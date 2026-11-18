@@ -23,6 +23,8 @@
 
 - [x] M5.13 (revisión de seguridad) Mitigaciones de http y servidor configurable: servidor visible y «Cambiar servidor» en login y registro (envío bloqueado sin servidor), advertencia http accesible, confirmación «Entiendo el riesgo» para http hacia hosts públicos en `ConfigServidor`, detección de rangos privados, rechazo de credenciales embebidas en la URL; `docs/seguridad.md` actualizado (hallazgos, riesgo residual, requisito de producción)
 
+- [x] M5.14 (pedido del usuario) Adaptación a cualquier dispositivo y resolución: kit `src/lib/responsive.ts` (`calcularDiseno`, `useDiseno`, `fuenteAcotada`), `Pantalla` con zonas seguras, ancho máximo y teclado, `Rejilla`/`FilaBotones`, dos columnas en tablet ancha, mapa de sector a pantalla dividida, leyenda con tope 1,5x, barra de pestañas con fuente acotada 1,3x, toques >= 48 dp, rotación libre (`orientation: default`), `softwareKeyboardLayoutMode: resize`, `ios.supportsTablet`
+
 ## Ruta
 Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado por el coordinador).
 
@@ -52,3 +54,14 @@ Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado
 - `npx expo-doctor`: 20/20 checks passed. `npx expo export --platform android`: bundle Hermes (2,9 MB); `dist/` eliminado.
 - `npx expo config --type introspect`: `AndroidManifest` con `android:usesCleartextTraffic = 'true'` (plugin `expo-build-properties`).
 - No probado en un teléfono real contra el backend de la LAN.
+
+## M5.14 · Adaptación a dispositivos (2026-11-18)
+- Ruta: delegada (escritor único). TDD: desactivado; pruebas junto al código, una sola verificación al final.
+- Puntos de corte (dp): compacto < 360; normal >= 360 con lado corto < 600; tablet con lado corto >= 600 (un teléfono apaisado NO es tablet); dos columnas con tablet y ancho >= 840. Ancho máximo del contenido 640 dp (una columna) o 960 dp (dos), centrado. Márgenes 12/16/24 dp; separación entre bloques escala con la fuente (tope 1,5x).
+- Fuente: todo escala con el sistema (sin desactivar globalmente). Excepciones acotadas: leyenda `maxFontSizeMultiplier=1.5`, insignias 1,5x, etiquetas de la barra de pestañas hasta 1,3x (alto fijo; `tabBarAllowFontScaling=false` solo ahí).
+- Zonas seguras: insets laterales en leyenda y pantallas; inferior en pantallas fuera de pestañas (`EnPestanasContext`, la barra ya lo reserva); `MarcoApp` sigue reservando el borde superior.
+- Teclado: `KeyboardAvoidingView` (iOS), `keyboardShouldPersistTaps="handled"`, `automaticallyAdjustKeyboardInsets`, Android `softwareKeyboardLayoutMode: "resize"`.
+- Pantallas tocadas: bienvenida, login, registro, asistencia, solicitudes, alertas, sector, perfil, cuadrilla, `ui.tsx`, `LeyendaFija`, `MapaSector`, layout de pestañas.
+- Android mínimo: minSdk 24 (Android 7.0), valor por defecto del catálogo de Gradle de React Native 0.88.1 / Expo SDK 58 (`node_modules/react-native/gradle/libs.versions.toml`); no se redujo. No se usan APIs de nivel superior en el código propio (`POST_NOTIFICATIONS` se ignora antes de Android 13 y las notificaciones locales crean su canal en 8+).
+- Verificación (una vez, al final): `npx tsc --noEmit`: sin errores; `npx jest`: 8 suites, 150 tests en verde (110 previos + 40 nuevos en `responsive.test.tsx`); `npx expo-doctor`: 20/20; `npx expo export --platform android --output-dir <temporal>`: bundle Hermes (3 MB), directorio temporal eliminado.
+- NO probado en dispositivo ni emulador. Pendiente manual: (1) teléfono chico (o emulador 320x568) con «Tamaño de fuente» al máximo: bienvenida, registro y asistencia sin texto cortado, leyenda visible; (2) tablet o emulador 1024x768 apaisado: perfil/alertas/solicitudes en dos columnas y sector con mapa a la izquierda; (3) registro con teclado abierto en Android (con gestos y con 3 botones) e iOS: el campo enfocado y «Crear cuenta» deben quedar visibles (si Android edge-to-edge no redimensiona, usar `behavior="padding"` también en Android); (4) teléfono con recorte de cámara apaisado: leyenda y contenido fuera del recorte; (5) rotar con la app abierta sin perder lo escrito.

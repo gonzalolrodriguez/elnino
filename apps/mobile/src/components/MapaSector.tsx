@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 
+import { useDiseno } from "@/lib/responsive";
 import type { GeoSectores } from "@/lib/servicios";
 
 const COLOR_ESTADO: Record<string, string> = {
@@ -15,10 +16,13 @@ type Props = {
   /** id del sector -> estado, solo para los sectores del usuario. */
   estados: Record<string, string>;
   centro: { nombre: string; lon: number; lat: number } | null;
+  /** `"lleno"` ocupa todo el alto disponible del contenedor; si no, un alto según la pantalla. */
+  alto?: number | "lleno";
 };
 
 /** Mapa del sector propio (polígono K10, SIMULADO) y del centro sugerido (SIMULADO). */
-export function MapaSector({ geo, estados, centro }: Props) {
+export function MapaSector({ geo, estados, centro, alto }: Props) {
+  const d = useDiseno();
   const propios = useMemo(
     () => (geo?.features ?? []).filter((f) => f.properties.id in estados),
     [geo, estados],
@@ -43,7 +47,10 @@ export function MapaSector({ geo, estados, centro }: Props) {
   }, [puntos]);
 
   return (
-    <MapView style={estilos.mapa} initialRegion={region} accessibilityLabel="Mapa del sector">
+    <MapView
+      style={[estilos.mapa, alto === "lleno" ? { flex: 1, minHeight: 240 } : { height: alto ?? d.altoMapa }]}
+      initialRegion={region} accessibilityLabel="Mapa del sector"
+    >
       {propios.map((f) => (
         <Polygon
           key={f.properties.id}
@@ -64,4 +71,4 @@ export function MapaSector({ geo, estados, centro }: Props) {
   );
 }
 
-const estilos = StyleSheet.create({ mapa: { height: 280, borderRadius: 8 } });
+const estilos = StyleSheet.create({ mapa: { borderRadius: 8, width: "100%" } });

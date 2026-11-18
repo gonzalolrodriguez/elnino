@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 
 import { ServidorEnUso, useServidorActual } from "@/components/ServidorEnUso";
-import { Boton, Campo, ErrorCaja, Pantalla, Texto, Titulo } from "@/components/ui";
+import { Boton, Campo, ErrorCaja, FilaBotones, Pantalla, Texto, Titulo } from "@/components/ui";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
 import { mensajeError } from "@/lib/errores";
 import { api, type ItemStock } from "@/lib/servicios";
@@ -103,22 +103,18 @@ export default function Registro() {
   return (
     <Pantalla>
       <Titulo>Crear cuenta</Titulo>
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <Boton
-            titulo="Ciudadanía"
-            variante={tipo === "ciudadano" ? "primario" : "secundario"}
-            onPress={() => setTipo("ciudadano")}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Boton
-            titulo="Productor"
-            variante={tipo === "productor" ? "primario" : "secundario"}
-            onPress={() => setTipo("productor")}
-          />
-        </View>
-      </View>
+      <FilaBotones>
+        <Boton
+          titulo="Ciudadanía"
+          variante={tipo === "ciudadano" ? "primario" : "secundario"}
+          onPress={() => setTipo("ciudadano")}
+        />
+        <Boton
+          titulo="Productor"
+          variante={tipo === "productor" ? "primario" : "secundario"}
+          onPress={() => setTipo("productor")}
+        />
+      </FilaBotones>
 
       <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} autoComplete="name" />
       <Campo
@@ -169,13 +165,13 @@ export default function Registro() {
         onPress={usarUbicacion}
       />
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48 }}>
         <Switch
           value={consentimiento}
           onValueChange={setConsentimiento}
           accessibilityLabel="Consentimiento informado"
         />
-        <Text style={{ flex: 1, fontSize: 13 }}>
+        <Text style={{ flex: 1, fontSize: 14 }}>
           Acepto el tratamiento de mis datos personales con finalidad exclusiva de gestión de
           emergencias, con derecho de acceso, rectificación y supresión (Ley 25.326).
         </Text>
