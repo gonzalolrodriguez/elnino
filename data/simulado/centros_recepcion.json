@@ -1,0 +1,71 @@
+{
+  "categoria": "SIMULADO",
+  "fecha": "2026-11-17",
+  "fuente": "SIMULADO · capacidad y ubicación de prueba; qué edificio es centro lo define la autoridad",
+  "nota": "Dato ficticio con fines educativos. Los lugares reales (escuelas, caminos, parajes, puestos) reemplazarán a estos nombres genéricos cuando se carguen las capas oficiales (D7).",
+  "centros": [
+    {
+      "nombre": "Centro de recepción SIMULADO 1",
+      "tipo": "centro_simulado",
+      "lon": -58.165,
+      "lat": -26.17,
+      "sector_id": null,
+      "capacidad_personas": 400,
+      "capacidad_animales": 0,
+      "servicios": {
+        "agua": true,
+        "sanitarios": true,
+        "cocina": true,
+        "sanidad": true
+      },
+      "ocupacion": 0
+    },
+    {
+      "nombre": "Centro de recepción SIMULADO 2",
+      "tipo": "centro_simulado",
+      "lon": -58.168,
+      "lat": -26.2,
+      "sector_id": null,
+      "capacidad_personas": 250,
+      "capacidad_animales": 0,
+      "servicios": {
+        "agua": true,
+        "sanitarios": true,
+        "cocina": false,
+        "sanidad": false
+      },
+      "ocupacion": 0
+    },
+    {
+      "nombre": "Centro de recepción SIMULADO 3",
+      "tipo": "centro_simulado",
+      "lon": -58.2,
+      "lat": -26.185,
+      "sector_id": null,
+      "capacidad_personas": 600,
+      "capacidad_animales": 0,
+      "servicios": {
+        "agua": true,
+        "sanitarios": true,
+        "cocina": true,
+        "sanidad": true
+      },
+      "ocupacion": 0
+    },
+    {
+      "nombre": "Predio alto de recepción SIMULADO 1",
+      "tipo": "predio_alto",
+      "lon": -58.12,
+      "lat": -26.165,
+      "sector_id": null,
+      "capacidad_personas": 0,
+      "capacidad_animales": 300,
+      "servicios": {
+        "agua": true,
+        "forraje": true,
+        "corral": true
+      },
+      "ocupacion": 0
+    }
+  ]
+}

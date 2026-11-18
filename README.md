@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Simulador de planificación de evacuaciones (Desafío 6). Esta es la **Fase 0**: esqueleto del monorepo con backend, web y app móvil que muestran la leyenda obligatoria y el estado del backend.
+Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 1** (datos y seguridad base) sobre el esqueleto de la Fase 0: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, y autenticación con roles, cifrado de campos sensibles y bitácora de accesos con hash encadenado.
 
 ## Requisitos y versiones
 
@@ -17,7 +17,7 @@ Simulador de planificación de evacuaciones (Desafío 6). Esta es la **Fase 0**:
 ## Instalación
 
 ```bash
-cp .env.example .env            # completar valores (nunca commitear .env)
+cp .env.example .env            # completar JWT_SECRET y FIELD_ENCRYPTION_KEY (nunca commitear .env)
 pnpm install                    # dependencias de web, app móvil y shared
 
 cd apps/backend
@@ -28,10 +28,25 @@ pip install -r requirements-dev.txt
 
 ## Arranque
 
-**Base de datos (opcional en Fase 0)**
+**Base de datos**
 
 ```bash
 docker compose up -d db
+```
+
+**Migraciones, datos y limpieza (Fase 1)**, desde `apps/backend` con el entorno virtual activo y las variables de `.env` cargadas (o pasadas en la línea de comandos):
+
+```bash
+python -m app.ingest.limpieza_k1   # K1 -> data/processed/k1_limpio.csv, k1_diario.csv y docs/registro_limpieza.md
+alembic upgrade head               # crea el esquema (PostGIS, tablas de CLAUDE.md §7)
+python -m app.db.seed              # K3, K10 (sin cambios), K1 limpio, datos SIMULADOS y usuarios de demo; idempotente
+```
+
+El script de limpieza solo lee `data/kit/` y escribe en `data/processed/`. Las claves se generan así:
+
+```bash
+openssl rand -hex 32                                                        # JWT_SECRET
+python -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"  # FIELD_ENCRYPTION_KEY
 ```
 
 **Backend** (con Docker, junto con la base): `docker compose up backend`. Local:
@@ -51,7 +66,7 @@ Si la base no está disponible, `/api/v1/salud` responde igualmente con `"base_d
 
 ## Puertos
 
-Si el puerto 5432 ya está ocupado por un PostgreSQL local, definir `POSTGRES_PORT=5433` en `.env` y ajustar `DATABASE_URL` al mismo puerto.
+Si el puerto 5432 ya está ocupado por un PostgreSQL local (caso frecuente en Windows), definir `POSTGRES_PORT=5433` en `.env` y ajustar `DATABASE_URL` al mismo puerto (`...@localhost:5433/evacuaciones`). Sin `.env` se puede pasar por línea de comandos: `POSTGRES_PORT=5433 POSTGRES_PASSWORD=... docker compose up -d db`.
 
 | Servicio | Puerto |
 |---|---|
@@ -79,7 +94,42 @@ curl -i http://localhost:8000/api/v1/no-existe
 
 4. Abrir la web y la app: ambas muestran la leyenda fija y "backend OK". Con el backend detenido muestran el estado de error.
 
+## Usuarios de demostración
+
+Los crea `python -m app.db.seed` (ficticios; `@demo.evacuaciones.invalid`). La contraseña sale de `DEMO_PASSWORD` (el admin usa `DEMO_ADMIN_PASSWORD` si está definida); los valores de ejemplo están en `.env.example`.
+
+| Correo | Rol |
+|---|---|
+| `admin@demo.evacuaciones.invalid` | admin |
+| `decisor@demo.evacuaciones.invalid` | decisor |
+| `operador@demo.evacuaciones.invalid` | operador |
+| `cuadrilla@demo.evacuaciones.invalid` | cuadrilla |
+| `ciudadano1@…` y `ciudadano2@…` | ciudadano (S2 y S3) |
+| `productor1@…` (en S4) y `productor2@…` (en S1) | productor |
+
+## Probar el flujo de autenticación (Fase 1)
+
+Con el backend en marcha (`uvicorn app.main:app --port 8000`) y la base sembrada:
+
+```bash
+API=http://localhost:8000/api/v1
+# Registro (requiere consentimiento)
+curl -s -X POST $API/auth/registro/ciudadano -H 'Content-Type: application/json' \
+  -d '{"email":"ana@ejemplo.invalid","password":"UnaClaveLarga-2026","nombre_visible":"Ana Prueba","consentimiento":true}'
+# Login y usuario actual
+curl -s -X POST $API/auth/login -H 'Content-Type: application/json' -H 'X-Cliente: movil' \
+  -d '{"email":"ana@ejemplo.invalid","password":"UnaClaveLarga-2026"}'
+curl -s $API/auth/yo -H "Authorization: Bearer <access_token>"
+# Caso inválido: sin consentimiento -> 422
+curl -s -X POST $API/auth/registro/ciudadano -H 'Content-Type: application/json' \
+  -d '{"email":"b@ejemplo.invalid","password":"UnaClaveLarga-2026","nombre_visible":"B Prueba","consentimiento":false}'
+```
+
+Contrato completo en `docs/contrato_api.md`; medidas de seguridad en `docs/seguridad.md`; fuentes y categorías de cada cifra en `docs/ficha_fuentes.md`.
+
 ## Pruebas y calidad
+
+Las pruebas del backend usan una base PostGIS separada (`evacuaciones_test`, en el mismo servidor que `DATABASE_URL`; se puede fijar otra con `TEST_DATABASE_URL`). Al iniciar, `pytest` recrea el esquema, aplica las migraciones y carga los seeds; si no hay base disponible, las pruebas que la necesitan se omiten. El usuario de la base debe poder crear bases de datos.
 
 ```bash
 cd apps/backend && ruff check . && pytest -q
@@ -91,12 +141,12 @@ pnpm lint
 ## Estructura
 
 ```
-apps/backend    FastAPI (app/, tests/, db/init/, Dockerfile)
+apps/backend    FastAPI (app/, alembic/, tests/, db/init/, Dockerfile)
 apps/frontend   Web: Vite + React 18 + Chakra UI
 apps/mobile     App Expo (expo-router)
 packages/shared Constantes compartidas (leyenda, categorías, roles, fecha de corte)
 data/kit        Kit del evento, originales SIN MODIFICAR
-data/processed  Datos derivados (Fase 1)
+data/processed  Datos derivados (K1 limpio y serie diaria)
 data/simulado   Datos ficticios rotulados SIMULADO
 data/geo        Capas de referencia
 docs            Documentación y decisiones

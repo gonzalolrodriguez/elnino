@@ -1,0 +1,136 @@
+{
+  "categoria": "SIMULADO",
+  "fuente": "SIMULADO · usuarios ficticios; la contraseña sale de DEMO_PASSWORD / DEMO_ADMIN_PASSWORD",
+  "nota": "Teléfonos y datos de salud son marcadores de prueba, no corresponden a personas reales.",
+  "usuarios": [
+    {
+      "email": "admin@demo.evacuaciones.invalid",
+      "nombre_visible": "Administrador Demo",
+      "rol": "admin",
+      "rol_operativo": "administrador_plataforma"
+    },
+    {
+      "email": "decisor@demo.evacuaciones.invalid",
+      "nombre_visible": "Decisor Demo",
+      "rol": "decisor",
+      "rol_operativo": "defensa_civil"
+    },
+    {
+      "email": "operador@demo.evacuaciones.invalid",
+      "nombre_visible": "Operador Demo",
+      "rol": "operador",
+      "rol_operativo": "coordinador_sector"
+    },
+    {
+      "email": "cuadrilla@demo.evacuaciones.invalid",
+      "nombre_visible": "Cuadrilla Demo",
+      "rol": "cuadrilla",
+      "rol_operativo": "encargado_cuadrilla"
+    },
+    {
+      "email": "ciudadano1@demo.evacuaciones.invalid",
+      "nombre_visible": "Ciudadano Demo Uno",
+      "rol": "ciudadano",
+      "rol_operativo": null,
+      "grupo": {
+        "integrantes": 4,
+        "menores": 2,
+        "mayores": 0,
+        "mascotas": 1,
+        "telefono": "000-0000001",
+        "salud": "SIMULADO: sin datos reales",
+        "vulnerabilidad": "SIMULADO: ninguna",
+        "lon": -58.18,
+        "lat": -26.185
+      }
+    },
+    {
+      "email": "ciudadano2@demo.evacuaciones.invalid",
+      "nombre_visible": "Ciudadano Demo Dos",
+      "rol": "ciudadano",
+      "rol_operativo": null,
+      "grupo": {
+        "integrantes": 2,
+        "menores": 0,
+        "mayores": 1,
+        "mascotas": 0,
+        "telefono": "000-0000002",
+        "salud": "SIMULADO: requiere movilidad asistida",
+        "vulnerabilidad": "SIMULADO: adulto mayor",
+        "lon": -58.196,
+        "lat": -26.215
+      }
+    },
+    {
+      "email": "productor1@demo.evacuaciones.invalid",
+      "nombre_visible": "Productor Demo Uno",
+      "rol": "productor",
+      "rol_operativo": null,
+      "establecimiento": {
+        "nombre": "Establecimiento SIMULADO 1",
+        "lon": -58.139,
+        "lat": -26.18,
+        "stock": [
+          {
+            "especie": "bovino",
+            "categoria_animal": "vaca preñada",
+            "cantidad": 8
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "vaca con cría",
+            "cantidad": 10
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "ternero al pie",
+            "cantidad": 10
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "vaquillona",
+            "cantidad": 1
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "toro",
+            "cantidad": 1
+          }
+        ]
+      }
+    },
+    {
+      "email": "productor2@demo.evacuaciones.invalid",
+      "nombre_visible": "Productor Demo Dos",
+      "rol": "productor",
+      "rol_operativo": null,
+      "establecimiento": {
+        "nombre": "Establecimiento SIMULADO 2",
+        "lon": -58.1875,
+        "lat": -26.156,
+        "stock": [
+          {
+            "especie": "bovino",
+            "categoria_animal": "vaca con cría",
+            "cantidad": 12
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "ternero al pie",
+            "cantidad": 12
+          },
+          {
+            "especie": "bovino",
+            "categoria_animal": "toro",
+            "cantidad": 1
+          },
+          {
+            "especie": "apicultura",
+            "categoria_animal": "colmena",
+            "cantidad": 20
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -23,6 +23,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-evacuaciones}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-evacuaciones}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8081}
       PERMITIR_DATOS_POST_CORTE: ${PERMITIR_DATOS_POST_CORTE:-false}
+      JWT_SECRET: ${JWT_SECRET:-}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
     ports:
       - "8000:8000"
     depends_on:
