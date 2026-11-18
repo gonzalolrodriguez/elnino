@@ -126,9 +126,16 @@ def iniciar_sesion(client: TestClient, email: str, password: str, movil: bool = 
     )
 
 
+def clave_demo(clave: str) -> str:
+    """Contraseña de un usuario de demostración: el admin usa DEMO_ADMIN_PASSWORD si está definida."""
+    if clave == "admin":
+        return os.environ.get("DEMO_ADMIN_PASSWORD") or os.environ["DEMO_PASSWORD"]
+    return os.environ["DEMO_PASSWORD"]
+
+
 @pytest.fixture
 def token_admin(client):
-    r = iniciar_sesion(client, "admin@demo.evacuaciones.invalid", os.environ["DEMO_PASSWORD"])
+    r = iniciar_sesion(client, "admin@demo.evacuaciones.invalid", clave_demo("admin"))
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
@@ -151,7 +158,7 @@ DEMO = {
 
 def cabecera_demo(client: TestClient, clave: str) -> dict:
     """Authorization de un usuario de demostración (ver ``DEMO``)."""
-    r = iniciar_sesion(client, DEMO[clave], os.environ["DEMO_PASSWORD"])
+    r = iniciar_sesion(client, DEMO[clave], clave_demo(clave))
     assert r.status_code == 200, r.text
     return bearer(r.json()["access_token"])
 

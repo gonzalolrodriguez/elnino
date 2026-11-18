@@ -2,13 +2,13 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Prefijo: `/api/v1`. Documentación interactiva generada por FastAPI en `/docs` y esquema en `/openapi.json`. Este documento cubre lo implementado hasta la **Fase 2** (motor): meta, autenticación, usuarios, datos, simulación, producción, operación, Centinela, canales simulados y tiempo real.
+Prefijo: `/api/v1`. Documentación interactiva generada por FastAPI en `/docs` y esquema en `/openapi.json`. Este documento cubre la API completa de la entrega (Fases 0 a 5): meta, autenticación, usuarios, datos, simulación, producción, operación, ciudadanía y productores, solicitudes con adjuntos, lluvia, Centinela, canales simulados y tiempo real. El esquema OpenAPI exportado de la aplicación está en `docs/openapi.json` (regenerarlo con el comando de la sección "Regenerar el esquema OpenAPI", al final).
 
 ## Convenciones
 
 - Formato JSON en UTF-8. Autenticación con `Authorization: Bearer <access_token>`.
 - Cliente móvil: enviar `X-Cliente: movil` en login y refresh para recibir también el `refresh_token` en el cuerpo. La web lo recibe solo en una cookie `HttpOnly`.
-- Las respuestas con datos incluirán `categoria`, `fuente` y `fecha_dato` cuando corresponda (grupos de datos de fases siguientes).
+- Las respuestas con datos incluirán `categoria`, `fuente` y `fecha_dato` cuando corresponda (grupos de datos; ver cada sección).
 
 ### Sobre de error común
 
@@ -349,3 +349,15 @@ curl -s -X POST $API/canales/sms-sim -H "X-Hub-Signature-256: $FIRMA" -H 'Conten
 ```
 
 Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_ruteo.py`, `test_ganaderia_y_parser.py`, `test_lluvia_y_canales.py`, `test_operacion.py` y `test_seguridad_fase2.py`.
+
+## Regenerar el esquema OpenAPI
+
+`docs/openapi.json` se exporta de la aplicación (51 rutas y 60 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+
+```bash
+python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='
+').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'
+')"
+```
+
+Con el backend en marcha, el mismo esquema se sirve en `GET /openapi.json` y la interfaz interactiva en `GET /docs`.

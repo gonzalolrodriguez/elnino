@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Medidas implementadas en las **Fases 1 y 2** (backend) y su correspondencia con OWASP Top 10 (2021). Lo que aún no existe se indica en "Pendiente".
+Medidas implementadas en las Fases 1 a 5 (backend, web y app móvil) y su correspondencia con OWASP Top 10 (2021). Lo que aún no existe se indica en "Pendiente" al final. Las secciones están en orden cronológico: las medidas de las Fases 1 y 2 se completan con las de las Fases 3 a 5 (sección "Fases 3 a 5").
 
 ## Medidas
 
@@ -48,9 +48,9 @@ Medidas implementadas en las **Fases 1 y 2** (backend) y su correspondencia con 
 - **Almacenamiento del limitador:** `slowapi` usa memoria del proceso; con varios procesos hay que pasar a Redis.
 - **CSRF:** el access token viaja en `Authorization` (no en cookie) y la cookie de refresh es `SameSite=Strict` con ruta restringida, lo que cubre el riesgo en la web.
 
-## Pendiente (fases siguientes)
+## Pendiente de la Fase 1
 
-Límites de tamaño y tipo MIME de adjuntos (Fase 2/5), cifrado de más campos al incorporar solicitudes con datos de salud, `pip-audit` y análisis estático en CI, inscripción de la base ante la AAIP (fuera del alcance del MVP).
+Resuelto: límites de tamaño y tipo de los adjuntos (ver "Fases 3 a 5"). Sigue pendiente: `pip-audit` y análisis estático en CI e inscripción de la base ante la AAIP (fuera del alcance del MVP).
 
 
 ## Fase 2: correcciones de la revisión de la Fase 1 y nuevas medidas
@@ -93,6 +93,26 @@ Compromisos:
 - **Carrera:** intentos simultáneos justo en el umbral pueden exceder levemente el límite (la lectura de la ventana no es transaccional).
 - **Detección:** eventos `cuenta_bloqueada` y `login_bloqueado_cuenta` en la bitácora.
 
-### Pendiente (fases siguientes)
+## Fases 3 a 5: panel, portal y app móvil
 
-Límites de tamaño y tipo MIME de adjuntos de solicitudes (Fase 5), idempotencia de mensajes de canales por identificador del proveedor, límite de conexiones WebSocket por usuario, `pip-audit` en la CI.
+| Área | Medida | Dónde |
+|---|---|---|
+| Adjuntos de solicitudes | Solo `image/jpeg`, `image/png` y `image/webp`; el tipo se determina por los primeros bytes del archivo (no se confía en el `Content-Type` declarado; otro tipo responde 415); tope de `ADJUNTO_MAX_BYTES` (2 MB, 413) y de `ADJUNTOS_MAX_POR_SOLICITUD` (5, 409); el archivo se guarda con nombre generado (`<n>.<ext>`), nunca con el nombre del cliente; la descarga exige ser dueño de la solicitud o rol operativo. | `app/api/v1/solicitudes.py` |
+| Idempotencia | `POST /solicitudes` acepta `Idempotency-Key` (UUID); un reintento tras una respuesta perdida devuelve la solicitud ya creada en lugar de duplicarla. | `app/api/v1/solicitudes.py` |
+| Token en la web | El access token vive solo en memoria (nunca en `localStorage` ni `sessionStorage`); en `localStorage` solo queda una marca booleana de "hubo sesión" para intentar el refresh por cookie. El refresh viaja en cookie `HttpOnly`. | `apps/frontend/src/lib/api.ts`, `src/auth/AuthContext.tsx` |
+| Token en la app | Access y refresh en `expo-secure-store`; nada sensible en `AsyncStorage` ni en SQLite (la cola offline guarda solicitudes, no credenciales). | `apps/mobile/src/lib/almacenSeguro.ts` |
+| Rutas privadas | La web redirige por rol (`RutaProtegida`); el control efectivo está siempre en el backend (RBAC), no en la interfaz. | `apps/frontend/src/auth/RutaProtegida.tsx` |
+| Órdenes | El formulario de órdenes se deshabilita para el operador y exige confirmación al decisor; el backend responde 403 a cualquier otro rol. | `apps/frontend/src/panel/paginas/Ordenes.tsx`, `app/api/v1/operacion.py` |
+| Datos de la web sin secretos | Los JSON estáticos de `src/datos/` y `public/capas/` solo contienen datos del kit y capas oficiales; ninguna clave ni dato personal. La clave de Google Maps del APK se lee al compilar desde una variable de entorno. | `apps/frontend/scripts/preparar-datos.mjs`, `apps/mobile/app.config.ts` |
+
+Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), A05 (tipos y tamaños de archivo acotados), A08 (nombres de archivo generados por el servidor).
+
+## Pendiente (documentado como hoja de ruta)
+
+- MFA para usuarios institucionales y desbloqueo por OTP o correo (ver `docs/decisiones.md`).
+- `pip-audit`, `pnpm audit` y análisis estático en la integración continua.
+- Idempotencia de mensajes de canales por identificador del proveedor; límite de conexiones WebSocket por usuario.
+- Almacenamiento del limitador en Redis si se despliega con más de un proceso.
+- Anclar periódicamente el último hash de la bitácora de accesos fuera de la base.
+- Inscripción de la base ante la AAIP y despliegue productivo (fuera del alcance del MVP, CLAUDE.md §15).
+- Push remoto (FCM): requiere development build y credenciales.

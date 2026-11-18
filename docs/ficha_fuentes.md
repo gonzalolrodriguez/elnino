@@ -1,9 +1,9 @@
 # Ficha de fuentes · AI LAB Misión: Código Formosa
-Herramienta: Plataforma de Gestión de Evacuaciones (backend Fase 2, capas oficiales y portal público) · Equipo: Equipo 3 · Instituto Politécnico Formosa
+Herramienta: Plataforma de Gestión de Evacuaciones (backend, portal público, panel operativo y app móvil) · Equipo: Equipo 3 · Instituto Politécnico Formosa
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su categoría. Regla: si no está acá, no se muestra. Estado: **Fase 2** (motor) más las capas de `data/geo/` y el portal público; se amplía en cada fase.
+Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su categoría. Regla: si no está acá, no se muestra. Estado: **entrega (Fase 6)**: incluye el motor, las capas de `data/geo/`, el portal público, el panel, la app móvil y la auditoría final de cifras (última sección); se amplió en cada fase.
 
 ## Datos observados (K1, K3)
 
@@ -149,3 +149,28 @@ Cada cifra del panel muestra su categoría y, cuando corresponde, su fuente y fe
 | Establecimientos de salud en el mapa | Ubicación aproximada: centroide de la localidad, porque REFES no publica coordenadas | REFES, Ministerio de Salud (27/12/2024), centroides de Georef | Referencia | descarga 17/11/2026 |
 | Sectores, accesos, centros de recepción y su capacidad, rutas, escenario, ISAD, recomendaciones y alternativas | Los devuelve la API; K10 sin cambios; todo lo demás con los supuestos de `supuestos.yaml` | K10 y supuestos de la Fase 2 | Simulado | 12/11/2026 (K10) |
 | Verificador de K7 sobre la capa del IGN | El Pilcomayo y el Bermejo están a 142,1 km en su punto más cercano; el Pilcomayo termina a 5,6 km del trazo del Paraguay; el Bermejo llega al Paraguay a la latitud -26,866 (Puerto Formosa está en -26,183, aguas arriba); Clorinda está a 1,7 km del Pilcomayo y a 14,4 km del trazo del Paraguay | `data/geo/cursos_agua.geojson` (IGN) y `localidades_parajes.geojson` (BAHRA), distancias calculadas por `app/domain/hidrografia.py` con proyección equirrectangular local; la capa de Formosa no incluye el Paraná ni Corrientes | Referencia | descarga 17/11/2026 |
+
+
+## Fase 6: auditoría final de cifras visibles (web, app y API)
+
+Se recorrieron las fuentes de la web (`apps/frontend/src`), de la app (`apps/mobile/src`) y las respuestas del backend en busca de cifras escritas a mano o devueltas al usuario. Las que no figuraban se agregan abajo. Las demás cifras ya estaban cubiertas por las secciones anteriores.
+
+| Qué muestra la herramienta | Valor o rango | Fuente (archivo del kit o URL) | Categoría (observado / referencia / simulado) | Fecha del dato |
+|---|---|---|---|---|
+| Horizonte máximo de la proyección del tiempo restante | 60 días | Supuesto `dias_proyeccion_horizonte` (`supuestos.yaml`); el INA no pronostica a más de 15 días | Simulado | 17/11/2026 |
+| Rango de los controles del simulador | Altura de 0 a 12 m (validación del backend); lluvia de 0 a 200 mm en el deslizador (el backend admite de 0 a 1.000 mm) | CLAUDE.md §8.1 (rango de entrada); no son datos | Simulado | 17/11/2026 |
+| Ubicación de ejemplo en el formulario de registro de productores | Longitud -58,139 y latitud -26,18 (dentro de S4) | Punto de ejemplo elegido por el equipo dentro del polígono K10 de S4; no corresponde a una parcela ni a una persona | Simulado | 17/11/2026 |
+| Límites de validación de formularios | Integrantes 1 a 40; menores y mayores 0 a 40; mascotas 0 a 100; contraseña mínimo 10 caracteres; nombre de establecimiento 2 a 160 caracteres; cantidad de hacienda 0 a 100.000; planilla UPCA hasta 5 MB y 5.000 filas; foto hasta 2 MB y 5 por solicitud (JPEG, PNG o WebP) | Reglas de validación del equipo (`esquemas.py`, `settings.py`); no son datos | Simulado | 17/11/2026 |
+| Checklist en destino de Arca Productiva | Revisar el potrero por mío-mío, ofrecer agua y forraje, acostumbramiento gradual al grano, sales minerales con fósforo y calcio, lotes de hasta 200 cabezas, prevención de leptospirosis, rabia paresiante, pietín y tristeza bovina | Documento base del equipo ("Plataforma de Evacuación en Formosa.docx", sección de damnificado tipo 3A, que cita fuentes INTA y SENASA); a verificar. El plazo "control sanitario a los 7 días" no figura en ese documento: es una pauta del equipo, SUPUESTO | Simulado | 17/11/2026 |
+| Apicultura en el cálculo ganadero | Colmenas vivas y muertas; traslado vehicular (cubierto y ventilado) o a pie (grupos reducidos por corredores altos); no hay cifras propias | Documento base del equipo, sección de apicultura; a verificar | Simulado | 17/11/2026 |
+| Descripción del proceso de llegada del agua (página El Niño) | El Pantanal retiene y entrega el agua con demora; el remanso del Paraná frena el desagüe en la confluencia; la lluvia local sobre suelos arcillosos de muy baja pendiente anega caminos y campos | Documento base del equipo ("Plataforma de Evacuación en Formosa.docx", capítulo hidrológico: retardo amortiguador del Pantanal, remanso del Paraná y amenazas endógenas); no es una fuente oficial del kit y no sirve para fechar una crecida | Referencia (documento del equipo, a verificar) | 18/11/2026 |
+
+### Afirmaciones sin fuente verificada (declaradas, no se inventó una fuente)
+
+Estas frases aparecen en la página `/el-nino` (`apps/frontend/src/pages/ElNino.tsx`) y no tienen una fuente oficial del kit que las respalde con esa precisión. Hasta resolverlas, deben leerse como descripción general del equipo:
+
+1. **"rezago de semanas a meses"** entre la lluvia y la crecida en Puerto Formosa. El documento base del equipo habla de una demora de 3 a 4 meses del pico dentro del Pantanal y de respuesta "de días a pocas semanas" aguas abajo; el rango "semanas a meses" es una síntesis del equipo, sin cifra oficial.
+2. **"se sigue con las escalas del INA y avisa con semanas de anticipación"** (amenaza exógena). Está en tensión con el kit: el INA no pronostica la altura del río más allá de 15 días (K9) y el documento base del equipo habla de alerta fluvial de hasta 7 días. Recomendación: reemplazar por "con días de anticipación" o citar la fuente antes de la presentación.
+3. **"anega caminos y campos en horas. Casi no deja margen."** (amenaza endógena). El documento base menciona alerta pluvial de unas 24 horas; "en horas" es una descripción cualitativa sin fuente oficial.
+
+Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del kit, la carpeta `IA-Lab` y el documento base del equipo, ya citados).

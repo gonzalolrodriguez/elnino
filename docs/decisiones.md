@@ -5,16 +5,16 @@ Registro de decisiones confirmadas por el equipo el 2026-11-17 (Fase 0). Todas l
 | # | Tema | Decisión confirmada |
 |---|---|---|
 | P1 | Estructura del monorepo | `apps/frontend`, `apps/mobile` (Expo), `apps/backend` (FastAPI) y `packages/shared` (constantes y, más adelante, tipos y cliente API generados desde OpenAPI). |
-| P2 | Web | React 18 + TypeScript + Vite + Chakra UI + Framer Motion. React Three Fiber + Drei (landing) y MapLibre GL JS + Deck.gl (panel) se incorporan en fases posteriores. |
+| P2 | Web | React 18 + TypeScript + Vite + Chakra UI + Framer Motion. React Three Fiber + Drei (landing, con alternativa 2D) y MapLibre GL JS + Deck.gl (panel) incorporados en las Fases 3 y 4. |
 | P3 | App móvil | Expo + TypeScript + expo-router; mapas con `react-native-maps`, cola offline con `expo-sqlite`, tokens en `expo-secure-store`; APK con EAS Build (perfil `preview`). |
-| P4 | Backend y base | FastAPI + PostgreSQL 16 + PostGIS + pgRouting con `docker-compose`; migraciones con Alembic (Fase 1). |
+| P4 | Backend y base | FastAPI + PostgreSQL 16 + PostGIS + pgRouting con `docker-compose`; migraciones con Alembic (Fase 1; tres migraciones al cierre). |
 | P5 | Datos posteriores al corte | Apagados por defecto (`PERMITIR_DATOS_POST_CORTE=false`). Se muestra el dato del corte (Puerto Formosa 5,60 m, `DATO OBSERVADO`, 31/10/2026). |
 | P6 | Canales (WhatsApp, SMS, IVR) | Simulados con lógica real (mismo formato y parser que el canal real). |
 | P7 | Notificaciones | Web: centro de notificaciones + WebSocket. Móvil: notificaciones locales; push remoto como fase opcional. |
 | P8 | Lluvia | Partes policiales y cargas manuales, importación de la planilla UPCA y deslizador `SIMULADO` en el simulador. |
 | P9 | Índice ISAD | Índice relativo rotulado `SIMULADO`, con pesos configurables; el disparador oficial es la altura de compromiso de K10. |
 | P10 | Ruteo | pgRouting sobre red vial OSM/IGN recortada al corredor, con aristas bloqueables. |
-| P11 | Reparto del equipo | (1) backend + datos + seguridad, (2) panel operativo web, (3) landing 3D + registro web, (4) app móvil. |
+| P11 | Reparto del equipo | (1) backend + datos + seguridad, (2) panel operativo web, (3) landing 3D + registro web, (4) app móvil. Propuesta por defecto: la asignación de cada integrante la confirma el equipo (ver `docs/ficha_tecnica.md`). |
 | P12 | Chacras y campos reales | Opción (b): productores ficticios ubicados en el punto del paraje real, sin parcela. |
 
 ## Decisiones técnicas de la Fase 0
@@ -30,3 +30,11 @@ Registro de decisiones confirmadas por el equipo el 2026-11-17 (Fase 0). Todas l
 - **Bloqueo de login por cuenta sin verificación adicional.** El bloqueo temporal por intentos fallidos se aplica a toda la cuenta, no por origen ni dispositivo, y no hay un paso de desbloqueo (OTP o correo). Es un compromiso conocido: un tercero puede bloquear temporalmente una cuenta ajena a cambio de frenar la fuerza bruta. Mitigación futura: verificación por OTP o correo y límite por IP además del límite por cuenta.
 - **Push remoto (FCM).** Fuera de alcance del MVP. Las alertas llegan como notificaciones locales con la app abierta (P7). Requiere development build y credenciales de FCM.
 - **APK.** Compilarlo con EAS Build requiere la cuenta de Expo del equipo (`npx eas login`) y, para ver el mapa, una clave de Google Maps (`GOOGLE_MAPS_API_KEY`).
+
+## Decisiones técnicas de la Fase 6 (entrega)
+
+- **Puerto del backend en Docker configurable.** `docker-compose.yml` publica el backend en `${BACKEND_PORT:-8000}`; permite correr dos copias del proyecto a la vez (p. ej. desarrollo y prueba de clonado limpio) sin chocar de puerto. El valor por defecto no cambia.
+- **Contraseña del admin en las pruebas.** El seed usa `DEMO_ADMIN_PASSWORD` para el admin si está definida (el `.env.example` la define distinta de `DEMO_PASSWORD`); las pruebas del backend ahora hacen lo mismo (`tests/conftest.py`, función `clave_demo`). Antes, con el `.env.example` sin tocar, 11 pruebas fallaban en la preparación con 401.
+- **Esquema OpenAPI versionado.** `docs/openapi.json` se exporta de la aplicación para que la mesa pueda leer el contrato sin levantar el backend.
+- **Afirmaciones sin fuente.** Tres frases cualitativas de la página El Niño no tienen respaldo oficial preciso; se declaran en `docs/ficha_fuentes.md` en lugar de inventar una fuente.
+- **Publicación.** El tag evaluable `v1.0-entrega` se crea sobre `main` después del merge (pasos en `odd/tasks/fase-6-entrega.md`).
