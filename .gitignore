@@ -19,3 +19,6 @@ Thumbs.db
 android/
 ios/
 # data/kit se versiona (originales sin modificar)
+
+# Herramientas locales
+.atl/

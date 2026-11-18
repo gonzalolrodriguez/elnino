@@ -13,8 +13,10 @@ LIMITES = [
     "No existe pronóstico hidrológico más allá de 15 días; las extrapolaciones son supuestos.",
     "El kit no incluye cotas reales.",
     "El kit no incluye barrios reales.",
-    "El kit no incluye caminos ni centros de recepción reales; los centros y su capacidad son SIMULADO.",
-    "No hay alturas anteriores a 2006 con fuente oficial verificada (1983, 1992 y 1998 no se muestran).",
+    "El kit no incluye caminos ni centros de recepción reales; "
+    "los centros y su capacidad son SIMULADO.",
+    "No hay alturas anteriores a 2006 con fuente oficial verificada "
+    "(1983, 1992 y 1998 no se muestran).",
     "Decidir una evacuación, definir recorridos y disponer recursos corresponde a las autoridades; "
     "la plataforma solo recomienda y simula.",
 ]

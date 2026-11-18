@@ -8,7 +8,7 @@
     "scheme": "evacuaciones",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "ar.gob.formosa.ailab.equipo3.evacuaciones",
+      "package": "ar.ailab.equipo3.evacuaciones",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
