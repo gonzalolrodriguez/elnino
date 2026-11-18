@@ -1,0 +1,149 @@
+import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+
+import { AlertaError } from "../components/Formulario";
+import { Insignia } from "../components/Insignia";
+import { useEscenario } from "./EscenarioContext";
+import type { AccesoProps, OrigenLluvia } from "./tipos";
+import { COLOR_ESTADO, fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
+
+const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
+  { valor: "simulado", texto: "Simulado (deslizador)" },
+  { valor: "manual", texto: "Carga manual" },
+  { valor: "parte_policial", texto: "Parte policial" },
+  { valor: "planilla_upca", texto: "Planilla UPCA" },
+];
+
+/** Controles del escenario (CLAUDE.md §8.1) y resultado por sector. Todo el resultado es SIMULADO. */
+export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
+  const { entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, calculando, error, simular } = useEscenario();
+  const lluviaSimulada = entrada.lluvia_origen === "simulado" || entrada.lluvia_origen === "manual";
+
+  return (
+    <Box>
+      <Flex direction="column" gap={3}>
+        <FormControl>
+          <FormLabel htmlFor="sim-altura" mb={0} fontSize="sm">
+            Altura de Puerto Formosa (0 a 12 m): <strong data-testid="sim-altura-valor">{fmtM(entrada.altura_formosa_m)}</strong>
+          </FormLabel>
+          <input
+            id="sim-altura"
+            type="range"
+            min={0}
+            max={12}
+            step={0.05}
+            value={entrada.altura_formosa_m}
+            onChange={(e) => fijarAltura(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+          <Text fontSize="xs" color="pizarra.500">
+            Valor SIMULADO. Alerta 7,80 m y evacuación 8,30 m (K3). Dato del corte: 5,60 m.
+          </Text>
+        </FormControl>
+
+        <FormControl>
+          <FormLabel htmlFor="sim-lluvia" mb={0} fontSize="sm">
+            Lluvia: <strong data-testid="sim-lluvia-valor">{fmtNum(entrada.lluvia_mm)} mm</strong> ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
+          </FormLabel>
+          <input
+            id="sim-lluvia"
+            type="range"
+            min={0}
+            max={200}
+            step={5}
+            value={entrada.lluvia_mm}
+            onChange={(e) => fijarLluvia(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+          <Select aria-label="Origen de la lluvia" size="sm" bg="white" mt={1} value={entrada.lluvia_origen} onChange={(e) => fijarLluvia(entrada.lluvia_mm, e.target.value as OrigenLluvia)}>
+            {ORIGENES.map((o) => (
+              <option key={o.valor} value={o.valor}>
+                {o.texto}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Box>
+          <Text fontSize="sm" fontWeight={600} mb={1}>
+            Caminos cerrados en la simulación
+          </Text>
+          {accesos.length === 0 ? (
+            <Text fontSize="sm" color="pizarra.500">
+              No hay accesos cargados.
+            </Text>
+          ) : (
+            accesos.map((a) => (
+              <Checkbox key={a.id} size="sm" display="flex" isChecked={entrada.caminos_cerrados.includes(a.id)} onChange={() => alternarCamino(a.id)}>
+                {a.nombre} <Text as="span" color="pizarra.500">({a.superficie}{a.sector_id ? `, ${a.sector_id}` : ""})</Text>
+              </Checkbox>
+            ))
+          )}
+        </Box>
+
+        <Button onClick={() => void simular()} isLoading={calculando} loadingText="Calculando" size="sm">
+          Calcular escenario
+        </Button>
+      </Flex>
+
+      {error !== null && (
+        <Box mt={3}>
+          <AlertaError error={error} />
+        </Box>
+      )}
+
+      {escenario && (
+        <Box mt={4} data-testid="resultado-escenario">
+          <Flex align="center" gap={2} mb={2} wrap="wrap">
+            <Heading as="h3" size="xs">
+              Resultado
+            </Heading>
+            <Insignia categoria="SIMULADO" />
+          </Flex>
+          <Text fontSize="sm" mb={2} data-testid="resultado-rio">
+            Río: <strong>{escenario.rio.estado}</strong> a {fmtM(escenario.rio.altura_m)}; a {fmtM(Math.abs(escenario.rio.distancia_a_alerta_m))}{" "}
+            {escenario.rio.distancia_a_alerta_m >= 0 ? "de la alerta" : "por encima de la alerta"} y a {fmtM(Math.abs(escenario.rio.distancia_a_evacuacion_m))}{" "}
+            {escenario.rio.distancia_a_evacuacion_m >= 0 ? "de la evacuación" : "por encima de la evacuación"}.
+          </Text>
+          <TableContainer>
+            <Table size="sm" aria-label="Estado de los sectores en el escenario">
+              <Thead>
+                <Tr>
+                  <Th>Sector</Th>
+                  <Th>Estado</Th>
+                  <Th isNumeric>Margen</Th>
+                  <Th>ISAD</Th>
+                  <Th>Accesos</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {escenario.sectores.map((s) => (
+                  <Tr key={s.id} data-testid={`sector-${s.id}`}>
+                    <Td fontWeight={700}>{s.id}</Td>
+                    <Td whiteSpace="normal">
+                      <Badge bg={COLOR_ESTADO[s.estado].fill} color="pizarra.900" border={`1px solid ${COLOR_ESTADO[s.estado].stroke}`}>
+                        {COLOR_ESTADO[s.estado].texto}
+                      </Badge>
+                      {s.aislado && (
+                        <Badge ml={1} colorScheme="red" variant="solid">
+                          aislado
+                        </Badge>
+                      )}
+                    </Td>
+                    <Td isNumeric>{fmtM(s.margen_a_compromiso_m)}</Td>
+                    <Td whiteSpace="normal">{s.isad ? `${fmtNum(s.isad.valor, 2)} (SIMULADO)` : "sin dato"}</Td>
+                    <Td whiteSpace="normal" fontSize="xs">
+                      {s.accesos.map((a) => `${a.nombre}: ${NOMBRE_ACCESO[a.estado] ?? a.estado}`).join("; ") || "sin accesos"}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+          <Text fontSize="xs" color="pizarra.500" mt={1}>
+            El ISAD es un índice relativo SIMULADO y no reemplaza el criterio de compromiso de K10. Margen: distancia en la escala hasta el compromiso del sector (negativa si ya lo superó).
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+}

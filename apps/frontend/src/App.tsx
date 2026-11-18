@@ -7,12 +7,14 @@ import { AuthProvider } from "./auth/AuthContext";
 import { RutaProtegida } from "./auth/RutaProtegida";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
-import { AppMovil, PanelOperativo } from "./pages/Placeholders";
+import { AppMovil } from "./pages/Placeholders";
 
 const ElNino = lazy(() => import("./pages/ElNino"));
 const RegistroCiudadano = lazy(() => import("./pages/RegistroCiudadano"));
 const RegistroProductor = lazy(() => import("./pages/RegistroProductor"));
 const MiCuenta = lazy(() => import("./pages/MiCuenta"));
+const Panel = lazy(() => import("./panel/Panel"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 function Rutas() {
   return (
@@ -45,7 +47,7 @@ function Rutas() {
             path="/comando/*"
             element={
               <RutaProtegida roles={["operador", "decisor", "admin"]}>
-                <PanelOperativo />
+                <Panel />
               </RutaProtegida>
             }
           />
@@ -53,7 +55,7 @@ function Rutas() {
             path="/admin"
             element={
               <RutaProtegida roles={["admin"]}>
-                <PanelOperativo titulo="Administración de usuarios" />
+                <Admin />
               </RutaProtegida>
             }
           />

@@ -445,7 +445,7 @@ def test_verificador_k7_siete_relaciones_con_orden_de_estaciones_calculado(clien
     assert rel["K7-6"]["veredicto"] == "VERDADERA"
     assert (
         rel["K7-2"]["veredicto"] == "FALSA"
-        and rel["K7-2"]["verificado_con"] == "requiere_cartografia"
+        and rel["K7-2"]["verificado_con"] == "IGN cursos de agua (calculado)"
     )
 
 

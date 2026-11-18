@@ -22,3 +22,6 @@ ios/
 
 # Herramientas locales
 .atl/
+
+# Adjuntos de solicitudes (fotos subidas)
+uploads/

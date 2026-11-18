@@ -21,6 +21,8 @@ type EstadoAuth = "cargando" | "anonimo" | "autenticado";
 type Contexto = {
   estado: EstadoAuth;
   usuario: Usuario | null;
+  /** Token de acceso vigente (solo en memoria); cambia cada vez que se renueva. */
+  token: string | null;
   iniciarSesion: (email: string, password: string) => Promise<Usuario>;
   cerrarSesion: () => Promise<void>;
 };
@@ -53,12 +55,14 @@ function esSesion(x: unknown): x is Sesion {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoAuth>(() => (leerMarca() ? "cargando" : "anonimo"));
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const limpiar = useCallback(() => {
     if (temporizador.current) clearTimeout(temporizador.current);
     temporizador.current = null;
     fijarToken(null);
+    setToken(null);
     setUsuario(null);
     setEstado("anonimo");
     escribirMarca(false);
@@ -67,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const aplicar = useCallback(
     (s: Sesion, renovar: () => void) => {
       fijarToken(s.access_token);
+      setToken(s.access_token);
       setUsuario(s.usuario);
       setEstado("autenticado");
       escribirMarca(true);
@@ -121,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [limpiar]);
 
   const valor = useMemo(
-    () => ({ estado, usuario, iniciarSesion, cerrarSesion }),
-    [estado, usuario, iniciarSesion, cerrarSesion],
+    () => ({ estado, usuario, token, iniciarSesion, cerrarSesion }),
+    [estado, usuario, token, iniciarSesion, cerrarSesion],
   );
   return <AuthCtx.Provider value={valor}>{children}</AuthCtx.Provider>;
 }

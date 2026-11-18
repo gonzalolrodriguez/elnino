@@ -164,6 +164,7 @@ Convenciones: las respuestas con cifras llevan `categoria` (`DATO OBSERVADO`, `D
 | GET | `/accesos` | autenticado | Accesos como GeoJSON con `transitable`, `motivo`, `actualizado_por_rol` |
 | PATCH | `/accesos/{id}` | mandos | Marca un acceso transitable o no: `{"transitable": false, "motivo": "..."}`. 404 si no existe |
 | GET | `/centros` | autenticado | Centros de recepción con capacidad, ocupación y cupo libre (`SIMULADO`) |
+| GET | `/roles-operativos` | autenticado | Catálogo de roles operativos `{ "roles": [{ "codigo", "nombre", "descripcion" }] }` (`SIMULADO`, sin nombres de personas). Lo usa el panel de administración (Fase 3) |
 | GET | `/serie/formosa?desde=&hasta=` | público | Serie diaria K1 (máximo del día), umbrales K3, picos 2016 y 2019, máximo y última lectura. No interpola huecos |
 | GET | `/serie/ascenso?altura_actual_m=` | público | Velocidades de ascenso (2015-16, 2019, oct-2026), cruces, tasas m/día y **tiempo restante** a alerta, evacuación y cada compromiso K10 como rango (de la tasa más alta a la más baja). La proyección es lineal (`SUPUESTO`), no un pronóstico |
 
@@ -245,8 +246,10 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201) |
 | GET | `/ordenes` | autenticado | Mandos ven todas; ciudadanía y productores, las de su sector |
 | GET | `/solicitudes` | ciudadanía y productores (las propias) y mandos | Filtros `estado`, `sector_id` |
-| POST | `/solicitudes` | autenticado | `{ "tipo": "evacuacion|asistencia|ganado|logistica|otro", "personas", "animales", "lon", "lat", "texto" }` (201) |
-| GET | `/solicitudes/{id}` | dueño o mandos | 404 si es ajena |
+| POST | `/solicitudes` | autenticado | `{ "tipo": "evacuacion|asistencia|ganado|logistica|otro", "personas", "animales", "lon", "lat", "texto" }` (201). **Idempotente** con la cabecera opcional `Idempotency-Key: <UUID>`: el mismo usuario y la misma clave dentro de 24 h devuelven la solicitud original con **200** en lugar de crear otra (clave que no es UUID: 422). Pensado para los reintentos de la cola offline de la app |
+| GET | `/solicitudes/{id}` | dueño o mandos | 404 si es ajena. Incluye `adjuntos: [{ "n", "mime", "bytes" }]` |
+| POST | `/solicitudes/{id}/adjuntos` | dueño o mandos | `multipart/form-data`, campo `archivo`: imagen `image/jpeg`, `image/png` o `image/webp` (segundo tiempo del envío: primero el JSON mínimo, después la foto). Se valida el **contenido** (firma del archivo) además del `Content-Type`: tipo no permitido o contenido que no es imagen → 415; vacío → 422; más de `ADJUNTO_MAX_BYTES` (2 MB por defecto) → 413; más de `ADJUNTOS_MAX_POR_SOLICITUD` (5) → 409; solicitud ajena → 404. Responde 201 `{ "n", "mime", "bytes", "solicitud_id" }`. Se guarda en `ADJUNTOS_DIR` (por defecto `<raíz>/uploads/`, fuera de `data/` e ignorada por git) con nombre generado por el servidor; los metadatos van en `solicitudes_asistencia.adjuntos` |
+| GET | `/solicitudes/{id}/adjuntos/{n}` | dueño o mandos | Devuelve los bytes de la imagen con su `Content-Type`, `Cache-Control: private, no-store` y `X-Content-Type-Options: nosniff`. Cada lectura queda auditada. 404 si la solicitud es ajena o el adjunto no existe |
 | PATCH | `/solicitudes/{id}` | mandos | Siguiente estado: `verificada`, `asignada` (con `cuadrilla_id` opcional, crea la tarea), `en_curso`, `resuelta`; saltar estados da 409 |
 
 `POST /ordenes` registra al emisor (rol), crea notificaciones para quienes viven o producen en los sectores, tareas por cuadrilla (no en una simple `alerta`) y un **borrador** de bitácora K8; responde `{ "id", "notificaciones_creadas", "tareas_creadas", "bitacora_borrador_id", ... }`.
@@ -260,7 +263,7 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | PUT | `/mi/establecimientos/{id}` | productor | Actualiza (404 si es de otro productor) |
 | PUT | `/mi/establecimientos/{id}/stock` | productor | Reemplaza el stock |
 | POST | `/mi/solicitudes-logistica` | productor | `{ "establecimiento_id", "texto" }`; adjunta el cálculo de Arca Productiva |
-| GET | `/mi/sector` | autenticado | Sector propio con estado a la última altura observada, alertas y centro sugerido (`SIMULADO`) |
+| GET | `/mi/sector` | autenticado | Sector propio con estado a la última altura observada, alertas y centro sugerido (`SIMULADO`). Cada sector trae `geometria` (GeoJSON `Polygon`, EPSG:4326, K10 sin cambios) y cada centro sugerido (`centro_asignado.personas` y `.animales`) trae `lon` y `lat` además de la distancia en línea recta |
 | GET | `/mi/notificaciones?solo_no_leidas=` | autenticado | Notificaciones propias |
 | PATCH | `/mi/notificaciones/{id}/leida` | autenticado | Marca una notificación propia como leída |
 
@@ -281,7 +284,7 @@ Errores de `POST /lluvia`: mm fuera de 0 a 500, turno distinto de 07/17 o fecha 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | GET | `/verificador/k6` | público | Las 8 afirmaciones de K6 con veredicto y evidencia calculada desde K1/K3: refuta "10,7 m en 2016" (K1: 9,81 m) y "superó la evacuación en octubre" (máximo 5,60 m) |
-| GET | `/verificador/k7` | público | Las 7 relaciones de K7. Las relaciones 3 y 6 se calculan con K3; las demás indican `verificado_con: requiere_cartografia` hasta contrastarlas con el IGN |
+| GET | `/verificador/k7` | público | Las 7 relaciones de K7. Las 3 y 6 se calculan con K3 (`verificado_con: "K3 (calculado)"`). Las 1, 2 y 5 se miden sobre la capa de cursos de agua del IGN y de localidades de BAHRA (`data/geo/`; `verificado_con: "IGN cursos de agua (calculado)"`, con el campo `evidencia_cartografica` y las distancias en km). Las 4 y 7 involucran al Paraná y a Corrientes, que la capa de Formosa no incluye: `veredicto: "NO VERIFICABLE CON LA CAPA DISPONIBLE"` y el conocimiento general queda solo como nota a confirmar. Sin la capa cargada, todas las cartográficas quedan en ese veredicto |
 | GET | `/bitacora?estado=` | mandos | Entradas K8 |
 | POST | `/bitacora` | `decisor` | Campos obligatorios: `decision`, `evidencia`, `limites`, `riesgos`, `gatillos` y `fecha_simulada`; `responsable_rol` por defecto es el rol operativo del usuario. Un campo vacío o ausente responde 422 |
 | PATCH | `/bitacora/{id}` | `decisor` | Completa un borrador generado por una orden |

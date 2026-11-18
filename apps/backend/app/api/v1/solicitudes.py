@@ -6,15 +6,28 @@ La ciudadanía y los productores ven únicamente sus propias solicitudes.
 
 from __future__ import annotations
 
+import uuid
+from datetime import timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config.settings import get_settings
 from app.core import auditoria
 from app.core.eventos import difusor
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
@@ -60,7 +73,10 @@ def solicitud_a_dict(s: SolicitudAsistencia, con_ubicacion: bool = True) -> dict
         "sector_id": s.sector_id,
         "lon": punto.x if (punto and con_ubicacion) else None,
         "lat": punto.y if (punto and con_ubicacion) else None,
-        "detalle": s.detalle,
+        "detalle": {k: v for k, v in (s.detalle or {}).items() if k != "idempotency_key"} or None,
+        "adjuntos": [
+            {"n": a["n"], "mime": a["mime"], "bytes": a["bytes"]} for a in (s.adjuntos or [])
+        ],
         "creado_en": s.creado_en.isoformat(),
         "actualizado_en": s.actualizado_en.isoformat(),
         "categoria": "SIMULADO",
@@ -71,11 +87,32 @@ def solicitud_a_dict(s: SolicitudAsistencia, con_ubicacion: bool = True) -> dict
 def crear(
     datos: SolicitudIn,
     request: Request,
+    response: Response,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     usuario: Usuario = Depends(usuario_actual),
     db: Session = Depends(get_db),
 ) -> dict:
     if datos.personas == 0 and datos.animales == 0 and not datos.texto:
         raise HTTPException(422, "Indicar personas, animales o un texto")
+    clave = None
+    if idempotency_key is not None:
+        try:
+            clave = str(uuid.UUID(idempotency_key))
+        except ValueError:
+            raise HTTPException(422, "Idempotency-Key debe ser un UUID") from None
+        previa = db.execute(
+            select(SolicitudAsistencia)
+            .where(
+                SolicitudAsistencia.solicitante_id == usuario.id,
+                SolicitudAsistencia.creado_en >= ahora() - timedelta(hours=24),
+                SolicitudAsistencia.detalle["idempotency_key"].astext == clave,
+            )
+            .order_by(SolicitudAsistencia.id)
+            .limit(1)
+        ).scalar_one_or_none()
+        if previa is not None:
+            response.status_code = 200
+            return solicitud_a_dict(previa)
     solicitud = SolicitudAsistencia(
         solicitante_id=usuario.id,
         origen=datos.origen,
@@ -85,6 +122,7 @@ def crear(
         texto=datos.texto,
         geom=WKTElement(f"POINT({datos.lon} {datos.lat})", srid=SRID),
         sector_id=sector_de_punto(db, datos.lon, datos.lat),
+        detalle={"idempotency_key": clave} if clave else None,
     )
     db.add(solicitud)
     db.flush()
@@ -135,6 +173,110 @@ def detalle(
     if s is None or (usuario.rol in ("ciudadano", "productor") and s.solicitante_id != usuario.id):
         raise HTTPException(404, "Solicitud no encontrada")
     return solicitud_a_dict(s)
+
+
+# ---- adjuntos -----------------------------------------------------------------------------------
+
+TIPOS_IMAGEN = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+
+
+def tipo_por_firma(datos: bytes) -> str | None:
+    """Tipo MIME según los primeros bytes (no se confía en el Content-Type declarado)."""
+    if datos.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if datos.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if datos[:4] == b"RIFF" and datos[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def _solicitud_visible(db: Session, solicitud_id: int, usuario: Usuario) -> SolicitudAsistencia:
+    s = db.get(SolicitudAsistencia, solicitud_id)
+    if s is None or (usuario.rol in ("ciudadano", "productor") and s.solicitante_id != usuario.id):
+        raise HTTPException(404, "Solicitud no encontrada")
+    return s
+
+
+@router.post("/{solicitud_id}/adjuntos", status_code=201)
+def subir_adjunto(
+    solicitud_id: int,
+    request: Request,
+    archivo: UploadFile = File(..., description="Imagen JPEG, PNG o WebP"),
+    usuario: Usuario = Depends(requiere_rol("ciudadano", "productor", *_MANDOS)),
+    db: Session = Depends(get_db),
+) -> dict:
+    cfg = get_settings()
+    s = _solicitud_visible(db, solicitud_id, usuario)
+    if (archivo.content_type or "").lower() not in TIPOS_IMAGEN:
+        raise HTTPException(
+            415, "Tipo de archivo no permitido: solo image/jpeg, image/png o image/webp"
+        )
+    contenido = archivo.file.read(cfg.adjunto_max_bytes + 1)
+    if len(contenido) > cfg.adjunto_max_bytes:
+        raise HTTPException(413, f"El archivo supera el máximo de {cfg.adjunto_max_bytes} bytes")
+    if not contenido:
+        raise HTTPException(422, "El archivo está vacío")
+    mime = tipo_por_firma(contenido)
+    if mime is None:
+        raise HTTPException(415, "El contenido no es una imagen JPEG, PNG o WebP válida")
+    existentes = list(s.adjuntos or [])
+    if len(existentes) >= cfg.adjuntos_max_por_solicitud:
+        raise HTTPException(
+            409, f"Máximo de {cfg.adjuntos_max_por_solicitud} adjuntos por solicitud"
+        )
+    n = max((a["n"] for a in existentes), default=0) + 1
+    nombre = f"{n}.{TIPOS_IMAGEN[mime]}"
+    carpeta = cfg.adjuntos_ruta / "solicitudes" / str(s.id)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / nombre).write_bytes(contenido)
+    s.adjuntos = [
+        *existentes,
+        {
+            "n": n,
+            "mime": mime,
+            "bytes": len(contenido),
+            "archivo": nombre,
+            "subido_por": usuario.id,
+            "subido_en": ahora().isoformat(),
+        },
+    ]
+    s.actualizado_en = ahora()
+    auditoria.registrar(
+        db, "adjunto_subido", f"solicitudes/{s.id}/adjuntos/{n}", usuario.id, ip_cliente(request)
+    )
+    db.commit()
+    return {"n": n, "mime": mime, "bytes": len(contenido), "solicitud_id": s.id}
+
+
+@router.get("/{solicitud_id}/adjuntos/{n}")
+def descargar_adjunto(
+    solicitud_id: int,
+    n: int,
+    request: Request,
+    usuario: Usuario = Depends(requiere_rol("ciudadano", "productor", *_MANDOS)),
+    db: Session = Depends(get_db),
+) -> Response:
+    s = _solicitud_visible(db, solicitud_id, usuario)
+    meta = next((a for a in (s.adjuntos or []) if a["n"] == n), None)
+    ruta = (
+        get_settings().adjuntos_ruta / "solicitudes" / str(s.id) / meta["archivo"] if meta else None
+    )
+    if meta is None or ruta is None or not ruta.is_file():
+        raise HTTPException(404, "Adjunto no encontrado")
+    auditoria.registrar(
+        db,
+        "lectura_datos_personales",
+        f"solicitudes/{s.id}/adjuntos/{n}",
+        usuario.id,
+        ip_cliente(request),
+    )
+    db.commit()
+    return Response(
+        ruta.read_bytes(),
+        media_type=meta["mime"],
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.patch("/{solicitud_id}")

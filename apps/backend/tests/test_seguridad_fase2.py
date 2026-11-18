@@ -170,9 +170,7 @@ def test_muchas_ip_fallando_activan_el_limite_por_cuenta_y_la_titular_sigue_entr
     assert iniciar_sesion(nueva, datos["email"], "otra-incorrecta").status_code == 429
     # ...y no deja contador por par.
     db.expire_all()
-    assert (
-        db.execute(select(IntentoLogin).where(IntentoLogin.ip == "203.0.113.99")).first() is None
-    )
+    assert db.execute(select(IntentoLogin).where(IntentoLogin.ip == "203.0.113.99")).first() is None
     # La titular, desde la red con login previo, entra con la contraseña correcta.
     assert iniciar_sesion(victima, datos["email"], datos["password"]).status_code == 200
     # Con contraseña incorrecta desde su red conocida es un 401 normal.

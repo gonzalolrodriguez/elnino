@@ -1,24 +1,7 @@
 import { Alert, AlertIcon, Box, Button, Heading, List, ListItem, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 
-import { useAuth } from "../auth/AuthContext";
 import { Layout } from "../components/Layout";
-
-export function PanelOperativo({ titulo = "Panel operativo" }: { titulo?: string }) {
-  const { usuario } = useAuth();
-  return (
-    <Layout>
-      <Heading as="h1" size="xl" mb={3}>
-        {titulo} — Fase 3
-      </Heading>
-      <Alert status="info" maxW="36rem">
-        <AlertIcon />
-        Esta sección se construye en la Fase 3. Tu sesión es válida
-        {usuario ? ` (${usuario.rol}${usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""})` : ""}.
-      </Alert>
-    </Layout>
-  );
-}
 
 export function AppMovil() {
   return (

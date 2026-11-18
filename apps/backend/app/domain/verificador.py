@@ -192,13 +192,27 @@ def verificar_k6(
     return res
 
 
-def verificar_k7(estaciones: dict[str, dict]) -> list[dict]:
+NO_VERIFICABLE_CAPA = "NO VERIFICABLE CON LA CAPA DISPONIBLE"
+FUENTE_IGN = "IGN, Capas SIG (cursos de agua de Formosa); K3 para las estaciones"
+UMBRAL_CERCA_KM = 20.0  # a esta distancia o menos, dos elementos se consideran contiguos en la capa
+UMBRAL_LEJOS_KM = 30.0  # a más distancia que esta, dos cursos no se tocan
+
+
+def _km(v: float | None) -> str:
+    return "sin dato" if v is None else f"{v:.1f}".replace(".", ",") + " km"
+
+
+def verificar_k7(estaciones: dict[str, dict], hidrografia: dict | None = None) -> list[dict]:
     """Las 7 relaciones del esquema K7.
 
     ``estaciones`` es ``{"formosa": {lat, lon, alerta_m, evacuacion_m}, "pilcomayo": {...}}`` (K3).
-    Las relaciones 3 y 6 se calculan con K3; las demás dependen de la cartografía oficial del IGN
-    (cursos de agua), que se carga en ``data/geo/``: hasta contrastarlas allí figuran como
-    ``requiere_cartografia`` y el veredicto es el conocimiento geográfico general, a confirmar.
+    ``hidrografia`` son las medidas sobre la capa de cursos de agua del IGN
+    (``domain.hidrografia.analizar``); si es ``None`` la capa no está disponible.
+
+    Las relaciones 3 y 6 se calculan con K3. Las relaciones 1, 2 y 5 se contrastan con la capa del
+    IGN (que cubre Formosa). Las relaciones 4 y 7 involucran al río Paraná y a Corrientes, fuera de
+    esa capa: el veredicto es ``NO VERIFICABLE CON LA CAPA DISPONIBLE`` y el conocimiento geográfico
+    general queda solo como nota a confirmar.
     """
     formosa, pilcomayo = estaciones["formosa"], estaciones["pilcomayo"]
     # El río Paraguay fluye hacia el sur: aguas arriba = más al norte (latitud mayor).
@@ -213,37 +227,128 @@ def verificar_k7(estaciones: dict[str, dict]) -> list[dict]:
         or pilcomayo["evacuacion_m"] != formosa["evacuacion_m"]
     )
     coincide_6 = pilcomayo["alerta_m"] == 5.35 and pilcomayo["evacuacion_m"] == 6.0
+    h = hidrografia
 
-    def rel(n, texto, veredicto, correccion, fuente, verificable_con_kit):
+    def rel(n, texto, veredicto, correccion, fuente, verificado_con, categoria, cartografica=None):
         return {
             "id": f"K7-{n}",
             "relacion": texto,
             "veredicto": veredicto,
             "correccion": correccion,
             "fuente": fuente,
-            "verificado_con": "K3 (calculado)" if verificable_con_kit else "requiere_cartografia",
-            "categoria": "DATO OBSERVADO" if verificable_con_kit else "DOCUMENTO DE REFERENCIA",
+            "verificado_con": verificado_con,
+            "categoria": categoria,
+            "evidencia_cartografica": cartografica,
         }
 
-    pend = "Pendiente de contraste con la capa de cursos de agua del IGN (data/geo/)."
-    return [
-        rel(
+    sin_capa = "No hay capa de cursos de agua cargada en data/geo/ para contrastarla."
+
+    def con_capa(n, texto, veredicto, correccion, evidencia):
+        return rel(
+            n,
+            texto,
+            veredicto,
+            correccion,
+            FUENTE_IGN,
+            "IGN cursos de agua (calculado)",
+            "DOCUMENTO DE REFERENCIA",
+            evidencia,
+        )
+
+    def sin_contraste(n, texto, conocimiento, motivo):
+        return rel(
+            n,
+            texto,
+            NO_VERIFICABLE_CAPA,
+            f"{motivo} Conocimiento geográfico general, a confirmar con otra fuente: {conocimiento}",
+            "Conocimiento geográfico general (no contrastado con datos del kit)",
+            "no verificable con la capa disponible",
+            "DOCUMENTO DE REFERENCIA",
+        )
+
+    texto1 = "Clorinda está junto al río Pilcomayo, cerca de su desembocadura en el Paraguay."
+    conocimiento1 = "Clorinda está sobre el río Paraguay, frente a la desembocadura del Pilcomayo."
+    if h and h["clorinda_a_pilcomayo_km"] is not None:
+        cerca = (
+            h["clorinda_a_pilcomayo_km"] <= UMBRAL_CERCA_KM
+            and h["clorinda_a_paraguay_km"] <= UMBRAL_CERCA_KM
+            and h["pilcomayo_a_paraguay_km"] <= UMBRAL_CERCA_KM
+        )
+        ev = (
+            f"En la capa del IGN, Clorinda (centroide BAHRA) está a {_km(h['clorinda_a_pilcomayo_km'])} "
+            f"del Pilcomayo y a {_km(h['clorinda_a_paraguay_km'])} del Paraguay; el trazo del "
+            f"Pilcomayo termina a {_km(h['pilcomayo_a_paraguay_km'])} del trazo del Paraguay."
+        )
+        r1 = con_capa(
             1,
-            "Clorinda está junto al río Pilcomayo, cerca de su desembocadura en el Paraguay.",
-            "VERDADERA",
-            "Clorinda está sobre el río Paraguay, frente a la desembocadura del Pilcomayo. " + pend,
-            "Conocimiento geográfico; IGN (cursos de agua)",
-            False,
-        ),
-        rel(
-            2,
-            "El río Pilcomayo desemboca en el río Bermejo antes de alcanzar el Paraguay.",
-            "FALSA",
-            "El Pilcomayo desemboca directamente en el Paraguay, aguas arriba de Puerto Formosa. "
-            + pend,
-            "Conocimiento geográfico; IGN (cursos de agua)",
-            False,
-        ),
+            texto1,
+            "VERDADERA" if cerca else NO_VERIFICABLE_CAPA,
+            conocimiento1
+            if cerca
+            else "La capa no permite confirmar la cercanía de Clorinda con ambos ríos.",
+            ev,
+        )
+    else:
+        r1 = sin_contraste(1, texto1, conocimiento1, sin_capa)
+
+    texto2 = "El río Pilcomayo desemboca en el río Bermejo antes de alcanzar el Paraguay."
+    if h:
+        no_se_tocan = h["pilcomayo_a_bermejo_km"] > UMBRAL_LEJOS_KM
+        llega_al_paraguay = h["pilcomayo_a_paraguay_km"] <= UMBRAL_CERCA_KM
+        ev = (
+            "En la capa del IGN, el Pilcomayo y el Bermejo no se tocan: están a "
+            f"{_km(h['pilcomayo_a_bermejo_km'])} en su punto más cercano, mientras que el Pilcomayo "
+            f"termina a {_km(h['pilcomayo_a_paraguay_km'])} del Paraguay."
+        )
+        if no_se_tocan and llega_al_paraguay:
+            r2 = con_capa(
+                2,
+                texto2,
+                "FALSA",
+                "El Pilcomayo desemboca directamente en el Paraguay, aguas arriba de Puerto Formosa.",
+                ev,
+            )
+        else:
+            r2 = con_capa(
+                2,
+                texto2,
+                NO_VERIFICABLE_CAPA,
+                "La capa no alcanza para decidir dónde desemboca el Pilcomayo.",
+                ev,
+            )
+    else:
+        r2 = sin_contraste(
+            2, texto2, "el Pilcomayo desemboca directamente en el Paraguay.", sin_capa
+        )
+
+    texto5 = "El río Bermejo entra al río Paraguay aguas arriba de Puerto Formosa."
+    if h and h["bermejo_a_paraguay_km"] <= UMBRAL_CERCA_KM:
+        lat_boca = h["bermejo_desembocadura_lat"]
+        aguas_arriba = lat_boca > formosa["lat"]
+        ev = (
+            f"En la capa del IGN, el Bermejo llega al Paraguay a la latitud {lat_boca:.3f}; "
+            f"Puerto Formosa (K3) está a {formosa['lat']:.3f}. El Paraguay fluye hacia el sur."
+        ).replace(".", ",")
+        r5 = con_capa(
+            5,
+            texto5,
+            "VERDADERA" if aguas_arriba else "FALSA",
+            "El Bermejo entra al Paraguay aguas arriba de Puerto Formosa."
+            if aguas_arriba
+            else "El Bermejo desemboca en el Paraguay aguas abajo de Puerto Formosa.",
+            ev,
+        )
+    else:
+        r5 = sin_contraste(
+            5,
+            texto5,
+            "el Bermejo desemboca en el Paraguay aguas abajo de Puerto Formosa.",
+            sin_capa,
+        )
+
+    return [
+        r1,
+        r2,
         rel(
             3,
             "Orden de las estaciones de aguas arriba a aguas abajo: Bahía Negra → Concepción → "
@@ -252,24 +357,16 @@ def verificar_k7(estaciones: dict[str, dict]) -> list[dict]:
             f"Con las coordenadas de K3 (Pilcomayo {pilcomayo['lat']} y Formosa {formosa['lat']}), el "
             f"orden correcto es: {orden_real}.",
             "K3 · coordenadas de las estaciones del INA",
-            True,
+            "K3 (calculado)",
+            "DATO OBSERVADO",
         ),
-        rel(
+        sin_contraste(
             4,
             "El río Paraná recibe al Paraguay y continúa hasta el Río de la Plata.",
-            "VERDADERA",
-            "El Paraguay desemboca en el Paraná, que forma luego el Río de la Plata. " + pend,
-            "Conocimiento geográfico; IGN (cursos de agua)",
-            False,
+            "el Paraguay desemboca en el Paraná, que forma luego el Río de la Plata.",
+            "La capa de Formosa no incluye el río Paraná.",
         ),
-        rel(
-            5,
-            "El río Bermejo entra al río Paraguay aguas arriba de Puerto Formosa.",
-            "FALSA",
-            "El Bermejo desemboca en el Paraguay aguas abajo de Puerto Formosa. " + pend,
-            "Conocimiento geográfico; IGN (cursos de agua)",
-            False,
-        ),
+        r5,
         rel(
             6,
             "La escala de Puerto Pilcomayo tiene umbrales distintos de los de Puerto Formosa: "
@@ -279,15 +376,13 @@ def verificar_k7(estaciones: dict[str, dict]) -> list[dict]:
             f"{_fmt(pilcomayo['evacuacion_m'])} m; Puerto Formosa {_fmt(formosa['alerta_m'])} m y "
             f"{_fmt(formosa['evacuacion_m'])} m.",
             "K3 · catálogo de estaciones del INA",
-            True,
+            "K3 (calculado)",
+            "DATO OBSERVADO",
         ),
-        rel(
+        sin_contraste(
             7,
             "El río Paraguay confluye con el Paraná aguas abajo de la ciudad de Corrientes.",
-            "FALSA",
-            "La confluencia está aguas arriba de la ciudad de Corrientes (cerca de Paso de la Patria). "
-            + pend,
-            "Conocimiento geográfico; IGN (cursos de agua)",
-            False,
+            "la confluencia está aguas arriba de la ciudad de Corrientes (cerca de Paso de la Patria).",
+            "La capa de Formosa no incluye la confluencia ni la ciudad de Corrientes.",
         ),
     ]

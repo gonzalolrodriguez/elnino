@@ -23,7 +23,7 @@ type Manejador = (cuerpo: Record<string, unknown> | undefined) => Respuesta;
 /** Reemplaza fetch: las claves son "METODO /ruta" (sin el prefijo /api/v1). Lo no declarado responde 404. */
 export function simularFetch(rutas: Record<string, Manejador> = {}) {
   const f = vi.fn((url: string, init?: RequestInit) => {
-    const ruta = new URL(url).pathname.replace(/^\/api\/v1/, "");
+    const ruta = new URL(url, "http://localhost").pathname.replace(/^\/api\/v1/, "");
     const clave = `${init?.method ?? "GET"} ${ruta}`;
     const cuerpo = typeof init?.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : undefined;
     const r = rutas[clave]?.(cuerpo) ?? {
@@ -37,7 +37,7 @@ export function simularFetch(rutas: Record<string, Manejador> = {}) {
 }
 
 export function llamadas(f: ReturnType<typeof simularFetch>, clave: string) {
-  return f.mock.calls.filter(([u, i]) => `${(i as RequestInit | undefined)?.method ?? "GET"} ${new URL(u as string).pathname.replace(/^\/api\/v1/, "")}` === clave);
+  return f.mock.calls.filter(([u, i]) => `${(i as RequestInit | undefined)?.method ?? "GET"} ${new URL(u as string, "http://localhost").pathname.replace(/^\/api\/v1/, "")}` === clave);
 }
 
 export const USUARIO = {

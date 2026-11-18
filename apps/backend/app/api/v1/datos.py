@@ -15,7 +15,7 @@ from app.core import auditoria, constantes
 from app.core.eventos import difusor
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
 from app.db.base import ahora
-from app.db.modelos import Acceso, CentroRecepcion, Estacion, Sector, Usuario
+from app.db.modelos import Acceso, CentroRecepcion, Estacion, RolOperativo, Sector, Usuario
 from app.db.sesion import get_db
 from app.domain import ascenso
 from app.servicios import contexto
@@ -186,6 +186,19 @@ def centros(_: Usuario = Depends(usuario_actual), db: Session = Depends(get_db))
         ],
         "categoria": "SIMULADO",
         "nota": "Qué edificio es centro de recepción y su capacidad lo define la autoridad.",
+    }
+
+
+@router.get("/roles-operativos")
+def roles_operativos(_: Usuario = Depends(usuario_actual), db: Session = Depends(get_db)) -> dict:
+    """Catálogo de roles operativos (sin nombres de funcionarios)."""
+    filas = db.execute(select(RolOperativo).order_by(RolOperativo.codigo)).scalars().all()
+    return {
+        "roles": [
+            {"codigo": r.codigo, "nombre": r.nombre, "descripcion": r.descripcion} for r in filas
+        ],
+        "categoria": "SIMULADO",
+        "fuente": "Catálogo de roles operativos (SUPUESTO, sin nombres de personas)",
     }
 
 

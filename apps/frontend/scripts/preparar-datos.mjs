@@ -47,3 +47,51 @@ writeFileSync(
   JSON.stringify({ version: k10.metadata.version, fecha: k10.metadata.fecha, categoria: "SIMULADO", sectores }),
 );
 console.log(`k1_diario.json: ${valores.length} días (${desde} a ${hasta}); k10_sectores.json: ${sectores.length} sectores`);
+
+// --- Capas oficiales de data/geo/ recortadas al corredor del panel, para que el mapa funcione sin internet ---
+// Salidas en public/capas/: un GeoJSON por capa (solo propiedades útiles, coordenadas a 5 decimales) y capas.json
+// con la fuente, la licencia y la fecha de descarga de cada una (se muestran junto a cada capa del mapa).
+const geo = resolve(raiz, "data", "geo");
+const pub = resolve(aqui, "..", "public", "capas");
+mkdirSync(pub, { recursive: true });
+const [W, S, E, N] = [-58.6, -26.5, -57.8, -25.85];
+const manifiesto = JSON.parse(readFileSync(resolve(geo, "manifiesto.json"), "utf-8"));
+const redondear = (c) => (typeof c[0] === "number" ? [Number(c[0].toFixed(5)), Number(c[1].toFixed(5))] : c.map(redondear));
+const dentro = ([x, y]) => x >= W && x <= E && y >= S && y <= N;
+const vertices = (c) => (typeof c[0] === "number" ? [c] : c.flatMap(vertices));
+const CAPAS = [
+  { id: "red_vial", archivo: "red_vial.geojson", props: ["nombre", "ref", "superficie"], tipo: "linea", etiqueta: "Red vial (OSM)" },
+  { id: "localidades_parajes", archivo: "localidades_parajes.geojson", props: ["nombre", "categoria_asentamiento", "departamento"], tipo: "punto", etiqueta: "Localidades y parajes" },
+  { id: "establecimientos_educativos", archivo: "establecimientos_educativos.geojson", props: ["nombre", "nivel", "ambito"], tipo: "punto", etiqueta: "Escuelas", nota: "Ubicación aproximada. Qué edificio es centro de recepción lo define la autoridad." },
+  { id: "establecimientos_salud", archivo: "establecimientos_salud.geojson", props: ["nombre", "localidad", "tipologia_sigla"], tipo: "punto", etiqueta: "Establecimientos de salud", nota: "Ubicación aproximada (centroide de localidad): REFES no publica coordenadas." },
+  { id: "comisarias_destacamentos", archivo: "comisarias_destacamentos.geojson", props: ["nombre"], tipo: "punto", etiqueta: "Comisarías y destacamentos", nota: "Complemento de OpenStreetMap; cobertura parcial." },
+  { id: "cursos_agua", archivo: "cursos_agua.geojson", props: ["nombre", "tipo", "regimen"], tipo: "linea", etiqueta: "Cursos de agua (IGN)", nota: "Esquema ilustrativo: no sirve para cotas ni inundación." },
+];
+const capasSalida = [];
+for (const c of CAPAS) {
+  const fc = JSON.parse(readFileSync(resolve(geo, c.archivo), "utf-8"));
+  const m = manifiesto.capas?.find((x) => x.id === c.id) ?? manifiesto.find?.((x) => x.id === c.id);
+  const features = fc.features
+    .filter((f) => vertices(f.geometry.coordinates).some(dentro))
+    .map((f) => ({
+      type: "Feature",
+      geometry: { type: f.geometry.type, coordinates: redondear(f.geometry.coordinates) },
+      properties: Object.fromEntries(c.props.map((p) => [p, f.properties[p] ?? null])),
+    }));
+  writeFileSync(resolve(pub, `${c.id}.geojson`), JSON.stringify({ type: "FeatureCollection", features }));
+  capasSalida.push({
+    id: c.id,
+    etiqueta: c.etiqueta,
+    tipo: c.tipo,
+    archivo: `capas/${c.id}.geojson`,
+    n: features.length,
+    nota: c.nota ?? null,
+    categoria: "DOCUMENTO DE REFERENCIA",
+    fuente: m?.url?.split(" (")[0] ?? "",
+    nombre_fuente: m?.nombre ?? c.etiqueta,
+    licencia: m?.licencia ?? "",
+    fecha_actualizacion: m?.fecha_descarga ?? "",
+  });
+}
+writeFileSync(resolve(pub, "capas.json"), JSON.stringify({ recorte: { oeste: W, sur: S, este: E, norte: N }, capas: capasSalida }, null, 1));
+console.log(`public/capas: ${capasSalida.map((c) => `${c.id}=${c.n}`).join(", ")}`);

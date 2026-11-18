@@ -62,7 +62,7 @@ describe("ingreso", () => {
 describe("guardas por rol", () => {
   it("un operador ingresa y llega al panel operativo", async () => {
     await ingresar("operador");
-    expect(await screen.findByRole("heading", { name: /Panel operativo — Fase 3/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Monitor hidrométrico/ })).toBeInTheDocument();
   });
 
   it("un ciudadano con sesión que pide /comando es redirigido a su cuenta", async () => {

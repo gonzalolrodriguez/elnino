@@ -15,8 +15,8 @@ from app.core import auditoria, constantes
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
 from app.db.modelos import BitacoraDecision, Estacion, LecturaLluvia, RolOperativo, Usuario
 from app.db.sesion import get_db
-from app.domain import ganaderia, verificador
-from app.servicios import contexto
+from app.domain import ganaderia, hidrografia, verificador
+from app.servicios import capas, contexto
 
 router = APIRouter(tags=["centinela"])
 _MANDOS = ("operador", "decisor", "admin")
@@ -224,14 +224,15 @@ def verificar_k7(db: Session = Depends(get_db)) -> dict:
             "alerta_m": float(e.alerta_m),
             "evacuacion_m": float(e.evacuacion_m),
         }
+    medidas = hidrografia.analizar(capas.cursos_principales(), capas.localidad("Clorinda"))
     return {
         "esquema": "K7 · red hidrográfica propuesta (esquema educativo generado por IA, no verificado)",
-        "relaciones": verificador.verificar_k7(estaciones),
-        "nota": "Las relaciones 3 y 6 se calculan con K3. Las demás se confirman con la capa de "
-        "cursos de agua del IGN (data/geo/); hasta entonces el veredicto es el conocimiento "
-        "geográfico general y figura como 'requiere_cartografia'.",
+        "relaciones": verificador.verificar_k7(estaciones, medidas),
+        "nota": "Las relaciones 3 y 6 se calculan con K3; las 1, 2 y 5 se miden sobre la capa de "
+        "cursos de agua del IGN (data/geo/). Las 4 y 7 involucran al Paraná y a Corrientes, que la "
+        "capa de Formosa no incluye: figuran como NO VERIFICABLE CON LA CAPA DISPONIBLE.",
         "categoria": "DOCUMENTO DE REFERENCIA",
-        "fuente": "K3 (coordenadas y umbrales) e IGN (cursos de agua, pendiente de contraste)",
+        "fuente": f"K3 (coordenadas y umbrales); {capas.FUENTE_CURSOS}; {capas.FUENTE_LOCALIDADES}",
         "fecha_dato": constantes.FECHA_CORTE,
     }
 

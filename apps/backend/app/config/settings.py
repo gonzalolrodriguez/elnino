@@ -43,9 +43,19 @@ class Settings(BaseSettings):
     # Secreto compartido para firmar (HMAC SHA-256) los webhooks de los canales simulados.
     canal_hmac_secret: str = ""
 
+    # Adjuntos de solicitudes (fotos): carpeta fuera de data/ (por defecto <raíz>/uploads, ignorada)
+    # y límites de tamaño y cantidad.
+    adjuntos_dir: str = ""
+    adjunto_max_bytes: int = 2 * 1024 * 1024
+    adjuntos_max_por_solicitud: int = 5
+
     # Contraseñas de los usuarios de demostración (solo para `python -m app.db.seed`).
     demo_password: str = ""
     demo_admin_password: str = ""
+
+    @property
+    def adjuntos_ruta(self) -> Path:
+        return Path(self.adjuntos_dir) if self.adjuntos_dir else RAIZ_REPO / "uploads"
 
     @property
     def cors_origins_lista(self) -> list[str]:

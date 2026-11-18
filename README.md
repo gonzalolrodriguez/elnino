@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 2** (motor), capas territoriales oficiales y portal público (Fase 4) sobre las fases 0 y 1: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, autenticación con roles, cifrado de campos sensibles, bitácora de accesos con hash encadenado, y el motor de simulación (escenario, ISAD, recomendador, alternativas, ruteo con pgRouting, Arca Productiva, cuadrillas, lluvia, canales simulados, órdenes, bitácora K8, verificadores K6/K7 y WebSocket).
+Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 3** (panel operativo web) sobre la **Fase 2** (motor), capas territoriales oficiales y portal público (Fase 4) sobre las fases 0 y 1: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, autenticación con roles, cifrado de campos sensibles, bitácora de accesos con hash encadenado, y el motor de simulación (escenario, ISAD, recomendador, alternativas, ruteo con pgRouting, Arca Productiva, cuadrillas, lluvia, canales simulados, órdenes, bitácora K8, verificadores K6/K7 y WebSocket).
 
 ## Requisitos y versiones
 
@@ -74,8 +74,27 @@ pnpm --filter @evacuaciones/frontend datos      # regenera los JSON estáticos d
 - `VITE_API_URL` define la URL del backend (por defecto `http://localhost:8000`; el prefijo `/api/v1` se agrega solo). El origen del portal debe figurar en `CORS_ORIGINS` del backend; por defecto se admiten `http://localhost:5173` y `http://localhost:8081`. El refresh token viaja en una cookie `HttpOnly` (`SameSite=Strict`, ruta `/api/v1/auth`), por lo que el portal y el backend deben compartir sitio (por ejemplo, ambos en `localhost`).
 - La serie de Puerto Formosa de la página El Niño se pide a `GET /serie/formosa`; si el backend no responde, se usa el JSON estático (`src/datos/k1_diario.json`, generado con el comando `datos`).
 - Rutas públicas: `/` (landing), `/el-nino`, `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
-- Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/comando/*` (operador, decisor y admin), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
+- Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/comando/*` (operador, decisor y admin; ver "Panel operativo"), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
 - Pruebas y calidad: `pnpm --filter @evacuaciones/frontend test`, `lint` y `build`.
+
+## Panel operativo (Fase 3)
+
+Disponible en `/comando/*` para `operador`, `decisor` y `admin` (la ciudadanía y los productores son redirigidos a su cuenta) y en `/admin` para `admin`. Se carga bajo demanda (chunk aparte; el mapa, con MapLibre GL y Deck.gl, en otro).
+
+| Ruta | Qué hace |
+|---|---|
+| `/comando` | Monitor: serie K1 con umbrales y picos, ascenso y "¿cuánto tiempo queda?" (proyección lineal, SUPUESTO), lluvia por origen |
+| `/comando/mapa` | Mapa con sectores K10, accesos, centros, estaciones y capas oficiales (cada una con fuente y fecha de actualización); simulador (altura 0 a 12 m, lluvia, caminos cerrados, ISAD SIMULADO); marcar un camino como no transitable con su motivo (`PATCH /accesos/{id}`); ruteo vehicular, de camión jaula y de arreo |
+| `/comando/recomendacion` | Recomendador por sector (una recomendación, no una orden) y comparador de tres alternativas |
+| `/comando/produccion` | Arca Productiva: calculadora ganadera con sus supuestos |
+| `/comando/operacion`, `/comando/lluvia` | Solicitudes, tareas y cuadrillas; parte de lluvia, importación y exportación de la planilla UPCA |
+| `/comando/ordenes` | Emisión de órdenes (solo `decisor`, con confirmación; el operador ve el formulario deshabilitado); abre el borrador de bitácora |
+| `/comando/bitacora`, `/comando/centinela`, `/comando/limites` | Bitácora K8 (seis campos obligatorios, exporta Markdown); auditoría de K1 y verificadores K6 y K7; límites de los datos |
+| `/admin` | Alta, cambio de rol operativo y baja de usuarios institucionales |
+
+- El mapa funciona sin internet y sin claves: fondo liso y capas oficiales recortadas en `apps/frontend/public/capas/` (las genera `pnpm --filter @evacuaciones/frontend datos` desde `data/geo/`; el `build` las regenera). El fondo OpenStreetMap es opcional y requiere conexión.
+- Los avisos en tiempo real usan `WS /api/v1/ws`: el token viaja solo como primer mensaje y la conexión se reabre al renovarse el token.
+- Prueba del flujo (guion de demo, pasos 2 a 6): ingresar como `decisor@demo.evacuaciones.invalid`; en `/comando/mapa` subir la altura a 7,60 m y la lluvia a 40 mm y calcular (S4 queda comprometido y aislado); marcar un acceso de S1 como no transitable; en `/comando/recomendacion` generar la recomendación y comparar alternativas; en `/comando/ordenes` emitir una evacuación preventiva para S4 y completar el borrador de bitácora; en `/comando/centinela` ver refutadas las afirmaciones de "10,7 m" y de "superó la evacuación en octubre". Caso inválido: enviar el formulario de la bitácora o el motivo del acceso vacíos (se rechaza antes de llamar al servidor), o ingresar como `operador` en `/comando/ordenes` (formulario deshabilitado).
 
 ## Capas territoriales oficiales (`data/geo/`)
 
@@ -157,7 +176,7 @@ Contrato completo en `docs/contrato_api.md`; medidas de seguridad en `docs/segur
 Las pruebas del backend usan una base PostGIS separada (`evacuaciones_test`, en el mismo servidor que `DATABASE_URL`; se puede fijar otra con `TEST_DATABASE_URL`). Al iniciar, `pytest` recrea el esquema, aplica las migraciones y carga los seeds; si no hay base disponible, las pruebas que la necesitan se omiten. El usuario de la base debe poder crear bases de datos.
 
 ```bash
-cd apps/backend && ruff check . && pytest -q   # 177+ pruebas, incluidas las de la Fase 2
+cd apps/backend && ruff check . && pytest -q   # 190+ pruebas, incluidas las de las Fases 2 y 3
 pnpm test          # vitest de la web
 pnpm typecheck     # tsc --noEmit en web, móvil y shared
 pnpm lint

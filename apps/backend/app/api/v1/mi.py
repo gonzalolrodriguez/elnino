@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from shapely.geometry import mapping
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,7 @@ from app.db.modelos import (
     GrupoFamiliar,
     Notificacion,
     Orden,
+    Sector,
     SolicitudAsistencia,
     StockProductivo,
     Usuario,
@@ -386,6 +388,8 @@ def _centro_sugerido(centros, lon: float, lat: float, personas: int, animales: i
             "id": c.id,
             "nombre": c.nombre,
             "tipo": c.tipo,
+            "lon": c.lon,
+            "lat": c.lat,
             "distancia_linea_recta_m": round(ruteo.haversine_m(lon, lat, c.lon, c.lat)),
             "categoria": "SIMULADO",
         }
@@ -448,10 +452,12 @@ def mi_sector(usuario: Usuario = Depends(usuario_actual), db: Session = Depends(
     sectores = []
     for sid in ids:
         e = escenario.sector(sid)
+        fila = db.get(Sector, sid)
         sectores.append(
             {
                 "id": sid,
                 "nombre": e.nombre,
+                "geometria": mapping(to_shape(fila.geom)) if fila is not None else None,
                 "estado": e.estado,
                 "aislado": e.aislado,
                 "altura_compromiso_m": e.altura_compromiso_m,
