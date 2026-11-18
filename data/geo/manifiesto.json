@@ -1,0 +1,215 @@
+{
+  "proyecto": "AI LAB Mision: Codigo Formosa - Operacion Agua (Equipo 3)",
+  "generado_por": "apps/backend/scripts/descargar_capas.py",
+  "fecha_descarga": "2026-11-17",
+  "categoria": "DOCUMENTO DE REFERENCIA",
+  "crs": "EPSG:4326 (WGS84). POSGAR 07 geografico seria EPSG:5340.",
+  "corredor_vial_bbox": [
+    -58.4,
+    -26.4,
+    -57.95,
+    -25.95
+  ],
+  "capas": [
+    {
+      "nombre": "Provincia de Formosa",
+      "id": "provincia",
+      "archivo_original": "original/provincia.geojson",
+      "archivo_recortado": "provincia.geojson",
+      "url": "https://wms.ign.gob.ar/geoserver/ows?service=WFS&request=GetFeature&typeName=ign:provincia&CQL_FILTER=in1='34'",
+      "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 1,
+      "bbox": [
+        -62.342256,
+        -26.879842,
+        -57.559388,
+        -22.460941
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Poligonos simplificados con tolerancia 0.0005 grados (~50 m)."
+    },
+    {
+      "nombre": "Departamentos de Formosa",
+      "id": "departamentos",
+      "archivo_original": "original/departamentos.geojson",
+      "archivo_recortado": "departamentos.geojson",
+      "url": "https://wms.ign.gob.ar/geoserver/ows?service=WFS&request=GetFeature&typeName=ign:departamento&CQL_FILTER=in1 LIKE '34%'",
+      "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 9,
+      "bbox": [
+        -62.342256,
+        -26.879842,
+        -57.559388,
+        -22.460941
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Poligonos simplificados con tolerancia 0.0005 grados (~50 m)."
+    },
+    {
+      "nombre": "Municipios y comisiones de Formosa",
+      "id": "municipios",
+      "archivo_original": "original/municipios.geojson",
+      "archivo_recortado": "municipios.geojson",
+      "url": "https://wms.ign.gob.ar/geoserver/ows?service=WFS&request=GetFeature&typeName=ign:municipio&CQL_FILTER=in1 LIKE '34%'",
+      "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 37,
+      "bbox": [
+        -62.310946,
+        -26.663266,
+        -57.583093,
+        -23.176887
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Poligonos simplificados con tolerancia 0.0005 grados (~50 m)."
+    },
+    {
+      "nombre": "Localidades, parajes y asentamientos (BAHRA via Georef)",
+      "id": "localidades_parajes",
+      "archivo_original": "original/localidades_parajes.json",
+      "archivo_recortado": "localidades_parajes.geojson",
+      "url": "https://apis.datos.gob.ar/georef/api/asentamientos?provincia=34",
+      "licencia": "CC BY 4.0 (datos.gob.ar, Georef / BAHRA)",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 423,
+      "bbox": [
+        -62.335742,
+        -26.853467,
+        -57.586223,
+        -22.679148
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Total en la API: 423; descartados por falta de coordenadas o fuera de Formosa: 0. La posicion es el centroide declarado por BAHRA/Georef (no un punto catastral)."
+    },
+    {
+      "nombre": "Red vial del corredor RN 11 - rio Paraguay (OpenStreetMap)",
+      "id": "red_vial",
+      "archivo_original": "original/red_vial_overpass.json",
+      "archivo_recortado": "red_vial.geojson",
+      "url": "https://overpass-api.de/api/interpreter (consulta bbox (-58.4, -26.4, -57.95, -25.95))",
+      "licencia": "ODbL 1.0. (c) colaboradores de OpenStreetMap; atribucion obligatoria",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 12987,
+      "bbox": [
+        -58.621982,
+        -26.480002,
+        -57.82853,
+        -25.85125
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Corredor bbox [-58.4, -26.4, -57.95, -25.95]. Las vias OSM se parten en cada nodo compartido por otra via (grafo ruteable sin nodificar); se conservan los tramos con algun vertice dentro del corredor (6 descartados). `superficie` es el mapeo literal del tag OSM `surface` (pavimento: paved/asphalt/concrete/paving_stones/sett/cobblestone/bricks; ripio: gravel/fine_gravel/compacted/pebblestone/crushed_stone; tierra: unpaved/dirt/earth/ground/mud/sand/grass/clay); sin tag o con otro valor queda `desconocida` (no se infiere desde `highway`). Incluye caminos de Paraguay en la margen oriental del rio.",
+      "distribucion_superficie": {
+        "pavimento": 4255,
+        "tierra": 6345,
+        "desconocida": 2387
+      }
+    },
+    {
+      "nombre": "Cursos de agua de Formosa (IGN)",
+      "id": "cursos_agua",
+      "archivo_original": "original/cursos_agua.json",
+      "archivo_recortado": "cursos_agua.geojson",
+      "url": "https://wms.ign.gob.ar/geoserver/ows (ign:lineas_de_aguas_continentales_perenne / _intermitentes)",
+      "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 755,
+      "bbox": [
+        -62.342298,
+        -26.871936,
+        -57.560266,
+        -22.475293
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Consulta por bbox de la provincia (1159 entidades) y recorte exacto al poligono provincial; simplificado con tolerancia 0.0003 grados (~30 m). Esquema ilustrativo: no usar para cotas."
+    },
+    {
+      "nombre": "Establecimientos educativos de Formosa (Mapa Educativo Nacional)",
+      "id": "establecimientos_educativos",
+      "archivo_original": "original/establecimientos_educativos.geojson",
+      "archivo_recortado": "establecimientos_educativos.geojson",
+      "url": "https://mapa.educacion.gob.ar/geoserver/ows?typeName=publico:establecimiento_educativo&CQL_FILTER=cue LIKE '34%'",
+      "licencia": "CC BY 4.0 (Mapa Educativo Nacional, Ministerio de Capital Humano / DIEE)",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 1728,
+      "bbox": [
+        -62.335795,
+        -26.706075,
+        -57.58323,
+        -22.492547
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Filtro CUE que empieza con 34 (codigo de provincia); 0 sin coordenadas dentro de Formosa descartados. Solo campos institucionales. El servicio no publica direccion ni localidad. Candidatos a centro de recepcion: la autoridad define cuales lo son; la capacidad es SIMULADO."
+    },
+    {
+      "nombre": "Establecimientos de salud de Formosa (REFES)",
+      "id": "establecimientos_salud",
+      "archivo_original": "original/establecimientos_salud_formosa.csv",
+      "archivo_recortado": "establecimientos_salud.geojson",
+      "url": "http://datos.salud.gob.ar/dataset/336cf4d9-447a-44c4-8e34-0ba1fc293d55/resource/5d5710df-cf3f-4d91-b9c5-aecab1e06018/download/establecimientos-asistenciales-asentados-registro-federal-refes-20241227.xlsx",
+      "licencia": "CC BY 4.0 (Ministerio de Salud de la Nacion, datos.gob.ar)",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 373,
+      "bbox": [
+        -62.307387,
+        -26.707969,
+        -57.712531,
+        -23.160649
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Archivo REFES del 27/12/2024; 379 establecimientos de Formosa. REFES no trae coordenadas: la posicion es el centroide de la localidad censal segun Georef (varios establecimientos comparten punto; precision de localidad, no del edificio). 6 sin localidad ubicable, excluidos del GeoJSON. Solo campos institucionales. La descarga de REFES se hizo sin verificar el certificado TLS (cadena incompleta del servidor de datos.salud.gob.ar); contenido publico."
+    },
+    {
+      "nombre": "Comisarias y destacamentos policiales (OpenStreetMap)",
+      "id": "comisarias_destacamentos",
+      "archivo_original": "original/comisarias_destacamentos_overpass.json",
+      "archivo_recortado": "comisarias_destacamentos.geojson",
+      "url": "https://overpass-api.de/api/interpreter (area ISO3166-2=AR-P, amenity=police)",
+      "licencia": "ODbL 1.0. (c) colaboradores de OpenStreetMap; atribucion obligatoria",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 68,
+      "bbox": [
+        -62.156148,
+        -26.853086,
+        -57.704074,
+        -23.748886
+      ],
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Capa complementaria: la cobertura de OSM es parcial y no equivale al listado oficial de dependencias policiales. Los puestos del parte de lluvia (UPCA) no se descargan aqui."
+    },
+    {
+      "nombre": "Poblacion INDEC Censo 2022 por radio censal",
+      "id": "poblacion_radios_censales",
+      "archivo_original": null,
+      "archivo_recortado": null,
+      "url": "https://www.indec.gob.ar/indec/web/Nivel4-Tema-2-41-135",
+      "licencia": "INDEC, uso libre citando fuente",
+      "fecha_descarga": "2026-11-17",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "n_features": 0,
+      "bbox": null,
+      "estado": "pendiente",
+      "fuente_usada": "no intentada",
+      "notas": "Opcional segun la consigna; no se intento. Las poblaciones del MVP provienen de K10 (SIMULADO)."
+    }
+  ]
+}
