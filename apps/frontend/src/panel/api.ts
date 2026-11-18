@@ -13,6 +13,7 @@ import type {
   Estacion,
   Geo,
   Lectura,
+  Notificacion,
   Lluvia,
   Orden,
   Puesto,
@@ -63,7 +64,9 @@ export const api = {
   cuadrillas: () => solicitar<{ cuadrillas: Cuadrilla[] }>("/cuadrillas", a),
   crearCuadrilla: (c: { nombre: string; tipo_incidente: string }) => solicitar<Cuadrilla>("/cuadrillas", { ...a, cuerpo: { ...c, integrantes: [] } }),
   tareas: () => solicitar<{ tareas: Tarea[] }>("/tareas", a),
-  actualizarTarea: (id: number, c: { estado?: string; cuadrilla_id?: number }) => solicitar<Tarea>(`/tareas/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
+  actualizarTarea: (id: number, c: { estado?: string; cuadrilla_id?: number; checklist?: { item: string; hecho: boolean }[] }) => solicitar<Tarea>(`/tareas/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
+  notificaciones: () => solicitar<{ notificaciones: Notificacion[]; no_leidas: number }>("/mi/notificaciones", a),
+  marcarLeida: (id: number) => solicitar<Notificacion>(`/mi/notificaciones/${id}/leida`, { ...a, metodo: "PATCH", cuerpo: {} }),
   solicitudes: () => solicitar<{ solicitudes: Solicitud[] }>("/solicitudes", a),
   avanzarSolicitud: (id: number, estado: string, cuadrilla_id?: number) =>
     solicitar<Solicitud>(`/solicitudes/${id}`, { ...a, metodo: "PATCH", cuerpo: { estado, ...(cuadrilla_id ? { cuadrilla_id } : {}) } }),

@@ -84,13 +84,13 @@ export default function ElNino() {
             <Heading as="h3" size="sm" mb={2}>
               Exógena: los ríos
             </Heading>
-            <Text>El agua viene de afuera, por el cauce. Se sigue con las escalas del INA y avisa con semanas de anticipación.</Text>
+            <Text>El agua viene de afuera, por el cauce. Se sigue con las escalas del INA, que no publica pronósticos a más de 15 días (K9).</Text>
           </Box>
           <Box borderLeft="4px solid" borderColor="escala.alerta" pl={4}>
             <Heading as="h3" size="sm" mb={2}>
               Endógena: la lluvia local
             </Heading>
-            <Text>Cae sobre suelos arcillosos de muy baja pendiente y anega caminos y campos en horas. Casi no deja margen.</Text>
+            <Text>Cae sobre suelos arcillosos de muy baja pendiente y anega caminos y campos con muy poco margen de aviso (alrededor de 24 horas según el documento base del equipo).</Text>
           </Box>
         </Box>
       </Seccion>

@@ -170,7 +170,7 @@ Se recorrieron las fuentes de la web (`apps/frontend/src`), de la app (`apps/mob
 Estas frases aparecen en la página `/el-nino` (`apps/frontend/src/pages/ElNino.tsx`) y no tienen una fuente oficial del kit que las respalde con esa precisión. Hasta resolverlas, deben leerse como descripción general del equipo:
 
 1. **"rezago de semanas a meses"** entre la lluvia y la crecida en Puerto Formosa. El documento base del equipo habla de una demora de 3 a 4 meses del pico dentro del Pantanal y de respuesta "de días a pocas semanas" aguas abajo; el rango "semanas a meses" es una síntesis del equipo, sin cifra oficial.
-2. **"se sigue con las escalas del INA y avisa con semanas de anticipación"** (amenaza exógena). Está en tensión con el kit: el INA no pronostica la altura del río más allá de 15 días (K9) y el documento base del equipo habla de alerta fluvial de hasta 7 días. Recomendación: reemplazar por "con días de anticipación" o citar la fuente antes de la presentación.
-3. **"anega caminos y campos en horas. Casi no deja margen."** (amenaza endógena). El documento base menciona alerta pluvial de unas 24 horas; "en horas" es una descripción cualitativa sin fuente oficial.
+2. ~~"avisa con semanas de anticipación"~~ — **corregida**: ahora dice "se sigue con las escalas del INA, que no publica pronósticos a más de 15 días (K9)". Fuente: K9 (DOCUMENTO DE REFERENCIA).
+3. ~~"anega caminos y campos en horas"~~ — **corregida**: ahora dice "con muy poco margen de aviso (alrededor de 24 horas según el documento base del equipo)". Fuente: documento base del equipo (`DocumentoBase-IA-Lab-Evacuaciones.docx`); es una estimación del equipo, no una cifra oficial.
 
 Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del kit, la carpeta `IA-Lab` y el documento base del equipo, ya citados).

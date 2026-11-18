@@ -14,6 +14,7 @@ const RegistroCiudadano = lazy(() => import("./pages/RegistroCiudadano"));
 const RegistroProductor = lazy(() => import("./pages/RegistroProductor"));
 const MiCuenta = lazy(() => import("./pages/MiCuenta"));
 const Panel = lazy(() => import("./panel/Panel"));
+const Cuadrilla = lazy(() => import("./pages/Cuadrilla"));
 const Admin = lazy(() => import("./pages/Admin"));
 
 function Rutas() {
@@ -48,6 +49,14 @@ function Rutas() {
             element={
               <RutaProtegida roles={["operador", "decisor", "admin"]}>
                 <Panel />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/cuadrilla"
+            element={
+              <RutaProtegida roles={["cuadrilla", "admin"]}>
+                <Cuadrilla />
               </RutaProtegida>
             }
           />
