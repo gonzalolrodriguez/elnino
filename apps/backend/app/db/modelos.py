@@ -69,6 +69,22 @@ class Usuario(Base):
     ultimo_login: Mapped[datetime | None] = mapped_column(_TZ)
 
 
+class IntentoLogin(Base):
+    """Intentos fallidos de login por par (cuenta, IP): un atacante no bloquea a la víctima."""
+
+    __tablename__ = "intentos_login"
+    __table_args__ = (UniqueConstraint("usuario_id", "ip", name="uq_intentos_usuario_ip"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="CASCADE"), index=True
+    )
+    ip: Mapped[str] = mapped_column(String(64))
+    intentos: Mapped[int] = mapped_column(Integer, default=0)
+    bloqueado_hasta: Mapped[datetime | None] = mapped_column(_TZ)
+    actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+
+
 class SesionRefresh(Base):
     """Refresh tokens rotativos; solo se guarda el hash SHA-256."""
 
@@ -204,12 +220,22 @@ class RedVial(Base):
     superficie: Mapped[str | None] = mapped_column(String(20))
     source: Mapped[int | None] = mapped_column(Integer)
     target: Mapped[int | None] = mapped_column(Integer)
+    longitud_m: Mapped[float | None] = mapped_column(Float)
     costo: Mapped[float | None] = mapped_column(Float)
     costo_inverso: Mapped[float | None] = mapped_column(Float)
     bloqueada: Mapped[bool] = mapped_column(Boolean, default=False)
     categoria: Mapped[str] = mapped_column(String(30), default="DOCUMENTO DE REFERENCIA")
     fuente: Mapped[str | None] = mapped_column(String(200))
     fecha_dato: Mapped[date | None] = mapped_column(Date)
+
+
+class RedVialNodo(Base):
+    """Vértices de la red vial (los asigna ``app.ingest.red_vial`` al cargar las aristas)."""
+
+    __tablename__ = "red_vial_nodos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    geom = mapped_column(_punto())
 
 
 class CentroRecepcion(Base):
@@ -307,6 +333,8 @@ class SolicitudAsistencia(Base):
     texto: Mapped[str | None] = mapped_column(Text)
     geom = mapped_column(_punto())
     estado: Mapped[str] = mapped_column(String(20), default="recibida")
+    sector_id: Mapped[str | None] = mapped_column(ForeignKey("sectores.id"))
+    detalle: Mapped[dict | None] = mapped_column(JSONB)
     adjuntos: Mapped[list | None] = mapped_column(JSONB)
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
@@ -339,7 +367,10 @@ class Tarea(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cuadrilla_id: Mapped[int | None] = mapped_column(ForeignKey("cuadrillas.id"))
     solicitud_id: Mapped[int | None] = mapped_column(ForeignKey("solicitudes_asistencia.id"))
+    orden_id: Mapped[int | None] = mapped_column(ForeignKey("ordenes.id"))
+    sector_id: Mapped[str | None] = mapped_column(ForeignKey("sectores.id"))
     titulo: Mapped[str] = mapped_column(String(200))
+    descripcion: Mapped[str | None] = mapped_column(Text)
     estado: Mapped[str] = mapped_column(String(20), default="pendiente")
     checklist: Mapped[list | None] = mapped_column(JSONB)
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
@@ -396,6 +427,7 @@ class BitacoraDecision(Base):
     gatillos: Mapped[str] = mapped_column(Text)
     responsable_rol: Mapped[str] = mapped_column(String(60))
     fecha_simulada: Mapped[date] = mapped_column(Date)
+    estado: Mapped[str] = mapped_column(String(20), default="completa")  # borrador|completa
     snapshot: Mapped[dict | None] = mapped_column(JSONB)
     orden_id: Mapped[int | None] = mapped_column(ForeignKey("ordenes.id"))
     creada_por: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))

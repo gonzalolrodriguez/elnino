@@ -1,7 +1,5 @@
 """Autenticación: registro, login, refresh rotativo, logout y /auth/yo."""
 
-from datetime import timedelta
-
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
 from geoalchemy2 import WKTElement
 from sqlalchemy import select
@@ -17,7 +15,7 @@ from app.api.v1.esquemas import (
     UsuarioOut,
 )
 from app.config.settings import get_settings
-from app.core import auditoria, cifrado, sesiones
+from app.core import auditoria, bloqueo, cifrado, sesiones
 from app.core.limitador import limite_login, limite_registro, limiter
 from app.core.rbac import ip_cliente, usuario_actual
 from app.core.seguridad import crear_token_acceso, hashear_password, verificar_password
@@ -152,7 +150,6 @@ def login(
     db: Session = Depends(get_db),
     x_cliente: str | None = Header(default=None),
 ) -> SesionOut:
-    s = get_settings()
     ip = ip_cliente(request)
     usuario = db.execute(select(Usuario).where(Usuario.email == datos.email)).scalar_one_or_none()
     # Se verifica siempre (hash de relleno si no existe) para igualar tiempos de respuesta.
@@ -163,26 +160,24 @@ def login(
         db.commit()
         raise HTTPException(401, "Correo o contraseña incorrectos")
 
-    if usuario.bloqueado_hasta and usuario.bloqueado_hasta > ahora():
+    if bloqueo.esta_bloqueado(db, usuario.id, ip):
         auditoria.registrar(db, "login_bloqueado", "auth", usuario.id, ip)
         db.commit()
-        raise HTTPException(429, "Cuenta bloqueada temporalmente por intentos fallidos")
+        raise HTTPException(429, "Demasiados intentos fallidos desde esta red; probá más tarde")
 
     if not correcto or usuario.estado != "activo":
-        usuario.intentos_fallidos += 1
-        detalle = f"intento={usuario.intentos_fallidos}"
-        if usuario.intentos_fallidos >= s.login_max_intentos:
-            usuario.bloqueado_hasta = ahora() + timedelta(minutes=s.login_bloqueo_minutos)
-            usuario.intentos_fallidos = 0
-            auditoria.registrar(db, "cuenta_bloqueada", "auth", usuario.id, ip, detalle)
+        intentos, bloqueado = bloqueo.registrar_fallo(db, usuario.id, ip)
+        if bloqueado:
+            auditoria.registrar(
+                db, "cuenta_bloqueada", "auth", usuario.id, ip, f"intento={intentos}"
+            )
             db.commit()
-            raise HTTPException(429, "Cuenta bloqueada temporalmente por intentos fallidos")
-        auditoria.registrar(db, "login_fallido", "auth", usuario.id, ip, detalle)
+            raise HTTPException(429, "Demasiados intentos fallidos desde esta red; probá más tarde")
+        auditoria.registrar(db, "login_fallido", "auth", usuario.id, ip, f"intento={intentos}")
         db.commit()
         raise HTTPException(401, "Correo o contraseña incorrectos")
 
-    usuario.intentos_fallidos = 0
-    usuario.bloqueado_hasta = None
+    bloqueo.limpiar(db, usuario.id, ip)
     usuario.ultimo_login = ahora()
     salida, _ = _abrir_sesion(db, usuario, response, _es_movil(x_cliente))
     auditoria.registrar(db, "login_ok", "auth", usuario.id, ip)
@@ -220,10 +215,16 @@ def refresh(
     if sesion.expira_en <= ahora() or usuario is None or usuario.estado != "activo":
         raise invalido
 
+    # Se marca el token como usado de forma atómica ANTES de emitir el nuevo: si dos solicitudes
+    # llegan a la vez con el mismo refresh, solo una lo consume; la otra es una reutilización.
+    if not sesiones.consumir(db, sesion.id):
+        sesiones.revocar_familia(db, sesion.familia)
+        auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
+        db.commit()
+        raise invalido
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
     )
-    sesion.revocado_en = ahora()
     sesion.reemplazado_por = nueva.id
     auditoria.registrar(db, "refresh", "auth", usuario.id, ip)
     db.commit()

@@ -7,7 +7,20 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.v1 import auth, meta, usuarios
+from app.api.v1 import (
+    auth,
+    canales,
+    centinela,
+    datos,
+    lluvia,
+    meta,
+    mi,
+    operacion,
+    simulacion,
+    solicitudes,
+    usuarios,
+    ws,
+)
 from app.config.settings import get_settings
 from app.core import constantes
 from app.core.cabeceras import cabeceras_de_seguridad
@@ -19,7 +32,9 @@ CODIGOS_HTTP = {
     404: "no_encontrado",
     405: "metodo_no_permitido",
     409: "conflicto",
+    413: "cuerpo_demasiado_grande",
     429: "demasiados_intentos",
+    503: "no_disponible",
 }
 
 
@@ -68,6 +83,10 @@ def crear_app() -> FastAPI:
     app.include_router(meta.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(usuarios.router, prefix="/api/v1")
+    for modulo in (datos, lluvia, canales, operacion, solicitudes, mi, centinela, ws):
+        app.include_router(modulo.router, prefix="/api/v1")
+    app.include_router(simulacion.router, prefix="/api/v1")
+    app.include_router(simulacion.router_ruteo, prefix="/api/v1")
     return app
 
 

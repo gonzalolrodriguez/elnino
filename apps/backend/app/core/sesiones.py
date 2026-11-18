@@ -43,3 +43,28 @@ def revocar_familia(db: Session, familia: str) -> int:
         .values(revocado_en=ahora())
     )
     return resultado.rowcount or 0
+
+
+def revocar_todas(db: Session, usuario_id: int) -> int:
+    """Revoca todas las sesiones activas del usuario (cambio de contraseña, baja)."""
+    resultado = db.execute(
+        update(SesionRefresh)
+        .where(SesionRefresh.usuario_id == usuario_id, SesionRefresh.revocado_en.is_(None))
+        .values(revocado_en=ahora())
+    )
+    return resultado.rowcount or 0
+
+
+def consumir(db: Session, sesion_id: int) -> bool:
+    """Marca la sesión como usada de forma atómica.
+
+    ``UPDATE ... WHERE revocado_en IS NULL`` y ``rowcount``: de dos refresh simultáneos con el mismo
+    token solo uno actualiza la fila (el otro espera el bloqueo de fila y luego no coincide), así
+    que solo uno obtiene una sesión nueva.
+    """
+    resultado = db.execute(
+        update(SesionRefresh)
+        .where(SesionRefresh.id == sesion_id, SesionRefresh.revocado_en.is_(None))
+        .values(revocado_en=ahora())
+    )
+    return resultado.rowcount == 1

@@ -2,14 +2,14 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Medidas implementadas en la **Fase 1** (backend) y su correspondencia con OWASP Top 10 (2021). Lo que aún no existe se indica en "Pendiente".
+Medidas implementadas en las **Fases 1 y 2** (backend) y su correspondencia con OWASP Top 10 (2021). Lo que aún no existe se indica en "Pendiente".
 
 ## Medidas
 
 | Área | Medida | Dónde |
 |---|---|---|
 | Contraseñas | Hash **Argon2id** (`argon2-cffi`, parámetros por defecto). Largo mínimo 10 (configurable) y máximo 128. Se verifica un hash de relleno cuando el correo no existe, para igualar tiempos. | `app/core/seguridad.py` |
-| Bloqueo por intentos | Tras `LOGIN_MAX_INTENTOS` (5) contraseñas erróneas la cuenta se bloquea `LOGIN_BLOQUEO_MINUTOS` (15) y responde **429**; el contador se reinicia con un acceso correcto. | `app/api/v1/auth.py` |
+| Bloqueo por intentos | Tras `LOGIN_MAX_INTENTOS` (5) contraseñas erróneas desde una misma IP, ese par cuenta+IP se bloquea `LOGIN_BLOQUEO_MINUTOS` (15) y responde **429**; el contador se reinicia con un acceso correcto (Fase 2). | `app/api/v1/auth.py` |
 | Rate limiting | `slowapi` por IP en login, refresh y registro (`RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRO`). | `app/core/limitador.py` |
 | Access token | JWT HS256 de 15 minutos con `sub`, `rol`, `type=access`, `jti`, `iat` y `exp` obligatorio; se rechazan tokens vencidos, de otro tipo o firmados con otra clave. | `app/core/seguridad.py` |
 | Refresh token | Aleatorio de 48 bytes, guardado solo como hash SHA-256 en `sesiones_refresh`. **Rotación** en cada uso, vencimiento de 7 días y **detección de reutilización**: presentar un token ya rotado o cerrado revoca toda la familia de sesiones. | `app/core/sesiones.py` |
@@ -43,11 +43,38 @@ Medidas implementadas en la **Fase 1** (backend) y su correspondencia con OWASP 
 ## Decisiones y límites conocidos
 
 - **Enumeración de correos:** el registro responde 409 si el correo existe. Es un compromiso de usabilidad; el login no distingue entre correo inexistente y contraseña errónea (siempre 401, o 429 si la cuenta está bloqueada).
-- **Bloqueo por cuenta:** un atacante podría bloquear temporalmente a una persona conocida. Se acepta en el prototipo; el rate limiting por IP lo acota. Alternativa a evaluar: bloqueo progresivo por par IP/cuenta.
+- **Bloqueo por cuenta:** resuelto en la Fase 2 con bloqueo por par cuenta e IP (ver más abajo).
 - **Truncamiento de la bitácora:** el hash encadenado detecta alteraciones y borrados intermedios, pero no el borrado de las últimas filas; para eso haría falta anclar periódicamente el último hash fuera de la base.
 - **Almacenamiento del limitador:** `slowapi` usa memoria del proceso; con varios procesos hay que pasar a Redis.
 - **CSRF:** el access token viaja en `Authorization` (no en cookie) y la cookie de refresh es `SameSite=Strict` con ruta restringida, lo que cubre el riesgo en la web.
 
 ## Pendiente (fases siguientes)
 
-Webhooks de canales firmados con HMAC (Fase 2), límites de tamaño y tipo MIME de adjuntos (Fase 2/5), cifrado de más campos al incorporar solicitudes con datos de salud, `pip-audit` y análisis estático en CI, inscripción de la base ante la AAIP (fuera del alcance del MVP).
+Límites de tamaño y tipo MIME de adjuntos (Fase 2/5), cifrado de más campos al incorporar solicitudes con datos de salud, `pip-audit` y análisis estático en CI, inscripción de la base ante la AAIP (fuera del alcance del MVP).
+
+
+## Fase 2: correcciones de la revisión de la Fase 1 y nuevas medidas
+
+| Área | Medida | Dónde |
+|---|---|---|
+| Sesiones al cambiar la contraseña | `PATCH /usuarios/{id}` con `password` (o con `estado: inactivo`) **revoca todas las sesiones de refresh activas** del usuario y reinicia sus contadores de bloqueo. Un refresh token robado deja de servir al cambiar la clave. | `app/api/v1/usuarios.py`, `app/core/sesiones.py` |
+| Bloqueo por cuenta e IP | Los intentos fallidos se cuentan por par (cuenta, IP) en `intentos_login`; tras `LOGIN_MAX_INTENTOS` ese par se bloquea `LOGIN_BLOQUEO_MINUTOS` y responde 429. Un atacante ya no puede dejar sin acceso a la persona titular fallando a propósito desde otra IP. Se mantiene el rate limit por IP de `slowapi`. | `app/core/bloqueo.py`, `app/api/v1/auth.py` |
+| Rotación de refresh | El token se marca como usado con `UPDATE ... WHERE revocado_en IS NULL` y se verifica `rowcount == 1` **antes** de emitir el nuevo. Con dos solicitudes simultáneas con el mismo token, solo una obtiene sesión; la otra se trata como reutilización y revoca la familia. | `app/core/sesiones.py` (`consumir`), `app/api/v1/auth.py` |
+| Webhooks de canales | Firma HMAC SHA-256 del cuerpo crudo en `X-Hub-Signature-256` (esquema de Meta), comparación en tiempo constante, tope de 64 KB, secreto `CANAL_HMAC_SECRET` (mínimo 16 caracteres; sin él, 503). Todos los mensajes del lote se validan antes de guardar alguno. | `app/api/v1/canales.py` |
+| WebSocket | El token de acceso viaja **solo en el primer mensaje** (nunca en la URL, para que no quede en registros de acceso), con plazo de 5 segundos; sin token válido se cierra con el código 1008. Cada conexión recibe solo los eventos que su rol puede ver. | `app/api/v1/ws.py`, `app/core/eventos.py` |
+| Órdenes | Solo el rol `decisor` emite órdenes (403 para el resto); cada orden queda con el rol del emisor, en la bitácora de accesos y con un borrador de bitácora K8. | `app/api/v1/operacion.py` |
+| Datos personales | El recomendador cuenta vulnerables por edad y **no descifra** datos de salud; las solicitudes y `/mi/grupo-familiar` registran lecturas en la bitácora de accesos. Un ciudadano solo ve sus solicitudes y notificaciones (404 sobre las ajenas). | `app/servicios/recomendacion.py`, `app/api/v1/mi.py` |
+| Subida de la planilla | Tope de 5 MB, comprobación de que el archivo sea un `.xlsx` (firma ZIP), máximo de 5.000 filas y lectura de solo valores (no se evalúan fórmulas). | `app/servicios/lluvia.py` |
+| Ruteo | El SQL de `pgr_dijkstra` se arma solo con constantes numéricas de `supuestos.yaml` e ids de sectores validados contra una lista de caracteres; las coordenadas y los ids viajan como parámetros enlazados. | `app/servicios/ruteo.py` |
+
+### Compromiso del bloqueo por cuenta e IP
+
+- **Qué se gana:** la víctima no queda bloqueada por intentos ajenos desde otras IP; el bloqueo por intentos fallidos deja de ser una forma barata de denegar el servicio a una persona conocida.
+- **Qué se pierde:** quien adivina contraseñas con muchas IP obtiene `LOGIN_MAX_INTENTOS` intentos por IP. Lo acotan el costo de Argon2, el rate limit por IP y la longitud mínima de contraseña.
+- **Cómo se detecta:** cada bloqueo registra un evento `cuenta_bloqueada` con la IP en la bitácora de accesos; muchas IP distintas contra una misma cuenta es la señal.
+- **Pendiente:** un umbral global por cuenta (más alto que el de cada par) con verificación adicional, y MFA para los usuarios institucionales.
+- Las columnas `usuarios.intentos_fallidos` y `usuarios.bloqueado_hasta` de la Fase 1 ya no se usan en el login (quedan sin efecto; se reinician en el cambio de contraseña).
+
+### Pendiente (fases siguientes)
+
+Límites de tamaño y tipo MIME de adjuntos de solicitudes (Fase 5), idempotencia de mensajes de canales por identificador del proveedor, límite de conexiones WebSocket por usuario, `pip-audit` en la CI.

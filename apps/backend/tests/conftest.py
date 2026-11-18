@@ -22,6 +22,7 @@ os.environ["DEMO_PASSWORD"] = "ClaveDemoPruebas2026"
 os.environ["COOKIE_SECURE"] = "false"
 os.environ["RATE_LIMIT_ACTIVO"] = "false"
 os.environ["LOGIN_MAX_INTENTOS"] = "5"
+os.environ["CANAL_HMAC_SECRET"] = "secreto-canales-solo-para-pruebas"
 
 from app.config.settings import get_settings  # noqa: E402
 
@@ -134,3 +135,35 @@ def token_admin(client):
 
 def bearer(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+DEMO = {
+    "admin": "admin@demo.evacuaciones.invalid",
+    "decisor": "decisor@demo.evacuaciones.invalid",
+    "operador": "operador@demo.evacuaciones.invalid",
+    "cuadrilla": "cuadrilla@demo.evacuaciones.invalid",
+    "ciudadano1": "ciudadano1@demo.evacuaciones.invalid",
+    "ciudadano2": "ciudadano2@demo.evacuaciones.invalid",
+    "productor1": "productor1@demo.evacuaciones.invalid",
+    "productor2": "productor2@demo.evacuaciones.invalid",
+}
+
+
+def cabecera_demo(client: TestClient, clave: str) -> dict:
+    """Authorization de un usuario de demostración (ver ``DEMO``)."""
+    r = iniciar_sesion(client, DEMO[clave], os.environ["DEMO_PASSWORD"])
+    assert r.status_code == 200, r.text
+    return bearer(r.json()["access_token"])
+
+
+@pytest.fixture
+def como(client):
+    """``como("operador")`` devuelve la cabecera Authorization de ese usuario de demostración."""
+    cache: dict[str, dict] = {}
+
+    def _como(clave: str) -> dict:
+        if clave not in cache:
+            cache[clave] = cabecera_demo(client, clave)
+        return cache[clave]
+
+    return _como

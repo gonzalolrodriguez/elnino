@@ -1,13 +1,19 @@
 """Configuración leída desde variables de entorno (ver .env.example)."""
 
 import base64
+import os
 from functools import lru_cache
 from pathlib import Path
 
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-RAIZ_REPO = Path(__file__).resolve().parents[4]
+_RUTA = Path(__file__).resolve()
+# En el repositorio: <raíz>/apps/backend/app/config/settings.py. En el contenedor la ruta es
+# más corta (/srv/app/config/settings.py) y no hay raíz de repositorio: se usa DATA_DIR.
+RAIZ_REPO = _RUTA.parents[4] if len(_RUTA.parents) > 4 else _RUTA.parents[-1]
+# Carpeta `data/` (kit, processed, simulado, geo). Configurable con DATA_DIR para Docker.
+DATA_DIR = Path(os.environ.get("DATA_DIR") or RAIZ_REPO / "data")
 
 
 class Settings(BaseSettings):
@@ -30,6 +36,9 @@ class Settings(BaseSettings):
     rate_limit_registro: str = "10/minute"
     cookie_secure: bool = True
 
+    # Secreto compartido para firmar (HMAC SHA-256) los webhooks de los canales simulados.
+    canal_hmac_secret: str = ""
+
     # Contraseñas de los usuarios de demostración (solo para `python -m app.db.seed`).
     demo_password: str = ""
     demo_admin_password: str = ""
@@ -45,6 +54,11 @@ class Settings(BaseSettings):
         if url.startswith("postgresql://"):
             return "postgresql+psycopg://" + url[len("postgresql://") :]
         return url
+
+    def secreto_canales(self) -> str:
+        if len(self.canal_hmac_secret) < 16 or self.canal_hmac_secret.startswith("CAMBIAR"):
+            raise RuntimeError("CANAL_HMAC_SECRET no configurado (mínimo 16 caracteres)")
+        return self.canal_hmac_secret
 
     def secreto_jwt(self) -> str:
         if len(self.jwt_secret) < 32 or self.jwt_secret.startswith("CAMBIAR"):
@@ -70,3 +84,8 @@ def get_settings() -> Settings:
 def cargar_supuestos() -> dict:
     ruta = Path(__file__).with_name("supuestos.yaml")
     return yaml.safe_load(ruta.read_text(encoding="utf-8"))
+
+
+def supuesto(nombre: str):
+    """Valor de un supuesto de ``supuestos.yaml`` (cada entrada tiene ``valor`` y ``fuente``)."""
+    return cargar_supuestos()[nombre]["valor"]

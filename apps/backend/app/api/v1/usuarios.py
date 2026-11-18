@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.v1.esquemas import UsuarioActualizar, UsuarioCrear, UsuarioOut
-from app.core import auditoria
+from app.core import auditoria, sesiones
 from app.core.rbac import ROLES_INSTITUCIONALES, ip_cliente, requiere_rol
 from app.core.seguridad import hashear_password
-from app.db.modelos import RolOperativo, Usuario
+from app.db.modelos import IntentoLogin, RolOperativo, Usuario
 from app.db.sesion import get_db
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -94,6 +94,10 @@ def actualizar(
         usuario.hash_password = hashear_password(password)
         usuario.intentos_fallidos = 0
         usuario.bloqueado_hasta = None
+    # Un cambio de contraseña o una baja cierra todas las sesiones abiertas del usuario.
+    if password is not None or cambios.get("estado") == "inactivo":
+        sesiones.revocar_todas(db, usuario.id)
+        db.execute(delete(IntentoLogin).where(IntentoLogin.usuario_id == usuario.id))
     auditoria.registrar(
         db,
         "usuario_modificado",

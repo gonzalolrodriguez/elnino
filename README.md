@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 1** (datos y seguridad base) sobre el esqueleto de la Fase 0: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, y autenticación con roles, cifrado de campos sensibles y bitácora de accesos con hash encadenado.
+Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 2** (motor) sobre las fases 0 y 1: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, autenticación con roles, cifrado de campos sensibles, bitácora de accesos con hash encadenado, y el motor de simulación (escenario, ISAD, recomendador, alternativas, ruteo con pgRouting, Arca Productiva, cuadrillas, lluvia, canales simulados, órdenes, bitácora K8, verificadores K6/K7 y WebSocket).
 
 ## Requisitos y versiones
 
@@ -49,7 +49,7 @@ openssl rand -hex 32                                                        # JW
 python -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"  # FIELD_ENCRYPTION_KEY
 ```
 
-**Backend** (con Docker, junto con la base): `docker compose up backend`. Local:
+**Backend** (con Docker, junto con la base): `docker compose up -d --build backend` (aplica migraciones y seed; ver más abajo). Local:
 
 ```bash
 cd apps/backend
@@ -132,11 +132,56 @@ Contrato completo en `docs/contrato_api.md`; medidas de seguridad en `docs/segur
 Las pruebas del backend usan una base PostGIS separada (`evacuaciones_test`, en el mismo servidor que `DATABASE_URL`; se puede fijar otra con `TEST_DATABASE_URL`). Al iniciar, `pytest` recrea el esquema, aplica las migraciones y carga los seeds; si no hay base disponible, las pruebas que la necesitan se omiten. El usuario de la base debe poder crear bases de datos.
 
 ```bash
-cd apps/backend && ruff check . && pytest -q
+cd apps/backend && ruff check . && pytest -q   # 177+ pruebas, incluidas las de la Fase 2
 pnpm test          # vitest de la web
 pnpm typecheck     # tsc --noEmit en web, móvil y shared
 pnpm lint
 ```
+
+
+## Probar el motor de simulación (Fase 2)
+
+Con el backend en marcha y la base sembrada (el seed crea además dos cuadrillas de demostración):
+
+```bash
+API=http://localhost:8000/api/v1
+TOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"operador@demo.evacuaciones.invalid","password":"'"$DEMO_PASSWORD"'"}' \
+  | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+# Flujo principal: con 7,60 m y 40 mm, S4 queda comprometido y aislado; S1 y S3 en riesgo; S2 normal
+curl -s -X POST $API/simulacion/escenario -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"altura_formosa_m":7.6,"lluvia_mm":40,"caminos_cerrados":[]}'
+
+# Entrada inválida: altura fuera de 0 a 12 m -> 422
+curl -s -X POST $API/simulacion/escenario -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"altura_formosa_m":13}'
+```
+
+El resto de los endpoints (recomendador, alternativas, ruteo, Arca Productiva, lluvia, canales con HMAC, órdenes, bitácora, verificadores y WebSocket) está en `docs/contrato_api.md` con ejemplos `curl`.
+
+**Red vial para el ruteo.** Sin red cargada, `POST /ruteo` usa una estimación aproximada con su limitación explícita. Para usar pgRouting con la red real (OpenStreetMap, ya partida en nodos):
+
+```bash
+cd apps/backend
+python -m app.ingest.red_vial                 # carga data/geo/red_vial.geojson (o pasar otra ruta)
+```
+
+El archivo es un GeoJSON de `LineString`; propiedades reconocidas: `nombre`, `superficie` (`pavimento`, `ripio`, `tierra` o `desconocida`; si falta se infiere de `surface` o `highway` de OSM) y, si la red ya está partida en nodos, `nodo_ini` y `nodo_fin`. Reemplaza la red anterior (`--agregar` la suma).
+
+**Canales simulados.** Definir `CANAL_HMAC_SECRET` (mínimo 16 caracteres) en `.env`; cada petición debe llevar `X-Hub-Signature-256: sha256=<HMAC-SHA256 del cuerpo>` (ver `docs/contrato_api.md`).
+
+**WebSocket.** `ws://localhost:8000/api/v1/ws`: el primer mensaje debe ser `{"token": "<access_token>"}`; el token no va en la URL.
+
+## Backend con Docker
+
+```bash
+docker compose up -d --build backend     # levanta db y backend; aplica migraciones y seed al iniciar
+curl http://localhost:8000/api/v1/salud
+docker compose stop
+```
+
+El servicio monta `./data` en `/data` (solo lectura; variable `DATA_DIR`). Requiere `JWT_SECRET`, `FIELD_ENCRYPTION_KEY`, `DEMO_PASSWORD` y `CANAL_HMAC_SECRET` en `.env`.
 
 ## Estructura
 

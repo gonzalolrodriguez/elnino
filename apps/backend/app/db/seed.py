@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.config.settings import RAIZ_REPO, get_settings
+from app.config.settings import DATA_DIR, get_settings
 from app.core import cifrado
 from app.core.seguridad import hashear_password
 from app.db.base import SRID, ahora
@@ -28,9 +28,11 @@ from app.db.consultas import sector_de_punto
 from app.db.modelos import (
     Acceso,
     CentroRecepcion,
+    Cuadrilla,
     Establecimiento,
     Estacion,
     GrupoFamiliar,
+    IntegranteCuadrilla,
     LecturaHidrometrica,
     PuestoPluviometrico,
     RecursoSimulado,
@@ -42,8 +44,8 @@ from app.db.modelos import (
 from app.db.sesion import get_sessionmaker
 from app.ingest import limpieza_k1
 
-KIT = RAIZ_REPO / "data" / "kit"
-SIMULADO = RAIZ_REPO / "data" / "simulado"
+KIT = DATA_DIR / "kit"
+SIMULADO = DATA_DIR / "simulado"
 
 CAT_OBSERVADO = "DATO OBSERVADO"
 CAT_SIMULADO = "SIMULADO"
@@ -302,6 +304,33 @@ def sembrar_usuarios(db: Session) -> int:
     return nuevos
 
 
+def sembrar_cuadrillas(db: Session) -> int:
+    datos = _json(SIMULADO / "cuadrillas.json")
+    nuevas = 0
+    for c in datos["cuadrillas"]:
+        if db.execute(select(Cuadrilla.id).where(Cuadrilla.nombre == c["nombre"])).first():
+            continue
+        cuadrilla = Cuadrilla(nombre=c["nombre"], tipo_incidente=c["tipo_incidente"])
+        db.add(cuadrilla)
+        db.flush()
+        for i in c["integrantes"]:
+            usuario_id = None
+            if i.get("usuario_email"):
+                usuario_id = db.execute(
+                    select(Usuario.id).where(Usuario.email == i["usuario_email"])
+                ).scalar_one_or_none()
+            db.add(
+                IntegranteCuadrilla(
+                    cuadrilla_id=cuadrilla.id,
+                    usuario_id=usuario_id,
+                    rol_operativo=i["rol_operativo"],
+                )
+            )
+        nuevas += 1
+    db.flush()
+    return nuevas
+
+
 def sembrar_todo(db: Session) -> dict[str, int]:
     resultado = {
         "roles_operativos": sembrar_roles_operativos(db),
@@ -313,6 +342,7 @@ def sembrar_todo(db: Session) -> dict[str, int]:
         "recursos_nuevos": sembrar_recursos(db),
         "puestos_nuevos": sembrar_puestos(db),
         "usuarios_demo_nuevos": sembrar_usuarios(db),
+        "cuadrillas_nuevas": sembrar_cuadrillas(db),
     }
     db.commit()
     return resultado

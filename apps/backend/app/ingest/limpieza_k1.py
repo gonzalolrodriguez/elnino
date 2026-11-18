@@ -21,11 +21,11 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from app.config.settings import RAIZ_REPO
+from app.config.settings import DATA_DIR, RAIZ_REPO
 
-RUTA_ORIGINAL = RAIZ_REPO / "data" / "kit" / "P1_DATA_INTEGRITY_dataset_participantes_v1.csv"
-RUTA_LIMPIO = RAIZ_REPO / "data" / "processed" / "k1_limpio.csv"
-RUTA_DIARIO = RAIZ_REPO / "data" / "processed" / "k1_diario.csv"
+RUTA_ORIGINAL = DATA_DIR / "kit" / "P1_DATA_INTEGRITY_dataset_participantes_v1.csv"
+RUTA_LIMPIO = DATA_DIR / "processed" / "k1_limpio.csv"
+RUTA_DIARIO = DATA_DIR / "processed" / "k1_diario.csv"
 RUTA_REGISTRO = RAIZ_REPO / "docs" / "registro_limpieza.md"
 
 FECHA_INICIO = date(2006, 1, 1)

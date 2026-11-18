@@ -73,3 +73,60 @@ def resumen_periodo(
 
 def resumen_todos(serie: dict[date, float]) -> list[ResumenAscenso]:
     return [resumen_periodo(serie, nombre) for nombre in PERIODOS]
+
+
+# --- Tiempo restante (CLAUDE.md §8.9): proyección lineal, SUPUESTO con rango ---------------------
+
+SUPUESTO_LINEAL = (
+    "Proyección lineal a tasa constante: es un SUPUESTO, no un pronóstico (el INA no pronostica "
+    "a más de 15 días). El rango va de la tasa más rápida a la más lenta observadas."
+)
+
+
+@dataclass(frozen=True)
+class TiempoRestante:
+    objetivo_m: float
+    altura_actual_m: float
+    ya_alcanzado: bool
+    dias_minimo: float | None  # con la tasa más alta
+    dias_maximo: float | None  # con la tasa más baja
+    por_tasa: dict[str, float]  # días restantes con cada tasa (m/día)
+
+
+def tasas_m_dia(serie: dict[date, float]) -> dict[str, float]:
+    """Tasas de ascenso (m/día) de cada período: mayor suba diaria y mayor suba semanal / 7.
+
+    Para octubre de 2026 se agrega el promedio del mes ((31/10 - 01/10) / 30 días), que es la tasa
+    que la afirmación "11 cm por día" de K6 resume.
+    """
+    tasas: dict[str, float] = {}
+    for nombre in PERIODOS:
+        r = resumen_periodo(serie, nombre)
+        if r.mayor_suba_1d and r.mayor_suba_1d.metros > 0:
+            tasas[f"{nombre}: mayor suba diaria"] = r.mayor_suba_1d.metros
+        if r.mayor_suba_7d and r.mayor_suba_7d.metros > 0:
+            tasas[f"{nombre}: mayor suba semanal / 7"] = round(r.mayor_suba_7d.metros / 7, 4)
+    inicio, fin = date(2026, 10, 1), date(2026, 10, 31)
+    if inicio in serie and fin in serie and serie[fin] > serie[inicio]:
+        tasas["oct-2026: promedio del mes"] = round((serie[fin] - serie[inicio]) / 30, 4)
+    return tasas
+
+
+def tiempo_restante(
+    altura_actual_m: float, objetivo_m: float, tasas: dict[str, float]
+) -> TiempoRestante:
+    """Días hasta alcanzar ``objetivo_m`` con cada tasa; rango = (tasa más alta, tasa más baja)."""
+    if altura_actual_m >= objetivo_m:
+        return TiempoRestante(objetivo_m, altura_actual_m, True, 0.0, 0.0, {})
+    falta = objetivo_m - altura_actual_m
+    por_tasa = {nombre: round(falta / t, 1) for nombre, t in tasas.items() if t > 0}
+    if not por_tasa:
+        return TiempoRestante(objetivo_m, altura_actual_m, False, None, None, {})
+    return TiempoRestante(
+        objetivo_m,
+        altura_actual_m,
+        False,
+        min(por_tasa.values()),
+        max(por_tasa.values()),
+        por_tasa,
+    )
