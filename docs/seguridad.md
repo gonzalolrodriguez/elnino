@@ -110,7 +110,18 @@ Compromisos:
 - La app móvil permite elegir en tiempo de ejecución la URL del backend (pantalla de bienvenida y Perfil) para que un solo APK funcione en cualquier red. La URL no es un secreto; se guarda con `expo-secure-store`. Se valida (solo `http(s)://`) y se normaliza.
 - Cambiar de servidor con la sesión abierta cierra la sesión local (los tokens pertenecen al otro servidor) y la cola offline solo se conserva si el usuario lo elige.
 - **Compromiso:** el backend de una red local se atiende por `http://`, por lo que el APK habilita tráfico sin cifrar (`android.usesCleartextTraffic = true`, plugin `expo-build-properties` en `apps/mobile/app.json`). En una red Wi-Fi compartida, credenciales y datos de la persona podrían ser interceptados. Es aceptable solo para el prototipo en una LAN controlada y con datos de demostración. **En producción debe usarse HTTPS** (certificado válido) y quitar `usesCleartextTraffic`; la app ya admite `https://` y `wss://`.
-- El campo «Servidor» permite apuntar la app a otro host: un atacante con acceso físico al teléfono desbloqueado podría redirigirla. Mitigación prevista para producción: fijar el servidor en la compilación y ocultar la opción.
+- El campo «Servidor» permite apuntar la app a otro host: un atacante con acceso físico al teléfono desbloqueado podría redirigirla.
+
+#### Hallazgos de la revisión de seguridad automatizada y mitigaciones (APK)
+
+| # | Hallazgo | Mitigación aplicada | Riesgo residual |
+|---|---|---|---|
+| 1 | **Tráfico sin cifrar habilitado en toda la app** (`usesCleartextTraffic = true`), necesario para el backend de la LAN de la demo. | Login y registro muestran, encima del botón de envío, una advertencia (rol `alert`, anunciada por lectores de pantalla): «Conexión sin cifrar (http). Tu contraseña viaja sin protección: usala solo en la red de la demo y con datos de prueba.». Con `https://` no aparece. La misma advertencia se ve en «Servidor» al escribir una URL `http://`. | El APK sigue aceptando `http://` hacia cualquier host: la advertencia informa, no impide. |
+| 2 | **El ajuste de servidor de la bienvenida permite redirigir las credenciales a cualquier host.** | (a) Login y registro muestran siempre `Servidor: host:puerto` y un acceso «Cambiar servidor»; sin servidor configurado el envío se bloquea («Configurá el servidor antes de ingresar»). (b) Guardar una URL `http://` hacia un host **público** (IP o dominio fuera de 10/8, 172.16/12, 192.168/16, 127/8 y localhost) exige confirmar «Entiendo el riesgo»; las redes privadas solo muestran la advertencia. (c) Se rechazan URL con credenciales embebidas (`http://192.168.1.1@otro.host`), que disfrazarían el host real. (d) Cambiar de servidor con sesión abierta la cierra. | Quien tenga el teléfono desbloqueado puede cambiar el servidor y confirmar el riesgo; un usuario poco atento puede ignorar la advertencia. Un host con nombre de red privada controlado por un atacante en la misma LAN no se distingue de la demo. |
+
+Archivos: `apps/mobile/src/lib/servidor.ts` (`esHostPrivado`, `requiereConfirmarRiesgo`), `src/components/ServidorEnUso.tsx`, `src/components/ConfigServidor.tsx`, `src/app/login.tsx`, `src/app/registro.tsx`. Pruebas: `src/__tests__/credenciales.test.tsx` y `servidor.test.tsx`.
+
+**Requisito para producción (no cumplido por el prototipo):** servicio solo por HTTPS con certificado válido; quitar `usesCleartextTraffic` (y, si hace falta, restringirlo con una `network_security_config` a los dominios necesarios); fijar el servidor (o una lista cerrada) en la compilación y **ocultar el ajuste «Servidor»** en las compilaciones de producción, de modo que las credenciales solo puedan enviarse a un host autorizado.
 
 Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), A05 (tipos y tamaños de archivo acotados), A08 (nombres de archivo generados por el servidor), A02 (tráfico sin cifrar aceptado solo en el prototipo en LAN).
 

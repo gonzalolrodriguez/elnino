@@ -21,6 +21,8 @@
 - [x] M5.11 (pedido del coordinador) Foto como segundo tiempo con reintento propio, `Idempotency-Key` persistida en sqlite, `geometria` y `lon/lat` del centro desde `GET /mi/sector` (con respaldo a `/sectores` y `/centros`)
 - [x] M5.12 (pedido del coordinador) Servidor configurable en tiempo de ejecución: `src/lib/servidor.ts` (URL guardada en expo-secure-store, por defecto `EXPO_PUBLIC_API_URL`, leída en cada llamada por HTTP, cola, fotos y WebSocket), componente `ConfigServidor` en bienvenida y Perfil (probar conexión `GET /salud` 5 s, guardar, restablecer, cierre de sesión local con conservar/descartar pendientes), `usesCleartextTraffic` vía `expo-build-properties`, documentación en README y `docs/seguridad.md`
 
+- [x] M5.13 (revisión de seguridad) Mitigaciones de http y servidor configurable: servidor visible y «Cambiar servidor» en login y registro (envío bloqueado sin servidor), advertencia http accesible, confirmación «Entiendo el riesgo» para http hacia hosts públicos en `ConfigServidor`, detección de rangos privados, rechazo de credenciales embebidas en la URL; `docs/seguridad.md` actualizado (hallazgos, riesgo residual, requisito de producción)
+
 ## Ruta
 Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado por el coordinador).
 

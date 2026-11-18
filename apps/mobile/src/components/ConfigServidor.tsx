@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
+import { AvisoHttp } from "@/components/ServidorEnUso";
 import { Boton, COLOR, Campo, Tarjeta, Texto } from "@/components/ui";
 import {
   cargarServidor,
+  direccionServidor,
   escucharServidor,
+  esUrlHttp,
   guardarServidor,
   hayServidorPersonalizado,
   normalizarUrlServidor,
   obtenerUrlServidor,
   probarConexion,
+  requiereConfirmarRiesgo,
   restablecerServidor,
   urlPorDefecto,
   type ResultadoPrueba,
@@ -37,6 +41,8 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
   const [prueba, setPrueba] = useState<Prueba>({ tipo: "inactiva" });
   const [pendienteCambio, setPendienteCambio] = useState<Cambio | null>(null);
   const [aplicando, setAplicando] = useState(false);
+  /** Cambio hacia un host público por http: espera «Entiendo el riesgo». */
+  const [riesgo, setRiesgo] = useState<Cambio | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -93,6 +99,13 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
     else void aplicar(cambio, false);
   };
 
+  /** Pide confirmación explícita si el destino es http hacia un host público; si no, continúa. */
+  const pedir = (cambio: Cambio) => {
+    const destino = cambio.destino ?? urlPorDefecto();
+    if (destino && requiereConfirmarRiesgo(destino)) setRiesgo(cambio);
+    else solicitar(cambio);
+  };
+
   const guardar = () => {
     const r = normalizarUrlServidor(texto);
     if (!r.ok) {
@@ -100,12 +113,12 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
       return;
     }
     setError(null);
-    solicitar({ destino: r.url });
+    pedir({ destino: r.url });
   };
 
   const restablecer = () => {
     setError(null);
-    solicitar({ destino: null });
+    pedir({ destino: null });
   };
 
   return (
@@ -129,6 +142,10 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
         keyboardType="url"
         placeholder="http://192.168.1.50:8000"
       />
+      {(() => {
+        const r = normalizarUrlServidor(texto);
+        return r.ok && esUrlHttp(r.url) ? <AvisoHttp /> : null;
+      })()}
       <Text style={{ fontSize: 12, color: COLOR.suave }}>
         Ej.: http://192.168.1.50:8000 — la IP de la computadora que corre el backend, en la misma red Wi-Fi.
       </Text>
@@ -146,7 +163,26 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
         </Text>
       )}
 
-      {pendienteCambio ? (
+      {riesgo ? (
+        <View style={{ gap: 8, borderWidth: 1, borderColor: COLOR.error, borderRadius: 8, padding: 10 }}>
+          <Text style={{ fontWeight: "700", color: COLOR.error }} accessibilityRole="alert">
+            Servidor público sin cifrar
+          </Text>
+          <Texto>
+            {`«${direccionServidor(riesgo.destino ?? urlPorDefecto())}» no es una red local y se accede por http: cualquiera en el camino podría leer tu contraseña y tus datos. Confirmá solo si conocés y controlás ese servidor.`}
+          </Texto>
+          <Boton
+            titulo="Entiendo el riesgo"
+            variante="peligro"
+            onPress={() => {
+              const cambio = riesgo;
+              setRiesgo(null);
+              solicitar(cambio);
+            }}
+          />
+          <Boton titulo="Cancelar" variante="secundario" onPress={() => setRiesgo(null)} />
+        </View>
+      ) : pendienteCambio ? (
         <View style={{ gap: 8, borderWidth: 1, borderColor: COLOR.aviso, borderRadius: 8, padding: 10 }}>
           <Text style={{ fontWeight: "700", color: COLOR.aviso }}>Se cerrará tu sesión</Text>
           <Texto>

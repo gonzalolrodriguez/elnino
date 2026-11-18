@@ -1,7 +1,8 @@
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 
+import { ServidorEnUso, useServidorActual } from "@/components/ServidorEnUso";
 import { Boton, Campo, ErrorCaja, Pantalla, Texto, Titulo } from "@/components/ui";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
 import { mensajeError } from "@/lib/errores";
@@ -17,6 +18,8 @@ const entero = (v: string, por: number): number => {
 
 export default function Registro() {
   const { estado, entrar } = useSesion();
+  const router = useRouter();
+  const servidor = useServidorActual();
   const [tipo, setTipo] = useState<TipoCuenta>("ciudadano");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,6 +51,7 @@ export default function Registro() {
   if (!email.trim()) faltantes.push("correo");
   if (password.length < 10) faltantes.push("contraseña de al menos 10 caracteres");
   if (nombre.trim().length < 2) faltantes.push("nombre");
+  if (!servidor) faltantes.push("servidor configurado");
   if (!consentimiento) faltantes.push("consentimiento");
   if (tipo === "productor" && (nombreEst.trim().length < 2 || !ubicacion)) {
     faltantes.push("establecimiento y ubicación de la tranquera");
@@ -178,6 +182,7 @@ export default function Registro() {
       </View>
 
       {error ? <ErrorCaja mensaje={error} /> : null}
+      <ServidorEnUso url={servidor} onCambiar={() => router.push("/")} />
       {faltantes.length > 0 ? <Texto suave>Falta: {faltantes.join(", ")}.</Texto> : null}
       <Boton
         titulo="Crear cuenta"

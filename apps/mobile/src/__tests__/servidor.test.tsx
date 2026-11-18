@@ -3,6 +3,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { obtenerSalud, peticion } from "@/lib/api";
 import {
+  esHostPrivado,
+  hostDeUrl,
+  requiereConfirmarRiesgo,
   guardarServidor,
   normalizarUrlServidor,
   obtenerUrlServidor,
@@ -141,6 +144,79 @@ describe("probarConexion", () => {
   });
 });
 
+describe("detección de hosts privados", () => {
+  it.each([
+    "localhost", "127.0.0.1", "127.255.0.3", "10.0.0.1", "10.254.197.232", "172.16.0.1", "172.31.255.255",
+    "192.168.0.1", "192.168.1.50", "[::1]",
+  ])("%s es privado", (h) => expect(esHostPrivado(h)).toBe(true));
+
+  it.each([
+    "8.8.8.8", "172.15.0.1", "172.32.0.1", "192.169.0.1", "11.0.0.1", "200.1.2.3", "10.0.0.256",
+    "10.0.0.1.evil.com", "ejemplo.com", "mi-servidor.local", "",
+  ])("%p es público", (h) => expect(esHostPrivado(h)).toBe(false));
+
+  it("extrae el host de la URL (sin puerto) y rechaza credenciales embebidas", () => {
+    expect(hostDeUrl("http://10.254.197.232:8000")).toBe("10.254.197.232");
+    expect(hostDeUrl("https://API.Ejemplo.com/x")).toBe("api.ejemplo.com");
+    expect(normalizarUrlServidor("http://192.168.1.1@evil.com").ok).toBe(false);
+  });
+
+  it("solo exige confirmar http hacia hosts públicos", () => {
+    expect(requiereConfirmarRiesgo("http://ejemplo.com:8000")).toBe(true);
+    expect(requiereConfirmarRiesgo("http://8.8.8.8")).toBe(true);
+    expect(requiereConfirmarRiesgo("http://10.0.0.5:8000")).toBe(false);
+    expect(requiereConfirmarRiesgo("http://192.168.1.50:8000")).toBe(false);
+    expect(requiereConfirmarRiesgo("https://ejemplo.com")).toBe(false);
+  });
+});
+
+describe("ConfigServidor · riesgo de http", () => {
+  const ADVERTENCIA = /Conexión sin cifrar \(http\)/;
+
+  it("muestra la advertencia al escribir una URL http y no con https", async () => {
+    await render(<ConfigServidor />);
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://192.168.1.50:8000");
+    expect(screen.getByText(ADVERTENCIA)).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "https://segura.ejemplo.com");
+    expect(screen.queryByText(ADVERTENCIA)).toBeNull();
+  });
+
+  it.each(["http://10.254.197.232:8000", "http://192.168.1.50:8000"])(
+    "guarda %s sin pedir «Entiendo el riesgo» (solo advierte)",
+    async (url) => {
+      await render(<ConfigServidor />);
+      await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), url);
+      expect(screen.getByText(ADVERTENCIA)).toBeTruthy();
+      await fireEvent.press(screen.getByLabelText("Guardar"));
+      await waitFor(() => expect(obtenerUrlServidor()).toBe(url));
+      expect(screen.queryByText("Servidor público sin cifrar")).toBeNull();
+    },
+  );
+
+  it("un host público por http exige confirmación explícita y se puede cancelar", async () => {
+    await render(<ConfigServidor />);
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://ejemplo.com:8000");
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    expect(await screen.findByText("Servidor público sin cifrar")).toBeTruthy();
+    expect(obtenerUrlServidor()).toBe("");
+
+    await fireEvent.press(screen.getByLabelText("Cancelar"));
+    expect(obtenerUrlServidor()).toBe("");
+    expect(screen.queryByText("Servidor público sin cifrar")).toBeNull();
+
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    await fireEvent.press(await screen.findByLabelText("Entiendo el riesgo"));
+    await waitFor(() => expect(obtenerUrlServidor()).toBe("http://ejemplo.com:8000"));
+  });
+
+  it("un host público por https se guarda sin confirmación", async () => {
+    await render(<ConfigServidor />);
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "https://ejemplo.com");
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    await waitFor(() => expect(obtenerUrlServidor()).toBe("https://ejemplo.com"));
+  });
+});
+
 describe("ConfigServidor", () => {
   it("muestra el resultado de «Probar conexión» (éxito y error)", async () => {
     await render(<ConfigServidor />);
@@ -170,50 +246,50 @@ describe("ConfigServidor", () => {
   });
 
   it("con sesión, cambiar de servidor pide confirmar y cierra la sesión local", async () => {
-    await guardarServidor("http://viejo.invalid:8000");
+    await guardarServidor("http://192.168.1.10:8000");
     const sesion = {
       pendientes: 0,
       descartarPendientes: jest.fn(async () => undefined),
       cerrarSesionLocal: jest.fn(async () => undefined),
     };
     await render(<ConfigServidor sesion={sesion} />);
-    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://nuevo.invalid:8000");
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://192.168.1.20:8000");
     await fireEvent.press(screen.getByLabelText("Guardar"));
     expect(await screen.findByText("Se cerrará tu sesión")).toBeTruthy();
     expect(sesion.cerrarSesionLocal).not.toHaveBeenCalled();
-    expect(obtenerUrlServidor()).toBe("http://viejo.invalid:8000");
+    expect(obtenerUrlServidor()).toBe("http://192.168.1.10:8000");
 
     await fireEvent.press(screen.getByLabelText("Cambiar servidor y cerrar sesión"));
-    await waitFor(() => expect(obtenerUrlServidor()).toBe("http://nuevo.invalid:8000"));
+    await waitFor(() => expect(obtenerUrlServidor()).toBe("http://192.168.1.20:8000"));
     expect(sesion.cerrarSesionLocal).toHaveBeenCalledTimes(1);
     expect(sesion.descartarPendientes).not.toHaveBeenCalled();
   });
 
   it("con pendientes permite conservarlos o descartarlos", async () => {
-    await guardarServidor("http://viejo.invalid:8000");
+    await guardarServidor("http://192.168.1.10:8000");
     const sesion = {
       pendientes: 2,
       descartarPendientes: jest.fn(async () => undefined),
       cerrarSesionLocal: jest.fn(async () => undefined),
     };
     await render(<ConfigServidor sesion={sesion} />);
-    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://nuevo.invalid:8000");
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://192.168.1.20:8000");
     await fireEvent.press(screen.getByLabelText("Guardar"));
     expect(await screen.findByText(/Tenés 2 solicitud/)).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Descartar pendientes"));
-    await waitFor(() => expect(obtenerUrlServidor()).toBe("http://nuevo.invalid:8000"));
+    await waitFor(() => expect(obtenerUrlServidor()).toBe("http://192.168.1.20:8000"));
     expect(sesion.descartarPendientes).toHaveBeenCalledTimes(1);
     expect(sesion.cerrarSesionLocal).toHaveBeenCalledTimes(1);
   });
 
   it("cancelar no cambia nada ni cierra la sesión", async () => {
-    await guardarServidor("http://viejo.invalid:8000");
+    await guardarServidor("http://192.168.1.10:8000");
     const sesion = { pendientes: 0, descartarPendientes: jest.fn(), cerrarSesionLocal: jest.fn() };
     await render(<ConfigServidor sesion={sesion} />);
-    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://nuevo.invalid:8000");
+    await fireEvent.changeText(screen.getByLabelText("Dirección del servidor"), "http://192.168.1.20:8000");
     await fireEvent.press(screen.getByLabelText("Guardar"));
     await fireEvent.press(await screen.findByLabelText("Cancelar"));
     expect(sesion.cerrarSesionLocal).not.toHaveBeenCalled();
-    expect(obtenerUrlServidor()).toBe("http://viejo.invalid:8000");
+    expect(obtenerUrlServidor()).toBe("http://192.168.1.10:8000");
   });
 });

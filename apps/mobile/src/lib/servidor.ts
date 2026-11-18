@@ -19,7 +19,7 @@ export type ResultadoUrl = { ok: true; url: string } | { ok: false; mensaje: str
 export function normalizarUrlServidor(texto: string): ResultadoUrl {
   const bruto = texto.trim();
   if (!bruto) return { ok: false, mensaje: "Ingresá la dirección del servidor." };
-  const m = /^(https?):\/\/([^\s/?#]+)(\/[^\s?#]*)?$/i.exec(bruto);
+  const m = /^(https?):\/\/([^\s/?#@]+)(\/[^\s?#]*)?$/i.exec(bruto);
   if (!m) {
     return {
       ok: false,
@@ -31,6 +31,42 @@ export function normalizarUrlServidor(texto: string): ResultadoUrl {
     .replace(/\/api\/v1$/i, "")
     .replace(/\/+$/, "");
   return { ok: true, url: `${m[1]!.toLowerCase()}://${m[2]}${ruta}` };
+}
+
+/** `true` si la URL (normalizada) usa `http://`, es decir, sin cifrado. */
+export function esUrlHttp(url: string): boolean {
+  return /^http:\/\//i.test(url.trim());
+}
+
+/** Host sin esquema ni puerto (en minúsculas); "" si no se puede extraer. */
+export function hostDeUrl(url: string): string {
+  const m = /^https?:\/\/(\[[^\]]+\]|[^\s/?#:]+)/i.exec(url.trim());
+  return m ? m[1]!.toLowerCase() : "";
+}
+
+/** Dirección para mostrar (host:puerto y ruta, sin esquema), p. ej. `10.254.197.232:8000`. */
+export function direccionServidor(url: string): string {
+  return url.trim().replace(/^https?:\/\//i, "");
+}
+
+/**
+ * `true` si el host es de una red privada o local: localhost, 127/8, 10/8, 172.16/12, 192.168/16 o ::1.
+ * Cualquier otro (IP pública o dominio) se considera público.
+ */
+export function esHostPrivado(host: string): boolean {
+  const h = host.trim().toLowerCase();
+  if (h === "localhost" || h === "[::1]") return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (!m) return false;
+  const o = m.slice(1).map(Number) as [number, number, number, number];
+  if (o.some((n) => n > 255)) return false;
+  const [a, b] = o;
+  return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
+/** `true` si es `http://` hacia un host público: exige confirmación explícita del riesgo. */
+export function requiereConfirmarRiesgo(url: string): boolean {
+  return esUrlHttp(url) && !esHostPrivado(hostDeUrl(url));
 }
 
 /** Valor de compilación (`EXPO_PUBLIC_API_URL`), normalizado; vacío si no está definido o es inválido. */
