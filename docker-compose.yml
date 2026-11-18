@@ -1,0 +1,33 @@
+services:
+  db:
+    # Tag 16-3.4-3.6.1 verificado con `docker manifest inspect`
+    image: pgrouting/pgrouting:16-3.4-3.6.1
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-evacuaciones}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-evacuaciones}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./apps/backend/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./apps/backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-evacuaciones}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-evacuaciones}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8081}
+      PERMITIR_DATOS_POST_CORTE: ${PERMITIR_DATOS_POST_CORTE:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

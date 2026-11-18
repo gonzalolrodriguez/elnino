@@ -1,0 +1,30 @@
+{
+ "fecha_corte": "2026-10-31",
+ "fuente": "INA – Sistema de Información y Alerta Hidrológico, catálogo de estaciones (red de escalas de Prefectura Naval Argentina). Consultado el 29/10/2026",
+ "url": "https://alerta.ina.gob.ar/pub/datos/estaciones&format=json",
+ "unidad": "m",
+ "categoria": "Dato observado",
+ "estaciones": {
+  "formosa": {
+   "siteCode": 57,
+   "nombre": "FORMOSA (Puerto Formosa)",
+   "rio": "Paraguay",
+   "lon": -58.183,
+   "lat": -26.183,
+   "aguas_bajas": 1.6,
+   "alerta": 7.8,
+   "evacuacion": 8.3
+  },
+  "pilcomayo": {
+   "siteCode": 55,
+   "nombre": "PUERTO PILCOMAYO",
+   "abreviatura": "PILC",
+   "rio": "Paraguay",
+   "lon": -57.65,
+   "lat": -25.367,
+   "aguas_bajas": 1.4,
+   "alerta": 5.35,
+   "evacuacion": 6.0
+  }
+ }
+}

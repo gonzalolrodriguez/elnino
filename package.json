@@ -1,0 +1,13 @@
+{
+  "name": "operacion-agua-equipo3",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "dev:web": "pnpm --filter @evacuaciones/frontend dev",
+    "dev:mobile": "pnpm --filter @evacuaciones/mobile start",
+    "test": "pnpm --filter @evacuaciones/frontend test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint"
+  }
+}

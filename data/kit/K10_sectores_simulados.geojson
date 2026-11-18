@@ -1,0 +1,170 @@
+{
+ "type": "FeatureCollection",
+ "name": "K10_sectores_simulados",
+ "metadata": {
+  "proyecto": "AI LAB Misión: Código Formosa · Operación Agua",
+  "categoria": "SIMULADO",
+  "nota": "Polígonos ficticios con fines educativos. No representan barrios, parajes ni infraestructura reales. 'altura_escala_compromiso_m' es la lectura simulada de la escala de Puerto Formosa (INA, siteCode 57) a partir de la cual el sector queda comprometido en este escenario. Validado por la mesa evaluadora antes de su uso.",
+  "crs": "EPSG:4326",
+  "version": "1.0",
+  "fecha": "2026-11-12"
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "S1",
+    "nombre": "Sector Norte",
+    "SIMULADO": true,
+    "altura_escala_compromiso_m": 8.1,
+    "poblacion_simulada": 1200,
+    "acceso_simulado": "Un solo acceso, por camino de ripio",
+    "estacion_referencia": "Puerto Formosa (INA siteCode 57)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -58.195,
+       -26.15
+      ],
+      [
+       -58.18,
+       -26.15
+      ],
+      [
+       -58.18,
+       -26.162
+      ],
+      [
+       -58.195,
+       -26.162
+      ],
+      [
+       -58.195,
+       -26.15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "S2",
+    "nombre": "Sector Centro",
+    "SIMULADO": true,
+    "altura_escala_compromiso_m": 8.6,
+    "poblacion_simulada": 3500,
+    "acceso_simulado": "Dos accesos pavimentados",
+    "estacion_referencia": "Puerto Formosa (INA siteCode 57)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -58.188,
+       -26.178
+      ],
+      [
+       -58.172,
+       -26.178
+      ],
+      [
+       -58.172,
+       -26.192
+      ],
+      [
+       -58.188,
+       -26.192
+      ],
+      [
+       -58.188,
+       -26.178
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "S3",
+    "nombre": "Sector Sur",
+    "SIMULADO": true,
+    "altura_escala_compromiso_m": 7.9,
+    "poblacion_simulada": 800,
+    "acceso_simulado": "Un acceso pavimentado y uno de ripio",
+    "estacion_referencia": "Puerto Formosa (INA siteCode 57)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -58.205,
+       -26.208
+      ],
+      [
+       -58.188,
+       -26.208
+      ],
+      [
+       -58.188,
+       -26.222
+      ],
+      [
+       -58.205,
+       -26.222
+      ],
+      [
+       -58.205,
+       -26.208
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "S4",
+    "nombre": "Sector Rural Este",
+    "SIMULADO": true,
+    "altura_escala_compromiso_m": 7.5,
+    "poblacion_simulada": 150,
+    "acceso_simulado": "Camino de tierra, intransitable con lluvia; producción ganadera",
+    "estacion_referencia": "Puerto Formosa (INA siteCode 57)"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -58.15,
+       -26.168
+      ],
+      [
+       -58.128,
+       -26.168
+      ],
+      [
+       -58.128,
+       -26.192
+      ],
+      [
+       -58.15,
+       -26.192
+      ],
+      [
+       -58.15,
+       -26.168
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

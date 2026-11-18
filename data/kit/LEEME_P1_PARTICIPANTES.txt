@@ -1,0 +1,34 @@
+AI LAB MISIÓN: CÓDIGO FORMOSA
+P1 — DATA INTEGRITY
+Dataset de entrenamiento para participantes
+
+ESTACIÓN: Puerto Formosa (INA)
+VARIABLE: altura hidrométrica
+PERÍODO DE REFERENCIA: 01/01/2006 al 31/10/2026
+UNIDAD CANÓNICA ESPERADA: metros (m)
+
+PROPÓSITO
+Auditar la integridad de una serie hidrométrica, identificar inconsistencias y documentar qué correcciones pueden realizarse con evidencia y cuáles requieren contrastación con la fuente.
+
+IMPORTANTE
+Este archivo es un dataset pedagógico. Se incorporaron alteraciones deliberadas para la actividad. No es una serie oficial, no debe utilizarse para monitoreo, pronóstico, alertas ni decisiones operativas.
+
+CAMPOS
+- obs_id: identificador del registro.
+- timestart: fecha y hora de inicio de la observación.
+- timeend: fecha y hora de finalización de la observación.
+- valor: altura registrada.
+- unidad_registro: unidad declarada para el valor.
+- timeupdate: fecha y hora de actualización informada por la fuente.
+
+CRITERIOS DE AUDITORÍA
+1. La unidad de referencia de la serie es el metro (m).
+2. El campo valor debe poder interpretarse numéricamente con un único criterio decimal.
+3. Las fechas deben normalizarse al formato YYYY-MM-DD HH:MM:SS.
+4. No asumir que dos registros del mismo día son duplicados: la serie original puede contener varias mediciones en una misma fecha y hora distinta.
+5. Revisar la unicidad de obs_id y los registros idénticos.
+6. Para 2018, examinar la continuidad de la cobertura diaria.
+7. No inventar ni interpolar valores faltantes. Si no existe evidencia suficiente para corregir un registro, marcarlo como pendiente de verificación.
+
+FUENTE Y ALCANCE
+La base fue construida a partir de una descarga de la serie de altura hidrométrica de Puerto Formosa del portal de datos del Instituto Nacional del Agua (INA), con corte al 31/10/2026. El archivo contiene modificaciones intencionales realizadas exclusivamente para la dinámica educativa.

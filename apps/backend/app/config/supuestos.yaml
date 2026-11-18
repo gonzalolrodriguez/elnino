@@ -1,0 +1,19 @@
+# Supuestos del modelo. Cada valor indica su fuente o la palabra SUPUESTO.
+margen_riesgo_m:
+  valor: 0.50
+  fuente: SUPUESTO
+umbral_lluvia_camino_tierra_mm:
+  valor: 30
+  fuente: SUPUESTO
+umbral_lluvia_camino_ripio_mm:
+  valor: 80
+  fuente: SUPUESTO
+factor_desvio:
+  valor: 1.3
+  fuente: SUPUESTO
+camion_jaula_bovinos:
+  valor: 30
+  fuente: SUPUESTO (pendiente tabla Anexo II Res. SENASA 581/2014)
+vehiculo_cat_b_capacidad:
+  valor: 40
+  fuente: SUPUESTO

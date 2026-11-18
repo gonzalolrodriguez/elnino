@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Evacuaciones Equipo 3",
+    "slug": "evacuaciones-equipo3",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "evacuaciones",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "ar.gob.formosa.ailab.equipo3.evacuaciones",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      }
+    },
+    "plugins": ["expo-router"]
+  }
+}
