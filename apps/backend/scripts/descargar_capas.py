@@ -28,9 +28,10 @@ import json
 import sys
 import time
 import traceback
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 from shapely.geometry import Point, box, mapping, shape
@@ -347,7 +348,7 @@ def capa_vial(http: httpx.Client, formosa, _crudo: bytes) -> list[dict]:
     for wy in ways:
         nodos, pts, t = wy["nodes"], [(g["lon"], g["lat"]) for g in wy["geometry"]], wy.get("tags", {})
         cortes = [0] + [i for i in range(1, len(nodos) - 1) if uso[nodos[i]] >= 2] + [len(nodos) - 1]
-        for k, (a, b) in enumerate(zip(cortes, cortes[1:])):
+        for k, (a, b) in enumerate(zip(cortes, cortes[1:], strict=False)):
             tramo = pts[a:b + 1]
             if len(tramo) < 2 or not any(lon0 <= x <= lon1 and lat0 <= y <= lat1 for x, y in tramo):
                 descartados += 1
@@ -466,6 +467,7 @@ def capa_escuelas(http: httpx.Client, formosa, _crudo: bytes) -> list[dict]:
 def capa_salud(http: httpx.Client, formosa, _crudo: bytes) -> list[dict]:
     log("[salud] REFES (xlsx 27/12/2024) + centroides Georef")
     import csv
+
     import openpyxl
 
     m = entrada("establecimientos_salud", "Establecimientos de salud de Formosa (REFES)", url=REFES_URL,
@@ -485,7 +487,7 @@ def capa_salud(http: httpx.Client, formosa, _crudo: bytes) -> list[dict]:
     wb = openpyxl.load_workbook(io.BytesIO(r.content), read_only=True)
     filas = list(wb.worksheets[0].iter_rows(values_only=True))
     cab = [str(c).lower() for c in filas[0]]
-    reg = [dict(zip(cab, f)) for f in filas[1:] if f and str(f[cab.index("provincia_id")]).strip() in ("34", "34.0")]
+    reg = [dict(zip(cab, f, strict=False)) for f in filas[1:] if f and str(f[cab.index("provincia_id")]).strip() in ("34", "34.0")]
     if not reg:
         raise RuntimeError("REFES sin registros de Formosa")
     # Georef: centroide de la localidad censal (REFES no publica coordenadas).

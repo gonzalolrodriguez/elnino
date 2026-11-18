@@ -1,9 +1,9 @@
 # Ficha de fuentes · AI LAB Misión: Código Formosa
-Herramienta: Plataforma de Gestión de Evacuaciones (backend, Fase 2) · Equipo: Equipo 3 · Instituto Politécnico Formosa
+Herramienta: Plataforma de Gestión de Evacuaciones (backend Fase 2, capas oficiales y portal público) · Equipo: Equipo 3 · Instituto Politécnico Formosa
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su categoría. Regla: si no está acá, no se muestra. Estado: **Fase 2** (motor); se amplía en cada fase.
+Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su categoría. Regla: si no está acá, no se muestra. Estado: **Fase 2** (motor) más las capas de `data/geo/` y el portal público; se amplía en cada fase.
 
 ## Datos observados (K1, K3)
 
@@ -71,7 +71,7 @@ Los nombres genéricos ("SIMULADO 1", "Puesto pluviométrico SIMULADO A") se ree
 Lluvia observada, pronóstico hidrológico más allá de 15 días, cotas, barrios, caminos o centros reales y alturas anteriores a 2006 (1983, 1992 y 1998 no se muestran).
 
 Fuentes externas usadas (URL y fecha de consulta):
-- En la Fase 1 no se consultaron fuentes externas. Las capas oficiales (IGN/Georef, BAHRA, Mapa Educativo, REFES, OSM, INDEC) se incorporan en fases posteriores con su URL, licencia y fecha de descarga (CLAUDE.md §10.1).
+- En la Fase 1 no se consultaron fuentes externas. Las capas oficiales (IGN, BAHRA/Georef, Mapa Educativo, REFES, OSM) se descargaron el 17/11/2026 y figuran, con su URL, licencia y fecha, en la sección "Capas territoriales oficiales (`data/geo/`)". Población INDEC por radio censal y catastro parcelario siguen pendientes (CLAUDE.md §10.1).
 
 
 ## Fase 2: motor de simulación
@@ -104,3 +104,34 @@ Todo lo que calcula el motor se rotula `SIMULADO` (entradas simuladas, supuestos
 | Red vial para el ruteo | Se carga con `python -m app.ingest.red_vial`; las pruebas usan una red sintética rotulada SIMULADO. La red real (OSM, `data/geo/red_vial.geojson`) la documenta la capa de datos geográficos con su licencia y fecha | OpenStreetMap (ODbL), ver `data/geo/` | Referencia | según la capa |
 | Estimación sin red | Distancia al acceso más cercano más línea recta por 1,3 | Supuesto `factor_desvio`; se informa como `limitacion` | Simulado | 17/11/2026 |
 | Soluciones de ruteo y tiempos de las alternativas | Flota compartida, sectores en secuencia, ida y vuelta | Cálculo propio con los supuestos anteriores | Simulado | 17/11/2026 |
+
+
+## Capas territoriales oficiales (`data/geo/`)
+
+Lugares reales de fuentes oficiales o abiertas (decisión D7). Detalle por capa (URL, licencia, conteos, bbox y notas) en `data/geo/manifiesto.json` y `data/geo/LEEME.md`; se regeneran con `python apps/backend/scripts/descargar_capas.py`. Sistema de coordenadas EPSG:4326. Qué establecimiento educativo es centro de recepción y su capacidad no figuran en estas capas: lo define la autoridad y la capacidad es `SIMULADO`.
+
+| Qué muestra la herramienta | Valor o rango | Fuente (archivo del kit o URL) | Categoría (observado / referencia / simulado) | Fecha del dato |
+|---|---|---|---|---|
+| Límite provincial, departamentos y municipios de Formosa | `provincia.geojson`, `departamentos.geojson`, `municipios.geojson` | IGN, Capas SIG, servicio WFS (`wms.ign.gob.ar/geoserver/ows`) | Referencia | descarga 17/11/2026 |
+| Localidades, parajes y asentamientos de Formosa | `localidades_parajes.geojson` (centroide declarado por BAHRA, no punto catastral) | BAHRA / INDEC vía API Georef (`apis.datos.gob.ar/georef/api/asentamientos`), CC BY 4.0 | Referencia | descarga 17/11/2026 |
+| Red vial del corredor RN 11 - río Paraguay | `red_vial.geojson`, tramos partidos en cada nodo; `superficie` tomada literalmente del tag `surface` de OSM (parte queda `desconocida`) | OpenStreetMap vía Overpass API (ODbL 1.0, © colaboradores de OpenStreetMap) | Referencia | descarga 17/11/2026 |
+| Cursos de agua de Formosa | `cursos_agua.geojson` (perennes e intermitentes; esquema ilustrativo, no sirve para cotas ni inundación) | IGN, Capas SIG, WFS | Referencia | descarga 17/11/2026 |
+| Establecimientos educativos de Formosa (ubicación; no es centro de recepción) | `establecimientos_educativos.geojson` | Mapa Educativo Nacional, WFS `publico:establecimiento_educativo`, CC BY 4.0 | Referencia | descarga 17/11/2026 |
+| Establecimientos de salud de Formosa (ubicación por localidad) | `establecimientos_salud.geojson` (centroide de la localidad censal; varios comparten punto) | REFES, Ministerio de Salud (datos.gob.ar), archivo del 27/12/2024, CC BY 4.0; centroides de localidad: API Georef | Referencia | descarga 17/11/2026 |
+| Comisarías y destacamentos (complemento) | `comisarias_destacamentos.geojson` (OSM parcial; no sustituye el listado oficial) | OpenStreetMap (`amenity=police`), ODbL 1.0 | Referencia | descarga 17/11/2026 |
+
+Pendientes declarados: catastro parcelario (P12), población por radio censal (INDEC 2022) y puestos del parte pluviométrico de la Policía. Ninguno se muestra.
+
+## Portal público: El Niño y esquema de la cuenca (`apps/frontend`)
+
+Cifras verificadas el 18/11/2026 contra los archivos fuente (`K9_fuentes.md`; boletín SMN N.º 8 en PDF; pronóstico agroclimático en PPTX). Los datos de contacto de la fuente del pronóstico agroclimático no se reproducen.
+
+| Qué muestra la herramienta | Valor o rango | Fuente (archivo del kit o URL) | Categoría (observado / referencia / simulado) | Fecha del dato |
+|---|---|---|---|---|
+| El SMN confirma la fase El Niño | 100 % de probabilidad para septiembre-noviembre | SMN / DNPHyCF, Boletín N.º 1 sobre El Niño, vía K9 (`K9_fuentes.md`): https://www.cohife.org.ar/wp-content/uploads/2026/09/INFORME-el-Nino-Nro1-040926.pdf | Referencia | 04/09/2026 |
+| Probabilidad de evento fuerte o muy fuerte | 83 % en octubre-diciembre, con persistencia hasta el verano | NOAA, Climate Prediction Center, Discusión ENSO (versión en español), vía K9: https://cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc_Sp.shtml | Referencia | 08/10/2026 |
+| Permanencia en fase El Niño | 100 % de probabilidad de permanencia en octubre-noviembre-diciembre de 2026 | SMN y COHIFE (Dirección Nacional de Política Hídrica y Coordinación Federal), Boletín El Niño N.º 8, publicado el 22/10/2026, pronósticos emitidos al 20/10/2026 (PDF `BOLETIN el Niño_22-10-2026.pdf`, carpeta IA-Lab) | Referencia | 22/10/2026 |
+| Pronóstico agroclimático estacional 2026/27 Formosa: modelo y período | CFS v2 (NOAA), ensamble de 20 miembros (corridas), período noviembre de 2026 a julio de 2027 | Informe "Pronóstico Climático Estacional 2026/27 Formosa", emisión 29/10/2026 (`20261029 Formosa.pptx`, carpeta IA-Lab; informe de un tercero, orientativo y probabilístico) | Referencia | 29/10/2026 |
+| Índice ONI proyectado | Pico estimado +2,2; probabilidad de ONI >= +2,0 °C: 93 % (SON-OND-NDJ) | Mismo informe, diapositiva "Contexto ENSO". La diapositiva de análogos históricos del mismo informe indica +2,3 y 99 %; el portal usa la cifra de la diapositiva de contexto | Referencia | 29/10/2026 |
+| Campañas El Niño y tercio húmedo en Formosa | 8 de 14 campañas Niño en el tercio húmedo y una sola en el seco (45 campañas, 1981/82 a 2025/26); la fase ENOS cambia las probabilidades, no decide la campaña | Mismo informe, diapositiva "La fase ENSO cambia las probabilidades" | Referencia | 29/10/2026 |
+| Esquema de la cuenca (landing 3D y alternativa 2D) | Esquema ilustrativo: coordenadas aproximadas digitalizadas a mano, sin fuente cartográfica. Hitos aproximados: Pantanal (-57,50; -17,80), Asunción (-57,63; -25,28), confluencia con el Paraná (-58,57; -27,30). Las estaciones usan las coordenadas oficiales de K3 | `apps/frontend/src/landing/geometria.ts`; relaciones hidrográficas auditadas contra K7; sustituible por los cursos de agua del IGN de `data/geo/` | Simulado (esquema ilustrativo, no cartografía) | 18/11/2026 |

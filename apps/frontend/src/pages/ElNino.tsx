@@ -8,6 +8,7 @@ import { K10_FECHA, MARGEN_RIESGO_M, SECTORES_K10, UMBRAL_ALERTA } from "../dato
 import { estadoSector, ESTILO_ESTADO, MapaSectores } from "../elnino/MapaSectores";
 import { SerieK1 } from "../elnino/SerieK1";
 import { fmt, fmtMiles } from "../lib/entorno";
+import { useSerieFormosa } from "../lib/serie";
 
 function Seccion({ id, titulo, children }: { id: string; titulo: string; children: ReactNode }) {
   return (
@@ -42,6 +43,7 @@ function Hecho({ valor, texto, fuente }: { valor: string; texto: string; fuente:
 export default function ElNino() {
   const { hash } = useLocation();
   const [altura, setAltura] = useState(5.6);
+  const { serie } = useSerieFormosa();
 
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView?.();
@@ -98,7 +100,7 @@ export default function ElNino() {
           El nivel de alerta es {fmt(UMBRAL_ALERTA)} m y el de evacuación 8,30 m. La serie alcanzó 9,81 m en enero de 2016 y 9,72 m en
           junio de 2019. Al 31/10/2026 la escala marcaba 5,60 m. No hay lluvia observada en el kit.
         </Text>
-        <SerieK1 />
+        <SerieK1 serie={serie} />
       </Seccion>
 
       <Seccion id="pronostico" titulo="Pronóstico estacional 2026/27">

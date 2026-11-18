@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 2** (motor) sobre las fases 0 y 1: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, autenticación con roles, cifrado de campos sensibles, bitácora de accesos con hash encadenado, y el motor de simulación (escenario, ISAD, recomendador, alternativas, ruteo con pgRouting, Arca Productiva, cuadrillas, lluvia, canales simulados, órdenes, bitácora K8, verificadores K6/K7 y WebSocket).
+Simulador de planificación de evacuaciones (Desafío 6). Estado: **Fase 2** (motor), capas territoriales oficiales y portal público (Fase 4) sobre las fases 0 y 1: limpieza de K1, modelo de datos con migraciones, carga de K3/K10/K1 y datos simulados, autenticación con roles, cifrado de campos sensibles, bitácora de accesos con hash encadenado, y el motor de simulación (escenario, ISAD, recomendador, alternativas, ruteo con pgRouting, Arca Productiva, cuadrillas, lluvia, canales simulados, órdenes, bitácora K8, verificadores K6/K7 y WebSocket).
 
 ## Requisitos y versiones
 
@@ -58,11 +58,36 @@ uvicorn app.main:app --reload --port 8000
 
 Si la base no está disponible, `/api/v1/salud` responde igualmente con `"base_de_datos": "no_disponible"`.
 
-**Web**: `pnpm dev:web` → http://localhost:5173
+**Web**: `pnpm dev:web` (equivale a `pnpm --filter @evacuaciones/frontend dev`) → http://localhost:5173. Ver la sección siguiente.
 
 **App móvil**: `pnpm dev:mobile` (Expo). En un teléfono físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP de la PC en la red local (por ejemplo `http://192.168.1.50:8000`) y el backend debe aceptar ese origen en `CORS_ORIGINS`.
 
 **APK**: `cd apps/mobile && npx eas build --profile preview --platform android` (perfil `preview`, `buildType: apk`).
+
+## Portal web (`apps/frontend`)
+
+```bash
+pnpm --filter @evacuaciones/frontend dev        # Vite en http://localhost:5173
+pnpm --filter @evacuaciones/frontend datos      # regenera los JSON estáticos de src/datos/ (K1 diario y K10)
+```
+
+- `VITE_API_URL` define la URL del backend (por defecto `http://localhost:8000`; el prefijo `/api/v1` se agrega solo). El origen del portal debe figurar en `CORS_ORIGINS` del backend; por defecto se admiten `http://localhost:5173` y `http://localhost:8081`. El refresh token viaja en una cookie `HttpOnly` (`SameSite=Strict`, ruta `/api/v1/auth`), por lo que el portal y el backend deben compartir sitio (por ejemplo, ambos en `localhost`).
+- La serie de Puerto Formosa de la página El Niño se pide a `GET /serie/formosa`; si el backend no responde, se usa el JSON estático (`src/datos/k1_diario.json`, generado con el comando `datos`).
+- Rutas públicas: `/` (landing), `/el-nino`, `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
+- Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/comando/*` (operador, decisor y admin), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
+- Pruebas y calidad: `pnpm --filter @evacuaciones/frontend test`, `lint` y `build`.
+
+## Capas territoriales oficiales (`data/geo/`)
+
+Lugares reales de fuentes oficiales (IGN, BAHRA/Georef, Mapa Educativo, REFES, OSM), rotulados `DOCUMENTO DE REFERENCIA`. Ya están versionadas, así que la demo funciona sin internet. Detalle, licencias y limitaciones en `data/geo/LEEME.md`.
+
+```bash
+python apps/backend/scripts/descargar_capas.py                       # regenera todas las capas (~3 min, requiere internet)
+python apps/backend/scripts/descargar_capas.py --solo vial,escuelas  # solo algunas
+
+cd apps/backend
+python -m app.ingest.red_vial                                        # carga data/geo/red_vial.geojson para pgRouting
+```
 
 ## Puertos
 
@@ -169,7 +194,7 @@ python -m app.ingest.red_vial                 # carga data/geo/red_vial.geojson 
 
 El archivo es un GeoJSON de `LineString`; propiedades reconocidas: `nombre`, `superficie` (`pavimento`, `ripio`, `tierra` o `desconocida`; si falta se infiere de `surface` o `highway` de OSM) y, si la red ya está partida en nodos, `nodo_ini` y `nodo_fin`. Reemplaza la red anterior (`--agregar` la suma).
 
-**Canales simulados.** Definir `CANAL_HMAC_SECRET` (mínimo 16 caracteres) en `.env`; cada petición debe llevar `X-Hub-Signature-256: sha256=<HMAC-SHA256 del cuerpo>` (ver `docs/contrato_api.md`).
+**Canales simulados.** `CANAL_HMAC_SECRET` (mínimo 16 caracteres) es obligatorio en `.env` para usar los canales simulados; cada petición debe llevar `X-Hub-Signature-256: sha256=<HMAC-SHA256 del cuerpo>` (ver `docs/contrato_api.md`).
 
 **WebSocket.** `ws://localhost:8000/api/v1/ws`: el primer mensaje debe ser `{"token": "<access_token>"}`; el token no va en la URL.
 

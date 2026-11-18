@@ -12,27 +12,46 @@ type Recurso<T> =
   | { estado: "no_disponible" }
   | { estado: "error"; mensaje: string };
 
-function useRecurso<T>(ruta: string): Recurso<T> {
+type OpcionesRecurso<R, T> = {
+  /** Extrae los datos de la respuesta (p. ej. `{ notificaciones: [...] }` -> lista). */
+  extraer?: (respuesta: R) => T;
+  /** El backend responde 404 cuando el usuario todavía no cargó el dato (p. ej. grupo familiar). */
+  vacioSi404?: boolean;
+  /** Si es false no se consulta (p. ej. establecimientos solo existen para productores). */
+  activo?: boolean;
+};
+
+function useRecurso<T, R = T>(ruta: string, op: OpcionesRecurso<R, T> = {}): Recurso<T> {
   const [r, setR] = useState<Recurso<T>>({ estado: "cargando" });
+  const { extraer, vacioSi404 = false, activo: habilitado = true } = op;
   useEffect(() => {
+    if (!habilitado) return;
     let activo = true;
-    solicitar<T>(ruta, { autenticado: true })
-      .then((datos) => {
+    solicitar<R>(ruta, { autenticado: true })
+      .then((respuesta) => {
         if (!activo) return;
-        const vacio = datos === null || (Array.isArray(datos) && datos.length === 0);
+        const datos = extraer ? extraer(respuesta) : (respuesta as unknown as T);
+        const vacio = datos === null || datos === undefined || (Array.isArray(datos) && datos.length === 0);
         setR(vacio ? { estado: "vacio" } : { estado: "ok", datos });
       })
       .catch((e: unknown) => {
         if (!activo) return;
-        if (e instanceof ApiError && e.estado === 404) setR({ estado: "no_disponible" });
+        if (e instanceof ApiError && e.estado === 404) setR(vacioSi404 ? { estado: "vacio" } : { estado: "no_disponible" });
         else setR({ estado: "error", mensaje: e instanceof Error ? e.message : "Error desconocido" });
       });
     return () => {
       activo = false;
     };
-  }, [ruta]);
+    // `extraer` y las opciones son estables por llamada: la ruta identifica el recurso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruta, habilitado]);
   return r;
 }
+
+const listaDe = (clave: string) => (r: unknown): Dic[] => {
+  const lista = r && typeof r === "object" ? (r as Dic)[clave] : null;
+  return Array.isArray(lista) ? (lista as Dic[]) : [];
+};
 
 function Bloque<T>({
   titulo,
@@ -97,10 +116,15 @@ function Pares({ d, claves }: { d: Dic; claves: [string, string][] }) {
 export default function MiCuenta() {
   const { usuario } = useAuth();
   const yo = useRecurso<Usuario>("/auth/yo");
-  const familia = useRecurso<Dic>("/mi/grupo-familiar");
-  const estabs = useRecurso<Dic[]>("/mi/establecimientos");
-  const notifs = useRecurso<Dic[]>("/mi/notificaciones");
   const esProductor = usuario?.rol === "productor";
+  // Contrato real (apps/backend/app/api/v1/mi.py): el grupo familiar es un objeto plano y responde 404 si
+  // todavía no se cargó; establecimientos y notificaciones vienen envueltos en un objeto.
+  const familia = useRecurso<Dic>("/mi/grupo-familiar", { vacioSi404: true });
+  const estabs = useRecurso<Dic[], unknown>("/mi/establecimientos", {
+    extraer: listaDe("establecimientos"),
+    activo: esProductor,
+  });
+  const notifs = useRecurso<Dic[], unknown>("/mi/notificaciones", { extraer: listaDe("notificaciones") });
 
   return (
     <Layout>
@@ -151,6 +175,7 @@ export default function MiCuenta() {
                     claves={[
                       ["nombre", "Establecimiento"],
                       ["renspa", "RENSPA"],
+                      ["acceso_habitual", "Acceso habitual"],
                       ["sector_id", "Sector (K10, SIMULADO)"],
                     ]}
                   />
