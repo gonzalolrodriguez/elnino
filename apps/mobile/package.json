@@ -14,6 +14,7 @@
     "@evacuaciones/shared": "workspace:*",
     "@react-native-community/netinfo": "12.0.1",
     "expo": "~58.0.26",
+    "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.16",
     "expo-image-manipulator": "~58.0.16",
     "expo-image-picker": "~58.0.10",

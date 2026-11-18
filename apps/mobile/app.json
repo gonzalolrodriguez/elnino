@@ -27,6 +27,14 @@
       "expo-sqlite",
       "expo-secure-store",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": false,

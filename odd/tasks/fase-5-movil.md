@@ -19,6 +19,7 @@
 - [x] M5.10 Pruebas (jest) y verificación final
 
 - [x] M5.11 (pedido del coordinador) Foto como segundo tiempo con reintento propio, `Idempotency-Key` persistida en sqlite, `geometria` y `lon/lat` del centro desde `GET /mi/sector` (con respaldo a `/sectores` y `/centros`)
+- [x] M5.12 (pedido del coordinador) Servidor configurable en tiempo de ejecución: `src/lib/servidor.ts` (URL guardada en expo-secure-store, por defecto `EXPO_PUBLIC_API_URL`, leída en cada llamada por HTTP, cola, fotos y WebSocket), componente `ConfigServidor` en bienvenida y Perfil (probar conexión `GET /salud` 5 s, guardar, restablecer, cierre de sesión local con conservar/descartar pendientes), `usesCleartextTraffic` vía `expo-build-properties`, documentación en README y `docs/seguridad.md`
 
 ## Ruta
 Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado por el coordinador).
@@ -40,3 +41,12 @@ Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado
 - `jest` (mobile): 5 suites, 36 tests en verde (7 nuevos: clave persistida y reutilizada, clave por ítem, ítem previo sin clave, foto en segundo tiempo, reintento solo de la foto, foto rechazada).
 - `npx expo-doctor`: 20/20 checks passed. `npx expo export --platform android`: bundle Hermes generado (2,9 MB); `dist/` eliminado.
 - No probado en dispositivo ni contra un backend real desde el teléfono (multipart con `{uri,name,type}` pendiente de prueba real).
+
+## Evidencia M5.12
+- Ruta: delegada (escritor único, 2+ archivos no triviales).
+- Dependencia agregada: `expo-build-properties ~58.0.12` (`npx expo install`).
+- `pnpm -r typecheck`: shared, frontend y mobile sin errores.
+- `jest` (mobile): 6 suites, 72 tests en verde (36 previos + 36 nuevos, incluida la cola por servidor y usuario: normalización/validación de URL, servicios con la URL actualizada, URL del WebSocket, «Probar conexión», cambio de servidor con sesión).
+- `npx expo-doctor`: 20/20 checks passed. `npx expo export --platform android`: bundle Hermes (2,9 MB); `dist/` eliminado.
+- `npx expo config --type introspect`: `AndroidManifest` con `android:usesCleartextTraffic = 'true'` (plugin `expo-build-properties`).
+- No probado en un teléfono real contra el backend de la LAN.

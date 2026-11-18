@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
 import { api, type Solicitud } from "@/lib/servicios";
@@ -20,7 +21,7 @@ type Carga =
   | { tipo: "error"; mensaje: string };
 
 export default function Solicitudes() {
-  const { items, reintentar, descartar, sinRed } = useCola();
+  const { items, otroServidor, reintentar, descartar, sinRed } = useCola();
   const [carga, setCarga] = useState<Carga>({ tipo: "cargando" });
 
   const cargar = useCallback(async () => {
@@ -35,7 +36,7 @@ export default function Solicitudes() {
     void cargar();
   }, [cargar, items.length]);
 
-  const locales = items.filter((i) => i.estado !== "enviada");
+  const locales = items.filter((i) => i.estado !== "enviada" && !otroServidor.some((o) => o.id === i.id));
 
   return (
     <Pantalla>
@@ -69,6 +70,26 @@ export default function Solicitudes() {
                   <Boton titulo="Descartar" variante="peligro" onPress={() => void descartar(i.id)} />
                 ) : null}
               </View>
+            </Tarjeta>
+          ))}
+        </>
+      ) : null}
+
+      {otroServidor.length > 0 ? (
+        <>
+          <Text style={{ fontWeight: "700" }}>Pendientes para otro servidor ({otroServidor.length})</Text>
+          {otroServidor.map((i) => (
+            <Tarjeta key={i.id}>
+              <Text style={{ fontWeight: "600" }}>
+                Pendientes para otro servidor ({hostDeUrl(i.servidorUrl)})
+              </Text>
+              <Texto>
+                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
+              </Texto>
+              <Texto suave>
+                No se envía a este servidor. Se enviará si volvés a ese servidor con esta cuenta.
+              </Texto>
+              <Boton titulo="Descartar" variante="peligro" onPress={() => void descartar(i.id)} />
             </Tarjeta>
           ))}
         </>

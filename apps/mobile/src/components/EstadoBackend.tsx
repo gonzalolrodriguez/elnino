@@ -2,14 +2,20 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { obtenerSalud } from "@/lib/api";
+import { escucharServidor } from "@/lib/servidor";
 
 type Estado = { tipo: "cargando" } | { tipo: "ok" } | { tipo: "error"; mensaje: string };
 
 export function EstadoBackend() {
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
 
+  // Se vuelve a consultar al guardar otra URL de servidor.
+  const [version, setVersion] = useState(0);
+  useEffect(() => escucharServidor(() => setVersion((v) => v + 1)), []);
+
   useEffect(() => {
     let activo = true;
+    setEstado({ tipo: "cargando" });
     obtenerSalud()
       .then(() => activo && setEstado({ tipo: "ok" }))
       .catch((e: unknown) =>
@@ -19,7 +25,7 @@ export function EstadoBackend() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [version]);
 
   return (
     <View style={styles.caja}>

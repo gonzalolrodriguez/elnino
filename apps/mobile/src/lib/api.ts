@@ -1,10 +1,7 @@
 import type { Rol } from "@evacuaciones/shared";
 
 import { almacenSeguro } from "@/lib/almacenSeguro";
-
-/** URL base del backend. En un teléfono físico debe ser la IP de la PC en la red local. */
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
-export const API_BASE = `${API_URL}/api/v1`;
+import { cargarServidor, obtenerUrlServidor } from "@/lib/servidor";
 
 export type Salud = {
   estado: string;
@@ -96,8 +93,14 @@ async function ejecutar(
   const esForm = typeof FormData !== "undefined" && cuerpo instanceof FormData;
   if (cuerpo !== undefined && !esForm) headers["Content-Type"] = "application/json";
   if (conAuth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  // La URL del servidor se lee en cada llamada: puede cambiarse desde la app sin reiniciarla.
+  await cargarServidor();
+  const base = obtenerUrlServidor();
+  if (!base) {
+    throw new ErrorApi(0, "sin_servidor", "Falta configurar el servidor. Indicalo en «Servidor» (pantalla de inicio o Perfil).");
+  }
   try {
-    return await fetch(`${API_BASE}${ruta}`, {
+    return await fetch(`${base}/api/v1${ruta}`, {
       method: metodo,
       headers,
       body: cuerpo === undefined ? undefined : esForm ? (cuerpo as FormData) : JSON.stringify(cuerpo),

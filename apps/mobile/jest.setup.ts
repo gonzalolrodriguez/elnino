@@ -1,3 +1,5 @@
+process.env.EXPO_PUBLIC_API_URL = "http://localhost:8000";
+
 // Simulaciones de los módulos nativos que no existen en el entorno de pruebas.
 jest.mock("expo-secure-store", () => {
   const almacen = new Map<string, string>();

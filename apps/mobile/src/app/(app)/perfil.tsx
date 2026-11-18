@@ -1,5 +1,6 @@
 import { Alert } from "react-native";
 
+import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
 import { Boton, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
@@ -8,7 +9,7 @@ import { useSesion, useUsuario } from "@/lib/SesionContext";
 
 export default function Perfil() {
   const usuario = useUsuario();
-  const { salir } = useSesion();
+  const { salir, salirLocal } = useSesion();
   const { pendientes, borrarLocal } = useCola();
   const ciudadania = usuario.rol === "ciudadano" || usuario.rol === "productor";
 
@@ -51,6 +52,10 @@ export default function Perfil() {
           Los mandos operativos trabajan desde el panel web. Esta app solo muestra tus alertas.
         </Texto>
       ) : null}
+
+      <ConfigServidor
+        sesion={{ pendientes, descartarPendientes: borrarLocal, cerrarSesionLocal: salirLocal }}
+      />
 
       <Boton titulo="Cerrar sesión" variante="peligro" onPress={cerrar} />
     </Pantalla>
