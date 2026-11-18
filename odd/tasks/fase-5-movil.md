@@ -18,12 +18,14 @@
 - [x] M5.9 Modo cuadrilla (`/tareas`, checklist, cambio de estado), oculto para otros roles
 - [x] M5.10 Pruebas (jest) y verificación final
 
+- [x] M5.11 (pedido del coordinador) Foto como segundo tiempo con reintento propio, `Idempotency-Key` persistida en sqlite, `geometria` y `lon/lat` del centro desde `GET /mi/sector` (con respaldo a `/sectores` y `/centros`)
+
 ## Ruta
 Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado por el coordinador).
 
 ## Brechas de API detectadas
-- No existe endpoint de adjuntos: la foto se comprime y se conserva localmente; no se envía.
-- `POST /solicitudes` no admite clave de idempotencia: un reintento tras un timeout con respuesta perdida puede duplicar la solicitud.
+- (Resuelto 2026-11-18) Adjuntos: `POST /solicitudes/{id}/adjuntos` existe y la app sube la foto como segundo tiempo.
+- (Resuelto 2026-11-18) Idempotencia: `POST /solicitudes` admite `Idempotency-Key`; la app la envía.
 
 ## Evidencia
 - `pnpm --filter @evacuaciones/mobile typecheck`: sin errores.
@@ -31,3 +33,10 @@ Escritura de 2+ archivos no triviales: un escritor único (este agente, delegado
 - `npx expo-doctor`: 20/20 checks passed.
 - `npx expo export --platform android`: bundle Hermes generado (1315 módulos).
 - No ejecutado en dispositivo ni emulador: pendiente de prueba en teléfono real.
+
+## Evidencia (2026-11-18, tras el merge con fase-3-panel)
+- Cola: el ítem guarda `claveIdempotencia` (UUID al encolar, columna `clave_idempotencia` con migración `ALTER TABLE` para bases previas) y `fotoSubida`. Con foto fallida se reintenta solo la foto (la solicitud no se crea dos veces); una foto rechazada (4xx) no bloquea: la solicitud queda enviada y se informa el motivo.
+- `pnpm -r typecheck`: shared, frontend y mobile sin errores.
+- `jest` (mobile): 5 suites, 36 tests en verde (7 nuevos: clave persistida y reutilizada, clave por ítem, ítem previo sin clave, foto en segundo tiempo, reintento solo de la foto, foto rechazada).
+- `npx expo-doctor`: 20/20 checks passed. `npx expo export --platform android`: bundle Hermes generado (2,9 MB); `dist/` eliminado.
+- No probado en dispositivo ni contra un backend real desde el teléfono (multipart con `{uri,name,type}` pendiente de prueba real).

@@ -60,9 +60,46 @@ Si la base no está disponible, `/api/v1/salud` responde igualmente con `"base_d
 
 **Web**: `pnpm dev:web` (equivale a `pnpm --filter @evacuaciones/frontend dev`) → http://localhost:5173. Ver la sección siguiente.
 
-**App móvil**: `pnpm dev:mobile` (Expo). En un teléfono físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP de la PC en la red local (por ejemplo `http://192.168.1.50:8000`) y el backend debe aceptar ese origen en `CORS_ORIGINS`.
+## App móvil (`apps/mobile`)
 
-**APK**: `cd apps/mobile && npx eas build --profile preview --platform android` (perfil `preview`, `buildType: apk`).
+Expo SDK 58 + expo-router. Pantallas: registro y login, perfil, pedido de asistencia (GPS, foto, texto), mis solicitudes, alertas, mi sector y modo cuadrilla. La cola offline usa `expo-sqlite` y envía en dos tiempos: primero el JSON de la solicitud (con `Idempotency-Key`, un UUID generado al encolar y reutilizado en cada reintento) y después la foto comprimida a `POST /solicitudes/{id}/adjuntos`, con reintento propio. Un reintento tras una respuesta perdida no duplica la solicitud.
+
+```bash
+pnpm dev:mobile        # equivale a pnpm --filter @evacuaciones/mobile start
+```
+
+**Expo Go o development build.** Expo Go alcanza para probar registro, login, perfil, solicitudes, cola offline y alertas. El mapa del sector con `react-native-maps` y el push remoto necesitan un development build o el APK; en Expo Go el mapa puede no mostrarse. El push remoto (FCM) está fuera del alcance: las alertas llegan como notificaciones locales mientras la app está abierta.
+
+**Conexión con el backend desde un teléfono físico.** `localhost` no sirve en el teléfono:
+
+1. Averiguar la IP de la PC en la red local (`ipconfig`) y poner el teléfono en la misma red.
+2. Levantar el backend escuchando en todas las interfaces: `uvicorn app.main:app --host 0.0.0.0 --port 8000` (y permitir el puerto 8000 en el firewall de Windows).
+3. Definir `EXPO_PUBLIC_API_URL=http://<IP-de-la-PC>:8000` antes de `pnpm dev:mobile`.
+4. Agregar ese origen a `CORS_ORIGINS` del backend si se prueba la versión web desde otro equipo. La app nativa no está sujeta a CORS.
+
+| Variable | Dónde | Uso |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | app móvil | URL base del backend (por defecto `http://localhost:8000`) |
+| `EXPO_PUBLIC_SMS_DESTINO` | app móvil | Número al que se dirige el SMS de respaldo `SOS-FSA`; si falta, el usuario elige el destinatario. La app solo abre la app de mensajes: nunca envía sola |
+| `GOOGLE_MAPS_API_KEY` | compilación del APK | Clave de Google Maps SDK for Android para ver el mapa. Se lee en `app.config.ts` al compilar; no se guarda en el repositorio |
+
+**APK con EAS Build** (requiere la cuenta de Expo del equipo):
+
+```bash
+cd apps/mobile
+npx eas login
+GOOGLE_MAPS_API_KEY=<clave> npx eas build --profile preview --platform android   # perfil preview, buildType apk
+```
+
+En EAS la clave se define como secreto del proyecto (`npx eas secret:create`) en lugar de pasarla por la línea de comandos.
+
+**Adjuntos en el backend.** Las fotos se guardan en disco con estas variables (todas opcionales):
+
+| Variable | Valor por defecto | Descripción |
+|---|---|---|
+| `ADJUNTOS_DIR` | `<raíz del repo>/uploads` | Carpeta de los adjuntos; está fuera de `data/` y ignorada por git |
+| `ADJUNTO_MAX_BYTES` | `2097152` (2 MB) | Tamaño máximo por foto; si se supera, responde 413 |
+| `ADJUNTOS_MAX_POR_SOLICITUD` | `5` | Máximo de adjuntos por solicitud; si se supera, responde 409 |
 
 ## Portal web (`apps/frontend`)
 

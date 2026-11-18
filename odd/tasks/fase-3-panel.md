@@ -30,3 +30,8 @@
 ## Desvíos y pendientes
 - `ADJUNTOS_DIR`, `ADJUNTO_MAX_BYTES` y `ADJUNTOS_MAX_POR_SOLICITUD` no se agregaron a `.env.example` (regla de permisos); tienen valores por defecto. Se agregó `uploads/` al `.gitignore` raíz.
 - Revisión visual del mapa, de los gráficos y del diseño responsive pendiente en un navegador.
+
+## Evidencia posterior al merge con fase-5-movil (2026-11-18)
+- Causa raíz de TS2786 en la web: `react-router`/`react-router-dom` no declaran `@types/react` como peer, así que pnpm los resolvía desde el hoisting privado `node_modules/.pnpm/node_modules/@types/react` (19.3.0, de la app móvil) en vez del 18.3.31 de la web. Corrección: `packageExtensions` en `pnpm-workspace.yaml` (peer opcional `@types/react`), sin `node-linker=hoisted` y sin pasar la web a React 19.
+- `pnpm install`: Done. `pnpm -r typecheck`: sin errores. Frontend `lint`: sin avisos; `test`: 6 archivos, 53 pruebas pasadas; `build`: OK.
+- Backend (`docker compose up -d --wait db`): `ruff check .`: All checks passed; `pytest -q`: 202 passed; `docker compose stop db` ejecutado.

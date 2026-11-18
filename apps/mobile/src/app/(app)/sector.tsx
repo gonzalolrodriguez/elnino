@@ -19,10 +19,17 @@ export default function Sector() {
   const cargar = useCallback(async () => {
     try {
       const sector = await api.miSector();
-      // El mapa es complementario: si falla la geometría o los centros, se muestra el resto.
+      // `GET /mi/sector` ya trae la geometría y las coordenadas del centro. Solo si faltan (backend
+      // anterior) se consultan `/sectores` y `/centros`. El mapa es complementario: si fallan, se
+      // muestra el resto.
+      const faltaGeo = sector.sectores.some((s) => !s.geometria);
+      const sug = sector.centro_asignado?.personas ?? sector.centro_asignado?.animales ?? null;
+      const faltaCentro = sug !== null && (sug.lon == null || sug.lat == null);
       const [geo, centros] = await Promise.all([
-        api.sectoresGeo().catch(() => null),
-        api.centros().then((r) => r.centros).catch(() => [] as Centro[]),
+        faltaGeo ? api.sectoresGeo().catch(() => null) : Promise.resolve(null),
+        faltaCentro
+          ? api.centros().then((r) => r.centros).catch(() => [] as Centro[])
+          : Promise.resolve([] as Centro[]),
       ]);
       setCarga({ tipo: "ok", sector, geo, centros });
     } catch (e) {
@@ -40,7 +47,24 @@ export default function Sector() {
     [ok],
   );
   const asignado = ok?.sector.centro_asignado?.personas ?? ok?.sector.centro_asignado?.animales ?? null;
-  const centroMapa = ok && asignado ? (ok.centros.find((c) => c.id === asignado.id) ?? null) : null;
+  const centroMapa = useMemo(() => {
+    if (!ok || !asignado) return null;
+    if (asignado.lon != null && asignado.lat != null) {
+      return { nombre: asignado.nombre, lon: asignado.lon, lat: asignado.lat };
+    }
+    return ok.centros.find((c) => c.id === asignado.id) ?? null;
+  }, [ok, asignado]);
+  const geoMapa = useMemo<GeoSectores | null>(() => {
+    if (!ok) return null;
+    const propios = ok.sector.sectores.flatMap((s) =>
+      s.geometria
+        ? [{ geometry: s.geometria, properties: { id: s.id, nombre: s.nombre, categoria: s.categoria } }]
+        : [],
+    );
+    const ids = new Set(propios.map((f) => f.properties.id));
+    const respaldo = (ok.geo?.features ?? []).filter((f) => !ids.has(f.properties.id));
+    return { features: [...propios, ...respaldo] };
+  }, [ok]);
 
   return (
     <Pantalla>
@@ -53,7 +77,7 @@ export default function Sector() {
           {ok.sector.sectores.length === 0 ? (
             <Vacio texto="Todavía no tenés un sector asignado. Cargá tu domicilio o tu establecimiento en Perfil." />
           ) : (
-            <MapaSector geo={ok.geo} estados={estados} centro={centroMapa} />
+            <MapaSector geo={geoMapa} estados={estados} centro={centroMapa} />
           )}
           <Texto suave>{ok.sector.nota}</Texto>
 

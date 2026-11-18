@@ -1,5 +1,5 @@
 import { ErrorApi, peticion } from "@/lib/api";
-import type { DatosSolicitud, ResultadoEnvio } from "@/lib/cola";
+import type { DatosSolicitud, ResultadoEnvio, ResultadoFoto } from "@/lib/cola";
 
 /** Tipos de las respuestas de la API que consume la app (contrato: docs/contrato_api.md). */
 export type Categoria = "DATO OBSERVADO" | "DOCUMENTO DE REFERENCIA" | "SIMULADO";
@@ -65,6 +65,8 @@ export type SectorPropio = {
   alertas: { orden_id: number; tipo: string; fundamento: string; creada_en: string }[];
   categoria: Categoria;
   fuente: string;
+  /** GeoJSON Polygon (EPSG:4326, K10 sin cambios). Ausente en backends anteriores. */
+  geometria?: { type: string; coordinates: number[][][] } | null;
 };
 
 export type CentroSugerido = {
@@ -72,6 +74,8 @@ export type CentroSugerido = {
   nombre: string;
   tipo: string;
   distancia_linea_recta_m: number;
+  lon?: number | null;
+  lat?: number | null;
   categoria: Categoria;
 };
 
@@ -117,20 +121,48 @@ export type GeoSectores = {
   }[];
 };
 
-/** Convierte el resultado de enviar una solicitud en el vocabulario de la cola. */
-export async function enviarSolicitud(datos: DatosSolicitud): Promise<ResultadoEnvio> {
+type Falla = { ok: false; tipo: "red" | "sesion" | "rechazo"; mensaje: string };
+
+/** Traduce un error de la API al vocabulario de la cola: reintentable, sesión o rechazo definitivo. */
+function clasificar(e: unknown): Falla {
+  if (e instanceof ErrorApi) {
+    if (e.esRed || e.estado >= 500 || e.estado === 429) return { ok: false, tipo: "red", mensaje: e.message };
+    if (e.estado === 401) return { ok: false, tipo: "sesion", mensaje: e.message };
+    return { ok: false, tipo: "rechazo", mensaje: e.message };
+  }
+  return { ok: false, tipo: "red", mensaje: "Error inesperado" };
+}
+
+/**
+ * Primer tiempo del envío. La cabecera `Idempotency-Key` hace que un reintento tras una respuesta
+ * perdida devuelva la solicitud original (200) en lugar de duplicarla.
+ */
+export async function enviarSolicitud(
+  datos: DatosSolicitud,
+  claveIdempotencia: string,
+): Promise<ResultadoEnvio> {
   try {
-    const s = await peticion<Solicitud>("/solicitudes", { metodo: "POST", cuerpo: datos });
+    const s = await peticion<Solicitud>("/solicitudes", {
+      metodo: "POST",
+      cuerpo: datos,
+      cabeceras: { "Idempotency-Key": claveIdempotencia },
+    });
     return { ok: true, servidorId: s.id };
   } catch (e) {
-    if (e instanceof ErrorApi) {
-      if (e.esRed || e.estado >= 500 || e.estado === 429) {
-        return { ok: false, tipo: "red", mensaje: e.message };
-      }
-      if (e.estado === 401) return { ok: false, tipo: "sesion", mensaje: e.message };
-      return { ok: false, tipo: "rechazo", mensaje: e.message };
-    }
-    return { ok: false, tipo: "red", mensaje: "Error inesperado" };
+    return clasificar(e);
+  }
+}
+
+/** Segundo tiempo: sube la foto ya comprimida (JPEG) como adjunto de la solicitud. */
+export async function subirFotoSolicitud(servidorId: number, fotoUri: string): Promise<ResultadoFoto> {
+  try {
+    const form = new FormData();
+    // En React Native un archivo local se adjunta como { uri, name, type }.
+    form.append("archivo", { uri: fotoUri, name: "foto.jpg", type: "image/jpeg" } as unknown as Blob);
+    await peticion<unknown>(`/solicitudes/${servidorId}/adjuntos`, { metodo: "POST", cuerpo: form });
+    return { ok: true };
+  } catch (e) {
+    return clasificar(e);
   }
 }
 

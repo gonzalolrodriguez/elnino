@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 
-import type { Centro, GeoSectores } from "@/lib/servicios";
+import type { GeoSectores } from "@/lib/servicios";
 
 const COLOR_ESTADO: Record<string, string> = {
   normal: "#15803d",
@@ -14,7 +14,7 @@ type Props = {
   geo: GeoSectores | null;
   /** id del sector -> estado, solo para los sectores del usuario. */
   estados: Record<string, string>;
-  centro: Centro | null;
+  centro: { nombre: string; lon: number; lat: number } | null;
 };
 
 /** Mapa del sector propio (polígono K10, SIMULADO) y del centro sugerido (SIMULADO). */

@@ -52,7 +52,7 @@ export default function Solicitudes() {
               <Texto>
                 {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
               </Texto>
-              {i.fotoUri ? <Texto suave>Con foto guardada localmente.</Texto> : null}
+              {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
                 <Text style={{ color: COLOR.error, fontSize: 13 }}>{i.ultimoError}</Text>
               ) : null}

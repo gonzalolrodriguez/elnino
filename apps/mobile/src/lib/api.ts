@@ -92,13 +92,15 @@ async function ejecutar(
   extra: Record<string, string> = {},
 ): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json", "X-Cliente": "movil", ...extra };
-  if (cuerpo !== undefined) headers["Content-Type"] = "application/json";
+  // Con FormData no se fija Content-Type: fetch agrega el `boundary` del multipart.
+  const esForm = typeof FormData !== "undefined" && cuerpo instanceof FormData;
+  if (cuerpo !== undefined && !esForm) headers["Content-Type"] = "application/json";
   if (conAuth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
   try {
     return await fetch(`${API_BASE}${ruta}`, {
       method: metodo,
       headers,
-      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+      body: cuerpo === undefined ? undefined : esForm ? (cuerpo as FormData) : JSON.stringify(cuerpo),
     });
   } catch (e) {
     throw new ErrorApi(0, "sin_conexion", "Sin conexión con el servidor", e instanceof Error ? e.message : e);
@@ -158,12 +160,18 @@ export async function hayRefreshGuardado(): Promise<boolean> {
 /** Petición autenticada con un reintento tras renovar el token si responde 401. */
 export async function peticion<T>(
   ruta: string,
-  opciones: { metodo?: string; cuerpo?: unknown; auth?: boolean } = {},
+  opciones: {
+    metodo?: string;
+    /** JSON, o `FormData` para multipart. */
+    cuerpo?: unknown;
+    auth?: boolean;
+    cabeceras?: Record<string, string>;
+  } = {},
 ): Promise<T> {
-  const { metodo = "GET", cuerpo, auth = true } = opciones;
-  let r = await ejecutar(ruta, metodo, cuerpo, auth);
+  const { metodo = "GET", cuerpo, auth = true, cabeceras } = opciones;
+  let r = await ejecutar(ruta, metodo, cuerpo, auth, cabeceras);
   if (r.status === 401 && auth && (await renovarSesion())) {
-    r = await ejecutar(ruta, metodo, cuerpo, auth);
+    r = await ejecutar(ruta, metodo, cuerpo, auth, cabeceras);
   }
   if (!r.ok) throw await leerError(r);
   return (await r.json()) as T;

@@ -35,7 +35,7 @@ export default function Asistencia() {
   const [foto, setFoto] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resultado, setResultado] = useState<"enviada" | "encolada" | null>(null);
+  const [resultado, setResultado] = useState<"enviada" | "encolada" | "foto_pendiente" | null>(null);
 
   const cargarUbicacion = async () => {
     setError(null);
@@ -74,8 +74,8 @@ export default function Asistencia() {
     setTrabajando(true);
     try {
       const r = await enviar(d, foto);
-      setResultado(r.enviadaYa ? "enviada" : "encolada");
-      if (r.enviadaYa) {
+      setResultado(r.enviadaYa ? "enviada" : r.fotoPendiente ? "foto_pendiente" : "encolada");
+      if (r.enviadaYa || r.fotoPendiente) {
         setPersonas("");
         setAnimales("");
         setTexto("");
@@ -164,8 +164,8 @@ export default function Asistencia() {
         />
         {foto ? (
           <Texto suave>
-            La foto queda guardada en este teléfono. El servidor todavía no recibe adjuntos, por lo
-            que no se envía con el pedido.
+            La foto se envía después del pedido, comprimida. Si no hay conexión, espera en el teléfono
+            hasta que vuelva.
           </Texto>
         ) : null}
       </Tarjeta>
@@ -177,6 +177,12 @@ export default function Asistencia() {
           <Text style={{ color: COLOR.ok, fontWeight: "700" }}>Solicitud enviada</Text>
           <Insignia categoria="SIMULADO" />
           <Texto suave>Podés seguir su estado en la pestaña Solicitudes.</Texto>
+        </Tarjeta>
+      ) : null}
+      {resultado === "foto_pendiente" ? (
+        <Tarjeta>
+          <Text style={{ color: COLOR.aviso, fontWeight: "700" }}>Solicitud enviada</Text>
+          <Texto suave>La foto todavía no se pudo subir; se reintentará sola cuando haya conexión.</Texto>
         </Tarjeta>
       ) : null}
       {resultado === "encolada" ? (

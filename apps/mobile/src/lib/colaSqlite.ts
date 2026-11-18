@@ -12,6 +12,8 @@ type Fila = {
   proximo_intento: number;
   ultimo_error: string | null;
   servidor_id: number | null;
+  clave_idempotencia: string | null;
+  foto_subida: number;
   creado_en: number;
 };
 
@@ -24,6 +26,8 @@ const COLUMNAS: Record<keyof Omit<ItemCola, "id">, string> = {
   proximoIntento: "proximo_intento",
   ultimoError: "ultimo_error",
   servidorId: "servidor_id",
+  claveIdempotencia: "clave_idempotencia",
+  fotoSubida: "foto_subida",
   creadoEn: "creado_en",
 };
 
@@ -38,6 +42,8 @@ function aItem(f: Fila): ItemCola {
     proximoIntento: f.proximo_intento,
     ultimoError: f.ultimo_error,
     servidorId: f.servidor_id,
+    claveIdempotencia: f.clave_idempotencia ?? "",
+    fotoSubida: f.foto_subida === 1,
     creadoEn: f.creado_en,
   };
 }
@@ -60,9 +66,20 @@ export class RepositorioSqlite implements RepositorioCola {
           proximo_intento INTEGER NOT NULL DEFAULT 0,
           ultimo_error TEXT,
           servidor_id INTEGER,
+          clave_idempotencia TEXT,
+          foto_subida INTEGER NOT NULL DEFAULT 0,
           creado_en INTEGER NOT NULL
         );
       `);
+      // Bases creadas por versiones anteriores de la app: se agregan las columnas nuevas.
+      const columnas = await db.getAllAsync<{ name: string }>("PRAGMA table_info(cola_solicitudes)");
+      const nombres = new Set(columnas.map((c) => c.name));
+      if (!nombres.has("clave_idempotencia")) {
+        await db.execAsync("ALTER TABLE cola_solicitudes ADD COLUMN clave_idempotencia TEXT");
+      }
+      if (!nombres.has("foto_subida")) {
+        await db.execAsync("ALTER TABLE cola_solicitudes ADD COLUMN foto_subida INTEGER NOT NULL DEFAULT 0");
+      }
       return db;
     })();
     return this.abierta;
@@ -72,8 +89,8 @@ export class RepositorioSqlite implements RepositorioCola {
     const db = await this.db();
     const r = await db.runAsync(
       `INSERT INTO cola_solicitudes
-        (usuario_id, datos, foto_uri, estado, intentos, proximo_intento, ultimo_error, servidor_id, creado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (usuario_id, datos, foto_uri, estado, intentos, proximo_intento, ultimo_error, servidor_id, clave_idempotencia, foto_subida, creado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.usuarioId,
       JSON.stringify(item.datos),
       item.fotoUri,
@@ -82,6 +99,8 @@ export class RepositorioSqlite implements RepositorioCola {
       item.proximoIntento,
       item.ultimoError,
       item.servidorId,
+      item.claveIdempotencia,
+      item.fotoSubida ? 1 : 0,
       item.creadoEn,
     );
     return { ...item, id: r.lastInsertRowId };
@@ -101,9 +120,11 @@ export class RepositorioSqlite implements RepositorioCola {
     if (claves.length === 0) return;
     const db = await this.db();
     const sets = claves.map((k) => `${COLUMNAS[k]} = ?`).join(", ");
-    const valores = claves.map((k) =>
-      k === "datos" ? JSON.stringify(cambios[k]) : (cambios[k] ?? null),
-    ) as SQLite.SQLiteBindValue[];
+    const valores = claves.map((k) => {
+      if (k === "datos") return JSON.stringify(cambios[k]);
+      if (k === "fotoSubida") return cambios[k] ? 1 : 0;
+      return cambios[k] ?? null;
+    }) as SQLite.SQLiteBindValue[];
     await db.runAsync(`UPDATE cola_solicitudes SET ${sets} WHERE id = ?`, ...valores, id);
   }
 

@@ -25,7 +25,12 @@ export type ItemCola = {
   intentos: number;
   proximoIntento: number;
   ultimoError: string | null;
+  /** Id de la solicitud en el servidor; se fija al terminar el primer tiempo (JSON). */
   servidorId: number | null;
+  /** UUID generado al encolar; se reenvía igual en cada reintento (cabecera `Idempotency-Key`). */
+  claveIdempotencia: string;
+  /** Segundo tiempo del envío: la foto ya fue recibida por el servidor. */
+  fotoSubida: boolean;
   creadoEn: number;
 };
 
@@ -40,11 +45,20 @@ export type ResultadoEnvio =
   | { ok: true; servidorId: number }
   | { ok: false; tipo: "red" | "sesion" | "rechazo"; mensaje: string };
 
+export type ResultadoFoto =
+  | { ok: true }
+  | { ok: false; tipo: "red" | "sesion" | "rechazo"; mensaje: string };
+
 export type Dependencias = {
   repo: RepositorioCola;
   hayRed: () => Promise<boolean>;
-  enviar: (datos: DatosSolicitud) => Promise<ResultadoEnvio>;
+  /** Primer tiempo: JSON mínimo con la clave de idempotencia del ítem. */
+  enviar: (datos: DatosSolicitud, claveIdempotencia: string) => Promise<ResultadoEnvio>;
+  /** Segundo tiempo: sube la foto comprimida a la solicitud ya creada. */
+  subirFoto: (servidorId: number, fotoUri: string) => Promise<ResultadoFoto>;
   ahora?: () => number;
+  /** Generador de UUID; por defecto `crypto.randomUUID` o un v4 de respaldo. */
+  generarClave?: () => string;
 };
 
 export type VaciadoResultado = {
@@ -53,6 +67,16 @@ export type VaciadoResultado = {
   pendientes: number;
   sinRed: boolean;
 };
+
+/** UUID v4. La clave de idempotencia no es un secreto: basta con que no se repita. */
+export function uuidV4(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    const r = Math.floor(Math.random() * 16);
+    return (ch === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
 
 const BASE_MS = 5_000;
 const MAX_MS = 5 * 60_000;
@@ -81,8 +105,14 @@ export class ColaOffline {
       proximoIntento: 0,
       ultimoError: null,
       servidorId: null,
+      claveIdempotencia: this.clave(),
+      fotoSubida: false,
       creadoEn: this.ahora(),
     });
+  }
+
+  private clave(): string {
+    return (this.dep.generarClave ?? uuidV4)();
   }
 
   async listar(usuarioId: number): Promise<ItemCola[]> {
@@ -115,31 +145,58 @@ export class ColaOffline {
     }
     for (const item of await this.pendientes(usuarioId)) {
       if (!forzar && item.proximoIntento > this.ahora()) break;
-      const r = await this.dep.enviar(item.datos);
-      if (r.ok) {
-        await this.dep.repo.actualizar(item.id, {
-          estado: "enviada",
-          servidorId: r.servidorId,
-          ultimoError: null,
-        });
-        res.enviadas += 1;
-        continue;
+      let servidorId = item.servidorId;
+      if (servidorId === null) {
+        // Los ítems creados antes de existir la clave la reciben aquí y la conservan en los reintentos.
+        let clave = item.claveIdempotencia;
+        if (!clave) {
+          clave = this.clave();
+          await this.dep.repo.actualizar(item.id, { claveIdempotencia: clave });
+        }
+        const r = await this.dep.enviar(item.datos, clave);
+        if (!r.ok) {
+          if (r.tipo === "rechazo") {
+            await this.dep.repo.actualizar(item.id, { estado: "rechazada", ultimoError: r.mensaje });
+            res.rechazadas += 1;
+            continue;
+          }
+          await this.reprogramar(item, r.mensaje);
+          break;
+        }
+        servidorId = r.servidorId;
+        await this.dep.repo.actualizar(item.id, { servidorId, ultimoError: null });
       }
-      if (r.tipo === "rechazo") {
-        await this.dep.repo.actualizar(item.id, { estado: "rechazada", ultimoError: r.mensaje });
-        res.rechazadas += 1;
-        continue;
+
+      if (item.fotoUri && !item.fotoSubida) {
+        const f = await this.dep.subirFoto(servidorId, item.fotoUri);
+        if (f.ok) {
+          await this.dep.repo.actualizar(item.id, { fotoSubida: true, ultimoError: null });
+        } else if (f.tipo === "rechazo") {
+          // La solicitud ya llegó: la foto rechazada no debe reintentarse ni bloquear el envío.
+          await this.dep.repo.actualizar(item.id, {
+            fotoUri: null,
+            ultimoError: `La solicitud se envió, pero el servidor no aceptó la foto: ${f.mensaje}`,
+          });
+        } else {
+          await this.reprogramar(item, f.mensaje);
+          break;
+        }
       }
-      const intentos = item.intentos + 1;
-      await this.dep.repo.actualizar(item.id, {
-        intentos,
-        proximoIntento: this.ahora() + esperaBackoffMs(intentos),
-        ultimoError: r.mensaje,
-      });
-      break;
+
+      await this.dep.repo.actualizar(item.id, { estado: "enviada" });
+      res.enviadas += 1;
     }
     res.pendientes = (await this.pendientes(usuarioId)).length;
     return res;
+  }
+
+  private async reprogramar(item: ItemCola, mensaje: string): Promise<void> {
+    const intentos = item.intentos + 1;
+    await this.dep.repo.actualizar(item.id, {
+      intentos,
+      proximoIntento: this.ahora() + esperaBackoffMs(intentos),
+      ultimoError: mensaje,
+    });
   }
 
   /** Elimina un ítem (p. ej. el usuario descarta una solicitud rechazada). */
