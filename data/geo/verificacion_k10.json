@@ -1,0 +1,94 @@
+{
+  "fecha": "2026-11-17",
+  "criterio": "dentro = intersecta el bbox del sector K10; a_2km = intersecta el bbox ampliado ~2 km",
+  "sectores": {
+    "S1": {
+      "asentamientos": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "escuelas": {
+        "dentro": 3,
+        "a_2km": 99
+      },
+      "salud": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "comisarias": {
+        "dentro": 0,
+        "a_2km": 5
+      },
+      "tramos_viales": {
+        "dentro": 260,
+        "a_2km": 3273
+      }
+    },
+    "S2": {
+      "asentamientos": {
+        "dentro": 1,
+        "a_2km": 1
+      },
+      "escuelas": {
+        "dentro": 39,
+        "a_2km": 183
+      },
+      "salud": {
+        "dentro": 143,
+        "a_2km": 143
+      },
+      "comisarias": {
+        "dentro": 2,
+        "a_2km": 13
+      },
+      "tramos_viales": {
+        "dentro": 507,
+        "a_2km": 3978
+      }
+    },
+    "S3": {
+      "asentamientos": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "escuelas": {
+        "dentro": 0,
+        "a_2km": 41
+      },
+      "salud": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "comisarias": {
+        "dentro": 0,
+        "a_2km": 2
+      },
+      "tramos_viales": {
+        "dentro": 22,
+        "a_2km": 1796
+      }
+    },
+    "S4": {
+      "asentamientos": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "escuelas": {
+        "dentro": 0,
+        "a_2km": 35
+      },
+      "salud": {
+        "dentro": 0,
+        "a_2km": 0
+      },
+      "comisarias": {
+        "dentro": 0,
+        "a_2km": 5
+      },
+      "tramos_viales": {
+        "dentro": 271,
+        "a_2km": 1228
+      }
+    }
+  }
+}

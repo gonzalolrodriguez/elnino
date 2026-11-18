@@ -1,0 +1,862 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-11-18T02:45:17Z",
+    "timestamp_areas_base": "2026-11-18T00:50:16Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 2517820815,
+  "lat": -26.1807313,
+  "lon": -58.1686011,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:postcode": "3600",
+    "addr:street": "Mariano Moreno",
+    "amenity": "police",
+    "name": "Jefatura de Policía"
+  }
+},
+{
+  "type": "node",
+  "id": 2517820823,
+  "lat": -26.1825397,
+  "lon": -58.1695235,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:postcode": "3600",
+    "addr:street": "España",
+    "amenity": "police",
+    "name": "Policía Federal"
+  }
+},
+{
+  "type": "node",
+  "id": 3373635464,
+  "lat": -23.7488856,
+  "lon": -62.1561482,
+  "tags": {
+    "amenity": "police",
+    "name": "Puesto de Vigilancia Teniente General Rosendo María Fraga"
+  }
+},
+{
+  "type": "node",
+  "id": 3374113006,
+  "lat": -24.2540257,
+  "lon": -61.2486559,
+  "tags": {
+    "addr:city": "Laguna Yema",
+    "addr:full": "Independencia y San Lorenzo",
+    "addr:street": "Independencia",
+    "amenity": "police",
+    "name": "Comisaría de Laguna Yema",
+    "phone": "+54 3711 420444"
+  }
+},
+{
+  "type": "node",
+  "id": 3378851550,
+  "lat": -25.4072042,
+  "lon": -59.5697940,
+  "tags": {
+    "amenity": "police",
+    "name": "Unidad Especial de Asuntos Rurales"
+  }
+},
+{
+  "type": "node",
+  "id": 3386598064,
+  "lat": -26.3986376,
+  "lon": -58.3485924,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmería Nacional Seccion Tatané"
+  }
+},
+{
+  "type": "node",
+  "id": 3386746902,
+  "lat": -26.4883801,
+  "lon": -58.3116438,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría de Herradura"
+  }
+},
+{
+  "type": "node",
+  "id": 3386797153,
+  "lat": -26.2398449,
+  "lon": -58.6301316,
+  "tags": {
+    "addr:city": "San Francisco de Laishí",
+    "addr:postcode": "3605",
+    "addr:street": "Avenida San Martín",
+    "amenity": "police",
+    "name": "Comisaría de San Francisco del Laishi"
+  }
+},
+{
+  "type": "node",
+  "id": 3386819350,
+  "lat": -26.3456343,
+  "lon": -58.4374166,
+  "tags": {
+    "amenity": "police",
+    "name": "Policía de Tres Picos"
+  }
+},
+{
+  "type": "node",
+  "id": 3387127601,
+  "lat": -26.6543160,
+  "lon": -58.6314408,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmería Nacional -Control Puerto Velaz-"
+  }
+},
+{
+  "type": "node",
+  "id": 3388095811,
+  "lat": -26.6216188,
+  "lon": -58.6707319,
+  "tags": {
+    "addr:city": "Villa Escolar",
+    "addr:postcode": "3526",
+    "addr:street": "Avenida Domingo Faustino Sarmiento",
+    "amenity": "police",
+    "name": "Comisaría de Villa Escolar"
+  }
+},
+{
+  "type": "node",
+  "id": 3586553110,
+  "lat": -26.2039625,
+  "lon": -59.0789431,
+  "tags": {
+    "addr:city": "Mayor Villafañe",
+    "addr:postcode": "3609",
+    "addr:street": "Avenida Independencia",
+    "amenity": "police",
+    "name": "Comisaría Local Mayor Villafañe",
+    "phone": "+54 370 449 0190"
+  }
+},
+{
+  "type": "node",
+  "id": 3740318342,
+  "lat": -25.5494797,
+  "lon": -60.0260076,
+  "tags": {
+    "amenity": "police",
+    "name": "Puesto de Gendarmería Nacional"
+  }
+},
+{
+  "type": "node",
+  "id": 3743538954,
+  "lat": -26.3084957,
+  "lon": -59.3709284,
+  "tags": {
+    "addr:street": "Avenida 25 de Mayo",
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 3823027473,
+  "lat": -25.7309871,
+  "lon": -59.1056963,
+  "tags": {
+    "amenity": "police",
+    "name": "Policía"
+  }
+},
+{
+  "type": "node",
+  "id": 3823219675,
+  "lat": -25.7582152,
+  "lon": -59.1169200,
+  "tags": {
+    "addr:city": "Pirané",
+    "addr:postcode": "3606",
+    "addr:street": "Ruta Provincial Nº3 KM 75",
+    "amenity": "police",
+    "name": "Gendarmería Nacional Escuadrón 5 Pirané",
+    "phone": "+54 370 446 1073"
+  }
+},
+{
+  "type": "node",
+  "id": 4093639358,
+  "lat": -26.1954547,
+  "lon": -58.2069754,
+  "tags": {
+    "amenity": "police",
+    "name": "seccional sexta"
+  }
+},
+{
+  "type": "node",
+  "id": 4110755193,
+  "lat": -26.0327521,
+  "lon": -58.0505795,
+  "tags": {
+    "amenity": "police",
+    "name": "Destacamento policial UEAR"
+  }
+},
+{
+  "type": "node",
+  "id": 4110761858,
+  "lat": -26.0411195,
+  "lon": -58.0591147,
+  "tags": {
+    "addr:city": "Mojón de Fierro",
+    "addr:street": "Ruta Provincial 2",
+    "amenity": "police",
+    "name": "G.N."
+  }
+},
+{
+  "type": "node",
+  "id": 4123803058,
+  "lat": -26.8530865,
+  "lon": -58.3251340,
+  "tags": {
+    "amenity": "police",
+    "name": "Prefectura Naval Puerto Cano"
+  }
+},
+{
+  "type": "node",
+  "id": 4213168104,
+  "lat": -26.1451964,
+  "lon": -58.1902902,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:housenumber": "Ruta 11",
+    "addr:postcode": "3600",
+    "amenity": "police",
+    "name": "Control Policía de Formosa"
+  }
+},
+{
+  "type": "node",
+  "id": 4435470189,
+  "lat": -23.8979027,
+  "lon": -60.7558091,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmería Nacional - Seccion Gral Lamadrid -",
+    "name:en": "Gendarmería Nacional - Seccion Gral Lamadrid -",
+    "name:es": "Gendarmería Nacional - Seccion Gral Lamadrid -",
+    "opening_hours": "24/7"
+  }
+},
+{
+  "type": "node",
+  "id": 4435470389,
+  "lat": -24.2118116,
+  "lon": -60.1974804,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmería Nacional - Grupo Cambio Posta Zalazar -",
+    "name:en": "Gendarmería Nacional - Grupo Cambio Posta Zalazar -",
+    "name:es": "Gendarmería Nacional - Grupo Cambio Posta Zalazar -",
+    "opening_hours": "24/7"
+  }
+},
+{
+  "type": "node",
+  "id": 4459198292,
+  "lat": -26.2400011,
+  "lon": -58.2487014,
+  "tags": {
+    "amenity": "police",
+    "name": "Cuerpo de Tránsito"
+  }
+},
+{
+  "type": "node",
+  "id": 4465141389,
+  "lat": -23.9879398,
+  "lon": -60.4580551,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmería Nacional - Grupo El Remanzo",
+    "name:es": "Gendarmería Nacional - Grupo El Remanzo",
+    "opening_hours": "24/7"
+  }
+},
+{
+  "type": "node",
+  "id": 4531952991,
+  "lat": -26.1843522,
+  "lon": -59.3628015,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría \"Sgto Juan Domingo Ojeda\"",
+    "name:es": "Comisaría \"Sgto Juan Domingo Ojeda\""
+  }
+},
+{
+  "type": "node",
+  "id": 4794166823,
+  "lat": -26.1873519,
+  "lon": -58.1799364,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría 2da",
+    "name:es": "Comisaría 2da"
+  }
+},
+{
+  "type": "node",
+  "id": 4794199022,
+  "lat": -26.2067663,
+  "lon": -58.2391653,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría 8va Policía de Formosa",
+    "name:es": "Comisaría 8va Policía de Formosa"
+  }
+},
+{
+  "type": "node",
+  "id": 5055079606,
+  "lat": -24.7063374,
+  "lon": -60.5894294,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría Regional"
+  }
+},
+{
+  "type": "node",
+  "id": 5293851822,
+  "lat": -23.9150237,
+  "lon": -61.8204294,
+  "tags": {
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 5473895098,
+  "lat": -26.1467330,
+  "lon": -58.1588289,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría Nº5"
+  }
+},
+{
+  "type": "node",
+  "id": 6074907846,
+  "lat": -25.3233258,
+  "lon": -57.7040739,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmeria Nacional Argentina"
+  }
+},
+{
+  "type": "node",
+  "id": 6496556785,
+  "lat": -25.2156014,
+  "lon": -59.8578726,
+  "tags": {
+    "addr:city": "Ibarreta",
+    "addr:postcode": "3624",
+    "addr:street": "Jorge Newbery",
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 6501284735,
+  "lat": -25.6843253,
+  "lon": -59.0675639,
+  "tags": {
+    "addr:city": "Pirané",
+    "addr:postcode": "3606",
+    "addr:street": "Ruta Nacional 81",
+    "amenity": "police",
+    "description": "Puesto de Control",
+    "name": "Gendarmería Nacional"
+  }
+},
+{
+  "type": "node",
+  "id": 6502815422,
+  "lat": -25.8641958,
+  "lon": -58.8888982,
+  "tags": {
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 6556153885,
+  "lat": -25.8105362,
+  "lon": -58.8647699,
+  "tags": {
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 7009732578,
+  "lat": -26.4887596,
+  "lon": -58.3124222,
+  "tags": {
+    "addr:city": "Herradura",
+    "addr:postcode": "3601",
+    "addr:street": "Avenida San Martín",
+    "amenity": "police",
+    "name": "Gendarmería Nacional"
+  }
+},
+{
+  "type": "node",
+  "id": 7020671820,
+  "lat": -24.9433081,
+  "lon": -59.0276499,
+  "tags": {
+    "addr:city": "Villa General Manuel Belgrano",
+    "addr:full": "Ruta Nac. 86 y Av. Libertador",
+    "addr:postcode": "3615",
+    "addr:street": "Chile",
+    "amenity": "police",
+    "email": "pol.criagralbelgrano@formosa.gob.ar",
+    "phone": "+54 3716 491013",
+    "website": "https://www.formosa.gob.ar/policia/dependencias"
+  }
+},
+{
+  "type": "node",
+  "id": 7028204186,
+  "lat": -25.2880396,
+  "lon": -57.7490225,
+  "tags": {
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 7039239562,
+  "lat": -25.2885875,
+  "lon": -57.7261554,
+  "tags": {
+    "addr:city": "Clorinda",
+    "addr:postcode": "3610",
+    "addr:street": "Santiago de Liniers",
+    "amenity": "police"
+  }
+},
+{
+  "type": "node",
+  "id": 7047483607,
+  "lat": -25.2897631,
+  "lon": -57.7115766,
+  "tags": {
+    "addr:city": "Clorinda",
+    "addr:postcode": "3610",
+    "addr:street": "Juan Bautista Alberdi",
+    "amenity": "police",
+    "description": "El nombre representa como se llama la comisaría. https://www.formosa.gob.ar/noticia/32106/600/clorinda_la_policia_evoco_el_30_aniversario_de_la_muerte_en_servicio_del_oficial_subinspector_idelfonso_vera",
+    "name": "Comisaría Oficial Subinspector Idelfonso Vera",
+    "operator": "Policía de la Provincia de Formosa",
+    "short_name": "COSIV"
+  }
+},
+{
+  "type": "node",
+  "id": 7047899972,
+  "lat": -26.1178449,
+  "lon": -58.2248443,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:postcode": "3600",
+    "addr:street": "Ruta Nacional 11",
+    "amenity": "police",
+    "name": "Comisaría",
+    "name:es": "Comisaría barrio namqom",
+    "operator": "Policía de la Provincia de Formosa"
+  }
+},
+{
+  "type": "node",
+  "id": 7084978207,
+  "lat": -26.1832099,
+  "lon": -58.1689347,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:postcode": "3600",
+    "addr:street": "Avenida 25 de Mayo",
+    "amenity": "police",
+    "name": "Unidad 10 Carcel de FormosaT"
+  }
+},
+{
+  "type": "node",
+  "id": 7096616951,
+  "lat": -26.1849749,
+  "lon": -58.1782106,
+  "tags": {
+    "addr:city": "Formosa",
+    "addr:housename": "1175",
+    "addr:postcode": "3600",
+    "addr:street": "España",
+    "amenity": "police",
+    "name": "Gendarmería Nacional",
+    "phone": "+54 3717 426150",
+    "website": "https://prensagendarmeria.gob.ar/"
+  }
+},
+{
+  "type": "node",
+  "id": 7123535633,
+  "lat": -25.1310346,
+  "lon": -58.2465406,
+  "tags": {
+    "addr:city": "Laguna Blanca",
+    "addr:street": "San Martín",
+    "amenity": "police",
+    "description": "(54) 03718 - 470043 Int 5001",
+    "email": "pol.lagunablanca@formosa.gob.ar",
+    "name": "Comisaría Laguna Blanca",
+    "phone": "+54 3718 470043",
+    "website": "https://www.formosa.gob.ar/policia/dependencias"
+  }
+},
+{
+  "type": "node",
+  "id": 7123535635,
+  "lat": -25.1309880,
+  "lon": -58.2463819,
+  "tags": {
+    "addr:city": "Laguna Blanca",
+    "addr:street": "San Martín",
+    "amenity": "police",
+    "description": "(54) 03718 - 470043 Int 5001",
+    "email": "pol.lagunablanca@formosa.gob.ar",
+    "name": "Unidad Regional Cuatro UR 4",
+    "phone": "+54 3718 470043",
+    "website": "https://www.formosa.gob.ar/policia/dependencias"
+  }
+},
+{
+  "type": "node",
+  "id": 7123535641,
+  "lat": -25.1348523,
+  "lon": -58.2386221,
+  "tags": {
+    "addr:city": "Laguna Blanca",
+    "amenity": "police",
+    "name": "Gendarmería Nacional"
+  }
+},
+{
+  "type": "node",
+  "id": 7123563903,
+  "lat": -25.2287632,
+  "lon": -58.1163864,
+  "tags": {
+    "addr:city": "Laguna Naick Neck",
+    "addr:full": "Avenida del Labrador y Fontana",
+    "addr:street": "Avenida del Labrador",
+    "amenity": "police",
+    "name": "Subcomisaría Laguna Naick Neck",
+    "phone": "+54 3718 491035"
+  }
+},
+{
+  "type": "node",
+  "id": 7129220481,
+  "lat": -25.5676032,
+  "lon": -59.3421892,
+  "tags": {
+    "addr:city": "Palo Santo",
+    "addr:full": "Avenida 2 de Abril y Miguel Alberto Lucca",
+    "addr:postcode": "3608",
+    "addr:street": "Avenida 2 de Abril",
+    "amenity": "police",
+    "email": "pol.palosanto@formosa.gob.ar",
+    "name": "Comisaría Palo Santo",
+    "operator": "Policía de la Provincia de Formosa",
+    "phone": "+54 370 449 4124; +54 370 449 4399",
+    "website": "https://www.formosa.gob.ar/policia/dependencias"
+  }
+},
+{
+  "type": "node",
+  "id": 7131974205,
+  "lat": -24.4333493,
+  "lon": -59.6543679,
+  "tags": {
+    "addr:city": "San Martín 2",
+    "addr:full": "Hipólito Yrigoyen y Gabriel Mistral",
+    "addr:street": "Hipólito Yrigoyen",
+    "amenity": "police",
+    "email": "pol.criasanmartin2@formosa.gob.ar",
+    "fixme": "Verificar ubicación exacta",
+    "name": "Comisaría San Martín Dos",
+    "operator": "Policía de la Provincia de Formosa"
+  }
+},
+{
+  "type": "node",
+  "id": 7132078047,
+  "lat": -25.0560990,
+  "lon": -60.0916542,
+  "tags": {
+    "addr:city": "Estanislao del Campo",
+    "addr:full": "General Belgrano y Pringles",
+    "addr:street": "Belgrano",
+    "amenity": "police",
+    "email": "pol.campo@formosa.gob.ar",
+    "name": "Comisaría Estanislao del Campo",
+    "operator": "Policía de la Provincia de Formosa",
+    "phone": "+54 3715 493115"
+  }
+},
+{
+  "type": "node",
+  "id": 7208531707,
+  "lat": -24.9008083,
+  "lon": -60.3260605,
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría Pozo del Tigre"
+  }
+},
+{
+  "type": "node",
+  "id": 8869870717,
+  "lat": -26.1817506,
+  "lon": -58.2359576,
+  "tags": {
+    "amenity": "police",
+    "name": "Policía lote 111"
+  }
+},
+{
+  "type": "node",
+  "id": 9517046321,
+  "lat": -25.3285438,
+  "lon": -57.7354228,
+  "tags": {
+    "amenity": "police",
+    "name": "Gendarmeria Nacional Argentina"
+  }
+},
+{
+  "type": "node",
+  "id": 10827123625,
+  "lat": -24.4474025,
+  "lon": -60.3780977,
+  "tags": {
+    "amenity": "police",
+    "name": "Policía"
+  }
+},
+{
+  "type": "node",
+  "id": 10980776706,
+  "lat": -26.1818085,
+  "lon": -58.1630966,
+  "tags": {
+    "amenity": "police",
+    "name": "Prefectura Naval Argentina"
+  }
+},
+{
+  "type": "way",
+  "id": 201363789,
+  "center": {
+    "lat": -24.7133282,
+    "lon": -60.5930322
+  },
+  "tags": {
+    "amenity": "police",
+    "name": "Comisaría Las Lomitas"
+  }
+},
+{
+  "type": "way",
+  "id": 201363799,
+  "center": {
+    "lat": -24.7137065,
+    "lon": -60.5933534
+  },
+  "tags": {
+    "amenity": "police",
+    "name": "Alcaidía Mixta"
+  }
+},
+{
+  "type": "way",
+  "id": 244459549,
+  "center": {
+    "lat": -26.1912341,
+    "lon": -58.1972367
+  },
+  "tags": {
+    "amenity": "police",
+    "changing_table": "no",
+    "name": "Policía",
+    "opening_hours": "24/7",
+    "toilets:access": "private",
+    "toilets:wheelchair": "no",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "way",
+  "id": 296964228,
+  "center": {
+    "lat": -26.1740182,
+    "lon": -58.1771619
+  },
+  "tags": {
+    "addr:city": "formosa",
+    "addr:housenumber": "799",
+    "addr:postcode": "3600",
+    "addr:street": "Coronel Bogado",
+    "amenity": "police",
+    "building": "yes",
+    "name": "Policía De La Provincia De Formosa Comisaría 3",
+    "phone": "+54 370 442 0999"
+  }
+},
+{
+  "type": "way",
+  "id": 330592756,
+  "center": {
+    "lat": -24.7090710,
+    "lon": -60.5940275
+  },
+  "tags": {
+    "addr:housenumber": "44",
+    "addr:postcode": "3630",
+    "addr:street": "Avenida San Martín",
+    "amenity": "police",
+    "name": "Gendarmería Nacional Escuadron 18 Las Lomitas",
+    "opening_hours": "24/7"
+  }
+},
+{
+  "type": "way",
+  "id": 369442475,
+  "center": {
+    "lat": -25.2847394,
+    "lon": -57.7384886
+  },
+  "tags": {
+    "amenity": "police",
+    "building": "yes",
+    "contact:phone": "+54 3718 424 924",
+    "name": "Comisaría Territorios Nacionales"
+  }
+},
+{
+  "type": "way",
+  "id": 692446587,
+  "center": {
+    "lat": -25.7571471,
+    "lon": -59.1175033
+  },
+  "tags": {
+    "addr:city": "Pirané",
+    "addr:street": "Ruta Provincial 3",
+    "amenity": "police",
+    "name": "Gendarmería Nacional"
+  }
+},
+{
+  "type": "way",
+  "id": 755313819,
+  "center": {
+    "lat": -26.1687610,
+    "lon": -58.2084759
+  },
+  "tags": {
+    "amenity": "police"
+  }
+},
+{
+  "type": "way",
+  "id": 1040517232,
+  "center": {
+    "lat": -26.1855170,
+    "lon": -58.1704584
+  },
+  "tags": {
+    "amenity": "police",
+    "building": "yes",
+    "operator": "Gendarmería Nacional Argentina",
+    "operator:wikidata": "Q3100095",
+    "operator:wikipedia": "es:Gendarmería Nacional Argentina"
+  }
+},
+{
+  "type": "way",
+  "id": 1383766735,
+  "center": {
+    "lat": -26.1632804,
+    "lon": -58.1617181
+  },
+  "tags": {
+    "amenity": "police",
+    "building": "yes",
+    "name": "Destacamento Policial Ribereña",
+    "opening_hours": "24/7"
+  }
+},
+{
+  "type": "way",
+  "id": 1467302933,
+  "center": {
+    "lat": -26.1845767,
+    "lon": -58.2048422
+  },
+  "tags": {
+    "amenity": "police",
+    "changing_table": "no",
+    "name": "Subcomisaria Oficial Gustavo Ramon Bini",
+    "opening_hours": "24/7",
+    "toilets:access": "private",
+    "toilets:wheelchair": "no",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "way",
+  "id": 1467466104,
+  "center": {
+    "lat": -26.1717972,
+    "lon": -58.1952960
+  },
+  "tags": {
+    "amenity": "police",
+    "changing_table": "no",
+    "name": "Comisaría 4ta Policía de Formosa",
+    "name:es": "Comisaría 4ta Policía de Formosa",
+    "opening_hours": "24/7",
+    "toilets": "yes",
+    "toilets:access": "private",
+    "toilets:wheelchair": "no",
+    "wheelchair": "yes"
+  }
+}
+
+  ]
+}
