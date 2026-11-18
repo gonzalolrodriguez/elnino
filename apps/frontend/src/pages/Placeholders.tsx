@@ -3,6 +3,9 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { Layout } from "../components/Layout";
 
+/** URL pública de la APK generada con EAS Build (perfil preview). Vacía = descarga no disponible. */
+const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || "";
+
 export function AppMovil() {
   return (
     <Layout titulo="App móvil">
@@ -13,10 +16,22 @@ export function AppMovil() {
         La app (Android) permite pedir asistencia aunque no haya conexión: el pedido queda guardado en el teléfono y se envía cuando
         vuelve la señal. También recibe las alertas y las órdenes de tu sector.
       </Text>
-      <Alert status="warning" maxW="40rem" mb={6}>
-        <AlertIcon />
-        El archivo de instalación (APK) todavía no está publicado. Se genera en la Fase 5 con EAS Build.
-      </Alert>
+      {APK_URL ? (
+        <Box maxW="40rem" mb={6}>
+          <Button as="a" href={APK_URL} rel="noopener" download>
+            Descargar la app para Android (APK)
+          </Button>
+          <Text fontSize="sm" mt={2}>
+            Al instalarla, Android puede pedirte que permitas instalar apps de origen desconocido. Es un prototipo: no es una
+            herramienta oficial.
+          </Text>
+        </Box>
+      ) : (
+        <Alert status="info" maxW="40rem" mb={6}>
+          <AlertIcon />
+          La descarga de la app todavía no está disponible. Mientras tanto, podés registrarte y pedir asistencia desde la web.
+        </Alert>
+      )}
       <Box maxW="40rem">
         <Heading as="h2" size="md" mb={2}>
           Qué vas a poder hacer
