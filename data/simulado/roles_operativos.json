@@ -1,0 +1,96 @@
+{
+  "categoria": "SIMULADO",
+  "fuente": "SUPUESTO · catálogo de roles sin nombres de funcionarios (CLAUDE.md §2)",
+  "roles": [
+    {
+      "codigo": "comando_emergencia",
+      "nombre": "Comando de Emergencia",
+      "descripcion": "Coordinación general de la emergencia"
+    },
+    {
+      "codigo": "defensa_civil",
+      "nombre": "Defensa Civil",
+      "descripcion": "Alerta y evacuación"
+    },
+    {
+      "codigo": "coordinador_sector",
+      "nombre": "Coordinador de sector",
+      "descripcion": "Responsable operativo de un sector"
+    },
+    {
+      "codigo": "policia",
+      "nombre": "Policía",
+      "descripcion": "Seguridad, comunicaciones y partes de lluvia"
+    },
+    {
+      "codigo": "sipec",
+      "nombre": "SIPEC",
+      "descripcion": "Atención sanitaria de emergencia"
+    },
+    {
+      "codigo": "desarrollo_humano",
+      "nombre": "Desarrollo Humano",
+      "descripcion": "Asistencia social y centros de recepción"
+    },
+    {
+      "codigo": "trabajo_social",
+      "nombre": "Trabajo social",
+      "descripcion": "Asistencia a familias evacuadas"
+    },
+    {
+      "codigo": "produccion",
+      "nombre": "Producción",
+      "descripcion": "Coordinación de la logística productiva"
+    },
+    {
+      "codigo": "paippa",
+      "nombre": "PAIPPA",
+      "descripcion": "Programa de apoyo a pequeños productores"
+    },
+    {
+      "codigo": "prefectura",
+      "nombre": "Prefectura",
+      "descripcion": "Escalas hidrométricas y operaciones fluviales"
+    },
+    {
+      "codigo": "senasa",
+      "nombre": "SENASA",
+      "descripcion": "Sanidad y traslado de animales"
+    },
+    {
+      "codigo": "inta",
+      "nombre": "INTA",
+      "descripcion": "Asesoramiento técnico productivo"
+    },
+    {
+      "codigo": "vialidad",
+      "nombre": "Vialidad",
+      "descripcion": "Estado de caminos y accesos"
+    },
+    {
+      "codigo": "veterinario",
+      "nombre": "Veterinario o zootecnista",
+      "descripcion": "Cuadrilla ganadera"
+    },
+    {
+      "codigo": "transporte",
+      "nombre": "Transporte",
+      "descripcion": "Conducción y logística de vehículos"
+    },
+    {
+      "codigo": "tecnico_energia",
+      "nombre": "Técnico de energía",
+      "descripcion": "Servicios eléctricos en centros"
+    },
+    {
+      "codigo": "encargado_cuadrilla",
+      "nombre": "Encargado de cuadrilla",
+      "descripcion": "Responsable de una cuadrilla"
+    },
+    {
+      "codigo": "administrador_plataforma",
+      "nombre": "Administración de la plataforma",
+      "descripcion": "Alta de usuarios institucionales"
+    }
+  ]
+}

@@ -19,3 +19,9 @@ Thumbs.db
 android/
 ios/
 # data/kit se versiona (originales sin modificar)
+
+# Herramientas locales
+.atl/
+
+# Adjuntos de solicitudes (fotos subidas)
+uploads/

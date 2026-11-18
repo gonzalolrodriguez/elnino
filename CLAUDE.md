@@ -267,14 +267,14 @@ app/
 ```
 
 ### 5.4 Web (`apps/frontend`) — P2
-- **Rutas públicas:** `/` landing · `/el-nino` sección informativa · `/registro/ciudadania` · `/registro/productor` · `/login` · `/app` (descarga APK y enlace a la app).
+- **Rutas públicas:** `/` landing · `/informacion` sección informativa (antes `/el-nino`, que redirige; renombrada por el equipo el 18/11/2026) · `/registro/ciudadania` · `/registro/productor` · `/login` · `/app` (descarga APK y enlace a la app).
 - **Rutas privadas por rol:** `/mi-cuenta` (ciudadano/productor) · `/comando/*` (operador/decisor) · `/admin` (usuarios institucionales).
 - **Landing (D2):**
   - Hero 3D con React Three Fiber + Drei + Framer Motion: cuenca simplificada (Pantanal → río Paraguay → Asunción → Puerto Pilcomayo → Puerto Formosa → confluencia con el Paraná), partículas de agua animadas, cámara que termina en Formosa. Geometría de ríos desde **cursos de agua del IGN** (o Natural Earth como respaldo), proyectada y simplificada; **relaciones hidrográficas verificadas contra K7** (p. ej. el Pilcomayo no desemboca en el Bermejo; orden de estaciones correcto). Rótulo: "Esquema ilustrativo".
   - Datos visibles con categoría: Puerto Formosa 5,60 m (31/10/2026, OBSERVADO), umbrales 7,80/8,30 (K3), picos 9,81 m (2016) y 9,72 m (2019) (K1). Lluvia: "sin dato observado en el kit" o el último parte cargado con su origen.
   - Selectores de ingreso por perfil (ciudadanía, productores, mandos) con CTA a registro, app o login.
   - Fallback 2D si WebGL no está disponible o si el usuario prefiere menos movimiento (`prefers-reduced-motion`).
-- **Sección El Niño:** qué es ENSO; cómo llega a Formosa (cuenca alta y media, Pantanal como amortiguador, remanso del Paraná, rezago de semanas a meses); amenaza exógena (ríos) vs. endógena (lluvia sobre suelos arcillosos de muy baja pendiente); umbrales y picos; pronóstico estacional CFS v2 como REFERENCIA; qué hacer (anticipación, evacuación en seco); fuentes con fecha. Visualizaciones interactivas (línea de tiempo de la serie K1 con umbrales, mapa de sectores).
+- **Sección Información** (antes "Sección El Niño"): qué es ENSO; cómo llega a Formosa (cuenca alta y media, Pantanal como amortiguador, remanso del Paraná, rezago de semanas a meses); amenaza exógena (ríos) vs. endógena (lluvia sobre suelos arcillosos de muy baja pendiente); umbrales y picos; pronóstico estacional CFS v2 como REFERENCIA; qué hacer (anticipación, evacuación en seco); fuentes con fecha. Visualizaciones interactivas (línea de tiempo de la serie K1 con umbrales, mapa de sectores).
 - **Panel operativo:** MapLibre + Deck.gl (o Leaflet según P2), componentes Chakra.
 
 ### 5.5 App móvil (`apps/mobile`) — P3

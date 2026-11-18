@@ -23,8 +23,23 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-evacuaciones}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-evacuaciones}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8081}
       PERMITIR_DATOS_POST_CORTE: ${PERMITIR_DATOS_POST_CORTE:-false}
+      JWT_SECRET: ${JWT_SECRET:-}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
+      CANAL_HMAC_SECRET: ${CANAL_HMAC_SECRET:-}
+      # El código del contenedor no está dentro del repo: los datos se montan en solo lectura.
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data:ro
+    # Aplica las migraciones y la carga inicial (idempotente) antes de arrancar la API.
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy

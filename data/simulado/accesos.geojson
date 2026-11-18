@@ -1,0 +1,151 @@
+{
+  "type": "FeatureCollection",
+  "name": "accesos_simulados",
+  "metadata": {
+    "categoria": "SIMULADO",
+    "crs": "EPSG:4326",
+    "fecha": "2026-11-17",
+    "fuente": "SIMULADO · coherente con el campo acceso_simulado de K10",
+    "nota": "Dato ficticio con fines educativos. Los lugares reales (escuelas, caminos, parajes, puestos) reemplazarán a estos nombres genéricos cuando se carguen las capas oficiales (D7)."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S1",
+        "nombre": "Acceso SIMULADO S1-A",
+        "superficie": "ripio",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.1875,
+            -26.156
+          ],
+          [
+            -58.1875,
+            -26.138
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S2",
+        "nombre": "Acceso SIMULADO S2-A",
+        "superficie": "pavimento",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.18,
+            -26.185
+          ],
+          [
+            -58.158,
+            -26.185
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S2",
+        "nombre": "Acceso SIMULADO S2-B",
+        "superficie": "pavimento",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.18,
+            -26.178
+          ],
+          [
+            -58.18,
+            -26.162
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S3",
+        "nombre": "Acceso SIMULADO S3-A",
+        "superficie": "pavimento",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.196,
+            -26.215
+          ],
+          [
+            -58.172,
+            -26.215
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S3",
+        "nombre": "Acceso SIMULADO S3-B",
+        "superficie": "ripio",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.196,
+            -26.222
+          ],
+          [
+            -58.196,
+            -26.238
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "sector_id": "S4",
+        "nombre": "Acceso SIMULADO S4-A",
+        "superficie": "tierra",
+        "transitable": true,
+        "categoria": "SIMULADO"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -58.139,
+            -26.18
+          ],
+          [
+            -58.168,
+            -26.184
+          ]
+        ]
+      }
+    }
+  ]
+}

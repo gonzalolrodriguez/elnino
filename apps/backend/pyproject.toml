@@ -6,9 +6,30 @@ requires-python = ">=3.12"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Idioma estándar de FastAPI: Depends(...) / Query(...) como valor por defecto.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header", "fastapi.Cookie", "app.core.rbac.requiere_rol"]
+
+[tool.ruff.lint.per-file-ignores]
+# La plantilla Markdown del registro de limpieza tiene líneas largas por diseño.
+"app/ingest/limpieza_k1.py" = ["E501"]
+"alembic/env.py" = ["I001"]
+"app/api/v1/usuarios.py" = ["B008"]
+"app/api/v1/lluvia.py" = ["B008", "E501"]
+"app/api/v1/solicitudes.py" = ["B008"]
+"app/api/v1/centinela.py" = ["E501"]
+"app/api/v1/ws.py" = ["E501"]
+"app/domain/ganaderia.py" = ["E501"]
+"app/domain/verificador.py" = ["E501"]
+"app/servicios/*.py" = ["E501"]
+"tests/*.py" = ["E501"]
+# Script de descarga de capas: tablas de URLs y mensajes largos por diseño.
+"scripts/descargar_capas.py" = ["E501", "UP038"]

@@ -2,3 +2,21 @@ packages:
   - apps/frontend
   - apps/mobile
   - packages/shared
+
+# react-router(-dom) no declara @types/react como peer: sin esto pnpm lo resuelve
+# desde el hoisting privado (.pnpm/node_modules) y puede tomar los tipos de React 19
+# de la app movil en vez de los de React 18 de la web. Declararlo como peer fuerza
+# a pnpm a enlazar la version de cada workspace.
+packageExtensions:
+  react-router:
+    peerDependencies:
+      "@types/react": "*"
+    peerDependenciesMeta:
+      "@types/react":
+        optional: true
+  react-router-dom:
+    peerDependencies:
+      "@types/react": "*"
+    peerDependenciesMeta:
+      "@types/react":
+        optional: true

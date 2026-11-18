@@ -4,3 +4,13 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 pyyaml==6.0.2
 psycopg[binary]==3.2.3
+SQLAlchemy==2.1.9
+GeoAlchemy2==0.21.0
+alembic==1.20.1
+shapely==2.2.0
+argon2-cffi==25.1.0
+PyJWT==2.15.1
+cryptography==50.0.2
+slowapi==0.1.10
+openpyxl==3.1.5
+python-multipart==0.0.34

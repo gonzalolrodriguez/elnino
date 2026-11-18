@@ -1,0 +1,29 @@
+{
+  "categoria": "SIMULADO",
+  "fecha": "2026-11-17",
+  "fuente": "SIMULADO · puestos genéricos; se reemplazan por los del parte policial (UPCA) ubicados con BAHRA",
+  "nota": "Dato ficticio con fines educativos. Los lugares reales (escuelas, caminos, parajes, puestos) reemplazarán a estos nombres genéricos cuando se carguen las capas oficiales (D7).",
+  "puestos": [
+    {
+      "codigo": "PLUV-SIM-A",
+      "nombre": "Puesto pluviométrico SIMULADO A",
+      "zona": "Zona SIMULADA 1",
+      "lon": -58.19,
+      "lat": -26.155
+    },
+    {
+      "codigo": "PLUV-SIM-B",
+      "nombre": "Puesto pluviométrico SIMULADO B",
+      "zona": "Zona SIMULADA 2",
+      "lon": -58.18,
+      "lat": -26.185
+    },
+    {
+      "codigo": "PLUV-SIM-C",
+      "nombre": "Puesto pluviométrico SIMULADO C",
+      "zona": "Zona SIMULADA 3",
+      "lon": -58.139,
+      "lat": -26.18
+    }
+  ]
+}

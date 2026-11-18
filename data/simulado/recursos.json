@@ -1,0 +1,42 @@
+{
+  "categoria": "SIMULADO",
+  "fecha": "2026-11-17",
+  "fuente": "SIMULADO · cantidades de prueba",
+  "recursos": [
+    {
+      "tipo": "colectivo",
+      "descripcion": "Colectivo para traslado de personas",
+      "cantidad": 6,
+      "capacidad_unitaria": 40,
+      "unidad_capacidad": "personas"
+    },
+    {
+      "tipo": "camioneta_4x4",
+      "descripcion": "Camioneta 4x4 para caminos de tierra",
+      "cantidad": 10,
+      "capacidad_unitaria": 5,
+      "unidad_capacidad": "personas"
+    },
+    {
+      "tipo": "camion_jaula",
+      "descripcion": "Camión jaula para bovinos",
+      "cantidad": 4,
+      "capacidad_unitaria": 30,
+      "unidad_capacidad": "bovinos (SUPUESTO, ver supuestos.yaml)"
+    },
+    {
+      "tipo": "vehiculo_cat_b",
+      "descripcion": "Vehículo categoría B para animales menores",
+      "cantidad": 3,
+      "capacidad_unitaria": 40,
+      "unidad_capacidad": "animales menores (SUPUESTO)"
+    },
+    {
+      "tipo": "lancha",
+      "descripcion": "Lancha para sectores aislados por agua",
+      "cantidad": 3,
+      "capacidad_unitaria": 12,
+      "unidad_capacidad": "personas"
+    }
+  ]
+}
