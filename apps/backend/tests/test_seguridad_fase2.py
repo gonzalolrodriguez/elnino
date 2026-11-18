@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.config.settings import get_settings
-from app.db.modelos import IntentoLogin, SesionRefresh
+from app.core.bloqueo import clave_ip
+from app.db.modelos import AuditoriaAcceso, IntentoLogin, SesionRefresh
 from app.main import app
 from tests.conftest import (
     PASSWORD_VALIDA,
@@ -142,6 +143,91 @@ def test_login_correcto_reinicia_el_contador_del_par(base_de_datos, db):
     assert iniciar_sesion(c, datos["email"], datos["password"]).status_code == 200
     db.expire_all()
     assert db.execute(select(IntentoLogin).where(IntentoLogin.ip == "192.0.2.44")).first() is None
+
+
+# ------------------------------------------------ 2b) límite por cuenta (todas las redes)
+
+
+def test_muchas_ip_fallando_activan_el_limite_por_cuenta_y_la_titular_sigue_entrando(
+    base_de_datos, db, monkeypatch
+):
+    monkeypatch.setattr(get_settings(), "login_cuenta_max_fallos", 6)
+    victima = _cliente_desde("198.51.100.20")
+    datos = datos_ciudadano()
+    assert victima.post(REGISTRO, json=datos).status_code == 201
+    # login correcto previo: deja la red de la titular como conocida
+    assert iniciar_sesion(victima, datos["email"], datos["password"]).status_code == 200
+
+    # Cada IP falla una sola vez: ningún par llega a LOGIN_MAX_INTENTOS.
+    for n in range(6):
+        c = _cliente_desde(f"203.0.113.{n + 1}")
+        assert iniciar_sesion(c, datos["email"], "contraseña-incorrecta").status_code == 401
+
+    # Cuenta saturada: una red nueva recibe 429 aunque acierte (sin oráculo de contraseña)...
+    nueva = _cliente_desde("203.0.113.99")
+    r = iniciar_sesion(nueva, datos["email"], datos["password"])
+    assert r.status_code == 429 and r.json()["error"]["codigo"] == "demasiados_intentos"
+    assert iniciar_sesion(nueva, datos["email"], "otra-incorrecta").status_code == 429
+    # ...y no deja contador por par.
+    db.expire_all()
+    assert (
+        db.execute(select(IntentoLogin).where(IntentoLogin.ip == "203.0.113.99")).first() is None
+    )
+    # La titular, desde la red con login previo, entra con la contraseña correcta.
+    assert iniciar_sesion(victima, datos["email"], datos["password"]).status_code == 200
+    # Con contraseña incorrecta desde su red conocida es un 401 normal.
+    assert iniciar_sesion(victima, datos["email"], "contraseña-incorrecta").status_code == 401
+
+
+def test_el_limite_por_cuenta_cede_al_salir_los_fallos_de_la_ventana(
+    base_de_datos, db, monkeypatch
+):
+    from datetime import timedelta
+
+    monkeypatch.setattr(get_settings(), "login_cuenta_max_fallos", 3)
+    datos = datos_ciudadano()
+    _cliente_desde("198.51.100.30").post(REGISTRO, json=datos)
+    for n in range(3):
+        iniciar_sesion(_cliente_desde(f"203.0.113.{100 + n}"), datos["email"], "x" * 12)
+    nueva = _cliente_desde("203.0.113.150")
+    assert iniciar_sesion(nueva, datos["email"], datos["password"]).status_code == 429
+
+    # Los fallos envejecen fuera de la ventana: se simula moviendo su fecha hacia atrás
+    # (la cadena de hashes de esas filas queda inconsistente; esta prueba no la verifica).
+    minutos = get_settings().login_cuenta_ventana_minutos + 1
+    db.execute(
+        AuditoriaAcceso.__table__.update()
+        .where(AuditoriaAcceso.accion == "login_fallido", AuditoriaAcceso.ip.like("203.0.113.10_"))
+        .values(fecha=AuditoriaAcceso.fecha - timedelta(minutes=minutos))
+    )
+    db.commit()
+    assert iniciar_sesion(nueva, datos["email"], datos["password"]).status_code == 200
+
+
+def test_clave_ip_agrupa_ipv6_por_64_y_deja_ipv4_igual():
+    assert clave_ip("203.0.113.7") == "203.0.113.7"
+    assert clave_ip("2001:db8:1:2::1") == clave_ip("2001:db8:1:2:ffff:abcd:0:9")
+    assert clave_ip("2001:db8:1:2::1") == "2001:db8:1:2::/64"
+    assert clave_ip("2001:db8:1:3::1") != clave_ip("2001:db8:1:2::1")
+    assert clave_ip("::ffff:203.0.113.7") == "203.0.113.7"
+    assert clave_ip(None) == "desconocida"
+    assert clave_ip("testclient") == "testclient"
+
+
+def test_ipv6_del_mismo_64_comparten_el_contador_del_par(base_de_datos):
+    datos = datos_ciudadano()
+    _cliente_desde("198.51.100.40").post(REGISTRO, json=datos)
+    a = _cliente_desde("2001:db8:aa:bb::1")
+    b = _cliente_desde("2001:db8:aa:bb:dead:beef:0:2")
+    maximo = get_settings().login_max_intentos
+    estados = [
+        iniciar_sesion(a if n % 2 == 0 else b, datos["email"], "x" * 12).status_code
+        for n in range(maximo)
+    ]
+    assert estados == [401] * (maximo - 1) + [429]
+    # Otro /64 no queda bloqueado.
+    otro = _cliente_desde("2001:db8:aa:cc::1")
+    assert iniciar_sesion(otro, datos["email"], datos["password"]).status_code == 200
 
 
 # ------------------------------------------------ 3) rotación atómica del refresh

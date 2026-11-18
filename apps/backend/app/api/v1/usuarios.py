@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.esquemas import UsuarioActualizar, UsuarioCrear, UsuarioOut
 from app.core import auditoria, sesiones
+from app.core.eventos import difusor
 from app.core.rbac import ROLES_INSTITUCIONALES, ip_cliente, requiere_rol
 from app.core.seguridad import hashear_password
 from app.db.modelos import IntentoLogin, RolOperativo, Usuario
@@ -88,6 +89,7 @@ def actualizar(
     ):
         raise HTTPException(409, "Un admin no puede desactivarse ni quitarse el rol a sí mismo")
     password = cambios.pop("password", None)
+    rol_anterior = usuario.rol
     for campo, valor in cambios.items():
         setattr(usuario, campo, valor)
     if password is not None:
@@ -95,6 +97,11 @@ def actualizar(
         usuario.intentos_fallidos = 0
         usuario.bloqueado_hasta = None
     # Un cambio de contraseña o una baja cierra todas las sesiones abiertas del usuario.
+    cambia_autorizacion = (
+        password is not None
+        or "estado" in cambios
+        or ("rol" in cambios and cambios["rol"] != rol_anterior)
+    )
     if password is not None or cambios.get("estado") == "inactivo":
         sesiones.revocar_todas(db, usuario.id)
         db.execute(delete(IntentoLogin).where(IntentoLogin.usuario_id == usuario.id))
@@ -107,4 +114,7 @@ def actualizar(
         ",".join(sorted(list(cambios) + (["password"] if password else []))),
     )
     db.commit()
+    if cambia_autorizacion:
+        # Después del commit: si el usuario reconecta, ya verá su estado y rol nuevos.
+        difusor.desconectar_usuario(usuario.id)
     return usuario

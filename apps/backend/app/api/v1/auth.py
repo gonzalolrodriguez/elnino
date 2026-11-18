@@ -16,6 +16,7 @@ from app.api.v1.esquemas import (
 )
 from app.config.settings import get_settings
 from app.core import auditoria, bloqueo, cifrado, sesiones
+from app.core.eventos import difusor
 from app.core.limitador import limite_login, limite_registro, limiter
 from app.core.rbac import ip_cliente, usuario_actual
 from app.core.seguridad import crear_token_acceso, hashear_password, verificar_password
@@ -165,6 +166,12 @@ def login(
         db.commit()
         raise HTTPException(429, "Demasiados intentos fallidos desde esta red; probá más tarde")
 
+    # Límite por cuenta: con fallos masivos (muchas IP) solo pasan las redes con login previo.
+    if bloqueo.cuenta_saturada(db, usuario.id) and not bloqueo.red_conocida(db, usuario.id, ip):
+        auditoria.registrar(db, "login_bloqueado_cuenta", "auth", usuario.id, ip)
+        db.commit()
+        raise HTTPException(429, "Demasiados intentos fallidos contra esta cuenta; probá más tarde")
+
     if not correcto or usuario.estado != "activo":
         intentos, bloqueado = bloqueo.registrar_fallo(db, usuario.id, ip)
         if bloqueado:
@@ -209,6 +216,7 @@ def refresh(
         sesiones.revocar_familia(db, sesion.familia)
         auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
         db.commit()
+        difusor.desconectar_usuario(sesion.usuario_id)  # se asume robo: caen también los sockets
         raise invalido
 
     usuario = db.get(Usuario, sesion.usuario_id)
@@ -221,6 +229,7 @@ def refresh(
         sesiones.revocar_familia(db, sesion.familia)
         auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
         db.commit()
+        difusor.desconectar_usuario(sesion.usuario_id)  # se asume robo: caen también los sockets
         raise invalido
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia

@@ -4,11 +4,16 @@ Autenticación: el JWT de acceso viaja SOLO en el primer mensaje ``{"token": "<j
 URL, para que no quede en registros de acceso). Sin token válido en 5 segundos se cierra con el
 código 1008 (violación de política). Eventos enviados:
 ``{"tipo": "escenario|solicitud|orden|tarea", "datos": {...}}``.
+
+La conexión no sobrevive al token: al vencer el ``exp`` del token de acceso se cierra con 1008 y el
+cliente debe renovar el token (``/auth/refresh``) y reconectar. También se cierra si el servidor
+invalida la autorización (cambio de contraseña, estado o rol; ver ``Difusor.desconectar_usuario``).
 """
 
 from __future__ import annotations
 
 import asyncio
+import time
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -23,14 +28,14 @@ router = APIRouter(tags=["tiempo-real"])
 ESPERA_TOKEN_S = 5
 
 
-def _usuario(token: str) -> tuple[int, str] | None:
+def _usuario(token: str) -> tuple[int, str, float] | None:
     try:
         claims = decodificar_token_acceso(token)
         with get_sessionmaker()() as db:
             u = db.get(Usuario, int(claims["sub"]))
             if u is None or u.estado != "activo":
                 return None
-            return u.id, u.rol
+            return u.id, u.rol, float(claims["exp"])
     except (jwt.PyJWTError, ValueError, RuntimeError):
         return None
 
@@ -50,10 +55,19 @@ async def eventos(ws: WebSocket) -> None:
         return
     await difusor.conectar(ws, *identidad)
     await ws.send_json({"tipo": "conectado", "datos": {"rol": identidad[1]}})
+    exp = identidad[2]
     try:
         while True:
-            await ws.receive_text()  # se ignora lo que envíe el cliente (mantiene viva la conexión)
-    except WebSocketDisconnect:
+            restante = exp - time.time()
+            if restante <= 0:
+                break
+            try:
+                # Se ignora lo que envíe el cliente; el plazo es el vencimiento del token.
+                await asyncio.wait_for(ws.receive_text(), timeout=restante)
+            except TimeoutError:
+                break
+        await ws.close(code=1008)
+    except (WebSocketDisconnect, RuntimeError):
         pass
     finally:
         difusor.desconectar(ws)

@@ -439,6 +439,10 @@ class AuditoriaAcceso(Base):
     """Bitácora de accesos con hash encadenado (SHA-256)."""
 
     __tablename__ = "auditoria_accesos"
+    __table_args__ = (
+        # Consultas del límite de login por cuenta (fallos en ventana, redes conocidas).
+        Index("ix_auditoria_usuario_accion_fecha", "usuario_id", "accion", "fecha"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     usuario_id: Mapped[int | None] = mapped_column(Integer)  # sin FK: la traza sobrevive al usuario

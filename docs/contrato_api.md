@@ -74,7 +74,7 @@ Cuerpo `{ "email", "password" }`. Respuesta 200:
 
 - Web: además `Set-Cookie: refresh_token=...; HttpOnly; SameSite=Strict; Path=/api/v1/auth` (`Secure` según `COOKIE_SECURE`).
 - Con `X-Cliente: movil` el cuerpo incluye `"refresh_token"`.
-- 401 para credenciales incorrectas; tras 5 fallos consecutivos **desde la misma IP** ese par cuenta+IP se bloquea 15 minutos y responde 429 incluso con la contraseña correcta; el titular que entra desde otra IP no se ve afectado.
+- 401 para credenciales incorrectas; tras 5 fallos consecutivos **desde la misma IP** ese par cuenta+IP se bloquea 15 minutos y responde 429 incluso con la contraseña correcta; el titular que entra desde otra IP no se ve afectado. Las direcciones IPv6 se agrupan por /64 (misma clave de par). Además hay un **límite por cuenta**: con 20 fallos en 15 minutos sumando todas las IP, cualquier intento desde una red **sin un login correcto de esa cuenta en los últimos 30 días** recibe 429 (aunque la contraseña sea correcta) hasta que los fallos salgan de la ventana; las redes con login previo siguen entrando. Los umbrales se configuran con `LOGIN_CUENTA_MAX_FALLOS`, `LOGIN_CUENTA_VENTANA_MINUTOS` y `LOGIN_IP_CONOCIDA_DIAS`.
 
 ### `POST /auth/refresh`
 
@@ -300,6 +300,8 @@ Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de l
 ## Tiempo real
 
 `WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos; ciudadanía y productores reciben `orden` y sus propios `solicitud`.
+
+La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
 ## Ejemplos reproducibles (Fase 2)
 

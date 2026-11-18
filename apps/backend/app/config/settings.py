@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     password_min_longitud: int = 10
     login_max_intentos: int = 5
     login_bloqueo_minutos: int = 15
+    # Límite por cuenta (todas las redes): umbral más alto que `login_max_intentos`.
+    login_cuenta_max_fallos: int = 20
+    login_cuenta_ventana_minutos: int = 15
+    login_ip_conocida_dias: int = 30
     rate_limit_activo: bool = True
     rate_limit_login: str = "20/minute"
     rate_limit_registro: str = "10/minute"

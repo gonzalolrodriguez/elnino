@@ -35,7 +35,7 @@ Medidas implementadas en las **Fases 1 y 2** (backend) y su correspondencia con 
 | A04 Diseño inseguro | Bloqueo temporal, rate limiting, rotación y revocación de sesiones, consentimiento informado, mínimo de datos personales. |
 | A05 Configuración de seguridad incorrecta | Cabeceras de seguridad, CORS acotado, secretos obligatorios, errores sin detalle interno. |
 | A06 Componentes vulnerables | Dependencias fijadas en `requirements.txt`. Pendiente: auditoría periódica (`pip-audit`) en la CI. |
-| A07 Fallas de identificación y autenticación | Política de contraseñas, bloqueo, tiempos igualados, refresh rotativo con detección de reutilización, logout que revoca la familia. |
+| A07 Fallas de identificación y autenticación | Política de contraseñas, bloqueo por par y por cuenta (IPv6 por /64), WebSocket con token vigente, tiempos igualados, refresh rotativo con detección de reutilización, logout que revoca la familia. |
 | A08 Fallas de integridad de software y datos | Bitácora con hash encadenado verificable; migraciones versionadas con Alembic. |
 | A09 Fallas de registro y monitoreo | Eventos de autenticación, administración y acceso a datos personales en la bitácora. |
 | A10 Falsificación de solicitudes del lado del servidor | El backend no hace solicitudes a URLs provistas por el usuario. |
@@ -61,7 +61,7 @@ Límites de tamaño y tipo MIME de adjuntos (Fase 2/5), cifrado de más campos a
 | Bloqueo por cuenta e IP | Los intentos fallidos se cuentan por par (cuenta, IP) en `intentos_login`; tras `LOGIN_MAX_INTENTOS` ese par se bloquea `LOGIN_BLOQUEO_MINUTOS` y responde 429. Un atacante ya no puede dejar sin acceso a la persona titular fallando a propósito desde otra IP. Se mantiene el rate limit por IP de `slowapi`. | `app/core/bloqueo.py`, `app/api/v1/auth.py` |
 | Rotación de refresh | El token se marca como usado con `UPDATE ... WHERE revocado_en IS NULL` y se verifica `rowcount == 1` **antes** de emitir el nuevo. Con dos solicitudes simultáneas con el mismo token, solo una obtiene sesión; la otra se trata como reutilización y revoca la familia. | `app/core/sesiones.py` (`consumir`), `app/api/v1/auth.py` |
 | Webhooks de canales | Firma HMAC SHA-256 del cuerpo crudo en `X-Hub-Signature-256` (esquema de Meta), comparación en tiempo constante, tope de 64 KB, secreto `CANAL_HMAC_SECRET` (mínimo 16 caracteres; sin él, 503). Todos los mensajes del lote se validan antes de guardar alguno. | `app/api/v1/canales.py` |
-| WebSocket | El token de acceso viaja **solo en el primer mensaje** (nunca en la URL, para que no quede en registros de acceso), con plazo de 5 segundos; sin token válido se cierra con el código 1008. Cada conexión recibe solo los eventos que su rol puede ver. | `app/api/v1/ws.py`, `app/core/eventos.py` |
+| WebSocket | El token de acceso viaja **solo en el primer mensaje** (nunca en la URL, para que no quede en registros de acceso), con plazo de 5 segundos; sin token válido se cierra con el código 1008. Cada conexión recibe solo los eventos que su rol puede ver. **La autorización se mantiene vigente:** cada conexión guarda el `exp` del token y se cierra con 1008 al vencer (temporizador por conexión y comprobación antes de cada envío); `Difusor.desconectar_usuario` cierra los sockets del usuario al cambiar su contraseña, estado o rol y al detectar reutilización de un refresh. | `app/api/v1/ws.py`, `app/core/eventos.py` |
 | Órdenes | Solo el rol `decisor` emite órdenes (403 para el resto); cada orden queda con el rol del emisor, en la bitácora de accesos y con un borrador de bitácora K8. | `app/api/v1/operacion.py` |
 | Datos personales | El recomendador cuenta vulnerables por edad y **no descifra** datos de salud; las solicitudes y `/mi/grupo-familiar` registran lecturas en la bitácora de accesos. Un ciudadano solo ve sus solicitudes y notificaciones (404 sobre las ajenas). | `app/servicios/recomendacion.py`, `app/api/v1/mi.py` |
 | Subida de la planilla | Tope de 5 MB, comprobación de que el archivo sea un `.xlsx` (firma ZIP), máximo de 5.000 filas y lectura de solo valores (no se evalúan fórmulas). | `app/servicios/lluvia.py` |
@@ -72,8 +72,26 @@ Límites de tamaño y tipo MIME de adjuntos (Fase 2/5), cifrado de más campos a
 - **Qué se gana:** la víctima no queda bloqueada por intentos ajenos desde otras IP; el bloqueo por intentos fallidos deja de ser una forma barata de denegar el servicio a una persona conocida.
 - **Qué se pierde:** quien adivina contraseñas con muchas IP obtiene `LOGIN_MAX_INTENTOS` intentos por IP. Lo acotan el costo de Argon2, el rate limit por IP y la longitud mínima de contraseña.
 - **Cómo se detecta:** cada bloqueo registra un evento `cuenta_bloqueada` con la IP en la bitácora de accesos; muchas IP distintas contra una misma cuenta es la señal.
-- **Pendiente:** un umbral global por cuenta (más alto que el de cada par) con verificación adicional, y MFA para los usuarios institucionales.
+- **Pendiente:** MFA para los usuarios institucionales.
 - Las columnas `usuarios.intentos_fallidos` y `usuarios.bloqueado_hasta` de la Fase 1 ya no se usan en el login (quedan sin efecto; se reinician en el cambio de contraseña).
+
+### Límite por cuenta contra fuerza bruta distribuida
+
+Reglas exactas (`app/core/bloqueo.py`, `app/api/v1/auth.py`):
+
+1. **Clave de red:** IPv4 tal cual; IPv6 agrupada por /64 (quien tiene IPv6 controla todo su /64 y podría rotar de dirección); `::ffff:a.b.c.d` se reduce a IPv4. Vale para el bloqueo por par y para el reconocimiento de redes conocidas.
+2. **Par (cuenta, red):** sin cambios; `LOGIN_MAX_INTENTOS` (5) fallos bloquean ese par `LOGIN_BLOQUEO_MINUTOS` (15) y responde 429.
+3. **Cuenta (ventana deslizante):** si la cuenta suma `LOGIN_CUENTA_MAX_FALLOS` (20) eventos `login_fallido`/`cuenta_bloqueada` en los últimos `LOGIN_CUENTA_VENTANA_MINUTOS` (15), todo intento desde una red **sin** evento `login_ok` de esa cuenta en los últimos `LOGIN_IP_CONOCIDA_DIAS` (30) recibe 429, acierte o no la contraseña (sin oráculo), se registra `login_bloqueado_cuenta` y no suma fallos. Las redes conocidas siguen el flujo normal (una contraseña correcta entra). El bloqueo cede solo al salir los fallos de la ventana.
+4. Los datos salen de `auditoria_accesos` (sin tabla nueva; índice `ix_auditoria_usuario_accion_fecha`, migración 0003).
+
+Compromisos:
+
+- **Cota:** un atacante distribuido obtiene a lo sumo ~20 intentos por ventana de 15 minutos por cuenta (antes, 5 por IP sin tope), más lo que acote Argon2 y el rate limit por IP.
+- **Disponibilidad:** quien provoca 20 fallos desde muchas IP impide el ingreso de la titular **desde una red nueva** (viaje, cambio de operador) hasta que pase la ventana; no afecta a su red habitual. Si repite el ataque sostiene el bloqueo. Es el costo elegido frente a dejar la cuenta expuesta a adivinación distribuida.
+- **Historial de redes:** una red con login correcto previo (30 días) queda como conocida aunque después se cambie la contraseña; la IP se toma de la conexión TCP (no se confía en `X-Forwarded-For`; tras un proxy inverso hay que configurar la IP real del cliente).
+- **Retardo progresivo:** no se implementó; el 429 temporal con ventana deslizante cumple el mismo fin con menos estado.
+- **Carrera:** intentos simultáneos justo en el umbral pueden exceder levemente el límite (la lectura de la ventana no es transaccional).
+- **Detección:** eventos `cuenta_bloqueada` y `login_bloqueado_cuenta` en la bitácora.
 
 ### Pendiente (fases siguientes)
 
