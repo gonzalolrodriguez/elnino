@@ -5,6 +5,7 @@ import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-ro
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 import { AlertaError, Campo } from "../components/Formulario";
 import { Layout } from "../components/Layout";
+import { TarjetaFormulario } from "../components/TarjetaFormulario";
 
 export default function Login() {
   const { iniciarSesion, estado, usuario } = useAuth();
@@ -39,12 +40,13 @@ export default function Login() {
   }
 
   return (
-    <Layout>
-      <Box maxW="26rem">
+    <Layout titulo="Ingresar">
+      <Box maxW="28rem">
         <Heading as="h1" size="xl" mb={2}>
           Ingresar
         </Heading>
         <Text mb={6}>Para ciudadanía, productores y cuentas institucionales.</Text>
+        <TarjetaFormulario maxW="28rem">
         <form onSubmit={enviar} noValidate aria-label="Ingreso">
           <VStack spacing={4} align="stretch">
             <AlertaError error={error} />
@@ -55,17 +57,18 @@ export default function Login() {
             </Button>
             <Text fontSize="sm">
               ¿No tenés cuenta? Registrate como{" "}
-              <Link as={RouterLink} to="/registro/ciudadania" textDecoration="underline">
+              <Link as={RouterLink} to="/registro/ciudadania">
                 ciudadanía
               </Link>{" "}
               o como{" "}
-              <Link as={RouterLink} to="/registro/productor" textDecoration="underline">
+              <Link as={RouterLink} to="/registro/productor">
                 productor
               </Link>
               . Las cuentas institucionales las crea el administrador.
             </Text>
           </VStack>
         </form>
+        </TarjetaFormulario>
       </Box>
     </Layout>
   );

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 
 import { Insignia } from "../../components/Insignia";
 import { indiceDeFecha, type SerieDiaria } from "../../datos/kit";
-import { SerieK1 } from "../../elnino/SerieK1";
+import { SerieK1 } from "../../informacion/SerieK1";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
@@ -32,7 +32,7 @@ function SerieYCifras({ s }: { s: SerieFormosa }) {
         ))}
       </Flex>
       {serie ? <SerieK1 serie={serie} /> : <Text>La serie no tiene datos.</Text>}
-      <Text fontSize="xs" color="pizarra.500" mt={2}>
+      <Text fontSize="xs" color="textoSuave" mt={2}>
         {s.notas.join(" ")}
       </Text>
     </>
@@ -65,7 +65,7 @@ function TablaLluvia({ l }: { l: Lluvia }) {
       </Flex>
       <TableContainer maxH="16rem" overflowY="auto">
         <Table size="sm" variant="simple">
-          <Thead position="sticky" top={0} bg="white">
+          <Thead position="sticky" top={0} bg="superficie">
             <Tr>
               <Th>Fecha</Th>
               <Th>Turno</Th>
@@ -157,7 +157,7 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
           </Tbody>
         </Table>
       </TableContainer>
-      <Box mt={3} p={3} bg="#FFF4DC" border="1.5px dashed #B07A12" fontSize="sm" data-testid="supuesto-lineal">
+      <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1.5px dashed" borderColor="cat.simulado.borde" borderRadius="sm" fontSize="sm" data-testid="supuesto-lineal">
         <strong>Supuesto:</strong> {a.supuesto} El INA no publica pronósticos a más de {a.horizonte_pronostico_oficial_dias} días.
       </Box>
     </>

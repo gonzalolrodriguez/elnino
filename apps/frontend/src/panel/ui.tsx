@@ -3,6 +3,7 @@ import type { Categoria } from "@evacuaciones/shared";
 import type { ReactNode } from "react";
 
 import { AlertaError } from "../components/Formulario";
+import { ESTADOS } from "../estilo/estados";
 import { Insignia } from "../components/Insignia";
 import type { Carga } from "../lib/useCarga";
 
@@ -42,9 +43,20 @@ export function Seccion({
   id?: string;
 }) {
   return (
-    <Box as="section" aria-labelledby={id ?? undefined} bg="white" border="1px solid" borderColor="pizarra.200" borderRadius="3px" p={4} mb={4}>
+    <Box
+      as="section"
+      aria-labelledby={id ?? undefined}
+      bg="superficie"
+      border="1px solid"
+      borderColor="borde"
+      borderTop="3px solid"
+      borderTopColor="pizarra.700"
+      borderRadius="sm"
+      p={{ base: 4, md: 5 }}
+      mb={5}
+    >
       <Flex align="center" gap={3} mb={3} wrap="wrap">
-        <Heading as="h2" id={id} size="sm" fontFamily="heading">
+        <Heading as="h2" id={id} size="md">
           {titulo}
         </Heading>
         {categoria && <Insignia categoria={categoria} />}
@@ -72,16 +84,16 @@ export function Cifra({
   testId?: string;
 }) {
   return (
-    <Box minW="9rem">
-      <Text fontSize="xs" color="pizarra.500">
+    <Box minW="9rem" flex="1 1 9rem">
+      <Text fontSize="xs" color="textoSuave">
         {etiqueta}
       </Text>
-      <Text fontSize="xl" fontWeight={600} fontFamily="heading" data-testid={testId} lineHeight={1.2}>
+      <Text textStyle="cifra" fontSize="1.625rem" data-testid={testId}>
         {valor}
       </Text>
       <Insignia categoria={categoria} />
       {(fuente || fecha) && (
-        <Text fontSize="11px" color="pizarra.500" mt="2px">
+        <Text fontSize="0.75rem" color="textoSuave" mt="2px">
           {[fuente, fecha ? fmtFecha(fecha) : null].filter(Boolean).join(" · ")}
         </Text>
       )}
@@ -103,7 +115,7 @@ export function Cargando<T>({
 }) {
   if (carga.estado === "cargando") {
     return (
-      <Center py={8} role="status" aria-label="Cargando">
+      <Center py={8} role="status" aria-label="Cargando" gap={3} color="textoSuave">
         <Spinner />
       </Center>
     );
@@ -141,11 +153,7 @@ export function AvisoSimulado({ children }: { children: ReactNode }) {
   );
 }
 
-export const COLOR_ESTADO = {
-  normal: { fill: "#EAEFEC", stroke: "#5B6B68", texto: "normal" },
-  en_riesgo: { fill: "#F6D98E", stroke: "#B07A12", texto: "en riesgo" },
-  comprometido: { fill: "#E58C80", stroke: "#9B2D20", texto: "comprometido" },
-} as const;
+export const COLOR_ESTADO = ESTADOS;
 
 export const NOMBRE_ACCESO: Record<string, string> = {
   transitable: "transitable",

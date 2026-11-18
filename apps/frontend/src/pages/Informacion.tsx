@@ -4,15 +4,28 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { MarcasUmbral } from "../components/MarcasUmbral";
+import { MuestraEstado } from "../components/MuestraEstado";
 import { K10_FECHA, MARGEN_RIESGO_M, SECTORES_K10, UMBRAL_ALERTA } from "../datos/kit";
-import { estadoSector, ESTILO_ESTADO, MapaSectores } from "../elnino/MapaSectores";
-import { SerieK1 } from "../elnino/SerieK1";
+import { estadoSector, MapaSectores } from "../informacion/MapaSectores";
+import { SerieK1 } from "../informacion/SerieK1";
 import { fmt, fmtMiles } from "../lib/entorno";
 import { useSerieFormosa } from "../lib/serie";
 
+const TEMAS = [
+  { id: "que-es", titulo: "Qué es El Niño" },
+  { id: "como-llega", titulo: "Cómo llega el agua a Formosa" },
+  { id: "amenazas", titulo: "Dos amenazas distintas" },
+  { id: "serie", titulo: "Puerto Formosa: umbrales y picos" },
+  { id: "pronostico", titulo: "Pronóstico estacional 2026/27" },
+  { id: "sectores", titulo: "Sectores de evaluación" },
+  { id: "que-hacer", titulo: "Qué hacer" },
+  { id: "fuentes", titulo: "Fuentes" },
+] as const;
+
 function Seccion({ id, titulo, children }: { id: string; titulo: string; children: ReactNode }) {
   return (
-    <Box as="section" aria-labelledby={id} py={9} borderTop="1px solid" borderColor="pizarra.200" id={`sec-${id}`}>
+    <Box as="section" aria-labelledby={id} py={{ base: 7, md: 9 }} borderTop="1px solid" borderColor="borde" id={`sec-${id}`}>
       <Heading as="h2" id={id} size="lg" mb={4}>
         {titulo}
       </Heading>
@@ -23,15 +36,15 @@ function Seccion({ id, titulo, children }: { id: string; titulo: string; childre
 
 function Hecho({ valor, texto, fuente }: { valor: string; texto: string; fuente: string }) {
   return (
-    <Box py={3} borderBottom="1px solid" borderColor="pizarra.200" display="grid" gridTemplateColumns={{ base: "1fr", md: "9rem 1fr" }} gap={{ base: 1, md: 5 }}>
-      <Text fontFamily="heading" fontSize="2xl" fontWeight={600} lineHeight={1.1}>
+    <Box py={4} borderBottom="1px solid" borderColor="borde" display="grid" gridTemplateColumns={{ base: "1fr", md: "9.5rem minmax(0, 1fr)" }} gap={{ base: 1, md: 6 }} maxW="48rem">
+      <Text textStyle="cifra" fontSize="2xl">
         {valor}
       </Text>
       <Box>
         <Text>{texto}</Text>
-        <Box mt={1} display="flex" gap={2} alignItems="center" flexWrap="wrap">
+        <Box mt={2} display="flex" gap={2} alignItems="center" flexWrap="wrap">
           <Insignia categoria="DOCUMENTO DE REFERENCIA" />
-          <Text as="span" fontSize="xs" color="pizarra.500">
+          <Text as="span" fontSize="xs" color="textoSuave">
             {fuente}
           </Text>
         </Box>
@@ -40,7 +53,36 @@ function Hecho({ valor, texto, fuente }: { valor: string; texto: string; fuente:
   );
 }
 
-export default function ElNino() {
+function Indice() {
+  return (
+    <Box
+      as="nav"
+      aria-label="En esta página"
+      position={{ lg: "sticky" }}
+      top={{ lg: "5rem" }}
+      alignSelf="start"
+      borderLeft={{ lg: "2px solid" }}
+      borderColor="borde"
+      pl={{ lg: 4 }}
+      mb={{ base: 6, lg: 0 }}
+    >
+      <Text fontWeight={700} fontSize="sm" mb={2}>
+        En esta página
+      </Text>
+      <Box as="ul" listStyleType="none" m={0} p={0} display={{ base: "grid", sm: "grid", lg: "block" }} gridTemplateColumns={{ base: "1fr", sm: "1fr 1fr" }} columnGap={6}>
+        {TEMAS.map((t) => (
+          <li key={t.id}>
+            <Link href={`#${t.id}`} display="block" py={1.5} fontSize="sm" textDecoration="none" color="textoSuave" _hover={{ color: "primario", textDecoration: "underline" }}>
+              {t.titulo}
+            </Link>
+          </li>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+export default function Informacion() {
   const { hash } = useLocation();
   const [altura, setAltura] = useState(5.6);
   const { serie } = useSerieFormosa();
@@ -50,13 +92,17 @@ export default function ElNino() {
   }, [hash]);
 
   return (
-    <Layout>
+    <Layout titulo="Información">
       <Heading as="h1" size="2xl" maxW="40rem">
-        El Niño y el agua que llega a Formosa
+        Información para entender la crecida
       </Heading>
-      <Text mt={4} maxW="40rem" fontSize="lg">
-        Qué es el fenómeno, cómo se traduce en el río Paraguay y en la lluvia local, y qué dicen los datos hasta el corte del 31/10/2026.
+      <Text mt={4} maxW="40rem" fontSize="lg" color="pizarra.700">
+        El Niño, el río Paraguay y la lluvia local: qué es cada fenómeno, cómo se traduce en Formosa y qué dicen los datos hasta el corte del 31/10/2026.
       </Text>
+
+      <Box mt={{ base: 6, lg: 8 }} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "13rem minmax(0, 1fr)" }} columnGap={{ lg: 10 }}>
+        <Indice />
+        <Box minW={0}>
 
       <Seccion id="que-es" titulo="Qué es El Niño">
         <Text maxW="40rem" mb={4}>
@@ -80,13 +126,13 @@ export default function ElNino() {
 
       <Seccion id="amenazas" titulo="Dos amenazas distintas">
         <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8} maxW="48rem">
-          <Box borderLeft="4px solid" borderColor="agua.600" pl={4}>
+          <Box borderLeft="4px solid" borderColor="primario" pl={4}>
             <Heading as="h3" size="sm" mb={2}>
               Exógena: los ríos
             </Heading>
             <Text>El agua viene de afuera, por el cauce. Se sigue con las escalas del INA, que no publica pronósticos a más de 15 días (K9).</Text>
           </Box>
-          <Box borderLeft="4px solid" borderColor="escala.alerta" pl={4}>
+          <Box borderLeft="4px solid" borderColor="acento" pl={4}>
             <Heading as="h3" size="sm" mb={2}>
               Endógena: la lluvia local
             </Heading>
@@ -110,7 +156,7 @@ export default function ElNino() {
         </Text>
         <Hecho valor="+2,2" texto="Pico estimado del índice ONI. La probabilidad de que el ONI llegue a +2,0 °C o más es de 93 %." fuente="Pronóstico agroclimático estacional 2026/27 Formosa, CFS v2 (emisión 29/10/2026)" />
         <Hecho valor="8 de 14" texto="Campañas de años El Niño que quedaron en el tercio húmedo en Formosa; solo una cayó en el tercio seco (45 campañas analizadas). La fase ENOS cambia las probabilidades, no decide la campaña." fuente="Mismo pronóstico agroclimático (29/10/2026)" />
-        <Text mt={3} fontSize="sm" color="pizarra.500" maxW="40rem">
+        <Text mt={3} fontSize="sm" color="textoSuave" maxW="40rem">
           El INA no pronostica la altura del río más allá de 15 días: cualquier fecha de cruce de un umbral en 2027 sería un supuesto.
         </Text>
       </Seccion>
@@ -124,11 +170,12 @@ export default function ElNino() {
           <Box>
             <MapaSectores altura={altura} />
             <Box mt={3}>
-              <label htmlFor="altura-sim" style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+              <label htmlFor="altura-sim" style={{ fontSize: "0.875rem", fontWeight: 600, display: "block", marginBottom: "0.25rem" }}>
                 Altura simulada de Puerto Formosa: {fmt(altura)} m
               </label>
-              <input id="altura-sim" type="range" min={0} max={12} step={0.1} value={altura} onChange={(e) => setAltura(Number(e.target.value))} style={{ width: "100%" }} />
-              <Text fontSize="xs" color="pizarra.500">
+              <input id="altura-sim" type="range" min={0} max={12} step={0.1} value={altura} onChange={(e) => setAltura(Number(e.target.value))} style={{ width: "100%", minHeight: "2rem" }} />
+              <MarcasUmbral />
+              <Text fontSize="xs" color="textoSuave">
                 Escenario SIMULADO. En riesgo: a menos de {fmt(MARGEN_RIESGO_M)} m de la altura de compromiso (SUPUESTO). El 5,60 m es el valor
                 observado al corte.
               </Text>
@@ -149,18 +196,18 @@ export default function ElNino() {
                   <Tr key={s.id}>
                     <Td>
                       <strong>{s.id}</strong> {s.nombre}
-                      <Text fontSize="xs" color="pizarra.500">
+                      <Text fontSize="xs" color="textoSuave">
                         {s.acceso}
                       </Text>
                     </Td>
                     <Td isNumeric>{fmt(s.compromiso_m)} m</Td>
                     <Td isNumeric>{fmtMiles(s.poblacion)}</Td>
-                    <Td>{ESTILO_ESTADO[estadoSector(s, altura)].texto}</Td>
+                    <Td><MuestraEstado estado={estadoSector(s, altura)} /></Td>
                   </Tr>
                 ))}
               </Tbody>
             </Table>
-            <Text fontSize="xs" color="pizarra.500" mt={2}>
+            <Text fontSize="xs" color="textoSuave" mt={2}>
               S4 se compromete 0,30 m antes del nivel de alerta: a 1,90 m del valor observado al corte.
             </Text>
           </Box>
@@ -172,11 +219,11 @@ export default function ElNino() {
           <ListItem>Anticiparse: la evacuación con el camino seco es más segura y más rápida que con lluvia.</ListItem>
           <ListItem>
             Registrarse como{" "}
-            <Link as={RouterLink} to="/registro/ciudadania" textDecoration="underline">
+            <Link as={RouterLink} to="/registro/ciudadania" >
               ciudadanía
             </Link>{" "}
             o como{" "}
-            <Link as={RouterLink} to="/registro/productor" textDecoration="underline">
+            <Link as={RouterLink} to="/registro/productor" >
               productor
             </Link>{" "}
             para que el traslado de personas y animales se planifique con tiempo.
@@ -199,6 +246,8 @@ export default function ElNino() {
           <ListItem>Pronóstico agroclimático estacional 2026/27 Formosa, CFS v2 NOAA, emisión 29/10/2026 (DOCUMENTO DE REFERENCIA).</ListItem>
         </UnorderedList>
       </Seccion>
+        </Box>
+      </Box>
     </Layout>
   );
 }

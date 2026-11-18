@@ -21,7 +21,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 - **Centinela:** auditoría de la limpieza de K1, verificador de las afirmaciones de K6 (refuta "10,7 m en 2016" y "superó la evacuación en octubre" con datos de K1) y de las siete relaciones de K7 (algunas "no verificables con la capa disponible").
 - **Monitor hidrométrico:** serie K1 con umbrales de K3, picos y velocidades de ascenso de 2015–16, 2019 y octubre de 2026, con rango y supuesto lineal.
 - **Lluvia:** partes por formulario, planilla UPCA (vacío distinto de 0) y canales simulados (WhatsApp, SMS, IVR) con firma HMAC; el origen siempre queda visible.
-- **Portal público:** landing con esquema 3D de la cuenca y alternativa 2D, página El Niño con fuentes, registro de ciudadanía y de productores con consentimiento, y área "mi cuenta".
+- **Portal público:** landing con esquema 3D de la cuenca y alternativa 2D, página Información (El Niño, serie K1, sectores y fuentes), registro de ciudadanía y de productores con consentimiento, y área "mi cuenta".
 - **Seguridad:** Argon2id, JWT de 15 minutos con refresh rotativo, RBAC por endpoint y por recurso, cifrado AES-GCM de campos sensibles y bitácora de accesos con hash encadenado (`docs/seguridad.md`).
 - **App móvil (Expo):** registro, login, perfil, pedido de asistencia con cola offline (envío en dos tiempos e idempotencia), alertas, mapa del sector y modo cuadrilla.
 - **Prueba desde clonado limpio:** siguiendo solo el README, el backend con Docker, la web y la app pasan sus pruebas (backend 202, web 53, app 36).
@@ -55,7 +55,7 @@ No se pudo comprobar todavía: el aspecto y el comportamiento visual en un naveg
 - **Establecimientos de salud:** la ubicación es aproximada (centroide de la localidad), porque REFES no publica coordenadas.
 - **Red vial OSM:** de los 12.987 tramos del corredor, 4.255 figuran como pavimento, 6.345 como tierra y 2.387 con superficie desconocida; ninguno está etiquetado como ripio (OSM usa `unpaved` de forma genérica y aquí se mapea a tierra). El ruteo trata la superficie desconocida como tierra y el umbral de lluvia para ripio solo se aplica a los accesos simulados de los sectores.
 - **Chacras y campos reales:** no hay padrón parcelario abierto; los productores y familias son ficticios y no se asocian a parcelas reales.
-- **Tres frases cualitativas de la página El Niño** (rezago de semanas a meses, aviso con semanas de anticipación, anegamiento en horas) no tienen fuente oficial precisa; están declaradas en `docs/ficha_fuentes.md`.
+- **Tres frases cualitativas de la página Información (tema El Niño)** (rezago de semanas a meses, aviso con semanas de anticipación, anegamiento en horas) no tienen fuente oficial precisa; están declaradas en `docs/ficha_fuentes.md`.
 - **Datos posteriores al corte (31/10/2026)** están apagados por defecto.
 
 ## Cómo se arranca (cinco líneas)

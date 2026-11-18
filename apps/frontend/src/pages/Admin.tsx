@@ -32,7 +32,7 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: { codigo
       <Td>{u.rol}</Td>
       <Td>
         {institucional ? (
-          <Select aria-label={`Rol operativo de ${u.email}`} size="xs" bg="white" value={u.rol_operativo ?? ""} placeholder="Sin rol operativo" onChange={(e) => void modificar({ rol_operativo: e.target.value || null })}>
+          <Select aria-label={`Rol operativo de ${u.email}`} size="xs" bg="superficie" value={u.rol_operativo ?? ""} placeholder="Sin rol operativo" onChange={(e) => void modificar({ rol_operativo: e.target.value || null })}>
             {roles.map((r) => (
               <option key={r.codigo} value={r.codigo}>
                 {r.nombre}
@@ -100,28 +100,28 @@ function FormAlta({ roles, alCrear }: { roles: { codigo: string; nombre: string 
           <FormLabel htmlFor="alta-email" fontSize="sm" mb={0}>
             Correo
           </FormLabel>
-          <Input id="alta-email" size="sm" bg="white" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input id="alta-email" size="sm" bg="superficie" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
           <FormErrorMessage>{errEmail}</FormErrorMessage>
         </FormControl>
         <FormControl w="14rem" isInvalid={!!errNombre}>
           <FormLabel htmlFor="alta-nombre" fontSize="sm" mb={0}>
             Nombre visible
           </FormLabel>
-          <Input id="alta-nombre" size="sm" bg="white" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <Input id="alta-nombre" size="sm" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} />
           <FormErrorMessage>{errNombre}</FormErrorMessage>
         </FormControl>
         <FormControl w="14rem" isInvalid={!!errPass}>
           <FormLabel htmlFor="alta-password" fontSize="sm" mb={0}>
             Contraseña inicial
           </FormLabel>
-          <Input id="alta-password" size="sm" bg="white" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input id="alta-password" size="sm" bg="superficie" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <FormErrorMessage>{errPass}</FormErrorMessage>
         </FormControl>
         <FormControl w="10rem">
           <FormLabel htmlFor="alta-rol" fontSize="sm" mb={0}>
             Rol
           </FormLabel>
-          <Select id="alta-rol" size="sm" bg="white" value={rol} onChange={(e) => setRol(e.target.value)}>
+          <Select id="alta-rol" size="sm" bg="superficie" value={rol} onChange={(e) => setRol(e.target.value)}>
             {ROLES_ALTA.map((r) => (
               <option key={r} value={r}>
                 {r}
@@ -133,7 +133,7 @@ function FormAlta({ roles, alCrear }: { roles: { codigo: string; nombre: string 
           <FormLabel htmlFor="alta-rolop" fontSize="sm" mb={0}>
             Rol operativo
           </FormLabel>
-          <Select id="alta-rolop" size="sm" bg="white" placeholder="Sin rol operativo" value={rolOp} onChange={(e) => setRolOp(e.target.value)}>
+          <Select id="alta-rolop" size="sm" bg="superficie" placeholder="Sin rol operativo" value={rolOp} onChange={(e) => setRolOp(e.target.value)}>
             {roles.map((r) => (
               <option key={r.codigo} value={r.codigo}>
                 {r.nombre}
@@ -158,7 +158,7 @@ export default function Admin() {
   const roles = useCarga(() => api.rolesOperativos());
   const catalogo = roles.datos?.roles ?? [];
   return (
-    <Layout>
+    <Layout titulo="Administración">
       <Heading as="h1" size="xl" mb={2}>
         Administración de usuarios
       </Heading>

@@ -19,6 +19,7 @@ import { PERFILES_RUTEO } from "@evacuaciones/shared";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
+import { MuestraEstado } from "../../components/MuestraEstado";
 import { Insignia } from "../../components/Insignia";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
@@ -83,7 +84,7 @@ function PanelAcceso({ acceso, alCambiar }: { acceso: AccesoProps; alCambiar: ()
         <FormLabel htmlFor="motivo-acceso" fontSize="sm" mb={0}>
           Motivo (obligatorio para marcarlo no transitable)
         </FormLabel>
-        <Input id="motivo-acceso" size="sm" bg="white" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
+        <Input id="motivo-acceso" size="sm" bg="superficie" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
         <FormErrorMessage>Indicá el motivo (al menos 3 caracteres).</FormErrorMessage>
       </FormControl>
       <Flex gap={2} wrap="wrap">
@@ -152,7 +153,7 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
           <FormLabel htmlFor="ruta-perfil" fontSize="xs" mb={0}>
             Perfil
           </FormLabel>
-          <Select id="ruta-perfil" size="sm" bg="white" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
+          <Select id="ruta-perfil" size="sm" bg="superficie" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
             {PERFILES_RUTEO.map((p) => (
               <option key={p} value={p}>
                 {PERFIL_TEXTO[p]}
@@ -164,7 +165,7 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
           <FormLabel htmlFor="ruta-origen" fontSize="xs" mb={0}>
             Origen
           </FormLabel>
-          <Select id="ruta-origen" size="sm" bg="white" value={origenSector} onChange={(e) => { setOrigenSector(e.target.value); setOrigenManual(null); }}>
+          <Select id="ruta-origen" size="sm" bg="superficie" value={origenSector} onChange={(e) => { setOrigenSector(e.target.value); setOrigenManual(null); }}>
             {(sectores.datos?.features ?? []).map((f) => (
               <option key={String(f.properties.id)} value={String(f.properties.id)}>
                 Sector {String(f.properties.id)}
@@ -176,7 +177,7 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
           <FormLabel htmlFor="ruta-destino" fontSize="xs" mb={0}>
             Destino
           </FormLabel>
-          <Select id="ruta-destino" size="sm" bg="white" placeholder="Centro de recepción" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
+          <Select id="ruta-destino" size="sm" bg="superficie" placeholder="Centro de recepción" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
             {(centros.datos?.centros ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
@@ -206,7 +207,7 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
           <Flex gap={2} align="center" mb={1}>
             <strong>{ruta.encontrada ? "Ruta encontrada" : "Sin ruta"}</strong>
             <Insignia categoria="SIMULADO" />
-            <Text as="span" color="pizarra.500">
+            <Text as="span" color="textoSuave">
               método: {ruta.metodo === "pgrouting" ? "red vial (pgRouting)" : "aproximado"}
             </Text>
           </Flex>
@@ -223,12 +224,32 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
             </Alert>
           )}
           {ruta.advertencias.map((a) => (
-            <Text key={a} fontSize="xs" color="pizarra.500">
+            <Text key={a} fontSize="xs" color="textoSuave">
               {a}
             </Text>
           ))}
         </Box>
       )}
+    </Box>
+  );
+}
+
+/** Barras de color del tinte: la local (rampa propia del corredor) y la de la cuenca, con sus extremos en metros. */
+function RampaRelieve({ local, cuenca }: { local: [number, string][]; cuenca: [number, string][] }) {
+  const barra = (r: [number, string][]) => `linear-gradient(90deg, ${r.map((p) => p[1]).join(", ")})`;
+  const redondo = (n: number) => Math.round(n);
+  return (
+    <Box ml={6} my={1} aria-label="Escala de color del relieve" role="group">
+      <Text fontSize="11px" color="textoSuave">
+        Corredor de los sectores: {redondo(local[0][0])} m
+        <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(local) }} />
+        {redondo(local[local.length - 1][0])} m
+      </Text>
+      <Text fontSize="11px" color="textoSuave">
+        Cuenca (vista general): {redondo(cuenca[1][0])} m
+        <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(cuenca.slice(1)) }} />
+        {redondo(cuenca[cuenca.length - 2][0])}+ m
+      </Text>
     </Box>
   );
 }
@@ -239,14 +260,19 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
       {capas.map((c) => (
         <Box key={c.id} mb={2}>
           <Checkbox size="sm" isChecked={activas.includes(c.id)} onChange={() => alternar(c.id)}>
-            {c.etiqueta} <Text as="span" color="pizarra.500">({fmtNum(c.n)})</Text>
+            {c.etiqueta}{c.n > 0 && (
+              <Text as="span" color="textoSuave">
+                {" "}({fmtNum(c.n)})
+              </Text>
+            )}
           </Checkbox>
           <Flex ml={6} gap={2} align="center" wrap="wrap">
             <Insignia categoria={c.categoria} />
-            <Text fontSize="11px" color="pizarra.500">
+            <Text fontSize="11px" color="textoSuave">
               Fuente: {c.nombre_fuente}. Fecha de actualización: {fmtFecha(c.fecha_actualizacion)}. {c.licencia.split(".")[0]}.
             </Text>
           </Flex>
+          {c.id === "relieve" && c.rampa_local && c.rampa_cuenca && <RampaRelieve local={c.rampa_local} cuenca={c.rampa_cuenca} />}
           {c.nota && (
             <Text ml={6} fontSize="11px" color="pizarra.700">
               {c.nota}
@@ -257,7 +283,7 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
       <Checkbox size="sm" isChecked={osm} onChange={(e) => setOsm(e.target.checked)}>
         Fondo OpenStreetMap (requiere internet)
       </Checkbox>
-      <Text ml={6} fontSize="11px" color="pizarra.500">
+      <Text ml={6} fontSize="11px" color="textoSuave">
         Sin conexión el mapa usa fondo liso y las capas incluidas en el repositorio. © colaboradores de OpenStreetMap (ODbL).
       </Text>
     </Box>
@@ -265,23 +291,25 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
 }
 
 function Leyenda() {
-  const item = (color: string, texto: string, relleno = false) => (
-    <Flex align="center" gap={1} fontSize="xs">
-      <Box w="16px" h={relleno ? "10px" : "4px"} bg={color} border={relleno ? "1px solid #5B6B68" : undefined} />
+  const linea = (color: string, texto: string) => (
+    <Flex align="center" gap={2} fontSize="sm">
+      <Box w="1.25rem" h="4px" bg={color} aria-hidden="true" />
       {texto}
     </Flex>
   );
   return (
-    <Flex gap={4} wrap="wrap" aria-label="Leyenda del mapa" role="group" mt={2}>
-      {item("#E58C80", "sector comprometido", true)}
-      {item("#F6D98E", "sector en riesgo", true)}
-      {item("#EAEFEC", "sector normal", true)}
-      {item("#1B5C58", "acceso transitable")}
-      {item("#C23B2A", "acceso cerrado")}
-      {item("#D99A1E", "intransitable por lluvia")}
-      {item("#345CA0", "anegado")}
-      {item("#13242A", "ruta calculada")}
-      <Text fontSize="xs">Círculos verdes: centros de recepción (SIMULADO). Círculos oscuros con borde ámbar: estaciones K3 (DATO OBSERVADO). Borde grueso: sector aislado.</Text>
+    <Flex wrap="wrap" aria-label="Leyenda del mapa" role="group" mt={3} align="center" columnGap={5} rowGap={2}>
+      <Flex align="center" gap={2} fontSize="sm">
+        sector: <MuestraEstado estado="comprometido" /> <MuestraEstado estado="en_riesgo" /> <MuestraEstado estado="normal" />
+      </Flex>
+      {linea("acceso.transitable", "acceso transitable")}
+      {linea("acceso.cerrado", "acceso cerrado")}
+      {linea("acceso.lluvia", "intransitable por lluvia")}
+      {linea("acceso.anegado", "anegado")}
+      {linea("acceso.ruta", "ruta calculada")}
+      <Text fontSize="sm" flexBasis="100%">
+        Círculos verdes: centros de recepción (SIMULADO). Círculos oscuros con borde ámbar: estaciones K3 (DATO OBSERVADO). Borde grueso: sector aislado.
+      </Text>
     </Flex>
   );
 }
@@ -293,7 +321,7 @@ export default function MapaOperativo() {
   const centros = useCarga(() => api.centros());
   const estaciones = useCarga(() => api.estaciones());
   const capas = useCarga(cargarCapas);
-  const [capasActivas, setCapasActivas] = useState<string[]>(["localidades_parajes"]);
+  const [capasActivas, setCapasActivas] = useState<string[]>(["localidades_parajes", "departamentos", "curvas_nivel", "relieve"]);
   const [osm, setOsm] = useState(false);
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const [ruta, setRuta] = useState<Ruta | null>(null);
@@ -359,7 +387,7 @@ export default function MapaOperativo() {
                     </li>
                   ))}
                 </Box>
-                {accesoSel ? <PanelAcceso key={accesoSel.id} acceso={accesoSel} alCambiar={alCambiar} /> : <Text fontSize="sm" color="pizarra.500">Elegí un acceso de la lista o hacé clic sobre él en el mapa para marcarlo no transitable.</Text>}
+                {accesoSel ? <PanelAcceso key={accesoSel.id} acceso={accesoSel} alCambiar={alCambiar} /> : <Text fontSize="sm" color="textoSuave">Elegí un acceso de la lista o hacé clic sobre él en el mapa para marcarlo no transitable.</Text>}
               </>
             )} />
           </Seccion>
@@ -379,7 +407,7 @@ export default function MapaOperativo() {
           </Seccion>
         </Box>
         <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "7rem" }}>
-          <Box h={{ base: "60vh", xl: "75vh" }} border="1px solid" borderColor="pizarra.200" bg="white">
+          <Box h={{ base: "60vh", xl: "75vh" }} border="1px solid" borderColor="borde" bg="superficie">
             <Suspense fallback={<Text p={4} role="status">Cargando mapa…</Text>}>
               <MapaGL
                 sectores={sectores.datos}
@@ -401,7 +429,7 @@ export default function MapaOperativo() {
             </Suspense>
           </Box>
           <Leyenda />
-          <Text fontSize="xs" color="pizarra.500" mt={1}>
+          <Text fontSize="xs" color="textoSuave" mt={1}>
             Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
           </Text>
         </Box>

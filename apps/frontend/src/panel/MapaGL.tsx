@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo, useRef } from "react";
 
+import { hexDe, rgbaDe } from "../estilo/paleta";
 import type { AccesoProps, CapaOficial, Centro, Estacion, Geo, Ruta, SectorEscenario } from "./tipos";
 
 export type PropsMapa = {
@@ -30,29 +31,35 @@ export type PropsMapa = {
 type RGBA = [number, number, number, number];
 
 const FILL_ESTADO: Record<string, RGBA> = {
-  normal: [234, 239, 236, 120],
-  en_riesgo: [246, 217, 142, 170],
-  comprometido: [229, 140, 128, 190],
+  normal: rgbaDe("estado.normal.fill", 120),
+  en_riesgo: rgbaDe("estado.en_riesgo.fill", 170),
+  comprometido: rgbaDe("estado.comprometido.fill", 190),
 };
 const LINEA_ESTADO: Record<string, RGBA> = {
-  normal: [91, 107, 104, 255],
-  en_riesgo: [176, 122, 18, 255],
-  comprometido: [155, 45, 32, 255],
+  normal: rgbaDe("estado.normal.borde"),
+  en_riesgo: rgbaDe("estado.en_riesgo.borde"),
+  comprometido: rgbaDe("estado.comprometido.borde"),
 };
 const COLOR_ACCESO: Record<string, RGBA> = {
-  transitable: [27, 92, 88, 255],
-  cerrado_operador: [194, 59, 42, 255],
-  intransitable_lluvia: [217, 154, 30, 255],
-  anegado: [52, 92, 160, 255],
+  transitable: rgbaDe("acceso.transitable"),
+  cerrado_operador: rgbaDe("acceso.cerrado"),
+  intransitable_lluvia: rgbaDe("acceso.lluvia"),
+  anegado: rgbaDe("acceso.anegado"),
 };
 const COLOR_CAPA: Record<string, string> = {
-  red_vial: "#8A9A96",
-  localidades_parajes: "#13242A",
-  establecimientos_educativos: "#6B4C9A",
-  establecimientos_salud: "#C23B2A",
-  comisarias_destacamentos: "#345CA0",
-  cursos_agua: "#2F8F8A",
+  red_vial: hexDe("mapa.vial"),
+  localidades_parajes: hexDe("mapa.localidades"),
+  establecimientos_educativos: hexDe("mapa.educativos"),
+  establecimientos_salud: hexDe("mapa.salud"),
+  comisarias_destacamentos: hexDe("mapa.policia"),
+  cursos_agua: hexDe("mapa.agua"),
 };
+const COLOR_CURVA = hexDe("alerta.800");
+const COLOR_DEPARTAMENTO = hexDe("pizarra.700");
+const OPACIDAD_RELIEVE = 0.38;
+const ZOOM_LOCAL = 9.5; // desde aquí se muestran las curvas y el tinte del corredor; por debajo, los de la cuenca
+const TINTA = rgbaDe("acceso.ruta");
+const BLANCO = rgbaDe("superficie");
 
 export const LIMITES_INICIALES: [[number, number], [number, number]] = [
   [-58.27, -26.26],
@@ -62,7 +69,7 @@ export const LIMITES_INICIALES: [[number, number], [number, number]] = [
 const ESTILO_BASE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {},
-  layers: [{ id: "fondo", type: "background", paint: { "background-color": "#EEF2EF" } }],
+  layers: [{ id: "fondo", type: "background", paint: { "background-color": hexDe("mapa.fondo") } }],
 };
 
 function colorAcceso(p: AccesoProps, estado: Record<number, string>, cerrados: number[]): RGBA {
@@ -71,12 +78,80 @@ function colorAcceso(p: AccesoProps, estado: Record<number, string>, cerrados: n
   return COLOR_ACCESO[e] ?? COLOR_ACCESO.transitable;
 }
 
+const ESPECIALES = new Set(["relieve", "curvas_nivel", "departamentos"]);
+
+const esquinas = (b: [number, number, number, number]): [[number, number], [number, number], [number, number], [number, number]] => [
+  [b[0], b[3]],
+  [b[2], b[3]],
+  [b[2], b[1]],
+  [b[0], b[1]],
+];
+
+/**
+ * Relieve y planialtimetría (DOCUMENTO DE REFERENCIA, sin servicios externos): tinte hipsométrico como imagen,
+ * curvas de nivel (corredor local y cuenca según el zoom) y departamentos de Formosa. Cada grupo se muestra u oculta
+ * con su casilla de la lista de capas.
+ */
+function aplicarRelieve(m: maplibregl.Map, capas: CapaOficial[], activas: string[]) {
+  const base = import.meta.env.BASE_URL;
+  const vis = (id: string, visible: boolean) => {
+    if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+  };
+  const relieve = capas.find((c) => c.id === "relieve");
+  if (relieve && activas.includes("relieve") && !m.getSource("relieve-cuenca") && relieve.bbox_cuenca && relieve.bbox_local && relieve.archivo_cuenca) {
+    m.addSource("relieve-cuenca", { type: "image", url: `${base}${relieve.archivo_cuenca}`, coordinates: esquinas(relieve.bbox_cuenca) });
+    m.addSource("relieve-local", { type: "image", url: `${base}${relieve.archivo}`, coordinates: esquinas(relieve.bbox_local) });
+    const paint = { "raster-opacity": OPACIDAD_RELIEVE, "raster-fade-duration": 0 };
+    m.addLayer({ id: "relieve-cuenca", type: "raster", source: "relieve-cuenca", paint }, "ancla-relieve");
+    m.addLayer({ id: "relieve-local", type: "raster", source: "relieve-local", paint }, "ancla-relieve");
+  }
+  vis("relieve-cuenca", activas.includes("relieve"));
+  vis("relieve-local", activas.includes("relieve"));
+
+  const curvas = capas.find((c) => c.id === "curvas_nivel");
+  if (curvas && activas.includes("curvas_nivel") && !m.getSource("curvas-local")) {
+    m.addSource("curvas-local", { type: "geojson", data: `${base}${curvas.archivo}` });
+    if (curvas.archivo_cuenca) m.addSource("curvas-cuenca", { type: "geojson", data: `${base}${curvas.archivo_cuenca}` });
+    const estilo = (id: string, source: string, maestra: boolean, extra: { minzoom?: number; maxzoom?: number }) =>
+      m.addLayer(
+        {
+          id,
+          type: "line",
+          source,
+          filter: ["==", ["to-boolean", ["get", "maestra"]], maestra],
+          paint: { "line-color": COLOR_CURVA, "line-width": maestra ? 1.3 : 0.6, "line-opacity": maestra ? 0.85 : 0.55 },
+          ...extra,
+        },
+        "ancla-top",
+      );
+    estilo("curvas-local-menores", "curvas-local", false, { minzoom: ZOOM_LOCAL });
+    estilo("curvas-local-mayores", "curvas-local", true, { minzoom: ZOOM_LOCAL });
+    if (curvas.archivo_cuenca) {
+      estilo("curvas-cuenca-menores", "curvas-cuenca", false, { maxzoom: ZOOM_LOCAL });
+      estilo("curvas-cuenca-mayores", "curvas-cuenca", true, { maxzoom: ZOOM_LOCAL });
+    }
+  }
+  for (const id of ["curvas-local-menores", "curvas-local-mayores", "curvas-cuenca-menores", "curvas-cuenca-mayores"]) vis(id, activas.includes("curvas_nivel"));
+
+  const deps = capas.find((c) => c.id === "departamentos");
+  if (deps && activas.includes("departamentos") && !m.getSource("departamentos")) {
+    m.addSource("departamentos", { type: "geojson", data: `${base}${deps.archivo}` });
+    m.addLayer(
+      { id: "departamentos", type: "line", source: "departamentos", paint: { "line-color": COLOR_DEPARTAMENTO, "line-width": 1.6, "line-dasharray": [4, 2], "line-opacity": 0.85 } },
+      "ancla-top",
+    );
+  }
+  vis("departamentos", activas.includes("departamentos"));
+}
+
 /** Mapa operativo: MapLibre (capas oficiales, sin claves ni servicios externos) con Deck.gl para las capas operativas. */
 export default function MapaGL(props: PropsMapa) {
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
   const marcadores = useRef<maplibregl.Marker[]>([]);
+  const rotulosCurvas = useRef<{ marca: maplibregl.Marker; el: HTMLElement; regimen: "local" | "cuenca" }[]>([]);
+  const rotulosDepartamentos = useRef<maplibregl.Marker[]>([]);
   const listo = useRef(false);
   const ultimo = useRef(props);
   ultimo.current = props;
@@ -89,7 +164,7 @@ export default function MapaGL(props: PropsMapa) {
       style: ESTILO_BASE,
       bounds: LIMITES_INICIALES,
       fitBoundsOptions: { padding: 30 },
-      attributionControl: { compact: true, customAttribution: "Capas: IGN, BAHRA/INDEC, Mapa Educativo, REFES, © colaboradores de OpenStreetMap (ODbL)" },
+      attributionControl: { compact: true, customAttribution: "Capas: IGN, BAHRA/INDEC, Mapa Educativo, REFES, © colaboradores de OpenStreetMap (ODbL). Relieve: AWS Terrain Tiles (SRTM y otras fuentes)" },
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     m.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
@@ -177,7 +252,7 @@ export default function MapaGL(props: PropsMapa) {
           data: { type: "Feature", geometry: ruta.geometria, properties: {} } as never,
           lineWidthUnits: "pixels",
           getLineWidth: 6,
-          getLineColor: [19, 36, 42, 255],
+          getLineColor: TINTA,
         }),
       );
     } else if (ruta && ruta.encontrada) {
@@ -192,7 +267,7 @@ export default function MapaGL(props: PropsMapa) {
           } as never,
           lineWidthUnits: "pixels",
           getLineWidth: 3,
-          getLineColor: [19, 36, 42, 160],
+          getLineColor: [TINTA[0], TINTA[1], TINTA[2], 160],
         }),
       );
     }
@@ -204,8 +279,8 @@ export default function MapaGL(props: PropsMapa) {
         getPosition: (c) => [c.lon, c.lat],
         getRadius: (c) => 120 + Math.sqrt(c.capacidad_personas) * 6,
         radiusUnits: "meters",
-        getFillColor: [27, 92, 88, 230],
-        getLineColor: [255, 255, 255, 255],
+        getFillColor: rgbaDe("acceso.transitable", 230),
+        getLineColor: BLANCO,
         stroked: true,
         lineWidthMinPixels: 2,
       }),
@@ -216,8 +291,8 @@ export default function MapaGL(props: PropsMapa) {
         getPosition: (e) => [e.lon, e.lat],
         getRadius: 9,
         radiusUnits: "pixels",
-        getFillColor: [19, 36, 42, 255],
-        getLineColor: [217, 154, 30, 255],
+        getFillColor: TINTA,
+        getLineColor: rgbaDe("umbral.alerta"),
         stroked: true,
         lineWidthMinPixels: 3,
       }),
@@ -230,8 +305,8 @@ export default function MapaGL(props: PropsMapa) {
           getPosition: (p) => [p.lon, p.lat],
           getRadius: 8,
           radiusUnits: "pixels",
-          getFillColor: [194, 59, 42, 255],
-          getLineColor: [255, 255, 255, 255],
+          getFillColor: rgbaDe("mapa.marcador"),
+          getLineColor: BLANCO,
           stroked: true,
           lineWidthMinPixels: 2,
         }),
@@ -257,7 +332,7 @@ export default function MapaGL(props: PropsMapa) {
       const lat = anillo.reduce((s, p) => s + p[1], 0) / anillo.length;
       const est = props.estadoSectores[id];
       const el = document.createElement("div");
-      el.style.cssText = "font:600 12px 'Segoe UI',sans-serif;color:#13242A;background:rgba(255,255,255,.85);padding:1px 5px;border:1px solid #5B6B68;pointer-events:none;white-space:nowrap";
+      el.style.cssText = `font:600 12px 'Public Sans Variable','Segoe UI',sans-serif;color:${hexDe("texto")};background:${hexDe("superficie")};padding:1px 5px;border:1px solid ${hexDe("bordeFuerte")};pointer-events:none;white-space:nowrap`;
       el.textContent = est ? `${id} · ${est.estado.replace("_", " ")}${est.aislado ? " · aislado" : ""}` : id;
       marcadores.current.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m));
     }
@@ -271,17 +346,19 @@ export default function MapaGL(props: PropsMapa) {
       for (const c of props.capas) {
         const sid = `capa-${c.id}`;
         const activa = props.capasActivas.includes(c.id);
+        if (ESPECIALES.has(c.id)) continue; // relieve, curvas y departamentos: ver aplicarRelieve
         if (activa && !m.getSource(sid)) {
           m.addSource(sid, { type: "geojson", data: `${import.meta.env.BASE_URL}${c.archivo}` });
           m.addLayer(
             c.tipo === "linea"
-              ? { id: sid, type: "line", source: sid, paint: { "line-color": COLOR_CAPA[c.id] ?? "#5B6B68", "line-width": c.id === "red_vial" ? 1 : 1.5, "line-opacity": 0.8 } }
-              : { id: sid, type: "circle", source: sid, paint: { "circle-color": COLOR_CAPA[c.id] ?? "#13242A", "circle-radius": 3.5, "circle-stroke-color": "#fff", "circle-stroke-width": 1 } },
+              ? { id: sid, type: "line", source: sid, paint: { "line-color": COLOR_CAPA[c.id] ?? hexDe("bordeFuerte"), "line-width": c.id === "red_vial" ? 1 : 1.5, "line-opacity": 0.8 } }
+              : { id: sid, type: "circle", source: sid, paint: { "circle-color": COLOR_CAPA[c.id] ?? hexDe("texto"), "circle-radius": 3.5, "circle-stroke-color": hexDe("superficie"), "circle-stroke-width": 1 } },
             "ancla-top",
           );
         }
         if (m.getLayer(sid)) m.setLayoutProperty(sid, "visibility", activa ? "visible" : "none");
       }
+      aplicarRelieve(m, props.capas, props.capasActivas);
       if (props.fondoOsm && !m.getSource("osm")) {
         m.addSource("osm", { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© colaboradores de OpenStreetMap" });
         m.addLayer({ id: "osm", type: "raster", source: "osm" }, "ancla-osm");
@@ -290,12 +367,90 @@ export default function MapaGL(props: PropsMapa) {
     };
     const preparar = () => {
       if (!m.getLayer("ancla-osm")) m.addLayer({ id: "ancla-osm", type: "background", paint: { "background-opacity": 0 } });
+      if (!m.getLayer("ancla-relieve")) m.addLayer({ id: "ancla-relieve", type: "background", paint: { "background-opacity": 0 } });
       if (!m.getLayer("ancla-top")) m.addLayer({ id: "ancla-top", type: "background", paint: { "background-opacity": 0 } });
       aplicar();
     };
     if (listo.current) preparar();
     else m.once("load", preparar);
   }, [props.capas, props.capasActivas, props.fondoOsm]);
+
+  // Rótulos HTML de las curvas maestras (cota en metros) y de los departamentos: el estilo no tiene servidor de fuentes.
+  const hayCurvas = props.capasActivas.includes("curvas_nivel");
+  const hayDepartamentos = props.capasActivas.includes("departamentos");
+  const capaCurvas = props.capas.find((c) => c.id === "curvas_nivel");
+  const capaDepartamentos = props.capas.find((c) => c.id === "departamentos");
+  useEffect(() => {
+    const m = mapa.current;
+    rotulosCurvas.current.forEach((r) => r.marca.remove());
+    rotulosCurvas.current = [];
+    if (!m || !hayCurvas || !capaCurvas) return;
+    let activo = true;
+    const base = import.meta.env.BASE_URL;
+    const cargar = async (archivo: string | undefined, regimen: "local" | "cuenca") => {
+      if (!archivo) return;
+      try {
+        const fc = (await (await fetch(`${base}${archivo}`)).json()) as { features: { properties: { elev_m: number; maestra: boolean }; geometry: { type: string; coordinates: unknown } }[] };
+        if (!activo) return;
+        for (const f of fc.features.filter((x) => x.properties.maestra)) {
+          const lineas = (f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.coordinates) as [number, number][][];
+          for (const ln of [...lineas].sort((a, b) => b.length - a.length).slice(0, regimen === "local" ? 3 : 2)) {
+            if (ln.length < 6) continue;
+            const [lon, lat] = ln[Math.floor(ln.length / 2)];
+            const el = document.createElement("div");
+            el.textContent = `${f.properties.elev_m} m`;
+            el.style.cssText = `font:600 10px 'Public Sans Variable','Segoe UI',sans-serif;color:${COLOR_CURVA};background:${hexDe("superficie")};opacity:.85;padding:0 3px;border-radius:2px;pointer-events:none;white-space:nowrap`;
+            const marca = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m);
+            rotulosCurvas.current.push({ marca, el, regimen });
+          }
+        }
+        actualizarRotulos();
+      } catch {
+        /* sin archivo: no hay rótulos */
+      }
+    };
+    const actualizarRotulos = () => {
+      const z = m.getZoom();
+      for (const r of rotulosCurvas.current) r.el.style.display = r.regimen === "local" ? (z >= ZOOM_LOCAL + 1 ? "block" : "none") : z < ZOOM_LOCAL ? "block" : "none";
+    };
+    void cargar(capaCurvas.archivo, "local");
+    void cargar(capaCurvas.archivo_cuenca, "cuenca");
+    m.on("zoom", actualizarRotulos);
+    return () => {
+      activo = false;
+      m.off("zoom", actualizarRotulos);
+      rotulosCurvas.current.forEach((r) => r.marca.remove());
+      rotulosCurvas.current = [];
+    };
+  }, [hayCurvas, capaCurvas]);
+
+  useEffect(() => {
+    const m = mapa.current;
+    rotulosDepartamentos.current.forEach((x) => x.remove());
+    rotulosDepartamentos.current = [];
+    if (!m || !hayDepartamentos || !capaDepartamentos) return;
+    let activo = true;
+    void fetch(`${import.meta.env.BASE_URL}${capaDepartamentos.archivo}`)
+      .then((r) => r.json() as Promise<{ features: { properties: { nombre: string }; geometry: { type: string; coordinates: number[][][] | number[][][][] } }[] }>)
+      .then((fc) => {
+        if (!activo) return;
+        for (const f of fc.features) {
+          const anillo = (f.geometry.type === "Polygon" ? (f.geometry.coordinates as number[][][])[0] : (f.geometry.coordinates as number[][][][]).map((p) => p[0]).sort((a, b) => b.length - a.length)[0]) as number[][];
+          const lon = anillo.reduce((s, p) => s + p[0], 0) / anillo.length;
+          const lat = anillo.reduce((s, p) => s + p[1], 0) / anillo.length;
+          const el = document.createElement("div");
+          el.textContent = `Dpto. ${f.properties.nombre}`;
+          el.style.cssText = `font:600 11px 'Public Sans Variable','Segoe UI',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${COLOR_DEPARTAMENTO};opacity:.75;pointer-events:none;white-space:nowrap`;
+          rotulosDepartamentos.current.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m));
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      activo = false;
+      rotulosDepartamentos.current.forEach((x) => x.remove());
+      rotulosDepartamentos.current = [];
+    };
+  }, [hayDepartamentos, capaDepartamentos]);
 
   return <div ref={contenedor} role="application" aria-label="Mapa operativo de Puerto Formosa" style={{ width: "100%", height: "100%", minHeight: 420, cursor: props.modoOrigen ? "crosshair" : "grab" }} />;
 }

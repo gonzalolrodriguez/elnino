@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SERIE_K1, fechaDeIndice, indiceDeFecha, sectorDe } from "./datos/kit";
-import { construirTrazo } from "./elnino/SerieK1";
+import { construirTrazo } from "./informacion/SerieK1";
 import { ordenAguasAbajo, CURSOS_APROXIMADOS, HITOS } from "./landing/geometria";
 import { fijarToken } from "./lib/api";
 import { LEYENDA, renderRuta, simularFetch } from "./test/utils";
@@ -15,7 +15,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("leyenda fija", () => {
-  it.each(["/", "/el-nino", "/registro/ciudadania", "/registro/productor", "/login", "/app", "/mi-cuenta", "/comando", "/cuadrilla", "/admin"])(
+  it.each(["/", "/informacion", "/el-nino", "/registro/ciudadania", "/registro/productor", "/login", "/app", "/mi-cuenta", "/comando", "/cuadrilla", "/admin"])(
     "aparece en %s",
     async (ruta) => {
       renderRuta(ruta);
@@ -58,13 +58,35 @@ describe("landing", () => {
   });
 });
 
-describe("El Niño", () => {
+describe("Información", () => {
   it("muestra la serie con umbrales y el mapa de sectores SIMULADO", async () => {
-    renderRuta("/el-nino");
+    renderRuta("/informacion");
     expect(await screen.findByRole("heading", { name: "Puerto Formosa: umbrales y picos" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Altura diaria de la escala de Puerto Formosa/ })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /cuatro sectores simulados K10/ })).toBeInTheDocument();
     expect(screen.getAllByText("SIMULADO").length).toBeGreaterThan(0);
+  });
+});
+
+describe("sección Información", () => {
+  it("/el-nino redirige a /informacion", async () => {
+    renderRuta("/el-nino");
+    expect(await screen.findByRole("heading", { level: 1, name: "Información para entender la crecida" })).toBeInTheDocument();
+    expect(document.title).toBe("Información · Operación Agua");
+  });
+
+  it("la navegación principal dice Información y apunta a /informacion", () => {
+    renderRuta("/");
+    const nav = screen.getByRole("navigation", { name: "Navegación principal" });
+    expect(within(nav).getByRole("link", { name: "Información" })).toHaveAttribute("href", "/informacion");
+    expect(within(nav).queryByRole("link", { name: /El Niño/ })).not.toBeInTheDocument();
+  });
+
+  it("el índice de la página enlaza a cada tema, incluidas las fuentes", async () => {
+    renderRuta("/informacion");
+    const indice = await screen.findByRole("navigation", { name: "En esta página" });
+    expect(within(indice).getByRole("link", { name: "Fuentes" })).toHaveAttribute("href", "#fuentes");
+    expect(within(indice).getByRole("link", { name: "Qué es El Niño" })).toHaveAttribute("href", "#que-es");
   });
 });
 

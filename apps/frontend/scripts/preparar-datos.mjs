@@ -93,5 +93,82 @@ for (const c of CAPAS) {
     fecha_actualizacion: m?.fecha_descarga ?? "",
   });
 }
+// Relieve y departamentos: capas de planialtimetría (data/geo/relieve/, ver descargar_relieve.py) para el mapa operativo.
+const mRc = manifiesto.capas?.find((x) => x.id === "relieve_cuenca");
+const mRl = manifiesto.capas?.find((x) => x.id === "relieve_local");
+const mDep = manifiesto.capas?.find((x) => x.id === "departamentos");
+if (mRc && mRl) {
+  const base = { categoria: "DOCUMENTO DE REFERENCIA", fecha_actualizacion: mRc.fecha_descarga, n: 0 };
+  capasSalida.push(
+    {
+      ...base,
+      id: "departamentos",
+      etiqueta: "Departamentos de Formosa",
+      tipo: "poligono",
+      archivo: "relieve/departamentos.geojson",
+      n: mDep?.n_features ?? 9,
+      nota: "Límites del IGN, simplificados (~50 m).",
+      fuente: mDep?.url?.split(" (")[0] ?? "",
+      nombre_fuente: "IGN, Capas SIG (WFS ign:departamento)",
+      licencia: mDep?.licencia ?? "IGN, datos abiertos",
+      fecha_actualizacion: mDep?.fecha_descarga ?? base.fecha_actualizacion,
+    },
+    {
+      ...base,
+      id: "curvas_nivel",
+      etiqueta: "Curvas de nivel",
+      tipo: "curvas",
+      archivo: "relieve/curvas_local.geojson",
+      archivo_cuenca: "relieve/curvas_cuenca.geojson",
+      n: 0,
+      nota: `Corredor de los sectores: cada ${mRl.intervalo_curvas} sobre un DEM de ~75 m suavizado (error vertical de varios metros: muestran el gradiente regional, no cotas de inundación). Vista general: ${mRc.intervalo_curvas}.`,
+      fuente: mRl.url,
+      nombre_fuente: "AWS Terrain Tiles (terrarium), SRTM y otras fuentes",
+      licencia: "AWS Terrain Tiles (SRTM y otras fuentes; ver data/geo/LEEME.md)",
+    },
+    {
+      ...base,
+      id: "relieve",
+      etiqueta: "Relieve (tinte hipsométrico)",
+      tipo: "relieve",
+      archivo: "relieve/tinte_local_mercator.png",
+      archivo_cuenca: "relieve/tinte_cuenca_mercator.png",
+      bbox_local: mRl.bbox,
+      bbox_cuenca: mRc.bbox,
+      rampa_local: mRl.rampa,
+      rampa_cuenca: mRc.rampa,
+      nota: `Tinte local de ${mRl.elevacion_min_m} a ${mRl.elevacion_max_m} m (rampa propia: p2 a p98 = ${mRl.rampa_p2_p98_m.join(" a ")} m); fuera del corredor, tinte de la cuenca (${mRc.elevacion_min_m} a ${mRc.elevacion_max_m} m). Ruido del DEM ~${mRl.ruido_dem_m} m: no usar para cotas.`,
+      fuente: mRl.url,
+      nombre_fuente: "AWS Terrain Tiles (terrarium, z7 y z11)",
+      licencia: "AWS Terrain Tiles (SRTM y otras fuentes; ver data/geo/LEEME.md)",
+    },
+  );
+}
 writeFileSync(resolve(pub, "capas.json"), JSON.stringify({ recorte: { oeste: W, sur: S, este: E, norte: N }, capas: capasSalida }, null, 1));
 console.log(`public/capas: ${capasSalida.map((c) => `${c.id}=${c.n}`).join(", ")}`);
+
+// --- Relieve (planialtimetría) de data/geo/relieve/ y límites de Formosa, para la landing y los mapas ---
+// Salidas en public/relieve/ (se cargan por fetch, fuera del bundle inicial). Generado por
+// apps/backend/scripts/descargar_relieve.py; aquí solo se copian (sin modificar) más los límites del IGN.
+import { copyFileSync, existsSync, statSync } from "node:fs";
+const rel = resolve(geo, "relieve");
+const pubRel = resolve(aqui, "..", "public", "relieve");
+mkdirSync(pubRel, { recursive: true });
+const ARCHIVOS_RELIEVE = [
+  "meta.json",
+  "dem_cuenca_malla.json",
+  "curvas_cuenca.geojson",
+  "curvas_local.geojson",
+  "rio_paraguay.geojson",
+  "tinte_cuenca.png",
+  "tinte_cuenca_mercator.png",
+  "tinte_local_mercator.png",
+];
+if (ARCHIVOS_RELIEVE.every((a) => existsSync(resolve(rel, a)))) {
+  for (const a of ARCHIVOS_RELIEVE) copyFileSync(resolve(rel, a), resolve(pubRel, a));
+  for (const a of ["departamentos.geojson", "provincia.geojson"]) copyFileSync(resolve(geo, a), resolve(pubRel, a));
+  const kb = (a) => `${a}=${Math.round(statSync(resolve(pubRel, a)).size / 1024)} KB`;
+  console.log(`public/relieve: ${[...ARCHIVOS_RELIEVE, "departamentos.geojson", "provincia.geojson"].map(kb).join(", ")}`);
+} else {
+  console.warn("public/relieve: faltan archivos en data/geo/relieve/ (ejecutá apps/backend/scripts/descargar_relieve.py); se omite.");
+}

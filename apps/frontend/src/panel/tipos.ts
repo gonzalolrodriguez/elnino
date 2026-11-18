@@ -340,8 +340,14 @@ export type UsuarioAdmin = {
 export type CapaOficial = {
   id: string;
   etiqueta: string;
-  tipo: "linea" | "punto";
+  tipo: "linea" | "punto" | "poligono" | "curvas" | "relieve";
   archivo: string;
+  /** Capas de relieve: archivo de la cuenca (vista general), recuadros y rampas de color. */
+  archivo_cuenca?: string;
+  bbox_local?: [number, number, number, number];
+  bbox_cuenca?: [number, number, number, number];
+  rampa_local?: [number, string][];
+  rampa_cuenca?: [number, string][];
   n: number;
   nota: string | null;
   categoria: Categoria;

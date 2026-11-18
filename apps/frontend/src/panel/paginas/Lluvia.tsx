@@ -56,7 +56,7 @@ function FormParte({ alCargar }: { alCargar: () => void }) {
           <FormLabel htmlFor="parte-puesto" fontSize="sm" mb={0}>
             Puesto
           </FormLabel>
-          <Select id="parte-puesto" size="sm" bg="white" placeholder="Elegí un puesto" value={puesto} onChange={(e) => setPuesto(e.target.value)}>
+          <Select id="parte-puesto" size="sm" bg="superficie" placeholder="Elegí un puesto" value={puesto} onChange={(e) => setPuesto(e.target.value)}>
             {(puestos.datos?.puestos ?? []).map((p) => (
               <option key={p.codigo} value={p.codigo}>
                 {p.nombre} ({p.codigo})
@@ -68,13 +68,13 @@ function FormParte({ alCargar }: { alCargar: () => void }) {
           <FormLabel htmlFor="parte-fecha" fontSize="sm" mb={0}>
             Fecha
           </FormLabel>
-          <Input id="parte-fecha" type="date" size="sm" bg="white" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          <Input id="parte-fecha" type="date" size="sm" bg="superficie" value={fecha} onChange={(e) => setFecha(e.target.value)} />
         </FormControl>
         <FormControl w="6rem">
           <FormLabel htmlFor="parte-turno" fontSize="sm" mb={0}>
             Turno
           </FormLabel>
-          <Select id="parte-turno" size="sm" bg="white" value={turno} onChange={(e) => setTurno(e.target.value as "07" | "17")}>
+          <Select id="parte-turno" size="sm" bg="superficie" value={turno} onChange={(e) => setTurno(e.target.value as "07" | "17")}>
             <option value="07">07:00</option>
             <option value="17">17:00</option>
           </Select>
@@ -83,7 +83,7 @@ function FormParte({ alCargar }: { alCargar: () => void }) {
           <FormLabel htmlFor="parte-mm" fontSize="sm" mb={0}>
             mm
           </FormLabel>
-          <Input id="parte-mm" size="sm" bg="white" inputMode="decimal" value={mm} onChange={(e) => setMm(e.target.value)} isDisabled={sinMedicion} />
+          <Input id="parte-mm" size="sm" bg="superficie" inputMode="decimal" value={mm} onChange={(e) => setMm(e.target.value)} isDisabled={sinMedicion} />
         </FormControl>
         <Checkbox size="sm" isChecked={sinMedicion} onChange={(e) => setSinMedicion(e.target.checked)}>
           Sin medición
@@ -92,7 +92,7 @@ function FormParte({ alCargar }: { alCargar: () => void }) {
           <FormLabel htmlFor="parte-origen" fontSize="sm" mb={0}>
             Origen
           </FormLabel>
-          <Select id="parte-origen" size="sm" bg="white" value={origen} onChange={(e) => setOrigen(e.target.value as Origen)}>
+          <Select id="parte-origen" size="sm" bg="superficie" value={origen} onChange={(e) => setOrigen(e.target.value as Origen)}>
             <option value="simulado">Simulado</option>
             <option value="carga_manual">Carga manual</option>
             <option value="parte_policial">Parte policial</option>
@@ -103,11 +103,11 @@ function FormParte({ alCargar }: { alCargar: () => void }) {
         </Button>
       </Flex>
       {errorMm && (
-        <Text role="alert" color="red.600" fontSize="sm" mt={1}>
+        <Text role="alert" color="evacuacion.700" fontSize="sm" mt={1}>
           {errorMm}
         </Text>
       )}
-      <Text fontSize="xs" color="pizarra.500" mt={1}>
+      <Text fontSize="xs" color="textoSuave" mt={1}>
         Un parte real posterior al corte (31/10/2026) se rechaza salvo decisión de la mesa; para pruebas usá el origen «Simulado».
       </Text>
       <Box mt={2}>
@@ -168,13 +168,13 @@ function PlanillaUPCA({ alImportar }: { alImportar: () => void }) {
           <FormLabel htmlFor="planilla-anio" fontSize="sm" mb={0}>
             Año hidrológico
           </FormLabel>
-          <Input id="planilla-anio" size="sm" bg="white" inputMode="numeric" value={anio} onChange={(e) => setAnio(e.target.value)} />
+          <Input id="planilla-anio" size="sm" bg="superficie" inputMode="numeric" value={anio} onChange={(e) => setAnio(e.target.value)} />
         </FormControl>
         <Button size="sm" variant="outline" onClick={() => void exportar()} isDisabled={!/^\d{4}$/.test(anio)}>
           Exportar a Excel
         </Button>
       </Flex>
-      <Text fontSize="xs" color="pizarra.500" mt={1}>
+      <Text fontSize="xs" color="textoSuave" mt={1}>
         La celda vacía de la planilla significa «sin medición» y no se guarda como 0. El año hidrológico va de septiembre a agosto.
       </Text>
       <Box mt={2}>

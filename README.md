@@ -226,8 +226,8 @@ pnpm --filter @evacuaciones/frontend datos      # regenera los JSON estáticos d
 ```
 
 - `VITE_API_URL` define la URL del backend (por defecto `http://localhost:8000`; el prefijo `/api/v1` se agrega solo). El origen del portal debe figurar en `CORS_ORIGINS`; por defecto se admiten `http://localhost:5173` y `http://localhost:8081`. El refresh token viaja en una cookie `HttpOnly` (`SameSite=Strict`, ruta `/api/v1/auth`), por lo que el portal y el backend deben compartir sitio (por ejemplo, ambos en `localhost`).
-- La serie de Puerto Formosa de la página El Niño se pide a `GET /serie/formosa`; si el backend no responde, se usa el JSON estático (`src/datos/k1_diario.json`, generado con el comando `datos`).
-- Rutas públicas: `/` (landing), `/el-nino`, `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
+- La serie de Puerto Formosa de la página Información se pide a `GET /serie/formosa`; si el backend no responde, se usa el JSON estático (`src/datos/k1_diario.json`, generado con el comando `datos`).
+- Rutas públicas: `/` (landing), `/informacion` (antes `/el-nino`, que redirige), `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
 - Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/cuadrilla` (cuadrilla y admin: tareas asignadas, checklist, alertas y tiempo real), `/comando/*` (operador, decisor y admin; ver "Panel operativo"), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
 - Pruebas y calidad: `pnpm --filter @evacuaciones/frontend test`, `lint` y `build`.
 
@@ -256,6 +256,8 @@ Lugares reales de fuentes oficiales (IGN, BAHRA/Georef, Mapa Educativo, REFES, O
 ```bash
 python apps/backend/scripts/descargar_capas.py                       # regenera todas las capas (~3 min, requiere internet)
 python apps/backend/scripts/descargar_capas.py --solo vial,escuelas  # solo algunas
+python apps/backend/scripts/descargar_relieve.py                     # relieve, curvas de nivel y río Paraguay (~1 min, requiere internet)
+(cd apps/frontend && node scripts/preparar-datos.mjs)                # copia las capas a public/ para la web (también corre en `pnpm build`)
 ```
 
 ## Motor de simulación y canales (Fase 2)

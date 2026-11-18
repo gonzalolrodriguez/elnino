@@ -5,8 +5,9 @@ import { Link as RouterLink } from "react-router-dom";
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
-import { MapaSectores } from "../elnino/MapaSectores";
+import { MapaSectores } from "../informacion/MapaSectores";
 import { solicitar } from "../lib/api";
 import { decimal, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
@@ -82,7 +83,7 @@ export default function RegistroProductor() {
 
   if (creado) {
     return (
-      <Layout>
+      <Layout titulo="Registro de productores">
         <Alert status="success" alignItems="flex-start" role="status">
           <AlertIcon />
           <Box>
@@ -102,7 +103,7 @@ export default function RegistroProductor() {
   }
 
   return (
-    <Layout>
+    <Layout titulo="Registro de productores">
       <Heading as="h1" size="xl" mb={2}>
         Registro de productores
       </Heading>
@@ -111,7 +112,8 @@ export default function RegistroProductor() {
         Plataforma prototipo: usá datos de prueba.
       </Text>
       <form onSubmit={enviar} noValidate aria-label="Registro de productor">
-        <Box display="grid" gridTemplateColumns={{ base: "1fr", lg: "minmax(0, 32rem) minmax(0, 1fr)" }} gap={10} alignItems="start">
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 32rem) minmax(0, 1fr)" }} gap={10} alignItems="start">
+          <TarjetaFormulario maxW="none">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
             <Campo id="nombre_visible" etiqueta="Nombre para mostrar" value={v.nombre_visible} onChange={set("nombre_visible")} error={errores.nombre_visible} isRequired />
@@ -147,12 +149,12 @@ export default function RegistroProductor() {
             </Heading>
             {filas.length === 0 && <Text fontSize="sm">Todavía no cargaste hacienda. Podés agregarla ahora o más tarde.</Text>}
             {filas.map((f, i) => (
-              <Box key={f.clave} display="grid" gridTemplateColumns="8rem 1fr 6rem auto" gap={2} alignItems="end">
+              <Box key={f.clave} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr)", md: "8rem minmax(0, 1fr) 6rem auto" }} gap={2} alignItems="end">
                 <FormControl>
                   <FormLabel htmlFor={`esp-${f.clave}`} fontSize="xs">
                     Especie {i + 1}
                   </FormLabel>
-                  <Select id={`esp-${f.clave}`} bg="white" value={f.especie} onChange={(e) => cambiarFila(f.clave, "especie", e.target.value)}>
+                  <Select id={`esp-${f.clave}`} bg="superficie" value={f.especie} onChange={(e) => cambiarFila(f.clave, "especie", e.target.value)}>
                     {ESPECIES.map((x) => (
                       <option key={x}>{x}</option>
                     ))}
@@ -162,14 +164,14 @@ export default function RegistroProductor() {
                   <FormLabel htmlFor={`cat-${f.clave}`} fontSize="xs">
                     Categoría
                   </FormLabel>
-                  <Input id={`cat-${f.clave}`} bg="white" list="categorias" value={f.categoria_animal} onChange={(e) => cambiarFila(f.clave, "categoria_animal", e.target.value)} />
+                  <Input id={`cat-${f.clave}`} bg="superficie" list="categorias" value={f.categoria_animal} onChange={(e) => cambiarFila(f.clave, "categoria_animal", e.target.value)} />
                   <FormErrorMessage>{errores[`cat-${f.clave}`]}</FormErrorMessage>
                 </FormControl>
                 <FormControl isInvalid={!!errores[`cant-${f.clave}`]}>
                   <FormLabel htmlFor={`cant-${f.clave}`} fontSize="xs">
                     Cantidad
                   </FormLabel>
-                  <Input id={`cant-${f.clave}`} bg="white" inputMode="numeric" value={f.cantidad} onChange={(e) => cambiarFila(f.clave, "cantidad", e.target.value)} />
+                  <Input id={`cant-${f.clave}`} bg="superficie" inputMode="numeric" value={f.cantidad} onChange={(e) => cambiarFila(f.clave, "cantidad", e.target.value)} />
                   <FormErrorMessage>{errores[`cant-${f.clave}`]}</FormErrorMessage>
                 </FormControl>
                 <IconButton aria-label={`Quitar hacienda ${i + 1}`} icon={<span aria-hidden="true">×</span>} variant="outline" onClick={() => setFilas(filas.filter((x) => x.clave !== f.clave))} />
@@ -192,12 +194,13 @@ export default function RegistroProductor() {
             </Button>
             <Text fontSize="sm">
               ¿Ya tenés cuenta?{" "}
-              <Link as={RouterLink} to="/login" textDecoration="underline">
+              <Link as={RouterLink} to="/login">
                 Ingresá
               </Link>
               .
             </Text>
           </VStack>
+          </TarjetaFormulario>
 
           <Box position={{ lg: "sticky" }} top={{ lg: "7rem" }}>
             <Box display="flex" gap={2} alignItems="center" mb={2}>

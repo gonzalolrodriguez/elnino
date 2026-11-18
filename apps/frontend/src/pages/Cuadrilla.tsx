@@ -43,7 +43,7 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
   }
 
   return (
-    <Box as="article" aria-label={`Tarea ${tarea.id}`} border="1px solid" borderColor="pizarra.200" borderRadius="3px" p={3} bg="white">
+    <Box as="article" aria-label={`Tarea ${tarea.id}`} border="1px solid" borderColor="borde" borderRadius="3px" p={3} bg="superficie">
       <Flex gap={2} align="center" wrap="wrap" mb={1}>
         <Heading as="h3" size="sm">
           {tarea.titulo}
@@ -53,7 +53,7 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
         </Badge>
         <Insignia categoria="SIMULADO" />
       </Flex>
-      <Text fontSize="xs" color="pizarra.500" mb={2}>
+      <Text fontSize="xs" color="textoSuave" mb={2}>
         {[
           tarea.sector_id ? `Sector ${tarea.sector_id}` : null,
           tarea.solicitud_id ? `Solicitud n.º ${tarea.solicitud_id}` : null,
@@ -99,10 +99,10 @@ function Avisos({ avisos, alMarcar }: { avisos: Notificacion[]; alMarcar: (id: n
   return (
     <Stack as="ul" listStyleType="none" spacing={2}>
       {avisos.map((n) => (
-        <Flex as="li" key={n.id} gap={3} align="center" justify="space-between" borderLeft="4px solid" borderColor={n.leida ? "pizarra.200" : "#D99A1E"} pl={3}>
+        <Flex as="li" key={n.id} gap={3} align="center" justify="space-between" borderLeft="4px solid" borderColor={n.leida ? "pizarra.200" : "acento"} pl={3}>
           <Box>
             <Text fontSize="sm" fontWeight={n.leida ? 400 : 700}>{n.mensaje}</Text>
-            <Text fontSize="xs" color="pizarra.500">{fmtFecha(n.creada_en)}</Text>
+            <Text fontSize="xs" color="textoSuave">{fmtFecha(n.creada_en)}</Text>
           </Box>
           {!n.leida && (
             <Button size="xs" variant="outline" onClick={() => alMarcar(n.id)}>
@@ -147,11 +147,11 @@ export default function Cuadrilla() {
   }
 
   return (
-    <Layout>
+    <Layout titulo="Mis tareas">
       <Heading as="h1" size="xl" mb={1}>
         Mis tareas
       </Heading>
-      <Text fontSize="sm" color="pizarra.500" mb={4} role="status">
+      <Text fontSize="sm" color="textoSuave" mb={4} role="status">
         {ESTADOS_WS[ws]}. Las tareas y checklists de abajo son datos de demostración.
       </Text>
 

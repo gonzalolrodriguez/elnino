@@ -210,6 +210,153 @@
       "estado": "pendiente",
       "fuente_usada": "no intentada",
       "notas": "Opcional segun la consigna; no se intento. Las poblaciones del MVP provienen de K10 (SIMULADO)."
+    },
+    {
+      "id": "relieve_cuenca",
+      "nombre": "Relieve de la cuenca (DEM, curvas de nivel, rio Paraguay)",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (z7); https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_rivers_lake_centerlines.geojson",
+      "licencia": "AWS Terrain Tiles: ver LEEME.md; Natural Earth: dominio publico",
+      "bbox": [
+        -62.8,
+        -28.0,
+        -54.0,
+        -14.2
+      ],
+      "zoom": 7,
+      "tiles": 24,
+      "elevacion_min_m": 39.2,
+      "elevacion_max_m": 892.3,
+      "intervalo_curvas": "25 m hasta 200 m; 100 m por encima (maestras 100/200/300/500/700/1000)",
+      "rampa": [
+        [
+          0,
+          "#2a6660"
+        ],
+        [
+          60,
+          "#37796a"
+        ],
+        [
+          80,
+          "#4a8b6e"
+        ],
+        [
+          100,
+          "#639c76"
+        ],
+        [
+          150,
+          "#8caf7c"
+        ],
+        [
+          200,
+          "#b4ba86"
+        ],
+        [
+          300,
+          "#cfbb8b"
+        ],
+        [
+          500,
+          "#dcb68f"
+        ],
+        [
+          800,
+          "#ecd0b2"
+        ],
+        [
+          1000,
+          "#f6e8d8"
+        ]
+      ],
+      "tinte_mercator": {
+        "archivo": "relieve/tinte_cuenca_mercator.png",
+        "px": [
+          400,
+          675
+        ],
+        "factor_px": 2
+      },
+      "rio": {
+        "paraguay_vertices": 964,
+        "paraguay_inicio": [
+          -55.0753,
+          -14.3194
+        ],
+        "paraguay_fin": [
+          -58.605,
+          -27.3163
+        ]
+      },
+      "archivos": [
+        "relieve/dem_cuenca_malla.json",
+        "relieve/curvas_cuenca.geojson",
+        "relieve/tinte_cuenca.png",
+        "relieve/tinte_cuenca_mercator.png",
+        "relieve/rio_paraguay.geojson"
+      ],
+      "fecha_descarga": "2026-11-18",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Elevaciones suavizadas (precision vertical de varios metros). Rio de Natural Earth 1:10M (el tronco Paraguay va rotulado 'Parana' en esa fuente por ser un solo sistema). Departamentos: reutiliza departamentos.geojson (IGN)."
+    },
+    {
+      "id": "relieve_local",
+      "nombre": "Relieve local del corredor de los sectores K10 (DEM z11, curvas de nivel)",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (z11)",
+      "licencia": "AWS Terrain Tiles: ver LEEME.md",
+      "bbox": [
+        -58.4,
+        -26.4,
+        -57.95,
+        -25.95
+      ],
+      "zoom": 11,
+      "tiles": 16,
+      "elevacion_min_m": 49.7,
+      "elevacion_max_m": 77.5,
+      "rampa_p2_p98_m": [
+        54.4,
+        70.5
+      ],
+      "intervalo_curvas": "2 m (maestras cada 10 m)",
+      "ruido_dem_m": 1.99,
+      "rampa": [
+        [
+          54.43141630796179,
+          "#37796a"
+        ],
+        [
+          57.646046856713355,
+          "#4a8b6e"
+        ],
+        [
+          60.86067740546491,
+          "#639c76"
+        ],
+        [
+          64.07530795421647,
+          "#8caf7c"
+        ],
+        [
+          67.28993850296804,
+          "#b4ba86"
+        ],
+        [
+          70.5045690517196,
+          "#cfbb8b"
+        ]
+      ],
+      "archivos": [
+        "relieve/curvas_local.geojson",
+        "relieve/tinte_local_mercator.png"
+      ],
+      "fecha_descarga": "2026-11-18",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "DEM de ~75 m suavizado; precision vertical de varios metros. Muestra el gradiente regional de la llanura, no cotas de inundacion: el umbral de los sectores sigue siendo la altura de escala de K10 (SIMULADO)."
     }
   ]
 }

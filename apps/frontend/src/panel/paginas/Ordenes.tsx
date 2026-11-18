@@ -105,7 +105,7 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
             <FormLabel htmlFor="orden-tipo" fontSize="sm" mb={0}>
               Tipo de orden
             </FormLabel>
-            <Select id="orden-tipo" size="sm" bg="white" value={tipo} onChange={(e) => setTipo(e.target.value as TipoOrden)}>
+            <Select id="orden-tipo" size="sm" bg="superficie" value={tipo} onChange={(e) => setTipo(e.target.value as TipoOrden)}>
               {TIPOS_ORDEN.map((t) => (
                 <option key={t} value={t}>
                   {TEXTO_TIPO[t]}
@@ -117,7 +117,7 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
             <FormLabel htmlFor="orden-fecha" fontSize="sm" mb={0}>
               Día simulado (opcional)
             </FormLabel>
-            <Input id="orden-fecha" type="date" size="sm" bg="white" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            <Input id="orden-fecha" type="date" size="sm" bg="superficie" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </FormControl>
         </Flex>
         <FormControl as="fieldset" isInvalid={!!errorSectores} mb={3}>
@@ -137,10 +137,10 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
           <FormLabel htmlFor="orden-fundamento" fontSize="sm" mb={0}>
             Fundamento (obligatorio)
           </FormLabel>
-          <Textarea id="orden-fundamento" size="sm" bg="white" rows={3} maxLength={2000} value={fundamento} onChange={(e) => setFundamento(e.target.value)} />
+          <Textarea id="orden-fundamento" size="sm" bg="superficie" rows={3} maxLength={2000} value={fundamento} onChange={(e) => setFundamento(e.target.value)} />
           <FormErrorMessage>{errorFundamento}</FormErrorMessage>
         </FormControl>
-        <Text fontSize="xs" color="pizarra.500" mb={2}>
+        <Text fontSize="xs" color="textoSuave" mb={2}>
           Escenario de referencia: {fmtM(entrada.altura_formosa_m)} en Puerto Formosa, {entrada.lluvia_mm} mm ({entrada.lluvia_origen}). Citá la evidencia en el fundamento.
         </Text>
         <Button type="submit" size="sm" colorScheme="red" isDisabled={!esDecisor}>

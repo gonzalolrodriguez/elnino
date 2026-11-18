@@ -1,4 +1,4 @@
-import { Box, Flex, Text, useToast } from "@chakra-ui/react";
+import { Box, Flex, Link, Text, useToast } from "@chakra-ui/react";
 import { useCallback } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -21,9 +21,9 @@ const SECCIONES = [
 ] as const;
 
 const ESTADOS_WS = {
-  conectado: { texto: "Tiempo real conectado", color: "#1B5C58" },
-  conectando: { texto: "Conectando tiempo real…", color: "#B07A12" },
-  desconectado: { texto: "Tiempo real desconectado", color: "#9B2D20" },
+  conectado: { texto: "Tiempo real conectado", color: "primario" },
+  conectando: { texto: "Conectando tiempo real…", color: "alerta.600" },
+  desconectado: { texto: "Tiempo real desconectado", color: "escala.evacuacion" },
 } as const;
 
 /** Estructura del panel operativo: navegación lateral, escenario compartido y avisos en tiempo real. */
@@ -42,50 +42,70 @@ export function PanelLayout() {
   const estadoWs = ESTADOS_WS[ws];
 
   return (
-    <Layout contenedor={false}>
+    <Layout contenedor={false} titulo="Panel operativo">
       <EscenarioProvider>
         <Flex direction={{ base: "column", lg: "row" }} minH="70vh">
           <Box
             as="nav"
             aria-label="Secciones del panel operativo"
-            w={{ base: "100%", lg: "14.5rem" }}
+            w={{ base: "100%", lg: "15.5rem" }}
             flexShrink={0}
             bg="pizarra.100"
             borderRight={{ lg: "1px solid" }}
-            borderColor="pizarra.200"
+            borderBottom={{ base: "1px solid", lg: "none" }}
+            borderColor="borde"
             px={3}
             py={4}
           >
-            <Text fontFamily="heading" fontWeight={600} fontSize="md" mb={1}>
+            <Text fontFamily="heading" fontWeight={600} fontSize="lg" mb={0.5}>
               Panel operativo
             </Text>
-            <Text fontSize="xs" color="pizarra.500" mb={3}>
+            <Text fontSize="sm" color="textoSuave" mb={3}>
               {usuario ? `${usuario.rol}${usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""}` : ""}
             </Text>
-            <Flex direction={{ base: "row", lg: "column" }} wrap="wrap" gap={1}>
+            <Flex
+              as="ul"
+              listStyleType="none"
+              m={0}
+              p={0}
+              direction={{ base: "row", lg: "column" }}
+              overflowX={{ base: "auto", lg: "visible" }}
+              gap={{ base: 1, lg: 0.5 }}
+              pb={{ base: 1, lg: 0 }}
+            >
               {SECCIONES.map((s) => (
-                <NavLink
-                  key={s.to}
-                  to={s.to}
-                  end={"fin" in s}
-                  style={({ isActive }) => ({
-                    padding: "6px 10px",
-                    fontSize: "14px",
-                    fontWeight: isActive ? 700 : 500,
-                    background: isActive ? "white" : "transparent",
-                    borderLeft: `4px solid ${isActive ? "#D99A1E" : "transparent"}`,
-                  })}
-                >
-                  {s.texto}
-                </NavLink>
+                <li key={s.to} style={{ flex: "none" }}>
+                  <Link
+                    as={NavLink}
+                    to={s.to}
+                    end={"fin" in s}
+                    display="flex"
+                    alignItems="center"
+                    minH="2.75rem"
+                    px={3}
+                    fontSize="sm"
+                    fontWeight={600}
+                    whiteSpace="nowrap"
+                    color="texto"
+                    textDecoration="none"
+                    borderLeft={{ lg: "4px solid" }}
+                    borderBottom={{ base: "3px solid", lg: "none" }}
+                    borderColor="transparent"
+                    transition="background-color 140ms var(--ease-out)"
+                    _hover={{ bg: "pizarra.200", color: "texto", textDecoration: "none" }}
+                    _activeLink={{ bg: "superficie", borderColor: "acento", fontWeight: 700 }}
+                  >
+                    {s.texto}
+                  </Link>
+                </li>
               ))}
             </Flex>
-            <Flex align="center" gap={2} mt={4} fontSize="xs" role="status" aria-live="polite" data-testid="estado-ws">
-              <Box as="span" w="9px" h="9px" borderRadius="full" bg={estadoWs.color} />
+            <Flex align="center" gap={2} mt={4} fontSize="sm" role="status" aria-live="polite" data-testid="estado-ws">
+              <Box as="span" w="10px" h="10px" borderRadius="full" bg={estadoWs.color} aria-hidden="true" />
               {estadoWs.texto}
             </Flex>
           </Box>
-          <Box flex="1" minW={0} px={{ base: 3, md: 5 }} py={5}>
+          <Box flex="1" minW={0} px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }}>
             <Outlet />
           </Box>
         </Flex>

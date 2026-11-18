@@ -65,13 +65,13 @@ function Bloque<T>({
   children: (datos: T) => ReactNode;
 }) {
   return (
-    <Box as="section" py={5} borderTop="1px solid" borderColor="pizarra.200" aria-label={titulo}>
+    <Box as="section" py={5} borderTop="1px solid" borderColor="borde" aria-label={titulo}>
       <Heading as="h2" size="md" mb={3}>
         {titulo}
       </Heading>
       {recurso.estado === "cargando" && (
         <Text display="flex" alignItems="center" gap={2}>
-          <Spinner size="sm" /> Cargando...
+          <Spinner size="sm" /> Cargando…
         </Text>
       )}
       {recurso.estado === "vacio" && <Text>{vacio}</Text>}
@@ -96,15 +96,15 @@ type Dic = Record<string, unknown>;
 
 function Pares({ d, claves }: { d: Dic; claves: [string, string][] }) {
   return (
-    <Box as="dl" display="grid" gridTemplateColumns="12rem 1fr" gap={1} fontSize="sm">
+    <Box as="dl" display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", sm: "12rem minmax(0, 1fr)" }} columnGap={4} rowGap={0.5} fontSize="md">
       {claves
         .filter(([k]) => d[k] !== undefined && d[k] !== null)
         .map(([k, etiqueta]) => (
           <Box key={k} display="contents">
-            <Box as="dt" fontWeight={600}>
+            <Box as="dt" fontWeight={600} color="textoSuave" mt={{ base: 2, sm: 0 }}>
               {etiqueta}
             </Box>
-            <Box as="dd" m={0}>
+            <Box as="dd" m={0} overflowWrap="anywhere">
               {String(d[k])}
             </Box>
           </Box>
@@ -127,7 +127,7 @@ export default function MiCuenta() {
   const notifs = useRecurso<Dic[], unknown>("/mi/notificaciones", { extraer: listaDe("notificaciones") });
 
   return (
-    <Layout>
+    <Layout titulo="Mi cuenta">
       <Heading as="h1" size="xl" mb={1}>
         Mi cuenta
       </Heading>

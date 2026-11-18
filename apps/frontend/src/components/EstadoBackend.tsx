@@ -25,13 +25,13 @@ export function EstadoBackend() {
   }, []);
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4}>
-      <Heading as="h2" size="md" mb={3}>
+    <Box bg="superficie" border="1px solid" borderColor="borde" borderRadius="sm" p={4}>
+      <Heading as="h2" size="sm" mb={3}>
         Estado del backend
       </Heading>
       {estado.tipo === "cargando" && (
         <Text display="flex" alignItems="center" gap={2}>
-          <Spinner size="sm" /> Consultando el backend...
+          <Spinner size="sm" /> Consultando el backend…
         </Text>
       )}
       {estado.tipo === "ok" && (

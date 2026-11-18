@@ -17,7 +17,7 @@ function Numero({ id, etiqueta, valor, alCambiar, max = 100000 }: { id: string; 
         {etiqueta}
       </FormLabel>
       <NumberInput size="sm" min={0} max={max} value={valor} onChange={(_, n) => alCambiar(Number.isNaN(n) ? 0 : n)}>
-        <NumberInputField id={id} bg="white" />
+        <NumberInputField id={id} bg="superficie" />
       </NumberInput>
     </FormControl>
   );
@@ -94,7 +94,7 @@ function Resultado({ r }: { r: CalculoGanadero }) {
           </Tbody>
         </Table>
       </TableContainer>
-      <Text fontSize="xs" color="pizarra.500" mt={1}>
+      <Text fontSize="xs" color="textoSuave" mt={1}>
         {r.fuente}. Fecha del cálculo: {r.fecha_dato}.
       </Text>
     </Box>
@@ -164,7 +164,7 @@ export default function Produccion() {
             <FormLabel htmlFor="colmenas-traslado" fontSize="sm" mb={0}>
               Traslado de colmenas
             </FormLabel>
-            <Select id="colmenas-traslado" size="sm" bg="white" value={traslado} onChange={(e) => setTraslado(e.target.value)}>
+            <Select id="colmenas-traslado" size="sm" bg="superficie" value={traslado} onChange={(e) => setTraslado(e.target.value)}>
               <option value="vehicular">Vehicular</option>
               <option value="a_pie">A pie</option>
             </Select>

@@ -90,8 +90,8 @@ function Formulario({ borrador, alGuardar }: { borrador: EntradaBitacora | null;
             <FormLabel htmlFor={`bit-${c.id}`} fontSize="sm" mb={0}>
               {c.etiqueta}
             </FormLabel>
-            <Textarea id={`bit-${c.id}`} size="sm" bg="white" rows={2} maxLength={4000} value={v[c.id]} onChange={poner(c.id)} />
-            {errores[c.id] ? <FormErrorMessage>{errores[c.id]}</FormErrorMessage> : <Text fontSize="xs" color="pizarra.500">{c.ayuda}</Text>}
+            <Textarea id={`bit-${c.id}`} size="sm" bg="superficie" rows={2} maxLength={4000} value={v[c.id]} onChange={poner(c.id)} />
+            {errores[c.id] ? <FormErrorMessage>{errores[c.id]}</FormErrorMessage> : <Text fontSize="xs" color="textoSuave">{c.ayuda}</Text>}
           </FormControl>
         ))}
         <Flex gap={3} wrap="wrap" mb={3}>
@@ -99,14 +99,14 @@ function Formulario({ borrador, alGuardar }: { borrador: EntradaBitacora | null;
             <FormLabel htmlFor="bit-responsable" fontSize="sm" mb={0}>
               Responsable (rol)
             </FormLabel>
-            <Input id="bit-responsable" size="sm" bg="white" value={v.responsable_rol} onChange={poner("responsable_rol")} maxLength={60} />
+            <Input id="bit-responsable" size="sm" bg="superficie" value={v.responsable_rol} onChange={poner("responsable_rol")} maxLength={60} />
             <FormErrorMessage>{errores.responsable_rol}</FormErrorMessage>
           </FormControl>
           <FormControl isInvalid={!!errores.fecha_simulada} w="12rem" isRequired>
             <FormLabel htmlFor="bit-fecha" fontSize="sm" mb={0}>
               Fecha (día simulado)
             </FormLabel>
-            <Input id="bit-fecha" type="date" size="sm" bg="white" value={v.fecha_simulada} onChange={poner("fecha_simulada")} />
+            <Input id="bit-fecha" type="date" size="sm" bg="superficie" value={v.fecha_simulada} onChange={poner("fecha_simulada")} />
             <FormErrorMessage>{errores.fecha_simulada}</FormErrorMessage>
           </FormControl>
         </Flex>
@@ -144,7 +144,7 @@ export default function Bitacora() {
       </Heading>
       <Flex gap={2} align="center" mb={4}>
         <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="pizarra.500">
+        <Text fontSize="sm" color="textoSuave">
           Cada decisión lleva responsable (rol), evidencia y fecha del día simulado.
         </Text>
       </Flex>
@@ -161,11 +161,11 @@ export default function Bitacora() {
         <Cargando carga={lista} esVacio={(d) => d.entradas.length === 0} vacio="Todavía no hay decisiones registradas." hijos={(d) => (
           <Box as="ul" listStyleType="none" m={0} p={0}>
             {d.entradas.map((b) => (
-              <Box as="li" key={b.id} borderTop="1px solid" borderColor="pizarra.200" py={3}>
+              <Box as="li" key={b.id} borderTop="1px solid" borderColor="borde" py={3}>
                 <Flex gap={2} align="center" wrap="wrap" mb={1}>
                   <strong>Entrada {b.id}</strong>
                   <Badge colorScheme={b.estado === "borrador" ? "orange" : "green"}>{b.estado}</Badge>
-                  <Text fontSize="xs" color="pizarra.500">
+                  <Text fontSize="xs" color="textoSuave">
                     {b.responsable_rol ?? "sin responsable"} · {fmtFecha(b.fecha_simulada)}
                     {b.orden_id ? ` · orden ${b.orden_id}` : ""}
                   </Text>

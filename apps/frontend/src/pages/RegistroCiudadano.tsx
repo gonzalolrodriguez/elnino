@@ -4,6 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { Layout } from "../components/Layout";
+import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { solicitar } from "../lib/api";
 import { decimal, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
@@ -75,7 +76,7 @@ export default function RegistroCiudadano() {
 
   if (creado) {
     return (
-      <Layout>
+      <Layout titulo="Registro de ciudadanía">
         <Alert status="success" alignItems="flex-start" role="status">
           <AlertIcon />
           <Box>
@@ -95,7 +96,7 @@ export default function RegistroCiudadano() {
   }
 
   return (
-    <Layout>
+    <Layout titulo="Registro de ciudadanía">
       <Box maxW="36rem">
         <Heading as="h1" size="xl" mb={2}>
           Registro de ciudadanía
@@ -104,6 +105,7 @@ export default function RegistroCiudadano() {
           Con tu grupo familiar y tu domicilio podemos ubicarte en un sector, avisarte y organizar tu traslado. Esta es una
           plataforma prototipo: usá datos de prueba.
         </Text>
+        <TarjetaFormulario>
         <form onSubmit={enviar} noValidate aria-label="Registro de ciudadanía">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
@@ -133,17 +135,18 @@ export default function RegistroCiudadano() {
             </Button>
             <Text fontSize="sm">
               ¿Tenés cuenta?{" "}
-              <Link as={RouterLink} to="/login" textDecoration="underline">
+              <Link as={RouterLink} to="/login">
                 Ingresá
               </Link>
               . ¿Tenés un establecimiento?{" "}
-              <Link as={RouterLink} to="/registro/productor" textDecoration="underline">
+              <Link as={RouterLink} to="/registro/productor">
                 Registrate como productor
               </Link>
               .
             </Text>
           </VStack>
         </form>
+        </TarjetaFormulario>
       </Box>
     </Layout>
   );

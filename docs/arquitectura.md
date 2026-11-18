@@ -59,7 +59,7 @@ flowchart LR
 | Carpeta | Contenido |
 |---|---|
 | `landing`, `pages/Landing` | Hero 3D (React Three Fiber, carga diferida) con alternativa 2D en SVG si no hay WebGL o el usuario pide menos movimiento; escala hidrométrica; selector de perfil |
-| `pages`, `elnino` | Páginas públicas y por perfil: El Niño (serie K1, mapa de sectores), registros, login, mi cuenta, admin |
+| `pages`, `informacion` | Páginas públicas y por perfil: Información (El Niño, serie K1, mapa de sectores), registros, login, mi cuenta, admin |
 | `panel` | Panel operativo `/comando/*`: monitor, mapa (MapLibre + Deck.gl, carga diferida), simulador, recomendador, producción, operación, lluvia, órdenes, bitácora, Centinela, límites |
 | `auth`, `lib` | Contexto de sesión (access token solo en memoria), rutas protegidas por rol, cliente de API, WebSocket, validación de formularios |
 | `datos` | JSON estático derivado del kit (serie diaria K1, sectores K10) como respaldo cuando el backend no responde |

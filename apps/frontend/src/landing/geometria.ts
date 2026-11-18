@@ -127,6 +127,16 @@ export function limites(cursos: Curso[] = CURSOS_APROXIMADOS, margen = 80) {
   };
 }
 
+/** Hitos de la escena con relieve real: se suman las nacientes del Paraguay (extremo norte del tramo de Natural Earth). */
+export const HITOS_RELIEVE: Hito[] = [{ id: "matogrosso", nombre: "Mato Grosso", lon: -55.075, lat: -14.319, origen: "aprox" }, ...HITOS];
+
+/** Rectángulo en km (proyección del esquema) que corresponde a un bbox lon/lat [oeste, sur, este, norte]. */
+export function limitesDeBbox(b: [number, number, number, number]) {
+  const [x0, y0] = proyectar(b[0], b[1]);
+  const [x1, y1] = proyectar(b[2], b[3]);
+  return { xMin: x0, xMax: x1, yMin: y0, yMax: y1 };
+}
+
 /** Orden de las estaciones aguas abajo según su latitud (el flujo va de norte a sur). */
 export function ordenAguasAbajo(ids: string[]): string[] {
   const lat = new Map(HITOS.map((h) => [h.id, h.lat]));

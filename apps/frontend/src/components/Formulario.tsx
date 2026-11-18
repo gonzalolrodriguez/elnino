@@ -35,7 +35,7 @@ export function Campo({ id, etiqueta, error, ayuda, isRequired, ...entrada }: Ca
   return (
     <FormControl isInvalid={!!error} isRequired={isRequired}>
       <FormLabel htmlFor={id}>{etiqueta}</FormLabel>
-      <Input id={id} name={id} bg="white" {...entrada} />
+      <Input id={id} name={id} bg="superficie" {...entrada} />
       {error ? <FormErrorMessage>{error}</FormErrorMessage> : ayuda ? <FormHelperText>{ayuda}</FormHelperText> : null}
     </FormControl>
   );

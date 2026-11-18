@@ -83,6 +83,127 @@
    "nombre_fuente": "Cursos de agua de Formosa (IGN)",
    "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional",
    "fecha_actualizacion": "2026-11-17"
+  },
+  {
+   "categoria": "DOCUMENTO DE REFERENCIA",
+   "fecha_actualizacion": "2026-11-17",
+   "n": 9,
+   "id": "departamentos",
+   "etiqueta": "Departamentos de Formosa",
+   "tipo": "poligono",
+   "archivo": "relieve/departamentos.geojson",
+   "nota": "Límites del IGN, simplificados (~50 m).",
+   "fuente": "https://wms.ign.gob.ar/geoserver/ows?service=WFS&request=GetFeature&typeName=ign:departamento&CQL_FILTER=in1 LIKE '34%'",
+   "nombre_fuente": "IGN, Capas SIG (WFS ign:departamento)",
+   "licencia": "IGN, datos abiertos (Capas SIG); citar fuente: Instituto Geografico Nacional"
+  },
+  {
+   "categoria": "DOCUMENTO DE REFERENCIA",
+   "fecha_actualizacion": "2026-11-18",
+   "n": 0,
+   "id": "curvas_nivel",
+   "etiqueta": "Curvas de nivel",
+   "tipo": "curvas",
+   "archivo": "relieve/curvas_local.geojson",
+   "archivo_cuenca": "relieve/curvas_cuenca.geojson",
+   "nota": "Corredor de los sectores: cada 2 m (maestras cada 10 m) sobre un DEM de ~75 m suavizado (error vertical de varios metros: muestran el gradiente regional, no cotas de inundación). Vista general: 25 m hasta 200 m; 100 m por encima (maestras 100/200/300/500/700/1000).",
+   "fuente": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (z11)",
+   "nombre_fuente": "AWS Terrain Tiles (terrarium), SRTM y otras fuentes",
+   "licencia": "AWS Terrain Tiles (SRTM y otras fuentes; ver data/geo/LEEME.md)"
+  },
+  {
+   "categoria": "DOCUMENTO DE REFERENCIA",
+   "fecha_actualizacion": "2026-11-18",
+   "n": 0,
+   "id": "relieve",
+   "etiqueta": "Relieve (tinte hipsométrico)",
+   "tipo": "relieve",
+   "archivo": "relieve/tinte_local_mercator.png",
+   "archivo_cuenca": "relieve/tinte_cuenca_mercator.png",
+   "bbox_local": [
+    -58.4,
+    -26.4,
+    -57.95,
+    -25.95
+   ],
+   "bbox_cuenca": [
+    -62.8,
+    -28,
+    -54,
+    -14.2
+   ],
+   "rampa_local": [
+    [
+     54.43141630796179,
+     "#37796a"
+    ],
+    [
+     57.646046856713355,
+     "#4a8b6e"
+    ],
+    [
+     60.86067740546491,
+     "#639c76"
+    ],
+    [
+     64.07530795421647,
+     "#8caf7c"
+    ],
+    [
+     67.28993850296804,
+     "#b4ba86"
+    ],
+    [
+     70.5045690517196,
+     "#cfbb8b"
+    ]
+   ],
+   "rampa_cuenca": [
+    [
+     0,
+     "#2a6660"
+    ],
+    [
+     60,
+     "#37796a"
+    ],
+    [
+     80,
+     "#4a8b6e"
+    ],
+    [
+     100,
+     "#639c76"
+    ],
+    [
+     150,
+     "#8caf7c"
+    ],
+    [
+     200,
+     "#b4ba86"
+    ],
+    [
+     300,
+     "#cfbb8b"
+    ],
+    [
+     500,
+     "#dcb68f"
+    ],
+    [
+     800,
+     "#ecd0b2"
+    ],
+    [
+     1000,
+     "#f6e8d8"
+    ]
+   ],
+   "nota": "Tinte local de 49.7 a 77.5 m (rampa propia: p2 a p98 = 54.4 a 70.5 m); fuera del corredor, tinte de la cuenca (39.2 a 892.3 m). Ruido del DEM ~1.99 m: no usar para cotas.",
+   "fuente": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (z11)",
+   "nombre_fuente": "AWS Terrain Tiles (terrarium, z7 y z11)",
+   "licencia": "AWS Terrain Tiles (SRTM y otras fuentes; ver data/geo/LEEME.md)"
   }
  ]
 }

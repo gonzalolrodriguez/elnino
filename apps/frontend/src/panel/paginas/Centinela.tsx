@@ -62,7 +62,7 @@ export default function Centinela() {
             <ListItem key={c}>{c}</ListItem>
           ))}
         </List>
-        <Text fontSize="xs" color="pizarra.500" mt={1}>
+        <Text fontSize="xs" color="textoSuave" mt={1}>
           Fuente: {AUDITORIA_K1.fuente}. La serie conserva alteraciones pedagógicas deliberadas: no es oficial ni apta para decisiones operativas.
         </Text>
       </Seccion>
@@ -85,7 +85,7 @@ export default function Centinela() {
                   <Text fontSize="sm" color="pizarra.700">
                     {a.evidencia}
                   </Text>
-                  <Text fontSize="xs" color="pizarra.500">
+                  <Text fontSize="xs" color="textoSuave">
                     Fuente: {a.fuente}
                   </Text>
                 </Box>
@@ -123,7 +123,7 @@ export default function Centinela() {
                       <Td whiteSpace="normal" minW="16rem">
                         {r.correccion}
                         {r.evidencia_cartografica ? ` ${r.evidencia_cartografica}` : ""}
-                        <Text fontSize="xs" color="pizarra.500">
+                        <Text fontSize="xs" color="textoSuave">
                           Fuente: {r.fuente}
                         </Text>
                       </Td>

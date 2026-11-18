@@ -7,6 +7,7 @@ import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Alternativas, Plan, PlanSector, Recomendacion } from "../tipos";
+import { MuestraEstado } from "../../components/MuestraEstado";
 import { COLOR_ESTADO, fmtDias, fmtM, fmtNum, Seccion } from "../ui";
 
 /** Muestra valores heterogéneos de la comparación (números, listas y diccionarios). */
@@ -27,14 +28,12 @@ export function fmtValor(v: unknown): string {
 function TarjetaSector({ s }: { s: PlanSector }) {
   const c = COLOR_ESTADO[s.estado];
   return (
-    <Box border="1px solid" borderColor="pizarra.200" borderLeft={`6px solid ${c.stroke}`} p={3} bg="white" data-testid={`plan-${s.id}`}>
+    <Box border="1px solid" borderColor="borde" borderLeft={`6px solid ${c.stroke}`} p={3} bg="superficie" data-testid={`plan-${s.id}`}>
       <Flex align="center" gap={2} mb={2} wrap="wrap">
         <Heading as="h3" size="sm">
           {s.prioridad}.º · {s.id} {s.nombre}
         </Heading>
-        <Badge bg={c.fill} color="pizarra.900" border={`1px solid ${c.stroke}`}>
-          {c.texto}
-        </Badge>
+        <MuestraEstado estado={s.estado} aislado={s.aislado} />
         {s.aislado && (
           <Badge colorScheme="red" variant="solid">
             aislado
@@ -63,7 +62,7 @@ function TarjetaSector({ s }: { s: PlanSector }) {
         <strong>Cuadrillas sugeridas:</strong> {s.cuadrillas_sugeridas.map((q) => q.tipo).join(", ") || "ninguna"}.
       </Text>
       {s.advertencias.map((a) => (
-        <Text key={a} fontSize="xs" color="#6B4300">
+        <Text key={a} fontSize="xs" color="cat.simulado.fg">
           {a}
         </Text>
       ))}
@@ -118,7 +117,7 @@ function BloqueRecomendacion() {
           <FormLabel htmlFor="reco-prioridad" fontSize="sm" mb={0}>
             Prioridad
           </FormLabel>
-          <Select id="reco-prioridad" size="sm" bg="white" value={prioridad} onChange={(e) => setPrioridad(e.target.value as "riesgo" | "poblacion")}>
+          <Select id="reco-prioridad" size="sm" bg="superficie" value={prioridad} onChange={(e) => setPrioridad(e.target.value as "riesgo" | "poblacion")}>
             <option value="riesgo">Por riesgo (menor margen primero)</option>
             <option value="poblacion">Por población (más personas primero)</option>
           </Select>
@@ -151,7 +150,7 @@ function BloqueRecomendacion() {
           )}
           <Box mt={3}>
             {r.limites.map((l) => (
-              <Text key={l} fontSize="xs" color="pizarra.500">
+              <Text key={l} fontSize="xs" color="textoSuave">
                 {l}
               </Text>
             ))}
@@ -198,13 +197,13 @@ function BloqueComparador() {
           <FormLabel htmlFor="alt-nombre" fontSize="sm" mb={0}>
             Nombre de la alternativa editable
           </FormLabel>
-          <Input id="alt-nombre" size="sm" bg="white" value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} />
+          <Input id="alt-nombre" size="sm" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} />
         </FormControl>
         <FormControl w="14rem">
           <FormLabel htmlFor="alt-orden" fontSize="sm" mb={0}>
             Orden de sectores (ej.: S4, S1)
           </FormLabel>
-          <Input id="alt-orden" size="sm" bg="white" value={orden} onChange={(e) => setOrden(e.target.value)} />
+          <Input id="alt-orden" size="sm" bg="superficie" value={orden} onChange={(e) => setOrden(e.target.value)} />
         </FormControl>
         <Button size="sm" onClick={() => void comparar()} isLoading={cargando}>
           Comparar alternativas
@@ -267,7 +266,7 @@ function BloqueComparador() {
               </Tbody>
             </Table>
           </TableContainer>
-          <Text fontSize="xs" color="pizarra.500" mt={2}>
+          <Text fontSize="xs" color="textoSuave" mt={2}>
             Tiempos con flota compartida y velocidades por superficie (SUPUESTO). Cada alternativa quedó guardada con el snapshot del escenario.
           </Text>
         </Box>

@@ -5,7 +5,7 @@ import { Layout } from "../components/Layout";
 
 export function AppMovil() {
   return (
-    <Layout>
+    <Layout titulo="App móvil">
       <Heading as="h1" size="xl" mb={3}>
         App móvil
       </Heading>

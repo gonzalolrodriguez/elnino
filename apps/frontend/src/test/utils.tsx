@@ -4,12 +4,13 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
 import App from "../App";
+import { theme } from "../theme";
 
 export const LEYENDA = "PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial";
 
 export function renderRuta(ruta: string) {
   return render(
-    <ChakraProvider>
+    <ChakraProvider theme={theme}>
       <MemoryRouter initialEntries={[ruta]}>
         <App />
       </MemoryRouter>

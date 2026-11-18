@@ -42,11 +42,11 @@ export default function Landing() {
   const limites = meta.estado === "ok" ? meta.meta.limites : LIMITES_ESTATICOS;
 
   return (
-    <Layout contenedor={false}>
+    <Layout contenedor={false} titulo="Inicio">
       <Hero avisoSinServicio={meta.estado === "error"} />
 
-      <Box as="section" aria-labelledby="titulo-perfiles" maxW="5xl" mx="auto" px={{ base: 4, md: 6 }} py={14}>
-        <Heading as="h2" id="titulo-perfiles" size="xl" mb={8}>
+      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
+        <Heading as="h2" id="titulo-perfiles" size="xl" mb={{ base: 4, md: 8 }}>
           ¿Cómo querés ingresar?
         </Heading>
         <Box>
@@ -61,13 +61,13 @@ export default function Landing() {
               borderTop={i === 0 ? "2px solid" : "1px solid"}
               borderColor="pizarra.700"
             >
-              <Heading as="h3" size="md">
+              <Heading as="h3" size="md" pt={0.5}>
                 {p.nombre}
               </Heading>
               <Text maxW="38rem">{p.texto}</Text>
               <Box display="flex" gap={3} flexWrap="wrap">
                 {p.acciones.map((x) => (
-                  <Button key={x.t} as={RouterLink} to={x.a} variant={"principal" in x && x.principal ? "solid" : "outline"} size="sm">
+                  <Button key={x.t} as={RouterLink} to={x.a} variant={"principal" in x && x.principal ? "solid" : "outline"}>
                     {x.t}
                   </Button>
                 ))}
@@ -77,8 +77,8 @@ export default function Landing() {
         </Box>
       </Box>
 
-      <Box bg="pizarra.100" py={14}>
-        <Box maxW="5xl" mx="auto" px={{ base: 4, md: 6 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
+      <Box bg="pizarra.100" py={{ base: 10, md: 16 }}>
+        <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
           <Box>
             <Heading as="h2" size="lg" mb={4}>
               Por qué importa antes de que llueva
@@ -87,7 +87,7 @@ export default function Landing() {
               La crecida del río Paraguay llega a Formosa con un rezago de semanas a meses y, además, la lluvia local cae sobre suelos
               arcillosos de muy baja pendiente. Evacuar con el camino seco es más seguro que hacerlo con el agua encima.
             </Text>
-            <Button as={RouterLink} to="/el-nino" mt={5} size="sm" variant="outline">
+            <Button as={RouterLink} to="/informacion" mt={5} variant="outline">
               Leer cómo llega El Niño a Formosa
             </Button>
           </Box>
@@ -104,11 +104,11 @@ export default function Landing() {
         </Box>
       </Box>
 
-      <Box maxW="5xl" mx="auto" px={{ base: 4, md: 6 }} py={10}>
+      <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={10}>
         <EstadoBackend />
         <Text mt={4} fontSize="sm">
           Fuentes y supuestos de cada cifra:{" "}
-          <Link as={RouterLink} to="/el-nino#fuentes" textDecoration="underline">
+          <Link as={RouterLink} to="/informacion#fuentes">
             sección de fuentes
           </Link>
           .

@@ -4,7 +4,9 @@ import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { useEscenario } from "./EscenarioContext";
 import type { AccesoProps, OrigenLluvia } from "./tipos";
-import { COLOR_ESTADO, fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
+import { MarcasUmbral } from "../components/MarcasUmbral";
+import { MuestraEstado } from "../components/MuestraEstado";
+import { fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
 
 const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
   { valor: "simulado", texto: "Simulado (deslizador)" },
@@ -35,7 +37,8 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             onChange={(e) => fijarAltura(Number(e.target.value))}
             style={{ width: "100%" }}
           />
-          <Text fontSize="xs" color="pizarra.500">
+          <MarcasUmbral />
+          <Text fontSize="xs" color="textoSuave">
             Valor SIMULADO. Alerta 7,80 m y evacuación 8,30 m (K3). Dato del corte: 5,60 m.
           </Text>
         </FormControl>
@@ -54,7 +57,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             onChange={(e) => fijarLluvia(Number(e.target.value))}
             style={{ width: "100%" }}
           />
-          <Select aria-label="Origen de la lluvia" size="sm" bg="white" mt={1} value={entrada.lluvia_origen} onChange={(e) => fijarLluvia(entrada.lluvia_mm, e.target.value as OrigenLluvia)}>
+          <Select aria-label="Origen de la lluvia" size="sm" bg="superficie" mt={1} value={entrada.lluvia_origen} onChange={(e) => fijarLluvia(entrada.lluvia_mm, e.target.value as OrigenLluvia)}>
             {ORIGENES.map((o) => (
               <option key={o.valor} value={o.valor}>
                 {o.texto}
@@ -68,13 +71,13 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             Caminos cerrados en la simulación
           </Text>
           {accesos.length === 0 ? (
-            <Text fontSize="sm" color="pizarra.500">
+            <Text fontSize="sm" color="textoSuave">
               No hay accesos cargados.
             </Text>
           ) : (
             accesos.map((a) => (
               <Checkbox key={a.id} size="sm" display="flex" isChecked={entrada.caminos_cerrados.includes(a.id)} onChange={() => alternarCamino(a.id)}>
-                {a.nombre} <Text as="span" color="pizarra.500">({a.superficie}{a.sector_id ? `, ${a.sector_id}` : ""})</Text>
+                {a.nombre} <Text as="span" color="textoSuave">({a.superficie}{a.sector_id ? `, ${a.sector_id}` : ""})</Text>
               </Checkbox>
             ))
           )}
@@ -120,9 +123,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
                   <Tr key={s.id} data-testid={`sector-${s.id}`}>
                     <Td fontWeight={700}>{s.id}</Td>
                     <Td whiteSpace="normal">
-                      <Badge bg={COLOR_ESTADO[s.estado].fill} color="pizarra.900" border={`1px solid ${COLOR_ESTADO[s.estado].stroke}`}>
-                        {COLOR_ESTADO[s.estado].texto}
-                      </Badge>
+                      <MuestraEstado estado={s.estado} />
                       {s.aislado && (
                         <Badge ml={1} colorScheme="red" variant="solid">
                           aislado
@@ -139,7 +140,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
               </Tbody>
             </Table>
           </TableContainer>
-          <Text fontSize="xs" color="pizarra.500" mt={1}>
+          <Text fontSize="xs" color="textoSuave" mt={1}>
             El ISAD es un índice relativo SIMULADO y no reemplaza el criterio de compromiso de K10. Margen: distancia en la escala hasta el compromiso del sector (negativa si ya lo superó).
           </Text>
         </Box>

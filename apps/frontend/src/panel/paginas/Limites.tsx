@@ -25,7 +25,7 @@ export default function Limites() {
             <ListItem key={l}>{l}</ListItem>
           ))}
         </List>
-        <Text fontSize="sm" color="pizarra.500" mt={3}>
+        <Text fontSize="sm" color="textoSuave" mt={3}>
           Corte de datos: {m.estado === "ok" ? fmtFecha(m.meta.fecha_corte) : "31/10/2026"}. Lo posterior solo se muestra por decisión de la mesa.
           {m.estado === "ok" && m.meta.flags.permitir_datos_post_corte ? " Los datos posteriores al corte están habilitados en este servidor." : " Los datos posteriores al corte están apagados."}
         </Text>

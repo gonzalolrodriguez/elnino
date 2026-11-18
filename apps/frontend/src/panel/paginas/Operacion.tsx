@@ -70,13 +70,13 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
           <FormLabel htmlFor="cuadrilla-nombre" fontSize="sm" mb={0}>
             Nombre de la cuadrilla
           </FormLabel>
-          <Input id="cuadrilla-nombre" size="sm" bg="white" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <Input id="cuadrilla-nombre" size="sm" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </FormControl>
         <FormControl w="12rem">
           <FormLabel htmlFor="cuadrilla-tipo" fontSize="sm" mb={0}>
             Tipo de incidente
           </FormLabel>
-          <Select id="cuadrilla-tipo" size="sm" bg="white" value={tipo} onChange={(e) => setTipo(e.target.value as keyof typeof TIPO_INCIDENTE)}>
+          <Select id="cuadrilla-tipo" size="sm" bg="superficie" value={tipo} onChange={(e) => setTipo(e.target.value as keyof typeof TIPO_INCIDENTE)}>
             {Object.entries(TIPO_INCIDENTE).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -134,7 +134,7 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                     <Badge>{t.estado.replace("_", " ")}</Badge>
                   </Td>
                   <Td>
-                    <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="white" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
+                    <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
                       {cuadrillas.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.nombre}
@@ -184,7 +184,7 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
 
   return (
     <Seccion titulo="Cola de solicitudes de asistencia" categoria="SIMULADO" id="sec-solicitudes" derecha={
-      <Select aria-label="Cuadrilla para asignar" size="xs" bg="white" placeholder="Cuadrilla al asignar" value={cuadrilla} onChange={(e) => setCuadrilla(e.target.value)}>
+      <Select aria-label="Cuadrilla para asignar" size="xs" bg="superficie" placeholder="Cuadrilla al asignar" value={cuadrilla} onChange={(e) => setCuadrilla(e.target.value)}>
         {cuadrillas.map((c) => (
           <option key={c.id} value={c.id}>
             {c.nombre}
@@ -254,7 +254,7 @@ export default function Operacion() {
       </Heading>
       <Flex align="center" gap={2} mb={4}>
         <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="pizarra.500">
+        <Text fontSize="sm" color="textoSuave">
           Solicitudes, cuadrillas y tareas de demostración, con roles en lugar de nombres.
         </Text>
       </Flex>
