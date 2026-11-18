@@ -147,7 +147,7 @@ export function rutaInicio(rol: Rol): string {
     case "admin":
       return "/admin";
     case "cuadrilla":
-      return "/app";
+      return "/cuadrilla";
     default:
       return "/comando";
   }

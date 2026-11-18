@@ -260,7 +260,17 @@ export type Tarea = {
   titulo: string;
   descripcion: string | null;
   estado: EstadoTarea;
+  checklist?: { item: string; hecho: boolean }[] | null;
   creado_en: string;
+  actualizado_en?: string;
+};
+
+export type Notificacion = {
+  id: number;
+  orden_id: number | null;
+  mensaje: string;
+  leida: boolean;
+  creada_en: string;
 };
 
 export type Solicitud = {

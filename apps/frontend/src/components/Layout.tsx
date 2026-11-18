@@ -46,7 +46,8 @@ function Navegacion() {
         <Enlace to="/app">App móvil</Enlace>
         {estado === "autenticado" && usuario ? (
           <>
-            <Enlace to={rutaInicio(usuario.rol)}>{usuario.rol === "ciudadano" || usuario.rol === "productor" ? "Mi cuenta" : "Panel"}</Enlace>
+            <Enlace to={rutaInicio(usuario.rol)}>{usuario.rol === "ciudadano" || usuario.rol === "productor" ? "Mi cuenta" : usuario.rol === "cuadrilla" ? "Mis tareas" : "Panel"}</Enlace>
+            {usuario.rol === "admin" && <Enlace to="/cuadrilla">Cuadrilla</Enlace>}
             <Button size="xs" variant="outline" color="pizarra.100" _hover={{ bg: "limo.700" }} onClick={() => void cerrarSesion()}>
               Cerrar sesión
             </Button>

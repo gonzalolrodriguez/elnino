@@ -15,7 +15,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("leyenda fija", () => {
-  it.each(["/", "/el-nino", "/registro/ciudadania", "/registro/productor", "/login", "/app", "/mi-cuenta", "/comando", "/admin"])(
+  it.each(["/", "/el-nino", "/registro/ciudadania", "/registro/productor", "/login", "/app", "/mi-cuenta", "/comando", "/cuadrilla", "/admin"])(
     "aparece en %s",
     async (ruta) => {
       renderRuta(ruta);
