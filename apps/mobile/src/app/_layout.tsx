@@ -1,20 +1,19 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { LeyendaFija } from "@/components/LeyendaFija";
+import { MarcoApp } from "@/components/MarcoApp";
+import { SesionProvider } from "@/lib/SesionContext";
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#7c2d12" }} edges={["top"]}>
-        <StatusBar style="light" />
-        <LeyendaFija />
-        <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <StatusBar style="light" />
+      <SesionProvider>
+        <MarcoApp>
           <Stack screenOptions={{ headerShown: false }} />
-        </View>
-      </SafeAreaView>
+        </MarcoApp>
+      </SesionProvider>
     </SafeAreaProvider>
   );
 }
