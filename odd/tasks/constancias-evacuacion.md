@@ -43,7 +43,7 @@
 | ID | Tarea | Ruta | Estado |
 |---|---|---|---|
 | F1 | Backend: migración y modelo de constancia; endpoints de cierre con constancia y adjuntos, de confirmación del evacuado (app y SMS) y de estados de evacuación. Conteos en `/panel/resumen`. Tests. | escritor backend (después de C2/C3) | Hecha |
-| F2 | Web: vista de constancias y discrepancias en el panel; bloques en el tablero D1; mapa de origen a destino. | escritor web (junto con D1) | Pendiente |
+| F2 | Web: vista de constancias y discrepancias en el panel; bloques en el tablero D1; mapa de origen a destino. | escritor web (junto con D1) | Hecha (ver "Evidencia F2") |
 | F3 | App: cierre con constancia en la pantalla de cuadrilla (GPS, centro, fotos, nota, offline); confirmación del evacuado en Alertas o Estado de tu sector. | escritor mobile (junto con el Monitor) | Hecho (adef8fa): cola offline en dos tiempos con Idempotency-Key estable, tarjeta de confirmación (app y SMS con aviso del teléfono registrado, reemplazo al reabrir), bloque evacuaciones del Monitor, envío sin GPS con referencia. tsc sin errores, jest 220/220, expo export android correcto |
 
 ## Evidencia F1 (backend, 19/11/2026)
@@ -54,3 +54,14 @@
 - Cambio en una prueba existente: `test_tareas_cuadrilla_actualiza_las_suyas_y_transiciones` ahora elige una tarea `pendiente` (las tareas ya cerradas con constancia por otras pruebas y el seed ya no sirven para ese caso).
 - Decisiones: respuesta del evacuado única (otra distinta: 409); el estado se deriva; `verificadas_pct` se calcula sobre las evacuaciones ya cerradas por la cuadrilla; sin tope de almacenamiento por persona para fotos del personal operativo; sin límite de intentos por código SMS (hoja de ruta).
 - Revisión de seguridad (19/11/2026): la confirmación por SMS quedó ligada al teléfono del solicitante, con respuesta genérica única, límite de 5 intentos fallidos por remitente y hora, códigos de 8 caracteres con vigencia de 72 h y reapertura por un operador (`sec: confirmación por SMS ligada al teléfono del solicitante, con límite e intentos y vencimiento`).
+
+## Evidencia F2 (web, 19/11/2026)
+
+- Commit `feat(web): constancias de evacuación, confirmación del evacuado y traslados` en `rediseno-v2`, solo `apps/frontend`.
+- Panel: página Evacuaciones (grupo Respuesta) con estados legibles (texto y marca de forma), filtros por estado y sector (servidor) y por cuadrilla y "solo a revisar" (cliente), discrepancias resaltadas, y panel lateral con la constancia (esquema destino frente al centro con la distancia, personas y animales, rol firmante, nota, fotos pedidas con la sesión, confirmación y canal). Los motivos de discrepancia salen en palabras comunes y como "marca para revisar, no una acusación", con enlace a la tarea. "Reabrir confirmación" (con motivo y diálogo de confirmación) para confirmaciones ya respondidas, vía `POST /evacuaciones/{id}/confirmacion/reabrir`.
+- Tablero: bloque Evacuaciones con la forma real del backend (por sector y estado, % verificadas, discrepancias abiertas, personas y animales) y aviso en tiempo real (`discrepancia`, `constancia`).
+- Mapa: capa opcional "Traslados" (línea origen-destino coloreada por estado y punto de destino) que carga las evacuaciones solo al activarla.
+- `/cuadrilla`: "Cerrar con constancia" reemplaza a "Completar" en tareas ligadas a un pedido u orden (GPS o manual, centro, personas, animales, nota, hasta 5 fotos, `Idempotency-Key` conservada entre reintentos; si falla una foto el cierre queda hecho y solo se reintentan las fotos).
+- `/mi-cuenta`: tarjetas "¿Llegaste a X?" (Sí / No / Hubo un problema, comentario opcional, copy sin acusación; aviso de responder por SMS desde el teléfono registrado y código visible).
+- Verificación en apps/frontend: `tsc --noEmit`, `eslint src`, `vitest run` (16 archivos, 192 pruebas; 14 nuevas en `evacuaciones.test.tsx`) y `pnpm build`.
+- No verificado: contra el backend en marcha, y capturas de pantalla (sin credenciales ni WebGL). La capa Traslados se probó con el mapa simulado (el dibujo deck.gl no corre en jsdom). El esquema destino-centro usa una proyección local sin mapa base.
