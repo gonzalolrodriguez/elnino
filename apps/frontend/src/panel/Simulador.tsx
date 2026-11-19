@@ -1,4 +1,4 @@
-import { Alert, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
@@ -16,6 +16,13 @@ const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
   { valor: "planilla_upca", texto: "Planilla UPCA" },
 ];
 
+const PRESETS_ESCENARIO = [
+  { etiqueta: "Corte 31/10 (5,60 m · 0 mm)", altura: 5.6, lluvia: 0 },
+  { etiqueta: "Caso §8.1 · S4 Aislado (7,60 m · 40 mm)", altura: 7.6, lluvia: 40 },
+  { etiqueta: "Alerta K3 (7,80 m · 60 mm)", altura: 7.8, lluvia: 60 },
+  { etiqueta: "Evacuación + Ripio (8,30 m · 85 mm)", altura: 8.3, lluvia: 85 },
+] as const;
+
 /** Controles del escenario (CLAUDE.md §8.1) y resultado por sector. Todo el resultado es SIMULADO. */
 export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
   const { entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular } = useEscenario();
@@ -24,6 +31,28 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
   return (
     <Box>
       <Flex direction="column" gap={3}>
+        <Box layerStyle="suave" p={3}>
+          <Text fontSize="xs" fontWeight={700} mb={1.5}>
+            Escenarios rápidos de evaluación (SIMULADO):
+          </Text>
+          <Flex gap={1.5} wrap="wrap">
+            {PRESETS_ESCENARIO.map((p) => (
+              <Button
+                key={p.etiqueta}
+                size="xs"
+                variant={Math.abs(entrada.altura_formosa_m - p.altura) < 0.03 && entrada.lluvia_mm === p.lluvia ? "solid" : "outline"}
+                type="button"
+                onClick={() => {
+                  fijarAltura(p.altura);
+                  fijarLluvia(p.lluvia);
+                }}
+              >
+                {p.etiqueta}
+              </Button>
+            ))}
+          </Flex>
+        </Box>
+
         <FormControl>
           <FormLabel htmlFor="sim-altura" mb={0} fontSize="sm">
             Altura de Puerto Formosa (0 a 12 m): <strong data-testid="sim-altura-valor">{fmtM(entrada.altura_formosa_m)}</strong>
@@ -65,6 +94,9 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
               </option>
             ))}
           </Select>
+          <Text fontSize="xs" color="textoSuave" mt={1}>
+            Umbrales de saturación vial (SUPUESTO): camino de tierra &gt;= 30 mm {entrada.lluvia_mm >= 30 ? "(cortado)" : ""} · camino de ripio &gt;= 80 mm {entrada.lluvia_mm >= 80 ? "(cortado)" : ""}.
+          </Text>
         </FormControl>
 
         <Box>
@@ -121,6 +153,16 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             {escenario.rio.distancia_a_alerta_m >= 0 ? "de la alerta" : "por encima de la alerta"} y a {fmtM(Math.abs(escenario.rio.distancia_a_evacuacion_m))}{" "}
             {escenario.rio.distancia_a_evacuacion_m >= 0 ? "de la evacuación" : "por encima de la evacuación"}.
           </Text>
+          {escenario.resumen && (
+            <SimpleGrid columns={2} spacing={2} mb={3} fontSize="xs">
+              <Box layerStyle="suave" p={2.5}>
+                Comprometidos: <strong>{escenario.resumen.comprometidos.join(", ") || "ninguno"}</strong>
+              </Box>
+              <Box layerStyle="suave" p={2.5}>
+                Aislados (sin acceso): <strong>{escenario.resumen.aislados.join(", ") || "ninguno"}</strong>
+              </Box>
+            </SimpleGrid>
+          )}
           <TablaDesplazable etiqueta="Estado de los sectores en el escenario">
             <Table size="sm" aria-label="Estado de los sectores en el escenario">
               <Thead>

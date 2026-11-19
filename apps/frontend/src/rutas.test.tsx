@@ -95,6 +95,28 @@ describe("sección Información", () => {
     expect(within(indice).getByRole("link", { name: "Fuentes" })).toHaveAttribute("href", "#fuentes");
     expect(within(indice).getByRole("link", { name: "Qué es El Niño" })).toHaveAttribute("href", "#que-es");
   });
+
+  it("muestra el gráfico comparativo del pronóstico CFS v2 (1.623 mm y pico de 308 mm en marzo de 2027)", async () => {
+    renderRuta("/informacion");
+    expect(await screen.findByRole("img", { name: /Precipitación mensual proyectada por el modelo NOAA CFS v2/ })).toBeInTheDocument();
+    expect(screen.getAllByText(/1\.623 mm/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/308/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("resiliencia y acceso de demostración", () => {
+  it("/app muestra el simulador de trama SMS SOS-FSA dentro del límite de 160 caracteres", async () => {
+    renderRuta("/app");
+    const preview = await screen.findByTestId("trama-sos-preview");
+    expect(preview.textContent).toMatch(/^SOS-FSA\|/);
+    expect((preview.textContent ?? "").length).toBeLessThanOrEqual(160);
+  });
+
+  it("/login ofrece el selector de perfiles de demostración para el guion de 3 minutos", async () => {
+    renderRuta("/login");
+    expect(await screen.findByRole("heading", { name: /Perfiles de demostración/ })).toBeInTheDocument();
+    expect(screen.getByText("decisor@demo.evacuaciones.invalid")).toBeInTheDocument();
+  });
 });
 
 describe("datos del kit", () => {

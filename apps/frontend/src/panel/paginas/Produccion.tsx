@@ -1,4 +1,4 @@
-import { Alert, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, List, ListItem, NumberInput, NumberInputField, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Badge, Box, Button, Flex, FormControl, FormLabel, Heading, List, ListItem, NumberInput, NumberInputField, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
@@ -113,6 +113,11 @@ export default function Produccion() {
   const [error, setError] = useState<unknown>(null);
   const [cargando, setCargando] = useState(false);
 
+  const lote1 = (bov["vaca preñada"] ?? 0) + (bov["vaca vacía"] ?? 0) + (bov.toro ?? 0);
+  const lote2 = bov.vaquillona ?? 0;
+  const lote3 = (bov["vaca con cría"] ?? 0) + (bov["ternero al pie"] ?? 0);
+  const totalBovinos = lote1 + lote2 + lote3;
+
   async function calcular() {
     setCargando(true);
     setError(null);
@@ -138,14 +143,90 @@ export default function Produccion() {
         Producción y ganado
       </Heading>
       <AvisoSimulado>El rodeo de ejemplo es el caso de control (8 preñadas, 10 con cría, 10 terneros, 1 vaquillona y 1 toro). Las capacidades y raciones son supuestos a verificar, no normativa.</AvisoSimulado>
-      <Seccion titulo="Calculadora ganadera" categoria="SIMULADO" id="sec-ganaderia">
+      <Seccion
+        titulo="Calculadora ganadera"
+        categoria="SIMULADO"
+        id="sec-ganaderia"
+        derecha={
+          <Flex gap={1.5} wrap="wrap">
+            <Button
+              size="xs"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setBov({ "vaca preñada": 8, "vaca vacía": 0, "vaca con cría": 10, "ternero al pie": 10, vaquillona: 1, toro: 1 });
+                setOtros({ caprino: 0, ovino: 0, porcino: 0 });
+                setVivas(0);
+                setMuertas(0);
+                setAlbardon(200);
+              }}
+            >
+              Caso de control §8.5 (30 bov.)
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setBov({ "vaca preñada": 75, "vaca vacía": 0, "vaca con cría": 40, "ternero al pie": 40, vaquillona: 24, toro: 6 });
+                setOtros({ caprino: 0, ovino: 8, porcino: 0 });
+                setVivas(25);
+                setMuertas(5);
+                setTraslado("a_pie");
+                setAlbardon(450);
+              }}
+            >
+              Rodeo insular S4 (185 bov. + 30 colm.)
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setBov({ "vaca preñada": 10, "vaca vacía": 0, "vaca con cría": 4, "ternero al pie": 4, vaquillona: 2, toro: 1 });
+                setOtros({ caprino: 45, ovino: 10, porcino: 12 });
+                setVivas(15);
+                setMuertas(2);
+                setTraslado("vehicular");
+                setAlbardon(250);
+              }}
+            >
+              Chacra familiar PAIPPA
+            </Button>
+          </Flex>
+        }
+      >
         <Text fontWeight={600} fontSize="sm" mb={1}>
-          Bovinos por categoría
+          Bovinos por categoría (total actual: {totalBovinos} cabezas)
         </Text>
         <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3} mb={3}>
           {BOVINOS.map((c) => (
             <Numero key={c} id={`bov-${c}`} etiqueta={c} valor={bov[c]} alCambiar={(n) => setBov((b) => ({ ...b, [c]: n }))} />
           ))}
+        </SimpleGrid>
+
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3} mb={4}>
+          <Box layerStyle="suave" p={3}>
+            <Flex justify="space-between" align="center" mb={0.5}>
+              <Text fontSize="xs" fontWeight={700}>Lote 1 · Vientres y toros</Text>
+              <Badge colorScheme="teal">{lote1} cab.</Badge>
+            </Flex>
+            <Text fontSize="xs" color="textoSuave">Preñadas + vacías + toros (máx. 200/lote).</Text>
+          </Box>
+          <Box layerStyle="suave" p={3}>
+            <Flex justify="space-between" align="center" mb={0.5}>
+              <Text fontSize="xs" fontWeight={700}>Lote 2 · Recría (vaquillonas)</Text>
+              <Badge colorScheme="green">{lote2} cab.</Badge>
+            </Flex>
+            <Text fontSize="xs" color="textoSuave">Separadas con boyero para evitar competencia.</Text>
+          </Box>
+          <Box layerStyle="suave" p={3}>
+            <Flex justify="space-between" align="center" mb={0.5}>
+              <Text fontSize="xs" fontWeight={700}>Lote 3 · Maternidad crítica</Text>
+              <Badge colorScheme="orange">{lote3} cab.</Badge>
+            </Flex>
+            <Text fontSize="xs" color="textoSuave">Vacas con cría + terneros al pie (loma seca).</Text>
+          </Box>
         </SimpleGrid>
         <Text fontWeight={600} fontSize="sm" mb={1}>
           Animales menores

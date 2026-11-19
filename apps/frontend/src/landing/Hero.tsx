@@ -14,7 +14,7 @@ import type { ControlCuenca, IdHito } from "./recorrido";
 // El módulo 3D (three, R3F, drei) se descarga solo cuando hay WebGL y se admite movimiento.
 const Cuenca3D = lazy(() => import("./Cuenca3D"));
 
-const Aparece = motion(Box);
+const Aparece = motion.create(Box);
 
 /** Si el módulo 3D no se descarga o falla al dibujar, avisa para pasar al respaldo 2D. */
 class Limite3D extends Component<{ alFallar: () => void; children: ReactNode }, { fallo: boolean }> {

@@ -30,7 +30,7 @@ export function EstadoBackend() {
         Estado del backend
       </Heading>
       {estado.tipo === "cargando" && (
-        <Text display="flex" alignItems="center" gap={2}>
+        <Text as="div" display="flex" alignItems="center" gap={2}>
           <Spinner size="sm" /> Consultando el backend…
         </Text>
       )}

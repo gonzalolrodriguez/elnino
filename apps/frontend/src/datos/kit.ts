@@ -85,6 +85,33 @@ export type Sector = {
 export const SECTORES_K10 = (k10 as { sectores: Sector[] }).sectores;
 export const K10_FECHA = "12/11/2026";
 
+/**
+ * Pronóstico Climático Estacional 2026/27 Formosa (NOAA CFS v2, ensamble 20 miembros, emisión 29/10/2026).
+ * Fuente: `20261029 Formosa.pptx` (carpeta IA-Lab) · registrado en `docs/ficha_fuentes.md`.
+ * Categoría: DOCUMENTO DE REFERENCIA (orientativo y probabilístico).
+ */
+export const PRONOSTICO_CFS_V2 = {
+  categoria: CATEGORIAS.REFERENCIA,
+  fuente: "Pronóstico Climático Estacional 2026/27 Formosa (NOAA CFS v2, 20 miembros, emisión 29/10/2026)",
+  periodo: "Noviembre de 2026 – Julio de 2027",
+  acumulado_proyectado_mm: 1623,
+  normal_acumulada_mm: 1229,
+  anomalia_mm: 394,
+  pico_mes: "Mar 2027",
+  pico_mm: 308,
+  meses: [
+    { mes: "Nov 26", proyectado_mm: 198, normal_mm: 160, anomalia_mm: 38, nota: "Inicio fase húmeda" },
+    { mes: "Dic 26", proyectado_mm: 214, normal_mm: 168, anomalia_mm: 46, nota: "Exceso sostenido" },
+    { mes: "Ene 27", proyectado_mm: 216, normal_mm: 172, anomalia_mm: 44, nota: "Recarga de cuenca" },
+    { mes: "Feb 27", proyectado_mm: 245, normal_mm: 162, anomalia_mm: 83, nota: "Aceleración estival (+51 %)" },
+    { mes: "Mar 27", proyectado_mm: 308, normal_mm: 175, anomalia_mm: 133, nota: "Pico trimestral (+76 %)" },
+    { mes: "Abr 27", proyectado_mm: 246, normal_mm: 182, anomalia_mm: 64, nota: "Otoño saturado (+35 %)" },
+    { mes: "May 27", proyectado_mm: 80, normal_mm: 110, anomalia_mm: -30, nota: "Transición otoñal" },
+    { mes: "Jun 27", proyectado_mm: 68, normal_mm: 58, anomalia_mm: 10, nota: "Estiaje invernal" },
+    { mes: "Jul 27", proyectado_mm: 48, normal_mm: 42, anomalia_mm: 6, nota: "Estiaje invernal" },
+  ],
+} as const;
+
 export const LIMITES_ESTATICOS: string[] = [
   "El kit no incluye lluvia observada (la planilla de precipitaciones está vacía).",
   "No existe pronóstico hidrológico más allá de 15 días; las extrapolaciones son supuestos.",

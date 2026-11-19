@@ -8,7 +8,7 @@ import { fmt, useMenosMovimiento } from "../lib/entorno";
 
 const MAXIMO = 10.5; // m, largo visible de la escala
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const Nivel = motion(Box);
+const Nivel = motion.create(Box);
 
 const cifra = (id: string) => CIFRAS_FORMOSA.find((c) => c.id === id);
 

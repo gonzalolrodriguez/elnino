@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Text, Textarea, useToast } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, SimpleGrid, Text, Textarea, useToast } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -10,6 +10,36 @@ import { api, descargar, guardarArchivo } from "../api";
 import type { CamposBitacora, EntradaBitacora } from "../tipos";
 import { Cargando, fmtFecha, Seccion } from "../ui";
 import { etiquetaEstadoBitacora } from "../../lib/etiquetas";
+
+const ESCENARIOS_K8 = [
+  {
+    id: "A",
+    titulo: "Opción A · Preparación",
+    descripcion: "Alistar recursos (camiones jaula, colectivos, centros de recepción) y notificar a productores de S4 sin desplazar población todavía.",
+    tradeoff: "Bajo costo inicial; requiere ventana seca garantizada (> 24 h sin lluvia >= 30 mm).",
+  },
+  {
+    id: "B",
+    titulo: "Opción B · Evacuación preventiva",
+    descripcion: "Ejecutar el traslado anticipado en ventana seca de S4 Rural Este (compromiso en 7,50 m, 0,30 m antes de la alerta general).",
+    tradeoff: "Evita aislamiento por barro en camino de tierra; implica costo logístico inmediato.",
+  },
+  {
+    id: "C",
+    titulo: "Opción C · Espera",
+    descripcion: "Mantener monitoreo sin movilización hasta alcanzar el umbral oficial de alerta (7,80 m · K3).",
+    tradeoff: "Riesgo alto para S4: si llueve >= 30 mm con el río en 7,50 m, el sector queda comprometido y aislado.",
+  },
+] as const;
+
+const PLANTILLA_K8: Omit<Valores, "responsable_rol"> = {
+  decision: "Ejecutar Opción B (Evacuación preventiva en Ventana Seca) para Sector S4 Rural Este (150 personas y hacienda) y Opción A (Preparación de recursos y centros) para Sectores S3 y S1.",
+  evidencia: "K1 limpio al corte 31/10/2026: 5,60 m (+3,23 m en octubre, tasa 0,1077 m/día). K3: alerta 7,80 m, evacuación 8,30 m. K10 v1.0: S4 se compromete a 7,50 m con único acceso de tierra.",
+  limites: "El kit no incluye lluvia observada ni pronóstico hidrológico del INA a más de 15 días. La proyección de tiempo restante y el umbral de 30 mm de corte en tierra son SUPUESTOS.",
+  riesgos: "Riesgo de movilizar antes del pico frente al riesgo crítico de aislamiento total de S4 si llueve >= 30 mm antes de evacuar hacienda y familias.",
+  gatillos: "Si Puerto Formosa supera 7,00 m en K1 o el parte policial UPCA registra >= 20 mm en 24 h, iniciar despacho inmediato de camiones jaula hacia el predio alto.",
+  fecha_simulada: "2026-10-31",
+};
 
 const CAMPOS = [
   { id: "decision", etiqueta: "Decisión", ayuda: "Qué se decide y para qué sectores." },
@@ -123,9 +153,28 @@ function Formulario({ borrador, alGuardar }: { borrador: EntradaBitacora | null;
             <FormErrorMessage>{errores.fecha_simulada}</FormErrorMessage>
           </FormControl>
         </Flex>
-        <Button type="submit" size="sm" isLoading={guardando}>
-          {borrador ? "Completar borrador" : "Registrar decisión"}
-        </Button>
+        <Flex gap={3} wrap="wrap">
+          <Button type="submit" size="sm" isLoading={guardando}>
+            {borrador ? "Completar borrador" : "Registrar decisión"}
+          </Button>
+          {esDecisor && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setV((actual) => ({
+                  ...actual,
+                  ...PLANTILLA_K8,
+                  responsable_rol: actual.responsable_rol || usuario?.rol_operativo || "Coordinación General · Defensa Civil",
+                }));
+                setErrores({});
+              }}
+            >
+              Cargar plantilla sugerida (Escenario A+B · Ventana Seca S4)
+            </Button>
+          )}
+        </Flex>
       </fieldset>
       <Box mt={3}>
         <AlertaError error={error} />
@@ -161,6 +210,24 @@ export default function Bitacora() {
           Cada decisión lleva responsable (rol), evidencia y fecha del día simulado.
         </Text>
       </Flex>
+
+      <Seccion titulo="Escenarios de actuación del Comité de la Misión (K8)" categoria="DOCUMENTO DE REFERENCIA" id="sec-k8-opciones">
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+          {ESCENARIOS_K8.map((esc) => (
+            <Box key={esc.id} layerStyle="suave" p={3}>
+              <Text fontWeight={700} fontSize="sm" mb={1}>
+                {esc.titulo}
+              </Text>
+              <Text fontSize="xs" mb={2}>
+                {esc.descripcion}
+              </Text>
+              <Text fontSize="xs" color="textoSuave">
+                <strong>Compromiso operativo:</strong> {esc.tradeoff}
+              </Text>
+            </Box>
+          ))}
+        </SimpleGrid>
+      </Seccion>
       <Seccion titulo={borrador ? `Completar el borrador ${borrador.id}${borrador.orden_id ? ` (orden ${borrador.orden_id})` : ""}` : "Nueva decisión"} id="sec-form" derecha={
         borrador ? (
           <Button size="xs" variant="outline" onClick={() => setParams({})}>
