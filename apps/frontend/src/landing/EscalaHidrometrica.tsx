@@ -13,7 +13,7 @@ const COLOR: Record<Cifra["tono"], string> = {
   pico: "escala.pico",
 };
 
-const Nivel = motion(Box);
+const Nivel = motion.create(Box);
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 /**

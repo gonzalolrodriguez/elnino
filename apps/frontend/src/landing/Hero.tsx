@@ -12,7 +12,7 @@ import { EscalaHidrometrica } from "./EscalaHidrometrica";
 // El módulo 3D (three, R3F, drei) se descarga solo cuando hay WebGL y se admite movimiento.
 const Cuenca3D = lazy(() => import("./Cuenca3D"));
 
-const Aparece = motion(Box);
+const Aparece = motion.create(Box);
 
 /**
  * Las etiquetas del esquema (3D o 2D) nunca deben quedar bajo el texto, los botones o la escala.

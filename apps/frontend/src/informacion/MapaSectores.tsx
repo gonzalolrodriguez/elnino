@@ -101,13 +101,6 @@ export function MapaSectores({ altura, marcador, onElegir, etiquetar = true, rel
           <path d={dDepartamentos} stroke={hexDe("pizarra.700")} strokeOpacity={0.8} strokeWidth={2.5} strokeDasharray="14 8" />
         </g>
       )}
-      {rel && (
-        <g data-capa="relieve-local" aria-hidden="true" fill="none">
-          <path d={dMenores} stroke={hexDe("alerta.800")} strokeOpacity={0.35} strokeWidth={1} />
-          <path d={dMayores} stroke={hexDe("alerta.800")} strokeOpacity={0.7} strokeWidth={2} />
-          <path d={dDepartamentos} stroke={hexDe("pizarra.700")} strokeOpacity={0.8} strokeWidth={2.5} strokeDasharray="14 8" />
-        </g>
-      )}
       {SECTORES_K10.map((s) => {
         const est = altura === undefined ? "normal" : estadoSector(s, altura);
         const st = ESTILO_ESTADO[est];

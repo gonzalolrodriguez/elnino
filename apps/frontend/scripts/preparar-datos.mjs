@@ -1,9 +1,31 @@
 // Genera JSON compactos para la web a partir de archivos del repositorio (solo lectura de data/).
 // Salidas en src/datos/: k1_diario.json (serie diaria de Puerto Formosa) y k10_sectores.json.
 // Uso: node scripts/preparar-datos.mjs
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+function escribirSiCambio(ruta, contenido) {
+  if (existsSync(ruta)) {
+    try {
+      if (readFileSync(ruta, "utf-8") === contenido) return;
+    } catch {
+      // continuar con escritura
+    }
+  }
+  writeFileSync(ruta, contenido);
+}
+
+function copiarSiCambio(origen, destino) {
+  if (existsSync(destino)) {
+    try {
+      if (statSync(origen).size === statSync(destino).size) return;
+    } catch {
+      // continuar con copia
+    }
+  }
+  copyFileSync(origen, destino);
+}
 
 const aqui = dirname(fileURLToPath(import.meta.url));
 const raiz = resolve(aqui, "..", "..", "..");
@@ -19,7 +41,7 @@ const filas = csv.slice(1).map((l) => l.split(","));
 const desde = filas[0][0];
 const hasta = filas[filas.length - 1][0];
 const valores = filas.map((f) => (f[1] === "" || f[1] === undefined ? null : Number(f[1])));
-writeFileSync(
+escribirSiCambio(
   resolve(salida, "k1_diario.json"),
   JSON.stringify({
     fuente: "K1 limpio (data/processed/k1_diario.csv)",
@@ -42,7 +64,7 @@ const sectores = k10.features.map((f) => ({
   acceso: f.properties.acceso_simulado,
   anillo: f.geometry.coordinates[0],
 }));
-writeFileSync(
+escribirSiCambio(
   resolve(salida, "k10_sectores.json"),
   JSON.stringify({ version: k10.metadata.version, fecha: k10.metadata.fecha, categoria: "SIMULADO", sectores }),
 );
@@ -78,7 +100,7 @@ for (const c of CAPAS) {
       geometry: { type: f.geometry.type, coordinates: redondear(f.geometry.coordinates) },
       properties: Object.fromEntries(c.props.map((p) => [p, f.properties[p] ?? null])),
     }));
-  writeFileSync(resolve(pub, `${c.id}.geojson`), JSON.stringify({ type: "FeatureCollection", features }));
+  escribirSiCambio(resolve(pub, `${c.id}.geojson`), JSON.stringify({ type: "FeatureCollection", features }));
   capasSalida.push({
     id: c.id,
     etiqueta: c.etiqueta,
@@ -144,13 +166,12 @@ if (mRc && mRl) {
     },
   );
 }
-writeFileSync(resolve(pub, "capas.json"), JSON.stringify({ recorte: { oeste: W, sur: S, este: E, norte: N }, capas: capasSalida }, null, 1));
+escribirSiCambio(resolve(pub, "capas.json"), JSON.stringify({ recorte: { oeste: W, sur: S, este: E, norte: N }, capas: capasSalida }, null, 1));
 console.log(`public/capas: ${capasSalida.map((c) => `${c.id}=${c.n}`).join(", ")}`);
 
 // --- Relieve (planialtimetría) de data/geo/relieve/ y límites de Formosa, para la landing y los mapas ---
 // Salidas en public/relieve/ (se cargan por fetch, fuera del bundle inicial). Generado por
 // apps/backend/scripts/descargar_relieve.py; aquí solo se copian (sin modificar) más los límites del IGN.
-import { copyFileSync, existsSync, statSync } from "node:fs";
 const rel = resolve(geo, "relieve");
 const pubRel = resolve(aqui, "..", "public", "relieve");
 mkdirSync(pubRel, { recursive: true });
@@ -165,8 +186,8 @@ const ARCHIVOS_RELIEVE = [
   "tinte_local_mercator.png",
 ];
 if (ARCHIVOS_RELIEVE.every((a) => existsSync(resolve(rel, a)))) {
-  for (const a of ARCHIVOS_RELIEVE) copyFileSync(resolve(rel, a), resolve(pubRel, a));
-  for (const a of ["departamentos.geojson", "provincia.geojson"]) copyFileSync(resolve(geo, a), resolve(pubRel, a));
+  for (const a of ARCHIVOS_RELIEVE) copiarSiCambio(resolve(rel, a), resolve(pubRel, a));
+  for (const a of ["departamentos.geojson", "provincia.geojson"]) copiarSiCambio(resolve(geo, a), resolve(pubRel, a));
   const kb = (a) => `${a}=${Math.round(statSync(resolve(pubRel, a)).size / 1024)} KB`;
   console.log(`public/relieve: ${[...ARCHIVOS_RELIEVE, "departamentos.geojson", "provincia.geojson"].map(kb).join(", ")}`);
 } else {

@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Text, Textarea, useToast } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, SimpleGrid, Text, Textarea, useToast } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -10,6 +10,27 @@ import { api, descargar, guardarArchivo } from "../api";
 import type { CamposBitacora, EntradaBitacora } from "../tipos";
 import { Cargando, fmtFecha, Seccion } from "../ui";
 
+const ESCENARIOS_K8 = [
+  {
+    codigo: "A · Preparación",
+    descripcion: "Comunicación preventiva, verificación de rutas y centros de recepción, monitoreo diario con umbrales de aviso. Sin evacuación.",
+    pregunta: "¿Qué dato convertiría A en B? ¿Qué estación aguas arriba avisa antes? (Puerto Pilcomayo, siteCode 55).",
+    color: "agua.700",
+  },
+  {
+    codigo: "B · Evacuación preventiva",
+    descripcion: "Evacuación inmediata de los sectores por debajo de una altura de escala definida por el comité (ej. S4 a 7,50 m), con alojamiento temporal.",
+    pregunta: "¿Qué sectores primero y por qué acceso? (S4 Rural Este por único camino de tierra, 0,30 m antes del alerta oficial).",
+    color: "escala.alerta",
+  },
+  {
+    codigo: "C · Espera",
+    descripcion: "No disponer acciones hasta que la escala de Puerto Formosa supere el nivel oficial de alerta (7,80 m).",
+    pregunta: "¿Cuánto tiempo queda si el río acelera? Esperar a 7,80 m deja a S4 comprometido y con riesgo de bloqueo por lluvia.",
+    color: "escala.evacuacion",
+  },
+] as const;
+
 const CAMPOS = [
   { id: "decision", etiqueta: "Decisión", ayuda: "Qué se decide y para qué sectores." },
   { id: "evidencia", etiqueta: "Evidencia", ayuda: "Dato con fuente abrible (K1, K3, K10, parte de lluvia)." },
@@ -20,6 +41,16 @@ const CAMPOS = [
 
 type Valores = Record<(typeof CAMPOS)[number]["id"] | "responsable_rol" | "fecha_simulada", string>;
 const VACIO: Valores = { decision: "", evidencia: "", limites: "", riesgos: "", gatillos: "", responsable_rol: "", fecha_simulada: "" };
+
+const EJEMPLO_K8: Valores = {
+  decision: "Adoptar el Escenario A (Preparación activa) al corte del 31/10/2026 (5,60 m), combinándolo con transición preventiva al Escenario B para el Sector S4 Rural Este (compromiso 7,50 m) ante lluvias >= 30 mm o nivel >= 7,00 m.",
+  evidencia: "K1 limpio: Puerto Formosa al 31/10/2026 mide 5,60 m (ascenso desde 2,37 m el 01/10). K3: alerta en 7,80 m y evacuación en 8,30 m. K10: S4 se compromete a 7,50 m (0,30 m antes del alerta) y tiene un único camino de tierra.",
+  limites: "El kit no incluye lluvia observada en Formosa (planilla vacía) ni pronósticos hidrológicos a más de 15 días (K9). Los polígonos K10 y capacidades de centros son SIMULADO.",
+  riesgos: "Actuar hoy con evacuación masiva a 5,60 m implica costo de falsa alarma. Esperar hasta 7,80 m (Escenario C) expone a las 150 personas y rodeos de S4 a quedar aislados por barro o agua a los 7,50 m.",
+  gatillos: "1) Puerto Formosa >= 7,00 m en escala INA siteCode 57 (K1/K3). 2) Parte pluvial policial >= 30 mm en 24 h sobre camino de tierra de S4. 3) Alerta en Puerto Pilcomayo aguas arriba (>= 5,35 m, siteCode 55, K3).",
+  responsable_rol: "defensa_civil",
+  fecha_simulada: "2026-10-31",
+};
 
 /** Valida los seis campos obligatorios de K8; devuelve un mensaje por campo vacío. */
 export function validarBitacora(v: Valores): Partial<Record<keyof Valores, string>> {
@@ -85,6 +116,22 @@ function Formulario({ borrador, alGuardar }: { borrador: EntradaBitacora | null;
         </Alert>
       )}
       <fieldset disabled={!esDecisor} style={{ border: 0, padding: 0, margin: 0 }}>
+        <Flex justify="flex-end" mb={2}>
+          <Button
+            size="xs"
+            variant="outline"
+            type="button"
+            onClick={() => {
+              setV({
+                ...EJEMPLO_K8,
+                responsable_rol: usuario?.rol_operativo || EJEMPLO_K8.responsable_rol,
+              });
+              setErrores({});
+            }}
+          >
+            Cargar plantilla sugerida (Escenario A+B · Ventana Seca S4)
+          </Button>
+        </Flex>
         {CAMPOS.map((c) => (
           <FormControl key={c.id} isInvalid={!!errores[c.id]} mb={3} isRequired>
             <FormLabel htmlFor={`bit-${c.id}`} fontSize="sm" mb={0}>
@@ -148,6 +195,25 @@ export default function Bitacora() {
           Cada decisión lleva responsable (rol), evidencia y fecha del día simulado.
         </Text>
       </Flex>
+
+      <Seccion titulo="Escenarios de actuación del Comité de la Misión (K8)" categoria="SIMULADO" id="sec-escenarios-k8">
+        <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={3}>
+          {ESCENARIOS_K8.map((esc) => (
+            <Box key={esc.codigo} bg="pizarra.100" p={3} borderRadius="sm" borderLeft="4px solid" borderLeftColor={esc.color}>
+              <Heading as="h3" size="xs" mb={1}>
+                {esc.codigo}
+              </Heading>
+              <Text fontSize="xs" mb={2}>
+                {esc.descripcion}
+              </Text>
+              <Text fontSize="xs" color="textoSuave">
+                <strong>Foco del comité:</strong> {esc.pregunta}
+              </Text>
+            </Box>
+          ))}
+        </SimpleGrid>
+      </Seccion>
+
       <Seccion titulo={borrador ? `Completar el borrador ${borrador.id}${borrador.orden_id ? ` (orden ${borrador.orden_id})` : ""}` : "Nueva decisión"} id="sec-form" derecha={
         borrador ? (
           <Button size="xs" variant="outline" onClick={() => setParams({})}>

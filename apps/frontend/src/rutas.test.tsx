@@ -66,6 +66,29 @@ describe("Información", () => {
     expect(screen.getByRole("img", { name: /cuatro sectores simulados K10/ })).toBeInTheDocument();
     expect(screen.getAllByText("SIMULADO").length).toBeGreaterThan(0);
   });
+
+  it("muestra el gráfico y tabla mensual del pronóstico estacional CFS v2 (1.623 mm)", async () => {
+    renderRuta("/informacion");
+    expect(await screen.findByRole("img", { name: /Precipitación mensual proyectada por el modelo NOAA CFS v2/ })).toBeInTheDocument();
+    expect(screen.getByText(/1\.623 mm/)).toBeInTheDocument();
+    expect(screen.getByText("308 mm")).toBeInTheDocument();
+  });
+});
+
+describe("App móvil y perfiles de demostración", () => {
+  it("muestra el simulador de trama SMS SOS-FSA de hasta 160 caracteres en /app", async () => {
+    renderRuta("/app");
+    const trama = await screen.findByTestId("trama-sos-preview");
+    expect(trama).toHaveTextContent(/^SOS-FSA\|-26\.180,-58\.139\|PRODUCTOR\|FAM:5\|BOV:30\|ACC:BARRO\|/);
+    expect((trama.textContent ?? "").length).toBeLessThanOrEqual(160);
+  });
+
+  it("permite autocompletar correos de demostración en /login", async () => {
+    renderRuta("/login");
+    expect(await screen.findByText(/Perfiles de demostración/i)).toBeInTheDocument();
+    expect(screen.getByText("decisor@demo.evacuaciones.invalid")).toBeInTheDocument();
+    expect(screen.getByText("productor1@demo.evacuaciones.invalid")).toBeInTheDocument();
+  });
 });
 
 describe("sección Información", () => {

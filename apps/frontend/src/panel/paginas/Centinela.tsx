@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, Heading, List, ListItem, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Flex, Heading, List, ListItem, SimpleGrid, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { Insignia } from "../../components/Insignia";
 import { AUDITORIA_K1 } from "../../datos/auditoriaK1";
@@ -15,6 +15,16 @@ const COLOR_VEREDICTO: Record<string, string> = {
   "NO VERIFICABLE": "gray",
   "NO VERIFICABLE CON LA CAPA DISPONIBLE": "gray",
 };
+
+const ORDEN_OFICIAL_CUENCA = [
+  "1. Bahía Negra",
+  "2. Concepción",
+  "3. Asunción",
+  "4. Puerto Pilcomayo · Clorinda (siteCode 55, lat -25,367°)",
+  "5. Puerto Formosa (siteCode 57, lat -26,183°)",
+  "6. Desembocadura Río Bermejo (lat -26,866°)",
+  "7. Confluencia con el Río Paraná → Corrientes → Río de la Plata",
+] as const;
 
 function Veredicto({ v }: { v: string }) {
   return (
@@ -34,6 +44,29 @@ export default function Centinela() {
       </Heading>
 
       <Seccion titulo="Auditoría de la limpieza de K1" categoria="DATO OBSERVADO" id="sec-k1">
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={4}>
+          <Box bg="pizarra.100" p={3} borderRadius="sm" borderTop="3px solid" borderTopColor="agua.700">
+            <Text fontSize="xs" color="textoSuave">Registros crudos → válidos</Text>
+            <Text textStyle="cifra" fontSize="xl">8.347 → 8.334</Text>
+            <Text fontSize="xs" color="textoSuave">12 duplicados + 1 en cuarentena</Text>
+          </Box>
+          <Box bg="pizarra.100" p={3} borderRadius="sm" borderTop="3px solid" borderTopColor="verde.600">
+            <Text fontSize="xs" color="textoSuave">Máximo histórico validado</Text>
+            <Text textStyle="cifra" fontSize="xl">9,81 m</Text>
+            <Text fontSize="xs" color="textoSuave">05 y 06/01/2016 (pico 2019: 9,72 m)</Text>
+          </Box>
+          <Box bg="pizarra.100" p={3} borderRadius="sm" borderTop="3px solid" borderTopColor="escala.alerta">
+            <Text fontSize="xs" color="textoSuave">Normalizaciones con evidencia</Text>
+            <Text textStyle="cifra" fontSize="xl">7 cm · 3 comas · 40 fechas</Text>
+            <Text fontSize="xs" color="textoSuave">Sin alterar el archivo original K1</Text>
+          </Box>
+          <Box bg="pizarra.100" p={3} borderRadius="sm" borderTop="3px solid" borderTopColor="pizarra.700">
+            <Text fontSize="xs" color="textoSuave">Integridad sin interpolar</Text>
+            <Text textStyle="cifra" fontSize="xl">25 huecos (2018)</Text>
+            <Text fontSize="xs" color="textoSuave">141 negativos reales (mín. −0,86 m)</Text>
+          </Box>
+        </SimpleGrid>
+
         <Text fontSize="sm" mb={2}>
           Entrada: {AUDITORIA_K1.entrada}. Salida: {AUDITORIA_K1.salida}.
         </Text>
@@ -96,6 +129,22 @@ export default function Centinela() {
       </Seccion>
 
       <Seccion titulo="Verificador de la red hidrográfica (K7)" id="sec-k7">
+        <Box bg="pizarra.100" p={3} borderRadius="sm" border="1px solid" borderColor="borde" mb={3}>
+          <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={1.5}>
+            <Text fontSize="xs" fontWeight={700} color="pizarra.800">
+              Secuencia hidrográfica real verificada (aguas arriba → aguas abajo · K3 + Capas SIG IGN):
+            </Text>
+            <Insignia categoria="DOCUMENTO DE REFERENCIA" />
+          </Flex>
+          <Flex gap={1.5} wrap="wrap" align="center">
+            {ORDEN_OFICIAL_CUENCA.map((n, i) => (
+              <Badge key={n} bg="superficie" color="pizarra.900" border="1px solid" borderColor="borde" px={2} py={0.5}>
+                {n}{i < ORDEN_OFICIAL_CUENCA.length - 1 ? " →" : ""}
+              </Badge>
+            ))}
+          </Flex>
+        </Box>
+
         <Cargando carga={k7} hijos={(d) => (
           <>
             <Text fontSize="sm" mb={3}>

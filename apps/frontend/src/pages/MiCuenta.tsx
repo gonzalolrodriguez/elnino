@@ -70,7 +70,7 @@ function Bloque<T>({
         {titulo}
       </Heading>
       {recurso.estado === "cargando" && (
-        <Text display="flex" alignItems="center" gap={2}>
+        <Text as="div" display="flex" alignItems="center" gap={2}>
           <Spinner size="sm" /> Cargando…
         </Text>
       )}

@@ -85,6 +85,38 @@ export type Sector = {
 export const SECTORES_K10 = (k10 as { sectores: Sector[] }).sectores;
 export const K10_FECHA = "12/11/2026";
 
+export type MesPronosticoCFS = {
+  mes: string;
+  proyectado_mm: number;
+  normal_mm: number;
+  prob_50mm_pct: number;
+};
+
+/**
+ * Pronóstico agroclimático estacional 2026/27 Formosa (20261029 Formosa.pptx, modelo NOAA CFS v2,
+ * ensamble de 20 miembros, emisión 29/10/2026). Categoría: DOCUMENTO DE REFERENCIA.
+ * Todas las cifras figuran en docs/ficha_fuentes.md.
+ */
+export const PRONOSTICO_CFS_V2 = {
+  fuente: "Pronóstico agroclimático estacional 2026/27 Formosa, CFS v2 NOAA (20261029 Formosa.pptx)",
+  fecha_emision: "29/10/2026",
+  categoria: CATEGORIAS.REFERENCIA,
+  acumulado_proyectado_mm: 1623,
+  normal_acumulada_mm: 1229,
+  anomalia_mm: 394,
+  meses: [
+    { mes: "Nov 2026", proyectado_mm: 227, normal_mm: 193, prob_50mm_pct: 90 },
+    { mes: "Dic 2026", proyectado_mm: 227, normal_mm: 179, prob_50mm_pct: 85 },
+    { mes: "Ene 2027", proyectado_mm: 184, normal_mm: 151, prob_50mm_pct: 80 },
+    { mes: "Feb 2027", proyectado_mm: 204, normal_mm: 141, prob_50mm_pct: 90 },
+    { mes: "Mar 2027", proyectado_mm: 308, normal_mm: 149, prob_50mm_pct: 95 },
+    { mes: "Abr 2027", proyectado_mm: 243, normal_mm: 183, prob_50mm_pct: 95 },
+    { mes: "May 2027", proyectado_mm: 130, normal_mm: 114, prob_50mm_pct: 75 },
+    { mes: "Jun 2027", proyectado_mm: 58, normal_mm: 70, prob_50mm_pct: 25 },
+    { mes: "Jul 2027", proyectado_mm: 42, normal_mm: 50, prob_50mm_pct: 25 },
+  ] as const satisfies readonly MesPronosticoCFS[],
+} as const;
+
 export const LIMITES_ESTATICOS: string[] = [
   "El kit no incluye lluvia observada (la planilla de precipitaciones está vacía).",
   "No existe pronóstico hidrológico más allá de 15 días; las extrapolaciones son supuestos.",
