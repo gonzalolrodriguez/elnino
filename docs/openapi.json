@@ -404,7 +404,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/UsuarioOut"
+                    "$ref": "#/components/schemas/UsuarioAdminOut"
                   },
                   "title": "Response Listar Api V1 Usuarios Get"
                 }
@@ -919,6 +919,18 @@
               "default": 100,
               "title": "Limite"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
           }
         ],
         "responses": {
@@ -1294,6 +1306,30 @@
               ],
               "title": "Estado"
             }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 500,
+              "title": "Limite"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
           }
         ],
         "responses": {
@@ -1380,46 +1416,44 @@
       }
     },
     "/api/v1/ordenes": {
-      "get": {
-        "tags": [
-          "operacion"
-        ],
-        "summary": "Listar Ordenes",
-        "operationId": "listar_ordenes_api_v1_ordenes_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Listar Ordenes Api V1 Ordenes Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "operacion"
         ],
         "summary": "Emitir",
         "operationId": "emitir_api_v1_ordenes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OrdenIn"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -1443,12 +1477,32 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "operacion"
+        ],
+        "summary": "Listar Ordenes",
+        "operationId": "listar_ordenes_api_v1_ordenes_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Listar Ordenes Api V1 Ordenes Get"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/solicitudes": {
@@ -1571,6 +1625,18 @@
               "minimum": 1,
               "default": 100,
               "title": "Limite"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
@@ -2276,6 +2342,30 @@
               ],
               "title": "Estado"
             }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limite"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
           }
         ],
         "responses": {
@@ -2533,6 +2623,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/panel/resumen": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "summary": "Panel Resumen",
+        "operationId": "panel_resumen_api_v1_panel_resumen_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Panel Resumen Api V1 Panel Resumen Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/resumen": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "summary": "Admin Resumen",
+        "operationId": "admin_resumen_api_v1_admin_resumen_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Admin Resumen Api V1 Admin Resumen Get"
                 }
               }
             }
@@ -3296,6 +3440,27 @@
         ],
         "title": "IntegranteIn"
       },
+      "ItemChecklist": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Item"
+          },
+          "hecho": {
+            "type": "boolean",
+            "title": "Hecho"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "hecho"
+        ],
+        "title": "ItemChecklist"
+      },
       "LecturaIn": {
         "properties": {
           "puesto": {
@@ -3400,7 +3565,7 @@
         "properties": {
           "especie": {
             "type": "string",
-            "pattern": "^(caprino|ovino|porcino)$",
+            "maxLength": 40,
             "title": "Especie"
           },
           "cantidad": {
@@ -4006,7 +4171,7 @@
             "anyOf": [
               {
                 "items": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ItemChecklist"
                 },
                 "type": "array",
                 "maxItems": 50
@@ -4107,6 +4272,86 @@
         "additionalProperties": false,
         "type": "object",
         "title": "UsuarioActualizar"
+      },
+      "UsuarioAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "nombre_visible": {
+            "type": "string",
+            "title": "Nombre Visible"
+          },
+          "rol": {
+            "type": "string",
+            "title": "Rol"
+          },
+          "rol_operativo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rol Operativo"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creado En"
+          },
+          "ultimo_login": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Login"
+          },
+          "intentos_fallidos": {
+            "type": "integer",
+            "title": "Intentos Fallidos",
+            "default": 0
+          },
+          "bloqueado_hasta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bloqueado Hasta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "nombre_visible",
+          "rol",
+          "estado",
+          "creado_en"
+        ],
+        "title": "UsuarioAdminOut",
+        "description": "Salida para el admin: suma el estado de bloqueo por intentos fallidos de login."
       },
       "UsuarioCrear": {
         "properties": {

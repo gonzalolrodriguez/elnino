@@ -25,24 +25,53 @@ Medidas implementadas en las Fases 1 a 5 (backend, web y app móvil) y su corres
 | Secretos | Solo en variables de entorno; `JWT_SECRET` y `FIELD_ENCRYPTION_KEY` no tienen valor por defecto utilizable y el backend se niega a firmar o cifrar si faltan o conservan el marcador `CAMBIAR`. `.env` está en `.gitignore`. | `app/config/settings.py` |
 | Datos de demo | Usuarios, familias y teléfonos ficticios; contraseñas de demostración solo desde `DEMO_PASSWORD` / `DEMO_ADMIN_PASSWORD`. | `data/simulado/usuarios_demo.json` |
 
-## Correspondencia con OWASP Top 10 (2021)
+## Correspondencia con OWASP Top 10:2025 (web y API)
 
-| Riesgo | Mitigación en esta fase |
-|---|---|
-| A01 Pérdida de control de acceso | RBAC por endpoint y por recurso; altas institucionales solo por admin; denegaciones auditadas. |
-| A02 Fallas criptográficas | Argon2id; AES-GCM con AAD; JWT con secreto obligatorio; refresh almacenado como hash; cookies `HttpOnly`/`Secure`/`SameSite=Strict`. |
-| A03 Inyección | ORM con parámetros enlazados; validación estricta de entradas; sin SQL armado con texto del usuario. |
-| A04 Diseño inseguro | Bloqueo temporal, rate limiting, rotación y revocación de sesiones, consentimiento informado, mínimo de datos personales. |
-| A05 Configuración de seguridad incorrecta | Cabeceras de seguridad, CORS acotado, secretos obligatorios, errores sin detalle interno. |
-| A06 Componentes vulnerables | Dependencias fijadas en `requirements.txt`. Pendiente: auditoría periódica (`pip-audit`) en la CI. |
-| A07 Fallas de identificación y autenticación | Política de contraseñas, bloqueo por par y por cuenta (IPv6 por /64), WebSocket con token vigente, tiempos igualados, refresh rotativo con detección de reutilización, logout que revoca la familia. |
-| A08 Fallas de integridad de software y datos | Bitácora con hash encadenado verificable; migraciones versionadas con Alembic. |
-| A09 Fallas de registro y monitoreo | Eventos de autenticación, administración y acceso a datos personales en la bitácora. |
-| A10 Falsificación de solicitudes del lado del servidor | El backend no hace solicitudes a URLs provistas por el usuario. |
+Se usa la edición 2025 (no hay una edición 2026 oficial). Estado al 19/11/2026.
+
+| Riesgo | Mitigación | Riesgo aceptado / pendiente |
+|---|---|---|
+| A01 Pérdida de control de acceso (incluye SSRF) | RBAC por endpoint y por recurso; altas institucionales solo por admin; denegaciones auditadas; el backend no hace solicitudes a URLs provistas por el usuario; las órdenes por WebSocket solo llegan a los mandos y a quienes viven o producen en los sectores alcanzados. | Los miembros de cuadrilla ven todos los eventos de mandos. |
+| A02 Configuración de seguridad incorrecta | Cabeceras de seguridad, CORS acotado (con `Idempotency-Key`), secretos obligatorios, `ENTORNO=produccion` oculta `/docs` y `/openapi.json` y fuerza la cookie `Secure`, la base de datos se publica solo en `127.0.0.1`, usuarios de demo solo con `SEED_DEMO=true`, tope global de cuerpo de 1 MB. | El demo local usa `COOKIE_SECURE=false` y HTTP; en producción se exige HTTPS. |
+| A03 Fallas en la cadena de suministro de software | Dependencias fijadas en `requirements.txt` y lockfiles; `maplibre-gl` llevado al parche. | Falta `pip-audit` / `pnpm audit` en la CI. |
+| A04 Fallas criptográficas | Argon2id; AES-GCM con AAD; JWT con secreto obligatorio; refresh guardado como hash SHA-256; cookies `HttpOnly`/`Secure`/`SameSite=Strict`. | Tráfico HTTP sin cifrar en el demo de LAN (ver APK). |
+| A05 Inyección | ORM con parámetros enlazados; SQL de ruteo armado solo con constantes e ids enteros validados; validación estricta de entradas con vocabularios cerrados (especies, categorías, sectores). | - |
+| A06 Diseño inseguro | Bloqueo temporal, rate limiting por IP, cuota blanda de solicitudes (20/hora) y tope de fotos por persona, rotación y revocación de sesiones, idempotencia (solicitudes, órdenes, mensajes de canal), consentimiento informado, mínimo de datos personales, sin CAPTCHA ni pasos extra para la ciudadanía. | - |
+| A07 Fallas de autenticación | Política de contraseñas; **401 genérico** para correo inexistente, contraseña errónea, cuenta inactiva o bloqueada (sin enumeración); bloqueo por par cuenta+IP y por cuenta; tiempos igualados; refresh rotativo con detección de reutilización y gracia de un solo uso ligada al cliente; logout que revoca la familia y cierra los WebSockets. | Sin MFA para usuarios institucionales (decisión de producto pendiente). El registro responde 409 si el correo existe. |
+| A08 Fallas de integridad de software y datos | Bitácora con hash encadenado verificable (`/admin/resumen` informa su integridad); migraciones versionadas; firma HMAC de los webhooks de canales comparada en bytes. | El truncamiento de las últimas filas de la bitácora no se detecta. |
+| A09 Fallas de registro y alertas | Eventos de autenticación, administración y acceso a datos personales en la bitácora; los correos inexistentes se auditan agregados (una fila por IP y minuto) para no serializar el sistema; `/admin/resumen` expone bloqueos y la verificación de la cadena. | No hay alertas automáticas hacia una persona. |
+| A10 Manejo incorrecto de condiciones excepcionales | Manejador global que responde el sobre JSON `error_interno` sin trazas; 503 si faltan lecturas del río; serie vacía, timestamps desbordados, firmas no ASCII y marcos binarios de WebSocket ya no producen 500; tope de cuerpo por `Content-Length` y por transmisión; envíos de WebSocket concurrentes con plazo. | - |
+
+## Correspondencia con OWASP Mobile Top 10 2024 (app React Native / Expo)
+
+| Riesgo | Mitigación | Riesgo aceptado / pendiente |
+|---|---|---|
+| M1 Uso inadecuado de credenciales | Sin credenciales en el código ni en el repositorio; tokens en `expo-secure-store`; contraseñas de demo solo por variables de entorno. | - |
+| M2 Seguridad insuficiente de la cadena de suministro | Dependencias con lockfile; el APK se construye con EAS Build. | Sin auditoría automática de dependencias. |
+| M3 Autenticación/autorización insegura | Toda autorización se decide en el backend (RBAC); refresh rotativo con gracia de un solo uso; cierre de sesión remoto. | Sin MFA ni sesión por dispositivo. |
+| M4 Validación insuficiente de entradas y salidas | Validación estricta en el backend (Pydantic, vocabularios cerrados); el SMS de emergencia se arma con límites de largo; el parser rechaza coordenadas fuera de Formosa. | - |
+| M5 Comunicación insegura | HTTPS requerido para producción. | El APK de la demo habilita HTTP para la red local (ver más abajo y el aviso en pantalla). |
+| M6 Controles de privacidad insuficientes | Consentimiento (Ley 25.326), campos sensibles cifrados, lecturas de datos personales auditadas, datos de demo ficticios. | Inscripción de la base ante la AAIP pendiente. |
+| M7 Protecciones binarias insuficientes | - | Aceptado en el prototipo (sin ofuscación). |
+| M8 Configuración de seguridad incorrecta | Permisos mínimos; la URL del servidor es configurable con confirmación de riesgo si es HTTP. | `usesCleartextTraffic` habilitado en la demo. |
+| M9 Almacenamiento inseguro de datos | Nada sensible en `AsyncStorage`; la cola offline (SQLite) guarda solicitudes, no credenciales. | Las solicitudes encoladas quedan en claro en el teléfono hasta enviarse. |
+| M10 Criptografía insuficiente | Algoritmos estándar (Argon2id, AES-GCM, HMAC-SHA256); el cifrado de campos ocurre en el servidor. | - |
+
+## Auditoría del 19/11/2026: medidas de baja fricción
+
+| Medida | Detalle | Dónde |
+|---|---|---|
+| 401 genérico | Los bloqueos por par y por cuenta también responden 401; el 429 sale solo del limitador por IP y trae `Retry-After`. | `app/api/v1/auth.py`, `app/main.py` |
+| Cuota blanda de solicitudes | `SOLICITUDES_MAX_POR_HORA` (20) por persona con mensaje amable y `Retry-After`; los reintentos idempotentes no cuentan; tope `ADJUNTOS_MAX_BYTES_POR_USUARIO` de fotos. | `app/api/v1/solicitudes.py` |
+| Idempotencia sin ventana | Índices únicos parciales en `solicitudes_asistencia` (solicitante, clave) y `ordenes` (decisor, clave) más `ON CONFLICT`; fotos repetidas por SHA-256 bajo bloqueo de fila; mensajes de canal por id del proveedor. | migraciones 0004 y 0005 |
+| Concurrencia | Transiciones de solicitudes y tareas con `SELECT ... FOR UPDATE`; carrera de inserción de lluvia responde 409. | `app/api/v1/solicitudes.py`, `operacion.py`, `app/servicios/lluvia.py` |
+| Canales | Firma comparada como bytes (no ASCII: 401), `Content-Length` antes de leer, `timestamp` inválido: 422, cada mensaje se procesa aparte. | `app/api/v1/canales.py` |
+| WebSocket | Envíos concurrentes con plazo de 5 s, marcos binarios ignorados, `orden` solo a los alcanzados, logout cierra los sockets del usuario. | `app/core/eventos.py`, `app/api/v1/ws.py` |
+| Despliegue | `SEED_DEMO` (apagado por defecto), `ENTORNO=produccion`, base en `127.0.0.1`. | `docker-compose.yml`, `app/config/settings.py` |
 
 ## Decisiones y límites conocidos
 
-- **Enumeración de correos:** el registro responde 409 si el correo existe. Es un compromiso de usabilidad; el login no distingue entre correo inexistente y contraseña errónea (siempre 401, o 429 si la cuenta está bloqueada).
+- **Enumeración de correos:** el registro responde 409 si el correo existe. Es un compromiso de usabilidad; el login no distingue entre correo inexistente, contraseña errónea o cuenta bloqueada (siempre el mismo 401; el 429 es solo del limitador por IP).
 - **Bloqueo por cuenta:** resuelto en la Fase 2 con bloqueo por par cuenta e IP (ver más abajo).
 - **Truncamiento de la bitácora:** el hash encadenado detecta alteraciones y borrados intermedios, pero no el borrado de las últimas filas; para eso haría falta anclar periódicamente el último hash fuera de la base.
 - **Almacenamiento del limitador:** `slowapi` usa memoria del proceso; con varios procesos hay que pasar a Redis.
@@ -130,7 +159,7 @@ Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), 
 
 - MFA para usuarios institucionales y desbloqueo por OTP o correo (ver `docs/decisiones.md`).
 - `pip-audit`, `pnpm audit` y análisis estático en la integración continua.
-- Idempotencia de mensajes de canales por identificador del proveedor; límite de conexiones WebSocket por usuario.
+- Límite de conexiones WebSocket por usuario.
 - Almacenamiento del limitador en Redis si se despliega con más de un proceso.
 - Anclar periódicamente el último hash de la bitácora de accesos fuera de la base.
 - Inscripción de la base ante la AAIP y despliegue productivo (fuera del alcance del MVP, CLAUDE.md §15).

@@ -10,6 +10,10 @@ Prefijo: `/api/v1`. Documentación interactiva generada por FastAPI en `/docs` y
 - Cliente móvil: enviar `X-Cliente: movil` en login y refresh para recibir también el `refresh_token` en el cuerpo. La web lo recibe solo en una cookie `HttpOnly`.
 - Las respuestas con datos incluirán `categoria`, `fuente` y `fecha_dato` cuando corresponda (grupos de datos; ver cada sección).
 
+### Códigos del sobre de error
+
+`400 solicitud_invalida`, `401 no_autenticado`, `403 prohibido`, `404 no_encontrado` (conserva el mensaje propio, p. ej. `Solicitud no encontrada`), `405`, `409 conflicto`, `413 cuerpo_demasiado_grande` (tope global 1 MB; adjuntos y planilla tienen el suyo), `415 tipo_no_soportado`, `422 validacion`, `429 demasiados_intentos` (siempre con `Retry-After`), `500 error_interno` (sin trazas) y `503 no_disponible` (p. ej. sin lecturas del río cargadas).
+
 ### Sobre de error común
 
 ```json
@@ -24,6 +28,58 @@ Prefijo: `/api/v1`. Documentación interactiva generada por FastAPI en `/docs` y
 | 409 | `conflicto` | Correo ya registrado; un admin intenta desactivarse |
 | 422 | `validacion` | Entrada inválida (campos faltantes, rangos, consentimiento ausente, contraseña corta, rol desconocido) |
 | 429 | `demasiados_intentos` | Bloqueo temporal por intentos fallidos (por cuenta e IP) o límite de solicitudes excedido |
+
+## Tableros de decisión (nuevos)
+
+### `GET /panel/resumen` (`operador`, `decisor`, `admin`)
+
+Un solo llamado con los indicadores de decisión. Cada bloque lleva `categoria`, `fuente` y `fecha_dato`.
+
+```json
+{
+  "generado_en": "...", "leyenda": "PROTOTIPO · ...",
+  "rio": { "categoria": "DATO OBSERVADO", "fuente": "...", "fecha_dato": "2026-10-31", "disponible": true,
+    "altura_m": 5.6, "fecha_lectura": "2026-10-31", "umbral_alerta_m": 7.8, "umbral_evacuacion_m": 8.3,
+    "distancia_a_alerta_m": 2.2, "distancia_a_evacuacion_m": 2.7,
+    "tendencia_7d_m": 1.5, "tendencia_7d_m_por_dia": 0.214,
+    "tiempo_a_umbrales": [ { "objetivo": "Alerta", "valor_m": 7.8, "ya_alcanzado": false, "dias_minimo": 6.1, "dias_maximo": 20.4 } ],
+    "supuesto_proyeccion": "...", "categoria_proyeccion": "SIMULADO" },
+  "sectores": { "categoria": "SIMULADO", "fuente": "...", "fecha_dato": "...", "altura_usada_m": 5.6,
+    "items": [ { "id": "S4", "nombre": "...", "estado": "normal|en_riesgo|comprometido", "aislado": false,
+      "margen_a_compromiso_m": 1.9, "altura_compromiso_m": 7.5, "personas_k10": 150, "personas_registradas": 0,
+      "familias_registradas": 0, "animales_expuestos": 0, "colmenas": 0,
+      "accesos": [ { "nombre": "...", "superficie": "tierra", "estado": "transitable" } ],
+      "centro_sugerido": { "personas": { "id", "nombre", "tipo", "distancia_linea_recta_m", "...": "..." } | null, "animales": { } | null, "nota": "..." } } ] },
+  "solicitudes": { "categoria", "fuente", "fecha_dato", "total": 0, "por_estado": {}, "por_sector": {}, "por_origen": {},
+    "recibidas_mas_antigua_min": null, "a_verificar": 0 },
+  "centros": { "categoria", "fuente", "fecha_dato", "items": [ { "id", "nombre", "tipo", "capacidad_personas", "capacidad_animales", "ocupacion", "ocupacion_pct" } ] },
+  "cuadrillas": { "categoria", "fuente", "fecha_dato", "tareas_sin_cuadrilla": 0,
+    "items": [ { "id", "nombre", "tipo_incidente", "estado", "tareas": { "pendiente": 0, "en_curso": 0, "completada": 0, "cancelada": 0 } } ] },
+  "ordenes": { "categoria", "fuente", "fecha_dato", "bitacora_borradores": 0,
+    "recientes": [ { "id", "tipo", "sectores", "emitida_por_rol", "creada_en" } ] },
+  "lluvia_7d": { "categoria", "fuente", "fecha_dato", "desde": "...", "sin_dato_observado": true,
+    "por_origen": { "simulado": { "lecturas": 0, "mm_total": 0.0, "sin_medicion": 0, "categoria": "SIMULADO" } } },
+  "frescura": { "rio_ultima_lectura", "k10_sectores", "lluvia_ultima_lectura", "fecha_corte": "2026-10-31" },
+  "categoria": "SIMULADO", "fuente": "...", "fecha_dato": "..."
+}
+```
+
+Sin lecturas del río cargadas, `rio.disponible` es `false` y los sectores se calculan con altura 0. Cada lectura queda auditada.
+
+### `GET /admin/resumen` (`admin`)
+
+```json
+{
+  "generado_en": "...",
+  "usuarios": { "total": 0, "por_rol": {}, "por_estado": {}, "sin_login_30_dias": 0, "cuentas_bloqueadas": 0,
+    "intentos_fallidos_en_curso": 0, "bloqueos": [ { "usuario_id": 1, "ip": "...", "bloqueado_hasta": "..." } ] },
+  "auditoria": { "cadena_integra": true, "primera_fila_inconsistente": null, "filas": 0 },
+  "servicio": { "base_de_datos": "ok", "websockets_activos": 0, "version": "0.1.0" },
+  "categoria": "SIMULADO", "fuente": "...", "fecha_dato": "..."
+}
+```
+
+`GET /usuarios` (admin) suma `intentos_fallidos` y `bloqueado_hasta` a cada usuario.
 
 ## Meta (público)
 
@@ -74,15 +130,15 @@ Cuerpo `{ "email", "password" }`. Respuesta 200:
 
 - Web: además `Set-Cookie: refresh_token=...; HttpOnly; SameSite=Strict; Path=/api/v1/auth` (`Secure` según `COOKIE_SECURE`).
 - Con `X-Cliente: movil` el cuerpo incluye `"refresh_token"`.
-- 401 para credenciales incorrectas; tras 5 fallos consecutivos **desde la misma IP** ese par cuenta+IP se bloquea 15 minutos y responde 429 incluso con la contraseña correcta; el titular que entra desde otra IP no se ve afectado. Las direcciones IPv6 se agrupan por /64 (misma clave de par). Además hay un **límite por cuenta**: con 20 fallos en 15 minutos sumando todas las IP, cualquier intento desde una red **sin un login correcto de esa cuenta en los últimos 30 días** recibe 429 (aunque la contraseña sea correcta) hasta que los fallos salgan de la ventana; las redes con login previo siguen entrando. Los umbrales se configuran con `LOGIN_CUENTA_MAX_FALLOS`, `LOGIN_CUENTA_VENTANA_MINUTOS` y `LOGIN_IP_CONOCIDA_DIAS`.
+- **401 genérico** (`Correo o contraseña incorrectos`) para correo inexistente, contraseña errónea, cuenta inactiva o bloqueada: no se distingue ninguno de esos casos (sin enumeración de cuentas). El bloqueo por par cuenta+IP (5 fallos, 15 minutos; IPv6 por /64) y el límite por cuenta (20 fallos en 15 minutos desde redes sin login previo en 30 días) siguen activos pero responden también 401. El **429** sale solo del limitador por IP (`RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRO`) y trae `Retry-After` (segundos).
 
 ### `POST /auth/refresh`
 
-El token se toma del cuerpo `{ "refresh_token": "..." }` (móvil) o de la cookie (web; sin cuerpo). Devuelve una sesión nueva con el mismo formato que el login y **rota** el refresh token. Presentar un token ya usado o cerrado devuelve 401 y revoca toda la familia de sesiones.
+El token se toma del cuerpo `{ "refresh_token": "..." }` (móvil) o de la cookie (web; sin cuerpo). Devuelve una sesión nueva con el mismo formato que el login y **rota** el refresh token. **Gracia de un solo uso:** si la respuesta se perdió, el mismo token rotado puede reintentarse **una vez** en los 30 s siguientes, desde el mismo `X-Cliente` y la misma red; el relevo reemplaza al sucesor (una sola sesión viva por familia). Cualquier otra reutilización de un token ya usado o cerrado devuelve 401 y revoca toda la familia.
 
 ### `POST /auth/logout`
 
-Mismo origen del token que `refresh`. Revoca la familia de sesiones y borra la cookie. Siempre 200 `{ "mensaje": "Sesión cerrada" }` (idempotente).
+Mismo origen del token que `refresh`. Revoca la familia de sesiones y borra la cookie. Cierra también los WebSockets del usuario. Siempre 200 `{ "mensaje": "Sesión cerrada" }` (idempotente).
 
 ### `GET /auth/yo` (autenticado)
 
@@ -241,14 +297,14 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 |---|---|---|---|
 | GET | `/cuadrillas` | mandos | Cuadrillas con integrantes, plantilla sugerida y `roles_faltantes` |
 | POST | `/cuadrillas` | mandos | `{ "nombre", "tipo_incidente": "humana|ganadera|apicola", "integrantes": [{"rol_operativo"}] }` (201) |
-| GET | `/tareas?estado=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas |
-| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist`, `cuadrilla_id` (solo mandos) |
-| POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201) |
+| GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }` |
+| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última |
+| POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201). **Idempotente** con `Idempotency-Key: <UUID>` (mismo decisor y clave: 200 con la orden original y `"repetida": true`, sin duplicar notificaciones ni tareas). Las tareas se reparten entre las cuadrillas del tipo con menos tareas abiertas |
 | GET | `/ordenes` | autenticado | Mandos ven todas; ciudadanía y productores, las de su sector |
-| GET | `/solicitudes` | ciudadanía y productores (las propias) y mandos | Filtros `estado`, `sector_id` |
-| POST | `/solicitudes` | autenticado | `{ "tipo": "evacuacion|asistencia|ganado|logistica|otro", "personas", "animales", "lon", "lat", "texto" }` (201). **Idempotente** con la cabecera opcional `Idempotency-Key: <UUID>`: el mismo usuario y la misma clave dentro de 24 h devuelven la solicitud original con **200** en lugar de crear otra (clave que no es UUID: 422). Pensado para los reintentos de la cola offline de la app |
+| GET | `/solicitudes` | ciudadanía y productores (las propias) y mandos | Filtros `estado`, `sector_id`; paginación `limite` (100, máx. 500) y `offset`; responde `{ "solicitudes", "total", "limite", "offset" }` |
+| POST | `/solicitudes` | autenticado | `{ "tipo": "evacuacion|asistencia|ganado|logistica|otro", "personas", "animales", "lon", "lat", "texto" }` (201). **Idempotente** con la cabecera opcional `Idempotency-Key: <UUID>`: el mismo usuario y la misma clave (sin límite de tiempo: índice único parcial + `ON CONFLICT`) devuelven la solicitud original con **200** (clave que no es UUID: 422). **Cuota blanda:** `SOLICITUDES_MAX_POR_HORA` (20) por persona; al superarla, 429 con mensaje en español y `Retry-After` (los reintentos idempotentes no cuentan). La respuesta incluye `ubicacion_aproximada`, `referencia_ubicacion` y `requiere_verificacion` (siempre presentes; `false`/`null` en los pedidos con coordenadas de la app) |
 | GET | `/solicitudes/{id}` | dueño o mandos | 404 si es ajena. Incluye `adjuntos: [{ "n", "mime", "bytes" }]` |
-| POST | `/solicitudes/{id}/adjuntos` | dueño o mandos | `multipart/form-data`, campo `archivo`: imagen `image/jpeg`, `image/png` o `image/webp` (segundo tiempo del envío: primero el JSON mínimo, después la foto). Se valida el **contenido** (firma del archivo) además del `Content-Type`: tipo no permitido o contenido que no es imagen → 415; vacío → 422; más de `ADJUNTO_MAX_BYTES` (2 MB por defecto) → 413; más de `ADJUNTOS_MAX_POR_SOLICITUD` (5) → 409; solicitud ajena → 404. Responde 201 `{ "n", "mime", "bytes", "solicitud_id" }`. Se guarda en `ADJUNTOS_DIR` (por defecto `<raíz>/uploads/`, fuera de `data/` e ignorada por git) con nombre generado por el servidor; los metadatos van en `solicitudes_asistencia.adjuntos` |
+| POST | `/solicitudes/{id}/adjuntos` | dueño o mandos | `multipart/form-data`, campo `archivo`: imagen `image/jpeg`, `image/png` o `image/webp` (segundo tiempo del envío: primero el JSON mínimo, después la foto). Se valida el **contenido** (firma del archivo) además del `Content-Type`: tipo no permitido o contenido que no es imagen → 415; vacío → 422; más de `ADJUNTO_MAX_BYTES` (2 MB por defecto) → 413; más de `ADJUNTOS_MAX_POR_SOLICITUD` (5) → 409; solicitud ajena → 404. Responde 201 `{ "n", "mime", "bytes", "solicitud_id" }`; la misma foto reenviada (SHA-256 repetido) responde 200 con el `n` original y `"duplicado": true`; tope de almacenamiento por persona `ADJUNTOS_MAX_BYTES_POR_USUARIO` (413). Se guarda en `ADJUNTOS_DIR` (por defecto `<raíz>/uploads/`, fuera de `data/` e ignorada por git) con nombre generado por el servidor; los metadatos van en `solicitudes_asistencia.adjuntos` |
 | GET | `/solicitudes/{id}/adjuntos/{n}` | dueño o mandos | Devuelve los bytes de la imagen con su `Content-Type`, `Cache-Control: private, no-store` y `X-Content-Type-Options: nosniff`. Cada lectura queda auditada. 404 si la solicitud es ajena o el adjunto no existe |
 | PATCH | `/solicitudes/{id}` | mandos | Siguiente estado: `verificada`, `asignada` (con `cuadrilla_id` opcional, crea la tarea), `en_curso`, `resuelta`; saltar estados da 409 |
 
@@ -294,15 +350,30 @@ Errores de `POST /lluvia`: mm fuera de 0 a 500, turno distinto de 07/17 o fecha 
 
 `POST /canales/whatsapp-sim`, `/canales/sms-sim` y `/canales/ivr-sim`. Exigen la cabecera `X-Hub-Signature-256: sha256=<HMAC-SHA256 del cuerpo crudo con CANAL_HMAC_SECRET>` (401 si falta o no coincide; 503 si el secreto no está configurado).
 
-- `whatsapp-sim`: payload de la Meta Cloud API (`entry[].changes[].value.messages[].text.body`).
-- `sms-sim`: `{ "remitente": "+54...", "texto": "..." }`. `ivr-sim`: `{ "llamada_id": "...", "transcripcion": "..." }`.
-- Mensajes: `LLUVIA <CODIGO_PUESTO> <MM>` (crea una lectura `simulado`; turno 07 si es antes del mediodía, si no 17) y `SOS-FSA|lat,lon|PERFIL|FAM:n|BOV:n(detalle)|ACC:texto|texto libre` (crea una solicitud con origen `*_sim`). Un mensaje mal formado o un puesto inexistente responde 422 y no se guarda ninguno de los mensajes del lote.
+- `whatsapp-sim`: payload de la Meta Cloud API (`entry[].changes[].value.messages[].text.body`; `id` y `timestamp` por mensaje; `timestamp` inválido o fuera de rango: 422; un datetime sin zona se interpreta como hora de Argentina).
+- `sms-sim`: `{ "remitente": "+54...", "texto": "...", "recibido_en"?: datetime, "mensaje_id"?: "..." }`.
+- `ivr-sim`: `{ "llamada_id": "...", "transcripcion"?: "...", "turnos"?: ["línea 1", "línea 2"] }` (al menos uno; los turnos se unen en un guion y pasan por el normalizador).
+- Cuerpo máximo 64 KB (413 por `Content-Length` o al transmitirse); firma comparada en bytes (cualquier carácter no ASCII: 401).
+- **Cada mensaje se procesa por separado.** Respuesta 201 `{ "canal", "categoria": "SIMULADO", "resultados": [ ... ] }`; cada resultado trae `tipo` (`lluvia`, `solicitud`, `menu`, `no_entendido`, `error`) y `estado` (`creado`, `duplicado`, `respuesta`, `error`). Un mensaje inválido o repetido no tira a los demás; solo si **ningún** mensaje es válido responde 422 con el primer error. Deduplicación: por id de mensaje del proveedor (`id` de WhatsApp, `mensaje_id` o hash de remitente+texto+hora en SMS, `llamada_id` en IVR); una lectura de lluvia repetida es `duplicado`, no error.
+- Formatos estrictos (sin cambios): `LLUVIA <CODIGO_PUESTO> <MM>` y `SOS-FSA|lat,lon|PERFIL|FAM:n|BOV:n(detalle)|ACC:texto|texto libre`. Las coordenadas deben caer en la provincia de Formosa (0,0, lat/lon invertidas o de otro país: 422).
+- **Menú por palabras clave** (mensaje completo `AYUDA`, `INFO` o `SOS`): `resultados[0] = { "tipo": "menu", "estado": "respuesta", "palabra", "respuesta": "<texto fijo en español>", "categoria_respuesta": "DOCUMENTO DE REFERENCIA", "fuente_respuesta" }`. La respuesta lista 103 Defensa Civil, 106 Prefectura Naval, 911 Policía y emergencias y 105 Emergencias ambientales (fuente https://www.argentina.gob.ar/tema/emergencias, consultada el 19/11/2026) y explica cómo enviar un SOS.
+- **Texto libre** (cualquier otro texto): el normalizador extrae con reglas (cifras y números en palabras, "somos cinco", "40 vacas", "el camino está cortado") personas, animales y especie, estado del acceso y una referencia de ubicación (paraje, camino, ruta, barrio). **No inventa lo que falta.** Si hay algo registrable crea una solicitud `tipo: "sos_texto"`, estado `recibida`, sin coordenadas, con `ubicacion_aproximada: true`, `referencia_ubicacion` y `requiere_verificacion: true` ("a verificar por operador"); el resultado trae `extraido { personas, animales, especie, acceso, referencia_ubicacion, faltantes }` y una `respuesta` para quien escribió. Si no hay nada registrable: `tipo: "no_entendido"` con la guía, sin crear nada.
+
+Ejemplo de guion IVR simulado (la transcripción la entregaría el proveedor de voz; acá se simula):
+
+```bash
+CUERPO='{"llamada_id":"call-0001","turnos":["Estamos en el barrio Norte","somos tres personas","tenemos 12 cabras"]}'
+FIRMA="sha256=$(printf %s "$CUERPO" | openssl dgst -sha256 -hmac "$CANAL_HMAC_SECRET" -hex | sed 's/^.* //')"
+curl -s -X POST $API/canales/ivr-sim -H "X-Hub-Signature-256: $FIRMA" -H 'Content-Type: application/json' -d "$CUERPO"
+# -> resultados[0]: tipo "solicitud", estado "creado", requiere_verificacion true,
+#    extraido { personas: 3, animales: 12, especie: "caprino", referencia_ubicacion: "barrio Norte..." }
+```
 
 Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de la app de Meta, usar el secreto de la app como `CANAL_HMAC_SECRET` y agregar el `GET` de verificación (`hub.challenge`); el formato del payload y la firma son los mismos.
 
 ## Tiempo real
 
-`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos; ciudadanía y productores reciben `orden` y sus propios `solicitud`.
+`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos; ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
 
 La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
@@ -352,7 +423,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (51 rutas y 60 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (53 rutas y 62 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='
