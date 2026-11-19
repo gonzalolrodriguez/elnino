@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings, supuesto
 from app.core import constantes
+from app.core.tiempo import hoy_ar
 from app.db.modelos import LecturaLluvia, PuestoPluviometrico
 
 TURNOS = ("07", "17")
@@ -72,7 +73,7 @@ def validar_mm(mm: float | None) -> None:
 
 
 def validar_fecha(fecha: date, origen: str) -> None:
-    if fecha > date.today():
+    if fecha > hoy_ar():
         raise ErrorLluvia(422, "La fecha no puede ser futura")
     corte = date.fromisoformat(constantes.FECHA_CORTE)
     if (

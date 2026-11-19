@@ -128,7 +128,7 @@ def test_login_con_usuario_inexistente_devuelve_401(client):
     assert r.json()["error"]["codigo"] == "no_autenticado"
 
 
-def test_contrasena_erronea_repetida_bloquea_con_429(client):
+def test_contrasena_erronea_repetida_bloquea_con_401_generico(client):
     datos = datos_ciudadano()
     client.post(REGISTRO_C, json=datos)
     maximo = get_settings().login_max_intentos
@@ -136,11 +136,13 @@ def test_contrasena_erronea_repetida_bloquea_con_429(client):
         iniciar_sesion(client, datos["email"], "contraseña-incorrecta").status_code
         for _ in range(maximo)
     ]
-    assert estados == [401] * (maximo - 1) + [429]
-    # Bloqueada: ni siquiera la contraseña correcta entra mientras dure el bloqueo.
+    assert estados == [401] * maximo
+    # Bloqueada: ni siquiera la contraseña correcta entra mientras dure el bloqueo, y la respuesta
+    # es la misma 401 genérica (el 429 es solo del limitador por IP).
     r = iniciar_sesion(client, datos["email"], datos["password"])
-    assert r.status_code == 429
-    assert r.json()["error"]["codigo"] == "demasiados_intentos"
+    assert r.status_code == 401
+    assert r.json()["error"]["codigo"] == "no_autenticado"
+    assert r.json()["error"]["mensaje"] == "Correo o contraseña incorrectos"
 
 
 def test_intentos_fallidos_se_reinician_con_un_login_correcto(client):
@@ -175,7 +177,8 @@ def _login_movil(client):
     return datos, iniciar_sesion(client, datos["email"], datos["password"], movil=True).json()
 
 
-def test_refresh_rota_el_token_y_detecta_reutilizacion(client):
+def test_refresh_rota_el_token_y_detecta_reutilizacion(client, monkeypatch):
+    monkeypatch.setattr(get_settings(), "refresh_gracia_segundos", 0)  # sin ventana de gracia
     _, sesion = _login_movil(client)
     refresh_1 = sesion["refresh_token"]
     cabeceras = {"X-Cliente": "movil"}

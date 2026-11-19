@@ -68,3 +68,28 @@ def consumir(db: Session, sesion_id: int) -> bool:
         .values(revocado_en=ahora())
     )
     return resultado.rowcount == 1
+
+
+def en_gracia(db: Session, sesion: SesionRefresh) -> bool:
+    """``True`` si un token ya rotado se reutiliza dentro de la ventana de gracia.
+
+    Cubre reintentos de red y varias pestañas que refrescan casi a la vez con el mismo token. Solo
+    vale si el token fue **rotado** (tiene sucesor, no cerrado por logout o por reutilización) hace
+    menos de ``REFRESH_GRACIA_SEGUNDOS`` y la familia sigue teniendo una sesión activa: después de
+    un logout o de una revocación nadie puede reabrirla por esta vía.
+    """
+    gracia = get_settings().refresh_gracia_segundos
+    if gracia <= 0 or sesion.revocado_en is None or sesion.reemplazado_por is None:
+        return False
+    if ahora() - sesion.revocado_en > timedelta(seconds=gracia):
+        return False
+    activa = db.execute(
+        select(SesionRefresh.id)
+        .where(
+            SesionRefresh.familia == sesion.familia,
+            SesionRefresh.revocado_en.is_(None),
+            SesionRefresh.expira_en > ahora(),
+        )
+        .limit(1)
+    ).first()
+    return activa is not None

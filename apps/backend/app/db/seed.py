@@ -332,6 +332,8 @@ def sembrar_cuadrillas(db: Session) -> int:
 
 
 def sembrar_todo(db: Session) -> dict[str, int]:
+    """Carga los datos base; los usuarios y cuadrillas de demo solo con ``SEED_DEMO=true``."""
+    demo = get_settings().seed_demo
     resultado = {
         "roles_operativos": sembrar_roles_operativos(db),
         "estaciones": sembrar_estaciones(db),
@@ -341,8 +343,8 @@ def sembrar_todo(db: Session) -> dict[str, int]:
         "centros_nuevos": sembrar_centros(db),
         "recursos_nuevos": sembrar_recursos(db),
         "puestos_nuevos": sembrar_puestos(db),
-        "usuarios_demo_nuevos": sembrar_usuarios(db),
-        "cuadrillas_nuevas": sembrar_cuadrillas(db),
+        "usuarios_demo_nuevos": sembrar_usuarios(db) if demo else 0,
+        "cuadrillas_nuevas": sembrar_cuadrillas(db) if demo else 0,
     }
     db.commit()
     return resultado

@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from geoalchemy2 import WKTElement
@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.core.eventos import difusor
+from app.core.tiempo import ARGENTINA
 from app.db.base import SRID
 from app.db.consultas import sector_de_punto
 from app.db.modelos import SolicitudAsistencia
@@ -35,8 +36,22 @@ from app.servicios import lluvia as srv
 
 router = APIRouter(prefix="/canales", tags=["canales"])
 
-ARGENTINA = timezone(timedelta(hours=-3))  # sin horario de verano
 MAX_CUERPO = 64 * 1024
+
+
+async def _leer_con_tope(request: Request) -> bytes:
+    """Lee el cuerpo con tope ``MAX_CUERPO`` (mira ``Content-Length`` y corta al excederse)."""
+    declarado = request.headers.get("content-length")
+    if declarado is not None and declarado.isdigit() and int(declarado) > MAX_CUERPO:
+        raise HTTPException(413, "Cuerpo demasiado grande")
+    partes: list[bytes] = []
+    total = 0
+    async for trozo in request.stream():
+        total += len(trozo)
+        if total > MAX_CUERPO:
+            raise HTTPException(413, "Cuerpo demasiado grande")
+        partes.append(trozo)
+    return b"".join(partes)
 
 
 async def cuerpo_firmado(request: Request) -> bytes:
@@ -45,11 +60,11 @@ async def cuerpo_firmado(request: Request) -> bytes:
         secreto = get_settings().secreto_canales()
     except RuntimeError as exc:
         raise HTTPException(503, "Canales simulados no configurados (CANAL_HMAC_SECRET)") from exc
-    cuerpo = await request.body()
-    if len(cuerpo) > MAX_CUERPO:
-        raise HTTPException(413, "Cuerpo demasiado grande")
-    firma = request.headers.get("X-Hub-Signature-256", "")
-    esperado = "sha256=" + hmac.new(secreto.encode(), cuerpo, hashlib.sha256).hexdigest()
+    cuerpo = await _leer_con_tope(request)
+    # La firma llega de afuera y puede traer cualquier carácter: se compara como bytes (con un
+    # ``str`` no ASCII ``compare_digest`` lanzaría TypeError y daría 500 en vez de 401).
+    firma = request.headers.get("X-Hub-Signature-256", "").encode("utf-8", "replace")
+    esperado = firmar(cuerpo, secreto).encode("ascii")
     if not hmac.compare_digest(firma, esperado):
         raise HTTPException(401, "Firma inválida o ausente")
     return cuerpo
@@ -106,10 +121,22 @@ class IVRIn(_Base):
 
 
 def _momento(valor: str | datetime | None) -> datetime:
-    if isinstance(valor, str) and valor.isdigit():
-        return datetime.fromtimestamp(int(valor), UTC).astimezone(ARGENTINA)
-    if isinstance(valor, datetime):
-        return (valor if valor.tzinfo else valor.replace(tzinfo=UTC)).astimezone(ARGENTINA)
+    """Momento del mensaje en hora de Argentina; 422 si el valor no es una fecha válida.
+
+    Un ``timestamp`` de WhatsApp es epoch en segundos; un datetime sin zona horaria se interpreta
+    como hora de Argentina (UTC-3).
+    """
+    try:
+        if isinstance(valor, str) and valor.strip().isdigit():
+            return datetime.fromtimestamp(int(valor), UTC).astimezone(ARGENTINA)
+        if isinstance(valor, datetime):
+            return (valor if valor.tzinfo else valor.replace(tzinfo=ARGENTINA)).astimezone(
+                ARGENTINA
+            )
+        if isinstance(valor, str) and valor.strip():
+            raise ValueError("formato")
+    except (OverflowError, OSError, ValueError) as exc:
+        raise HTTPException(422, "Fecha y hora del mensaje inválidas") from exc
     return datetime.now(ARGENTINA)
 
 

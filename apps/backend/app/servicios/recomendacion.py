@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config.settings import supuesto
+from app.core.tiempo import hoy_ar
 from app.db.modelos import (
     Cuadrilla,
     Establecimiento,
@@ -490,7 +490,7 @@ def recomendar(
         ],
         "categoria": "SIMULADO",
         "fuente": FUENTE,
-        "fecha_dato": date.today().isoformat(),
+        "fecha_dato": hoy_ar().isoformat(),
     }
 
 

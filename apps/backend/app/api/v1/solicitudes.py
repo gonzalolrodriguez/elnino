@@ -24,7 +24,7 @@ from fastapi import (
 from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
@@ -83,6 +83,39 @@ def solicitud_a_dict(s: SolicitudAsistencia, con_ubicacion: bool = True) -> dict
     }
 
 
+def _aplicar_cuota(db: Session, usuario: Usuario) -> None:
+    """Cuota blanda por persona (``SOLICITUDES_MAX_POR_HORA``): frena abusos sin trabar a nadie.
+
+    Una familia en emergencia rara vez manda más de unas pocas solicitudes; el tope es holgado y el
+    mensaje dice cuándo reintentar. Los mandos operativos no tienen cuota.
+    """
+    if usuario.rol not in ("ciudadano", "productor"):
+        return
+    maximo = get_settings().solicitudes_max_por_hora
+    desde = ahora() - timedelta(hours=1)
+    recientes = (
+        db.execute(
+            select(SolicitudAsistencia.creado_en)
+            .where(
+                SolicitudAsistencia.solicitante_id == usuario.id,
+                SolicitudAsistencia.creado_en >= desde,
+            )
+            .order_by(SolicitudAsistencia.creado_en)
+        )
+        .scalars()
+        .all()
+    )
+    if len(recientes) >= maximo:
+        libera = recientes[len(recientes) - maximo] + timedelta(hours=1)
+        espera = max(int((libera - ahora()).total_seconds()) + 1, 1)
+        raise HTTPException(
+            429,
+            f"Ya enviaste {maximo} pedidos en la última hora. Si es una urgencia, llamá al 103; "
+            f"podés volver a enviar en unos {max(espera // 60, 1)} minutos.",
+            headers={"Retry-After": str(espera)},
+        )
+
+
 @router.post("", status_code=201)
 def crear(
     datos: SolicitudIn,
@@ -113,6 +146,7 @@ def crear(
         if previa is not None:
             response.status_code = 200
             return solicitud_a_dict(previa)
+    _aplicar_cuota(db, usuario)
     solicitud = SolicitudAsistencia(
         solicitante_id=usuario.id,
         origen=datos.origen,
@@ -198,6 +232,25 @@ def _solicitud_visible(db: Session, solicitud_id: int, usuario: Usuario) -> Soli
     return s
 
 
+def _aplicar_tope_almacenamiento(db: Session, usuario: Usuario, nuevos: int) -> None:
+    """Tope de bytes de adjuntos por persona (``ADJUNTOS_MAX_BYTES_POR_USUARIO``)."""
+    usado = db.execute(
+        text(
+            "SELECT COALESCE(SUM((a->>'bytes')::bigint), 0) FROM solicitudes_asistencia s, "
+            "jsonb_array_elements(COALESCE(s.adjuntos, '[]'::jsonb)) a "
+            "WHERE (a->>'subido_por')::int = :u"
+        ),
+        {"u": usuario.id},
+    ).scalar_one()
+    tope = get_settings().adjuntos_max_bytes_por_usuario
+    if int(usado) + nuevos > tope:
+        raise HTTPException(
+            413,
+            f"Alcanzaste el máximo de {tope // (1024 * 1024)} MB de fotos adjuntas. "
+            "Si necesitás enviar más, avisá por texto o por teléfono.",
+        )
+
+
 @router.post("/{solicitud_id}/adjuntos", status_code=201)
 def subir_adjunto(
     solicitud_id: int,
@@ -220,6 +273,7 @@ def subir_adjunto(
     mime = tipo_por_firma(contenido)
     if mime is None:
         raise HTTPException(415, "El contenido no es una imagen JPEG, PNG o WebP válida")
+    _aplicar_tope_almacenamiento(db, usuario, len(contenido))
     existentes = list(s.adjuntos or [])
     if len(existentes) >= cfg.adjuntos_max_por_solicitud:
         raise HTTPException(

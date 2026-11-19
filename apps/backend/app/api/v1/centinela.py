@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core import auditoria, constantes
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
+from app.core.tiempo import hoy_ar
 from app.db.modelos import BitacoraDecision, Estacion, LecturaLluvia, RolOperativo, Usuario
 from app.db.sesion import get_db
 from app.domain import ganaderia, hidrografia, verificador
@@ -292,4 +293,4 @@ def calculo_ganadero(datos: CalculoGanaderoIn, _: Usuario = Depends(usuario_actu
         traslado_colmenas=datos.colmenas.traslado if datos.colmenas else "vehicular",
         superficie_albardon_m2=datos.superficie_albardon_m2,
     )
-    return ganaderia.calcular(entrada) | {"fecha_dato": date.today().isoformat()}
+    return ganaderia.calcular(entrada) | {"fecha_dato": hoy_ar().isoformat()}

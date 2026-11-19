@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${POSTGRES_DB:-evacuaciones}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Solo en la máquina local: la base nunca se publica hacia la red.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./apps/backend/db/init:/docker-entrypoint-initdb.d:ro
@@ -25,7 +26,12 @@ services:
       PERMITIR_DATOS_POST_CORTE: ${PERMITIR_DATOS_POST_CORTE:-false}
       JWT_SECRET: ${JWT_SECRET:-}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      # En el demo local (http://localhost) la cookie no puede ser Secure; con ENTORNO=produccion
+      # el backend la fuerza a Secure y oculta /docs y /openapi.json.
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ENTORNO: ${ENTORNO:-desarrollo}
+      # Usuarios y datos de demostración: encendido en el demo; poner SEED_DEMO=false en producción.
+      SEED_DEMO: ${SEED_DEMO:-true}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-}
       DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
       CANAL_HMAC_SECRET: ${CANAL_HMAC_SECRET:-}

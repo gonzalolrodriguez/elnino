@@ -1,5 +1,7 @@
 """Autenticación: registro, login, refresh rotativo, logout y /auth/yo."""
 
+import time
+
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
 from geoalchemy2 import WKTElement
 from sqlalchemy import select
@@ -37,6 +39,42 @@ COOKIE_REFRESH = "refresh_token"
 RUTA_COOKIE = "/api/v1/auth"
 
 
+def _credenciales() -> HTTPException:
+    return HTTPException(401, "Correo o contraseña incorrectos")
+
+
+# Correos inexistentes: no se escribe una fila de auditoría por intento (serializaría todo el
+# sistema por el candado de la cadena y permitiría inflar la bitácora). Se agrega: como mucho una
+# fila por IP y ventana, con el total de intentos acumulados.
+_VENTANA_INEXISTENTES_S = 60.0
+_inexistentes: dict[str, tuple[float, int]] = {}
+
+
+def _auditar_correo_inexistente(db: Session, ip: str | None) -> None:
+    ahora_s = time.monotonic()
+    clave = ip or "desconocida"
+    inicio, n = _inexistentes.get(clave, (ahora_s, 0))
+    if ahora_s - inicio >= _VENTANA_INEXISTENTES_S:
+        inicio, n = ahora_s, 0
+    n += 1
+    _inexistentes[clave] = (inicio, n)
+    if n == 1:
+        auditoria.registrar(
+            db,
+            "login_fallido",
+            "auth",
+            None,
+            ip,
+            f"usuario_inexistente (agregado {_VENTANA_INEXISTENTES_S:g}s)",
+        )
+        db.commit()
+    if len(_inexistentes) > 5000:  # acota la memoria
+        for k in [
+            k for k, (t, _) in _inexistentes.items() if ahora_s - t >= _VENTANA_INEXISTENTES_S
+        ]:
+            _inexistentes.pop(k, None)
+
+
 def _punto(lon: float, lat: float) -> WKTElement:
     return WKTElement(f"POINT({lon} {lat})", srid=SRID)
 
@@ -57,7 +95,7 @@ def _abrir_sesion(
         refresh,
         max_age=s.refresh_token_dias * 86400,
         httponly=True,
-        secure=s.cookie_secure,
+        secure=s.cookie_segura,
         samesite="strict",
         path=RUTA_COOKIE,
     )
@@ -156,21 +194,23 @@ def login(
     # Se verifica siempre (hash de relleno si no existe) para igualar tiempos de respuesta.
     correcto = verificar_password(datos.password, usuario.hash_password if usuario else None)
 
+    # Respuesta única (401 genérico) para correo inexistente, contraseña errónea, cuenta inactiva o
+    # bloqueada: no se distingue ninguna de ellas (sin enumeración de cuentas). El 429 sale solo
+    # del limitador por IP (``@limiter.limit``).
     if usuario is None:
-        auditoria.registrar(db, "login_fallido", "auth", None, ip, "usuario_inexistente")
-        db.commit()
-        raise HTTPException(401, "Correo o contraseña incorrectos")
+        _auditar_correo_inexistente(db, ip)
+        raise _credenciales()
 
     if bloqueo.esta_bloqueado(db, usuario.id, ip):
         auditoria.registrar(db, "login_bloqueado", "auth", usuario.id, ip)
         db.commit()
-        raise HTTPException(429, "Demasiados intentos fallidos desde esta red; probá más tarde")
+        raise _credenciales()
 
     # Límite por cuenta: con fallos masivos (muchas IP) solo pasan las redes con login previo.
     if bloqueo.cuenta_saturada(db, usuario.id) and not bloqueo.red_conocida(db, usuario.id, ip):
         auditoria.registrar(db, "login_bloqueado_cuenta", "auth", usuario.id, ip)
         db.commit()
-        raise HTTPException(429, "Demasiados intentos fallidos contra esta cuenta; probá más tarde")
+        raise _credenciales()
 
     if not correcto or usuario.estado != "activo":
         intentos, bloqueado = bloqueo.registrar_fallo(db, usuario.id, ip)
@@ -178,11 +218,10 @@ def login(
             auditoria.registrar(
                 db, "cuenta_bloqueada", "auth", usuario.id, ip, f"intento={intentos}"
             )
-            db.commit()
-            raise HTTPException(429, "Demasiados intentos fallidos desde esta red; probá más tarde")
-        auditoria.registrar(db, "login_fallido", "auth", usuario.id, ip, f"intento={intentos}")
+        else:
+            auditoria.registrar(db, "login_fallido", "auth", usuario.id, ip, f"intento={intentos}")
         db.commit()
-        raise HTTPException(401, "Correo o contraseña incorrectos")
+        raise _credenciales()
 
     bloqueo.limpiar(db, usuario.id, ip)
     usuario.ultimo_login = ahora()
@@ -211,26 +250,28 @@ def refresh(
     if sesion is None:
         raise invalido
 
-    if sesion.revocado_en is not None:
-        # Reutilización de un token ya rotado o cerrado: se asume robo y cae toda la familia.
-        sesiones.revocar_familia(db, sesion.familia)
-        auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
-        db.commit()
-        difusor.desconectar_usuario(sesion.usuario_id)  # se asume robo: caen también los sockets
+    usuario = db.get(Usuario, sesion.usuario_id)
+    if usuario is None or usuario.estado != "activo":
         raise invalido
 
-    usuario = db.get(Usuario, sesion.usuario_id)
-    if sesion.expira_en <= ahora() or usuario is None or usuario.estado != "activo":
+    if sesion.revocado_en is not None:
+        # Token ya rotado hace instantes (reintento de red, otra pestaña): se entrega una sesión
+        # sucesora de la misma familia en vez de cerrar todo. Fuera de la ventana de gracia, o con
+        # la familia cerrada, es una reutilización y se asume robo.
+        if sesiones.en_gracia(db, sesion):
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip, "refresh_gracia")
+        return _reutilizado(db, sesion, ip, invalido)
+
+    if sesion.expira_en <= ahora():
         raise invalido
 
     # Se marca el token como usado de forma atómica ANTES de emitir el nuevo: si dos solicitudes
-    # llegan a la vez con el mismo refresh, solo una lo consume; la otra es una reutilización.
+    # llegan a la vez con el mismo refresh, solo una lo consume; la otra cae en la gracia.
     if not sesiones.consumir(db, sesion.id):
-        sesiones.revocar_familia(db, sesion.familia)
-        auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
-        db.commit()
-        difusor.desconectar_usuario(sesion.usuario_id)  # se asume robo: caen también los sockets
-        raise invalido
+        db.refresh(sesion)
+        if sesiones.en_gracia(db, sesion):
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip, "refresh_gracia")
+        return _reutilizado(db, sesion, ip, invalido)
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
     )
@@ -238,6 +279,22 @@ def refresh(
     auditoria.registrar(db, "refresh", "auth", usuario.id, ip)
     db.commit()
     return salida
+
+
+def _sucesora(db, sesion, usuario, response, x_cliente, ip, accion) -> SesionOut:
+    """Sesión nueva de la misma familia para un token rotado dentro de la ventana de gracia."""
+    salida, _ = _abrir_sesion(db, usuario, response, _es_movil(x_cliente), familia=sesion.familia)
+    auditoria.registrar(db, accion, "auth", usuario.id, ip)
+    db.commit()
+    return salida
+
+
+def _reutilizado(db, sesion, ip, invalido):
+    sesiones.revocar_familia(db, sesion.familia)
+    auditoria.registrar(db, "refresh_reutilizado", "auth", sesion.usuario_id, ip)
+    db.commit()
+    difusor.desconectar_usuario(sesion.usuario_id)  # se asume robo: caen también los sockets
+    raise invalido
 
 
 @router.post("/logout")
@@ -255,6 +312,7 @@ def logout(
             sesiones.revocar_familia(db, sesion.familia)
             auditoria.registrar(db, "logout", "auth", sesion.usuario_id, ip_cliente(request))
             db.commit()
+            difusor.desconectar_usuario(sesion.usuario_id)  # cierra también sus WebSockets
     response.delete_cookie(COOKIE_REFRESH, path=RUTA_COOKIE)
     return {"mensaje": "Sesión cerrada"}
 

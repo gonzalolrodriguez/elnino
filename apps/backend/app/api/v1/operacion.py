@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core import auditoria
 from app.core.eventos import difusor
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
+from app.core.tiempo import hoy_ar
 from app.db.base import ahora
 from app.db.modelos import (
     Cuadrilla,
@@ -154,10 +155,16 @@ def listar_tareas(
     return {"tareas": [_tarea_a_dict(t) for t in db.execute(consulta).scalars()]}
 
 
+class ItemChecklist(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    item: str = Field(min_length=1, max_length=200)
+    hecho: bool
+
+
 class TareaPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     estado: Literal["pendiente", "en_curso", "completada", "cancelada"] | None = None
-    checklist: list[dict] | None = Field(default=None, max_length=50)
+    checklist: list[ItemChecklist] | None = Field(default=None, max_length=50)
     cuadrilla_id: int | None = None
 
 
@@ -182,10 +189,7 @@ def actualizar_tarea(
             raise HTTPException(409, f"Transición inválida: {tarea.estado} → {datos.estado}")
         tarea.estado = datos.estado
     if datos.checklist is not None:
-        for item in datos.checklist:
-            if set(item) - {"item", "hecho"} or not isinstance(item.get("hecho"), bool):
-                raise HTTPException(422, "Cada ítem del checklist es {item: texto, hecho: boolean}")
-        tarea.checklist = datos.checklist
+        tarea.checklist = [i.model_dump() for i in datos.checklist]
     if datos.cuadrilla_id is not None:
         if db.get(Cuadrilla, datos.cuadrilla_id) is None:
             raise HTTPException(422, "Cuadrilla inexistente")
@@ -242,7 +246,7 @@ def emitir(
         datos.tipo,
         sectores,
         datos.fundamento.strip(),
-        datos.fecha_simulada or date.today(),
+        datos.fecha_simulada or hoy_ar(),
     )
     auditoria.registrar(
         db,
