@@ -93,6 +93,7 @@ class _TextoWA(_Base):
 
 class _MensajeWA(_Base):
     id: str | None = None
+    remitente: str | None = Field(default=None, alias="from", max_length=40)
     timestamp: str | None = None
     type: str = "text"
     text: _TextoWA | None = None
@@ -173,6 +174,7 @@ class _Mensaje:
     texto: str
     momento: datetime
     mensaje_id: str | None = None
+    remitente: str | None = None
 
 
 def _clasificar(texto: str) -> str:
@@ -219,7 +221,7 @@ def _procesar_uno(db: Session, m: _Mensaje, canal: str, eventos: list) -> dict:
     """Procesa un mensaje dentro de un savepoint: un error o duplicado no afecta a los demás."""
     tipo = _clasificar(m.texto)
     if tipo == "confirmacion":  # SI|NO|PROBLEMA <código> del evacuado
-        return srv_evac.procesar_respuesta_sms(db, m.texto, canal, eventos)
+        return srv_evac.procesar_respuesta_sms(db, m.texto, canal, m.remitente, eventos)
     if tipo == "menu":
         palabra = norm.palabra_clave(m.texto)
         return {
@@ -380,7 +382,7 @@ def whatsapp(cuerpo: bytes = Depends(cuerpo_firmado), db: Session = Depends(get_
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, "Payload con formato de WhatsApp inválido") from exc
     mensajes = [
-        _Mensaje(m.text.body, _momento(m.timestamp), m.id)
+        _Mensaje(m.text.body, _momento(m.timestamp), m.id, m.remitente)
         for e in datos.entry
         for c in e.changes
         for m in c.value.messages
@@ -404,7 +406,7 @@ def sms(cuerpo: bytes = Depends(cuerpo_firmado), db: Session = Depends(get_db)) 
                 f"{datos.remitente}|{datos.texto}|{datos.recibido_en.isoformat()}".encode()
             ).hexdigest()[:40]
         )
-    return _procesar(db, [_Mensaje(datos.texto, momento, mid)], "sms_sim")
+    return _procesar(db, [_Mensaje(datos.texto, momento, mid, datos.remitente)], "sms_sim")
 
 
 @router.post("/ivr-sim", status_code=201)

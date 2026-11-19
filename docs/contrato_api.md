@@ -350,9 +350,15 @@ Las tareas canceladas no cuentan como evacuaciones. Una tarea cerrada por `PATCH
 | GET | `/tareas/{id}/cierre/adjuntos/{n}` | cuadrilla de la tarea y mandos | Bytes de la foto (`private, no-store`); auditado |
 | GET | `/tareas/{id}/constancia` | cuadrilla de la tarea y mandos | Devuelve el mismo objeto que un ítem de `GET /evacuaciones`; 404 si no hay constancia; auditado |
 | GET | `/evacuaciones?estado=&sector_id=&limite=&offset=` | mandos | Listado con estado derivado. `estado` fuera de la lista: 422. Responde `{ "evacuaciones", "total", "limite", "offset", "categoria", "fuente", "fecha_dato" }`; auditado. Ciudadanía, productores y cuadrilla: 403 |
-| POST | `/mi/confirmaciones` | ciudadanía y productores | Responde la consulta propia. Indicar `solicitud_id` **o** `codigo` (ambos o ninguno: 422). Solicitud o código ajenos o inexistentes: 404. 201 la primera vez; misma respuesta de nuevo: 200 con `"repetida": true`; otra respuesta distinta: 409 (la respuesta es una sola, para conservar la traza) |
+| POST | `/mi/confirmaciones` | ciudadanía y productores | Responde la consulta propia (el código de la app no vence; el de SMS sí, ver abajo). Indicar `solicitud_id` **o** `codigo` (ambos o ninguno: 422). Solicitud o código ajenos o inexistentes: 404. 201 la primera vez; misma respuesta de nuevo: 200 con `"repetida": true`; otra respuesta distinta: 409 (la respuesta es una sola, para conservar la traza) |
 
-Los canales simulados (`sms-sim`, `whatsapp-sim`, `ivr-sim`) resuelven `SI <codigo>`, `NO <codigo>` y `PROBLEMA <codigo> <texto>` (mayúsculas, minúsculas y tildes indistintas) con una respuesta fija. El código tiene 6 caracteres (consonantes y dígitos 2-9, siempre con al menos un dígito) y llega en la notificación; un texto libre como `no quedan víveres` **no** se toma como confirmación. Resultado: `{ "tipo": "confirmacion", "estado": "creado" | "duplicado" | "codigo_invalido", "respuesta": "<texto fijo>" }`.
+**Confirmación por SMS.** Los canales simulados (`sms-sim`, `whatsapp-sim`; el IVR no trae remitente) resuelven `SI <codigo>`, `NO <codigo>` y `PROBLEMA <codigo> <texto>` (mayúsculas, minúsculas y tildes indistintas). El código tiene **8 caracteres** (consonantes y dígitos 2-9, siempre con al menos un dígito); llega en la notificación y **vence a las `vigencia_codigo_horas` (SUPUESTO: 72 h)**. Un texto libre como `no quedan víveres` no se toma como confirmación.
+
+La respuesta **solo tiene efecto** si (1) el código existe, (2) no venció y (3) el remitente (`remitente` de `sms-sim`; `from` del mensaje de `whatsapp-sim`) coincide con el teléfono registrado del solicitante en su grupo familiar (se compara por los últimos 10 dígitos; sin teléfono registrado no hay efecto). **En todos los casos** (código inexistente, vencido, remitente distinto, ya respondida, remitente bloqueado o éxito) la API devuelve lo mismo, para no revelar qué códigos existen: `{ "tipo": "confirmacion", "estado": "recibido", "respuesta": "Recibimos tu respuesta. Si corresponde a un pedido tuyo, la vamos a registrar. Si estás en peligro, llamá al 103. [PROTOTIPO: no es una herramienta oficial]" }`. **Límite:** cada intento fallido queda en la bitácora de accesos (`confirmacion_sms_invalida`, con el remitente hasheado) y, a partir de `confirmacion_sms_invalidos_por_hora` (SUPUESTO: 5) por remitente y hora, sus mensajes se ignoran (`confirmacion_sms_bloqueada`). Un éxito se audita como `confirmacion_evacuado`. La app (titular autenticado) no cambia.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/evacuaciones/{tarea_id}/confirmacion/reabrir` | mandos | Reabre una confirmación **ya respondida** para corregirla: borra la respuesta, genera un **código nuevo** (vigencia renovada) y notifica de nuevo al solicitante. Cuerpo opcional `{ "motivo": "hasta 200 caracteres" }`. 200 `{ "tarea_id", "estado", "respuesta_previa", "reabierta": true, "nota" }`; sin confirmación: 404; todavía sin responder: 409; otros roles: 403. Queda en la bitácora (`confirmacion_reabierta`, con la respuesta previa). |
 
 `POST /tareas/{id}/cierre`, cuerpo (`extra` prohibido):
 
@@ -387,14 +393,14 @@ Los canales simulados (`sms-sim`, `whatsapp-sim`, `ivr-sim`) resuelven `SI <codi
 
 `origen.tipo` es `solicitud` (coordenadas del pedido) o `sector` (centro del sector, para tareas de una orden o pedidos sin coordenadas). `constancia`, `confirmacion` y `origen` pueden ser `null`. `discrepancia` es `{ "motivos": ["evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro"] }` o `null`.
 
-`POST /mi/confirmaciones`, cuerpo `{ "solicitud_id": 12 | "codigo": "K7M2QX", "respuesta": "si|no|problema", "comentario"?: "hasta 500 caracteres" }`; respuesta `{ "id", "tarea_id", "solicitud_id", "respuesta", "comentario", "canal": "app", "respondida_en", "repetida", "nota" }`. No revela el estado derivado ni ubicaciones. `GET /mi/confirmaciones` lista las consultas propias.
+`POST /mi/confirmaciones`, cuerpo `{ "solicitud_id": 12 | "codigo": "K7M2QXV4", "respuesta": "si|no|problema", "comentario"?: "hasta 500 caracteres" }`; respuesta `{ "id", "tarea_id", "solicitud_id", "respuesta", "comentario", "canal": "app", "respondida_en", "repetida", "nota" }`. No revela el estado derivado ni ubicaciones. `GET /mi/confirmaciones` lista las consultas propias.
 
 **Notificación que recibe el solicitante** al cerrarse la tarea (solo si el pedido tiene solicitante), en `GET /mi/notificaciones`:
 
 ```json
 { "id": 9, "orden_id": null, "tipo": "confirmacion_evacuacion", "leida": false, "creada_en": "...",
-  "mensaje": "¿Llegaste a <centro>? ... Respondé en la app o por SMS: SI K7M2QX, NO K7M2QX o PROBLEMA K7M2QX y el detalle. [PROTOTIPO: no es una herramienta oficial]",
-  "datos": { "tarea_id": 7, "solicitud_id": 12, "codigo": "K7M2QX", "centro_nombre": "...", "respuestas": ["si", "no", "problema"] } }
+  "mensaje": "¿Llegaste a <centro>? ... Respondé en la app o por SMS desde tu teléfono registrado: SI K7M2QXV4, NO K7M2QXV4 o PROBLEMA K7M2QXV4 y el detalle. [PROTOTIPO: no es una herramienta oficial]",
+  "datos": { "tarea_id": 7, "solicitud_id": 12, "codigo": "K7M2QXV4", "centro_nombre": "...", "respuestas": ["si", "no", "problema"] } }
 ```
 
 Los operadores reciben `tipo: "discrepancia"` con `datos: { "tarea_id", "sector_id", "motivos" }`. Eventos WebSocket `constancia` (`{ "tarea_id", "sector_id", "estado", "personas_trasladadas"?, "motivo": "cierre|confirmacion" }`) y `discrepancia` (`{ "tarea_id", "sector_id", "motivos" }`): solo para mandos y cuadrilla, sin ubicaciones.
@@ -508,7 +514,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (59 rutas y 69 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (60 rutas y 70 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='

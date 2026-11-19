@@ -27,11 +27,11 @@ MOTIVO_LEJOS = "destino_lejos_del_centro"
 # Sin vocales ni 0/1/O/I/L: el código no forma palabras y se dicta sin confusión.
 _LETRAS = "BCDFGHJKMNPQRSTVWXYZ"
 _DIGITOS = "23456789"
-LARGO_CODIGO = 6
+LARGO_CODIGO = 8
 
 
 def generar_codigo() -> str:
-    """Código corto para responder por SMS: 6 caracteres con al menos una letra y un dígito.
+    """Código corto para responder por SMS: 8 caracteres con al menos una letra y un dígito.
 
     El dígito obligatorio permite distinguirlo de una palabra cualquiera del texto libre
     (``NO QUEDAN víveres`` no es una confirmación).
@@ -76,7 +76,7 @@ def estado_evacuacion(
     return "cerrada_cuadrilla", []
 
 
-# ---- respuesta por SMS -----------------------------------------------------------------------
+# ---- respuesta por SMS --------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -103,3 +103,22 @@ def parsear_respuesta_sms(texto: str) -> RespuestaSMS | None:
         return None
     comentario = texto[m.start(3) : m.end(3)].strip() if m.group(3) else ""
     return RespuestaSMS(m.group(1), m.group(2).upper(), comentario[:500] or None)
+
+
+# ---- teléfonos --------------------------------------------
+
+
+def normalizar_telefono(texto: str | None) -> str:
+    """Solo los dígitos (``+54 9 370 412-3456`` -> ``5493704123456``)."""
+    return "".join(c for c in (texto or "") if c.isdigit())
+
+
+def telefonos_coinciden(a: str | None, b: str | None) -> bool:
+    """Compara dos teléfonos por sus últimos 10 dígitos (tolera prefijo de país, 9 y 0/15).
+
+    Un número de menos de 8 dígitos nunca coincide: no identifica a nadie.
+    """
+    da, db = normalizar_telefono(a), normalizar_telefono(b)
+    if len(da) < 8 or len(db) < 8:
+        return False
+    return da[-10:] == db[-10:]

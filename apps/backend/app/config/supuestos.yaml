@@ -82,3 +82,9 @@ acceso_red_vial_buffer_m:
 distancia_max_destino_m:
   valor: 500
   fuente: SUPUESTO (si el destino GPS de la constancia queda a más de esta distancia del centro elegido, la evacuación se marca "con discrepancia" para revisar; no es una acusación)
+vigencia_codigo_horas:
+  valor: 72
+  fuente: SUPUESTO (horas durante las que el código de confirmación sirve por SMS; el operador puede reabrir la consulta con un código nuevo)
+confirmacion_sms_invalidos_por_hora:
+  valor: 5
+  fuente: SUPUESTO (intentos de confirmación por SMS fallidos por remitente y hora; superado el tope se ignoran los mensajes de ese remitente)

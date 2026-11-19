@@ -1842,6 +1842,72 @@
         }
       }
     },
+    "/api/v1/evacuaciones/{tarea_id}/confirmacion/reabrir": {
+      "post": {
+        "tags": [
+          "evacuaciones"
+        ],
+        "summary": "Reabrir Confirmacion",
+        "description": "Un operador reabre una confirmación respondida para que el evacuado la corrija.",
+        "operationId": "reabrir_confirmacion_api_v1_evacuaciones__tarea_id__confirmacion_reabrir_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tarea_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tarea Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReaperturaIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Datos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Reabrir Confirmacion Api V1 Evacuaciones  Tarea Id  Confirmacion Reabrir Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mi/confirmaciones": {
       "get": {
         "tags": [
@@ -4199,6 +4265,25 @@
           "lat"
         ],
         "title": "Punto"
+      },
+      "ReaperturaIn": {
+        "properties": {
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReaperturaIn"
       },
       "RecomendacionIn": {
         "properties": {

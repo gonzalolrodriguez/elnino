@@ -393,6 +393,41 @@ def listar_evacuaciones(
     }
 
 
+class ReaperturaIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    motivo: str | None = Field(default=None, max_length=200)
+
+
+@router.post("/evacuaciones/{tarea_id}/confirmacion/reabrir")
+def reabrir_confirmacion(
+    tarea_id: int,
+    request: Request,
+    datos: ReaperturaIn | None = None,
+    usuario: Usuario = Depends(requiere_rol(*_MANDOS)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Un operador reabre una confirmación respondida para que el evacuado la corrija."""
+    k, previa, efectos = srv.reabrir_confirmacion(db, tarea_id)
+    motivo = ((datos.motivo if datos else None) or "").strip()
+    auditoria.registrar(
+        db,
+        "confirmacion_reabierta",
+        f"tareas/{tarea_id}/confirmacion",
+        usuario.id,
+        ip_cliente(request),
+        f"respuesta_previa={previa}" + (f"; motivo={motivo}" if motivo else ""),
+    )
+    db.commit()
+    _publicar(efectos.eventos)
+    return {
+        "tarea_id": tarea_id,
+        "estado": efectos.estado,
+        "respuesta_previa": previa,
+        "reabierta": True,
+        "nota": "El evacuado recibió una consulta nueva con un código nuevo.",
+    }
+
+
 # ---- confirmación del evacuado ----------------------------------------------
 
 

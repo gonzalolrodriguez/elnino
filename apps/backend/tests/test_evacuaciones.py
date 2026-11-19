@@ -5,19 +5,28 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from datetime import timedelta
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.api.v1.canales import firmar
 from app.config.settings import get_settings
-from app.db.modelos import AuditoriaAcceso, CentroRecepcion, IntegranteCuadrilla, Usuario
+from app.db.base import ahora
+from app.db.modelos import (
+    AuditoriaAcceso,
+    CentroRecepcion,
+    ConfirmacionEvacuado,
+    IntegranteCuadrilla,
+    Usuario,
+)
 from app.domain import evacuaciones as dom
 from tests.test_operacion import S4, _usuario_nuevo
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 60
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 60
 SECRETO = os.environ["CANAL_HMAC_SECRET"]
+GENERICA = "Recibimos tu respuesta. Si corresponde a un pedido tuyo, la vamos a registrar."
 
 
 @pytest.fixture(autouse=True)
@@ -89,8 +98,15 @@ def _cierre(centro, **extra) -> dict:
     }
 
 
+def _telefono_nuevo() -> str:
+    return f"+54 9 370 4{uuid.uuid4().int % 10**6:06d}"
+
+
 def _cerrar(client, como, db, quien="cuadrilla", **extra_cuerpo):
-    p = _pedido_con_tarea(client, como, db)
+    tel = _telefono_nuevo()
+    _, h = _usuario_nuevo(client, telefono=tel)
+    p = _pedido_con_tarea(client, como, db, h_solicitante=h)
+    p["tel"] = tel
     r = client.post(
         f"/api/v1/tareas/{p['tarea_id']}/cierre",
         json=_cierre(_centro(db), **extra_cuerpo),
@@ -114,8 +130,8 @@ def _estado(client, como, tarea_id) -> dict:
     return next(e for e in items["evacuaciones"] if e["tarea_id"] == tarea_id)
 
 
-def _sms(client, texto: str):
-    cuerpo = json.dumps({"remitente": "+5400000000", "texto": texto}).encode()
+def _sms(client, texto: str, remitente: str = "+5400000000"):
+    cuerpo = json.dumps({"remitente": remitente, "texto": texto}).encode()
     return client.post(
         "/api/v1/canales/sms-sim",
         content=cuerpo,
@@ -143,7 +159,7 @@ def test_estado_derivado_puro():
 
 def test_parser_sms_y_codigos():
     c = dom.generar_codigo()
-    assert len(c) == 6 and any(x.isdigit() for x in c) and any(x.isalpha() for x in c)
+    assert len(c) == 8 and any(x.isdigit() for x in c) and any(x.isalpha() for x in c)
     r = dom.parsear_respuesta_sms(f"  Sí {c.lower()} ")
     assert r and r.respuesta == "si" and r.codigo == c and r.comentario is None
     r = dom.parsear_respuesta_sms(f"PROBLEMA {c} se cortó el camino")
@@ -178,7 +194,7 @@ def test_cierre_feliz_con_constancia_y_notificacion(client, como, db):
     assert (
         n["datos"]["solicitud_id"] == p["solicitud_id"] and n["datos"]["tarea_id"] == p["tarea_id"]
     )
-    assert len(n["datos"]["codigo"]) == 6 and n["datos"]["codigo"] in n["mensaje"]
+    assert len(n["datos"]["codigo"]) == 8 and n["datos"]["codigo"] in n["mensaje"]
     # Los mandos la leen y la lectura queda auditada.
     antes = db.execute(
         select(func.count())
@@ -416,7 +432,7 @@ def test_confirmacion_por_codigo_y_ajenos(client, como, db):
         == 404
     )
     assert (
-        client.post(url, json={"codigo": "ZZZZZ9", "respuesta": "si"}, headers=p["h"]).status_code
+        client.post(url, json={"codigo": "ZZZZZZZ9", "respuesta": "si"}, headers=p["h"]).status_code
         == 404
     )
     # Validaciones: falta un identificador, o vienen los dos; respuesta fuera de la lista.
@@ -453,39 +469,157 @@ def test_confirmacion_por_codigo_y_ajenos(client, como, db):
     assert e["confirmacion"]["comentario"] == "Falta agua"
 
 
-def test_confirmacion_por_sms(client, como, db):
+def _estado_sms(r) -> dict:
+    assert r.status_code == 201, r.text
+    return r.json()["resultados"][0]
+
+
+def test_confirmacion_por_sms_del_telefono_registrado(client, como, db):
     p, _ = _cerrar(client, como, db)
     codigo = _codigo(client, p["h"])
-    r = _sms(client, f"SI {codigo}")
-    assert r.status_code == 201, r.text
-    res = r.json()["resultados"][0]
-    assert res["tipo"] == "confirmacion" and res["estado"] == "creado"
-    assert "Gracias por confirmar" in res["respuesta"]
+    # El mismo teléfono escrito de otra forma (sin +54 9, con guiones) también coincide.
+    tel_local = p["tel"].replace("+54 9 ", "0").replace(" ", "-")
+    res = _estado_sms(_sms(client, f"SI {codigo}", tel_local))
+    assert res == {"tipo": "confirmacion", "estado": "recibido", "respuesta": res["respuesta"]}
+    assert res["respuesta"].startswith(GENERICA)
     e = _estado(client, como, p["tarea_id"])
     assert e["estado"] == "verificada" and e["confirmacion"]["canal"] == "sms_sim"
-    # Repetido: respuesta fija de "ya registrada", sin cambiar nada.
-    rep = _sms(client, f"NO {codigo}").json()["resultados"][0]
-    assert rep["estado"] == "duplicado"
+    # Repetido con otra respuesta: misma respuesta genérica, sin cambiar nada.
+    rep = _estado_sms(_sms(client, f"NO {codigo}", p["tel"]))
+    assert rep["respuesta"] == res["respuesta"]
     assert _estado(client, como, p["tarea_id"])["estado"] == "verificada"
-    # Código que no existe.
-    mal = _sms(client, "SI ZZZZZ9").json()["resultados"][0]
-    assert mal["estado"] == "codigo_invalido" and "No encontramos ese código" in mal["respuesta"]
+
+
+def test_sms_de_otro_remitente_no_tiene_efecto_y_responde_igual(client, como, db):
+    p, _ = _cerrar(client, como, db)
+    codigo = _codigo(client, p["h"])
+    ok_texto = _estado_sms(_sms(client, "SI ZZZZZZZ9", p["tel"]))["respuesta"]  # código inexistente
+    ajeno = _estado_sms(_sms(client, f"NO {codigo}", _telefono_nuevo()))
+    sin_remitente = _estado_sms(_sms(client, f"NO {codigo}", ""))
+    assert ajeno["respuesta"] == sin_remitente["respuesta"] == ok_texto  # sin pistas
+    assert ajeno["estado"] == "recibido"
+    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
+    # Y quien sí es el titular puede confirmar después.
+    _sms(client, f"SI {codigo}", p["tel"])
+    assert _estado(client, como, p["tarea_id"])["estado"] == "verificada"
+
+
+def test_solicitante_sin_telefono_no_confirma_por_sms(client, como, db):
+    _, h = _usuario_nuevo(client)  # sin teléfono registrado
+    p = _pedido_con_tarea(client, como, db, h_solicitante=h)
+    client.post(
+        f"/api/v1/tareas/{p['tarea_id']}/cierre",
+        json=_cierre(_centro(db)),
+        headers={**como("cuadrilla"), **_clave()},
+    )
+    codigo = _codigo(client, h)
+    _estado_sms(_sms(client, f"SI {codigo}", "+54 9 370 4123456"))
+    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
+    # Por la app, el titular autenticado sí puede.
+    r = client.post(
+        "/api/v1/mi/confirmaciones", json={"codigo": codigo, "respuesta": "si"}, headers=h
+    )
+    assert r.status_code == 201
 
 
 def test_sms_no_y_problema_marcan_discrepancia(client, como, db):
     p, _ = _cerrar(client, como, db)
     cod = _codigo(client, p["h"])
-    res = _sms(client, f"PROBLEMA {cod} el camino estaba cortado").json()["resultados"][0]
-    assert res["estado"] == "creado" and "problema" in res["respuesta"]
+    _estado_sms(_sms(client, f"PROBLEMA {cod} el camino estaba cortado", p["tel"]))
     e = _estado(client, como, p["tarea_id"])
     assert e["estado"] == "con_discrepancia"
     assert e["confirmacion"]["comentario"] == "el camino estaba cortado"
     p2, _ = _cerrar(client, como, db)
-    assert _sms(client, f"no {_codigo(client, p2['h'])}").status_code == 201
+    _estado_sms(_sms(client, f"no {_codigo(client, p2['h'])}", p2["tel"]))
     assert _estado(client, como, p2["tarea_id"])["discrepancia"]["motivos"] == [dom.MOTIVO_NO]
     # Un texto libre que empieza con "no" sigue siendo un pedido, no una confirmación.
     libre = _sms(client, "no quedan viveres en el paraje").json()["resultados"][0]
     assert libre["tipo"] != "confirmacion"
+
+
+def test_limite_de_intentos_invalidos_por_remitente(client, como, db):
+    p, _ = _cerrar(client, como, db)
+    codigo = _codigo(client, p["h"])
+    atacante = _telefono_nuevo()
+    for i in range(5):  # 5 intentos inválidos por hora
+        _sms(client, f"SI KKKKKKK{i + 2}", atacante)
+    n_bloq = lambda: db.execute(  # noqa: E731
+        select(func.count())
+        .select_from(AuditoriaAcceso)
+        .where(AuditoriaAcceso.accion == "confirmacion_sms_bloqueada")
+    ).scalar_one()
+    db.expire_all()
+    antes = n_bloq()
+    # Con el límite superado se ignora al remitente, aunque ahora use el código correcto.
+    r = _estado_sms(_sms(client, f"SI {codigo}", atacante))
+    assert r["respuesta"].startswith(GENERICA)
+    db.expire_all()
+    assert n_bloq() == antes + 1
+    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
+    # Otro remitente (el titular) no está bloqueado.
+    _sms(client, f"SI {codigo}", p["tel"])
+    assert _estado(client, como, p["tarea_id"])["estado"] == "verificada"
+
+
+def test_codigo_vencido_por_sms_no_tiene_efecto(client, como, db):
+    p, _ = _cerrar(client, como, db)
+    codigo = _codigo(client, p["h"])
+    db.execute(
+        update(ConfirmacionEvacuado)
+        .where(ConfirmacionEvacuado.tarea_id == p["tarea_id"])
+        .values(creada_en=ahora() - timedelta(hours=73))
+    )
+    db.commit()
+    r = _estado_sms(_sms(client, f"SI {codigo}", p["tel"]))
+    assert r["respuesta"].startswith(GENERICA)
+    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
+    # La app (titular autenticado) no depende de la vigencia del código por SMS.
+    ok = client.post(
+        "/api/v1/mi/confirmaciones",
+        json={"solicitud_id": p["solicitud_id"], "respuesta": "si"},
+        headers=p["h"],
+    )
+    assert ok.status_code == 201
+
+
+def test_operador_reabre_la_confirmacion(client, como, db):
+    p, _ = _cerrar(client, como, db)
+    t = p["tarea_id"]
+    url = f"/api/v1/evacuaciones/{t}/confirmacion/reabrir"
+    # Sin respuesta todavía: 409. Roles: solo mandos.
+    assert client.post(url, headers=como("operador")).status_code == 409
+    client.post(
+        "/api/v1/mi/confirmaciones",
+        json={"solicitud_id": p["solicitud_id"], "respuesta": "no"},
+        headers=p["h"],
+    )
+    assert _estado(client, como, t)["estado"] == "con_discrepancia"
+    for h in (p["h"], como("cuadrilla"), como("ciudadano1")):
+        assert client.post(url, headers=h).status_code == 403
+    assert client.post(url).status_code == 401
+    assert (
+        client.post(
+            "/api/v1/evacuaciones/999999/confirmacion/reabrir", headers=como("operador")
+        ).status_code
+        == 404
+    )
+    r = client.post(url, json={"motivo": "Se equivocó al responder"}, headers=como("operador"))
+    assert r.status_code == 200, r.text
+    assert r.json()["respuesta_previa"] == "no" and r.json()["estado"] == "cerrada_cuadrilla"
+    assert _estado(client, como, t)["confirmacion"]["respuesta"] is None
+    # Recibe un código nuevo y puede corregir su respuesta.
+    nuevo = _codigo(client, p["h"])
+    assert client.get("/api/v1/mi/confirmaciones", headers=p["h"]).json()["pendientes"] == 1
+    _sms(client, f"SI {nuevo}", p["tel"])
+    assert _estado(client, como, t)["estado"] == "verificada"
+    db.expire_all()
+    aud = db.execute(
+        select(AuditoriaAcceso.detalle).where(
+            AuditoriaAcceso.accion == "confirmacion_reabierta",
+            AuditoriaAcceso.recurso == f"tareas/{t}/confirmacion",
+        )
+    ).scalar_one()
+    assert "respuesta_previa=no" in aud
 
 
 def test_destino_lejos_del_centro_es_discrepancia_y_avisa_al_operador(client, como, db):
