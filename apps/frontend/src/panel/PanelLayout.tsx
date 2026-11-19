@@ -1,6 +1,6 @@
-import { Box, Flex, Link, Text, useToast } from "@chakra-ui/react";
-import { useCallback } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Box, Button, Flex, Link, Text, useToast } from "@chakra-ui/react";
+import { useCallback, useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { Layout } from "../components/Layout";
@@ -40,11 +40,16 @@ export function PanelLayout() {
   );
   const ws = useTiempoReal(token, alEvento);
   const estadoWs = ESTADOS_WS[ws];
+  const [abierto, setAbierto] = useState(false);
+  const { pathname } = useLocation();
+  // Por debajo de lg la lista de secciones es plegable: se cierra al cambiar de sección.
+  useEffect(() => setAbierto(false), [pathname]);
+  const actual = SECCIONES.find((s) => ("fin" in s ? pathname === s.to || pathname === `${s.to}/` : pathname.startsWith(s.to)))?.texto ?? "Secciones";
 
   return (
     <Layout contenedor={false} titulo="Panel operativo">
       <EscenarioProvider>
-        <Flex direction={{ base: "column", lg: "row" }} minH="70vh">
+        <Flex direction={{ base: "column", lg: "row" }} minH="70vh" maxW="110rem" mx="auto" w="100%">
           <Box
             as="nav"
             aria-label="Secciones del panel operativo"
@@ -63,18 +68,34 @@ export function PanelLayout() {
             <Text fontSize="sm" color="textoSuave" mb={3}>
               {usuario ? `${usuario.rol}${usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""}` : ""}
             </Text>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              w="100%"
+              justifyContent="space-between"
+              display={{ base: "flex", lg: "none" }}
+              aria-expanded={abierto}
+              aria-controls="secciones-panel"
+              onClick={() => setAbierto((v) => !v)}
+              data-testid="boton-secciones"
+              mb={abierto ? 2 : 0}
+            >
+              <span>Sección: {actual}</span>
+              <span aria-hidden="true">{abierto ? "▲" : "▼"}</span>
+            </Button>
             <Flex
+              id="secciones-panel"
+              display={{ base: abierto ? "flex" : "none", lg: "flex" }}
               as="ul"
               listStyleType="none"
               m={0}
               p={0}
-              direction={{ base: "row", lg: "column" }}
-              overflowX={{ base: "auto", lg: "visible" }}
-              gap={{ base: 1, lg: 0.5 }}
-              pb={{ base: 1, lg: 0 }}
+              direction="column"
+              sx={{ "& > li + li": { marginTop: "0.125rem" } }}
             >
               {SECCIONES.map((s) => (
-                <li key={s.to} style={{ flex: "none" }}>
+                <li key={s.to}>
                   <Link
                     as={NavLink}
                     to={s.to}
@@ -88,8 +109,7 @@ export function PanelLayout() {
                     whiteSpace="nowrap"
                     color="texto"
                     textDecoration="none"
-                    borderLeft={{ lg: "4px solid" }}
-                    borderBottom={{ base: "3px solid", lg: "none" }}
+                    borderLeft="4px solid"
                     borderColor="transparent"
                     transition="background-color 140ms var(--ease-out)"
                     _hover={{ bg: "pizarra.200", color: "texto", textDecoration: "none" }}
@@ -100,8 +120,8 @@ export function PanelLayout() {
                 </li>
               ))}
             </Flex>
-            <Flex align="center" gap={2} mt={4} fontSize="sm" role="status" aria-live="polite" data-testid="estado-ws">
-              <Box as="span" w="10px" h="10px" borderRadius="full" bg={estadoWs.color} aria-hidden="true" />
+            <Flex align="center" mt={4} fontSize="sm" role="status" aria-live="polite" data-testid="estado-ws">
+              <Box as="span" w="10px" h="10px" mr={2} flexShrink={0} borderRadius="full" bg={estadoWs.color} aria-hidden="true" />
               {estadoWs.texto}
             </Flex>
           </Box>

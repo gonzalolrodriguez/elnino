@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useAlertas } from "@/lib/AlertasContext";
 
 const CANAL: Record<string, string> = {
@@ -13,7 +13,7 @@ export default function Alertas() {
   const { estado, notificaciones, canal, recargar, marcarLeida } = useAlertas();
 
   return (
-    <Pantalla>
+    <Pantalla dosColumnas>
       <Titulo>Alertas y órdenes</Titulo>
       <Texto suave>{CANAL[canal]}. Las órdenes las emite una persona con rol autorizado.</Texto>
 
@@ -23,9 +23,10 @@ export default function Alertas() {
         <Vacio texto="No tenés alertas ni órdenes para tu sector." />
       ) : null}
 
+      <Rejilla>
       {notificaciones.map((n) => (
         <Tarjeta key={n.id}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
             <Text style={{ fontWeight: "700", color: n.leida ? COLOR.suave : COLOR.primario }}>
               {n.leida ? "Leída" : "Nueva"}
             </Text>
@@ -38,6 +39,7 @@ export default function Alertas() {
           ) : null}
         </Tarjeta>
       ))}
+      </Rejilla>
     </Pantalla>
   );
 }

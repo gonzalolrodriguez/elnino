@@ -12,12 +12,16 @@ import {
 import { ColaOffline, type DatosSolicitud, type ItemCola, type VaciadoResultado } from "@/lib/cola";
 import { RepositorioSqlite } from "@/lib/colaSqlite";
 import { escucharRed, hayRed } from "@/lib/red";
+import { escucharServidor, obtenerUrlServidor } from "@/lib/servidor";
 import { enviarSolicitud, subirFotoSolicitud } from "@/lib/servicios";
 import { useUsuario } from "@/lib/SesionContext";
 
 type Valor = {
   items: ItemCola[];
+  /** Pendientes que se enviarán: usuario y servidor vigentes. */
   pendientes: number;
+  /** Pendientes que esperan a otro servidor (no se envían a este). */
+  otroServidor: ItemCola[];
   sinRed: boolean;
   /** Guarda la solicitud en la cola local y trata de enviarla de inmediato. */
   enviar: (datos: DatosSolicitud, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean }>;
@@ -32,9 +36,12 @@ const INTERVALO_MS = 15_000;
 export function ColaProvider({ children }: { children: ReactNode }) {
   const usuario = useUsuario();
   const repo = useRef(new RepositorioSqlite()).current;
-  const cola = useMemo(() => new ColaOffline({ repo, hayRed, enviar: enviarSolicitud, subirFoto: subirFotoSolicitud }), [repo]);
+  const cola = useMemo(() => new ColaOffline({ repo, hayRed, enviar: enviarSolicitud, subirFoto: subirFotoSolicitud, servidorActual: obtenerUrlServidor }), [repo]);
   const [items, setItems] = useState<ItemCola[]>([]);
   const [sinRed, setSinRed] = useState(false);
+  // Al cambiar el servidor se recalcula qué ítems corresponden al vigente.
+  const [versionServidor, setVersionServidor] = useState(0);
+  useEffect(() => escucharServidor(() => setVersionServidor((v) => v + 1)), []);
 
   const refrescar = useCallback(async () => {
     setItems(await cola.listar(usuario.id));
@@ -63,7 +70,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
       clearInterval(intervalo);
       quitar();
     };
-  }, [refrescar, vaciar]);
+  }, [refrescar, vaciar, versionServidor]);
 
   const enviar = useCallback<Valor["enviar"]>(
     async (datos, fotoUri) => {
@@ -82,7 +89,8 @@ export function ColaProvider({ children }: { children: ReactNode }) {
   const valor = useMemo<Valor>(
     () => ({
       items,
-      pendientes: items.filter((i) => i.estado === "pendiente").length,
+      pendientes: items.filter((i) => i.estado === "pendiente" && i.servidorUrl === obtenerUrlServidor()).length,
+      otroServidor: items.filter((i) => i.estado === "pendiente" && i.servidorUrl !== obtenerUrlServidor()),
       sinRed,
       enviar,
       reintentar: () => vaciar(true),
@@ -95,7 +103,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
         await refrescar();
       },
     }),
-    [items, sinRed, enviar, vaciar, cola, refrescar, repo, usuario.id],
+    [items, sinRed, enviar, vaciar, cola, refrescar, repo, usuario.id, versionServidor],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

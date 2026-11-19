@@ -4,12 +4,14 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
+import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
+import { ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
 import { MapaSectores } from "../informacion/MapaSectores";
 import { solicitar } from "../lib/api";
-import { decimal, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
+import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
 type Creado = { id: number; email: string };
 type Fila = { clave: number; especie: string; categoria_animal: string; cantidad: string };
@@ -52,7 +54,10 @@ export default function RegistroProductor() {
       if (!enRango(cant, 0, 100000)) err[`cant-${f.clave}`] = "Cantidad entre 0 y 100000.";
     });
     setErrores(err);
-    if (Object.keys(err).length) return;
+    if (Object.keys(err).length) {
+      enfocarPrimerError();
+      return;
+    }
 
     const cuerpo = {
       email: v.email.trim(),
@@ -112,7 +117,7 @@ export default function RegistroProductor() {
         Plataforma prototipo: usá datos de prueba.
       </Text>
       <form onSubmit={enviar} noValidate aria-label="Registro de productor">
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 32rem) minmax(0, 1fr)" }} gap={10} alignItems="start">
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 34rem) minmax(0, 1fr)" }} gap={{ base: 8, lg: 10 }} alignItems="start">
           <TarjetaFormulario maxW="none">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
@@ -128,9 +133,11 @@ export default function RegistroProductor() {
               Ubicación de la tranquera
             </Heading>
             <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4}>
-              <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,139" />
               <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,18" />
+              <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,139" />
             </Box>
+            <BotonUbicacion onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
             <Box>
               <Button size="xs" variant="outline" type="button" onClick={() => setV({ ...v, ...EJEMPLO })}>
                 Usar el ejemplo del sector S4
@@ -202,7 +209,7 @@ export default function RegistroProductor() {
           </VStack>
           </TarjetaFormulario>
 
-          <Box position={{ lg: "sticky" }} top={{ lg: "7rem" }}>
+          <Box position={{ lg: "sticky" }} top={{ lg: "calc(var(--altura-leyenda) + 1.5rem)" }}>
             <Box display="flex" gap={2} alignItems="center" mb={2}>
               <Heading as="h2" size="sm">
                 Elegir en el mapa
@@ -211,11 +218,14 @@ export default function RegistroProductor() {
             </Box>
             <MapaSectores
               marcador={puntoValido ? { lon, lat } : null}
-              onElegir={(lo, la) => setV({ ...v, lon: String(lo).replace(".", ","), lat: String(la).replace(".", ",") })}
+              onElegir={(lo, la) => setV({ ...v, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) })}
             />
             <Text fontSize="xs" mt={2}>
               Los sectores son de K10, simulados. El mapa solo sirve para elegir la ubicación de la tranquera.
             </Text>
+            <Box mt={5} display={{ base: "none", xl: "block" }}>
+              <ResumenSectores />
+            </Box>
           </Box>
         </Box>
       </form>

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import { MapaSector } from "@/components/MapaSector";
-import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
 
@@ -14,6 +15,7 @@ type Carga =
 const ESTADO_TEXTO = { normal: "Normal", en_riesgo: "En riesgo", comprometido: "Comprometido" } as const;
 
 export default function Sector() {
+  const d = useDiseno();
   const [carga, setCarga] = useState<Carga>({ tipo: "cargando" });
 
   const cargar = useCallback(async () => {
@@ -66,80 +68,106 @@ export default function Sector() {
     return { features: [...propios, ...respaldo] };
   }, [ok]);
 
+  const mapa =
+    ok && ok.sector.sectores.length > 0 ? (
+      <MapaSector geo={geoMapa} estados={estados} centro={centroMapa} alto={d.columnas === 2 ? "lleno" : undefined} />
+    ) : null;
+
+  const detalle = ok ? (
+    <>
+      <Texto suave>{ok.sector.nota}</Texto>
+
+      <Tarjeta>
+        <Text style={{ fontWeight: "600" }}>
+          Altura de referencia: {ok.sector.altura_referencia.altura_m.toFixed(2)} m
+        </Text>
+        <Texto suave>
+          {ok.sector.altura_referencia.fecha} · {ok.sector.altura_referencia.fuente}
+        </Texto>
+        <Insignia categoria={ok.sector.altura_referencia.categoria} />
+      </Tarjeta>
+
+      <Rejilla>
+        {ok.sector.sectores.map((s) => (
+          <Tarjeta key={s.id}>
+            <Text style={{ fontWeight: "700", fontSize: 16 }}>
+              {s.id} · {s.nombre}
+            </Text>
+            <Text
+              style={{
+                fontWeight: "700",
+                color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.aviso : COLOR.ok,
+              }}
+            >
+              {ESTADO_TEXTO[s.estado]}
+              {s.aislado ? " · aislado (sin accesos transitables)" : ""}
+            </Text>
+            <Texto>Altura de compromiso: {s.altura_compromiso_m.toFixed(2)} m</Texto>
+            <Texto>Margen: {s.margen_a_compromiso_m.toFixed(2)} m</Texto>
+            {s.accesos.map((a, i) => (
+              <Texto key={`${s.id}-${i}`} suave>
+                Acceso {a.nombre} ({a.superficie}): {a.estado}
+              </Texto>
+            ))}
+            {s.alertas.map((a) => (
+              <Texto key={a.orden_id}>
+                Orden #{a.orden_id} ({a.tipo}): {a.fundamento}
+              </Texto>
+            ))}
+            <Insignia categoria={s.categoria} />
+          </Tarjeta>
+        ))}
+      </Rejilla>
+
+      {ok.sector.centro_asignado ? (
+        <Tarjeta>
+          <Text style={{ fontWeight: "700" }}>Centro de recepción sugerido</Text>
+          {asignado ? (
+            <>
+              <Texto>
+                {asignado.nombre} · a {Math.round(asignado.distancia_linea_recta_m)} m en línea recta
+              </Texto>
+              <Insignia categoria={asignado.categoria} />
+            </>
+          ) : (
+            <Texto suave>No hay un centro con cupo para tu caso.</Texto>
+          )}
+          <Texto suave>{ok.sector.centro_asignado.nota}</Texto>
+        </Tarjeta>
+      ) : null}
+      <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
+    </>
+  ) : null;
+
+  const vacio =
+    ok && ok.sector.sectores.length === 0 ? (
+      <Vacio texto="Todavía no tenés un sector asignado. Cargá tu domicilio o tu establecimiento en Perfil." />
+    ) : null;
+
+  // Tablet ancha (>= 840 dp): el mapa ocupa la mitad izquierda a todo el alto y el detalle se
+  // desplaza a la derecha, sin que el scroll de la página tape el mapa.
+  if (ok && d.columnas === 2 && mapa) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", padding: d.margen, gap: d.margen }}>
+        <View style={{ flex: 1, gap: d.paso }}>
+          <Titulo>Mi sector</Titulo>
+          {mapa}
+        </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: d.paso, paddingBottom: d.insets.bottom }}>
+          {detalle}
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
-    <Pantalla>
+    <Pantalla dosColumnas>
       <Titulo>Mi sector</Titulo>
       {carga.tipo === "cargando" ? <Cargando texto="Cargando tu sector…" /> : null}
       {carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
-
-      {ok ? (
-        <>
-          {ok.sector.sectores.length === 0 ? (
-            <Vacio texto="Todavía no tenés un sector asignado. Cargá tu domicilio o tu establecimiento en Perfil." />
-          ) : (
-            <MapaSector geo={geoMapa} estados={estados} centro={centroMapa} />
-          )}
-          <Texto suave>{ok.sector.nota}</Texto>
-
-          <Tarjeta>
-            <Text style={{ fontWeight: "600" }}>
-              Altura de referencia: {ok.sector.altura_referencia.altura_m.toFixed(2)} m
-            </Text>
-            <Texto suave>
-              {ok.sector.altura_referencia.fecha} · {ok.sector.altura_referencia.fuente}
-            </Texto>
-            <Insignia categoria={ok.sector.altura_referencia.categoria} />
-          </Tarjeta>
-
-          {ok.sector.sectores.map((s) => (
-            <Tarjeta key={s.id}>
-              <Text style={{ fontWeight: "700", fontSize: 16 }}>
-                {s.id} · {s.nombre}
-              </Text>
-              <Text
-                style={{
-                  fontWeight: "700",
-                  color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.aviso : COLOR.ok,
-                }}
-              >
-                {ESTADO_TEXTO[s.estado]}
-                {s.aislado ? " · aislado (sin accesos transitables)" : ""}
-              </Text>
-              <Texto>Altura de compromiso: {s.altura_compromiso_m.toFixed(2)} m</Texto>
-              <Texto>Margen: {s.margen_a_compromiso_m.toFixed(2)} m</Texto>
-              {s.accesos.map((a, i) => (
-                <Texto key={`${s.id}-${i}`} suave>
-                  Acceso {a.nombre} ({a.superficie}): {a.estado}
-                </Texto>
-              ))}
-              {s.alertas.map((a) => (
-                <Texto key={a.orden_id}>
-                  Orden #{a.orden_id} ({a.tipo}): {a.fundamento}
-                </Texto>
-              ))}
-              <Insignia categoria={s.categoria} />
-            </Tarjeta>
-          ))}
-
-          {ok.sector.centro_asignado ? (
-            <Tarjeta>
-              <Text style={{ fontWeight: "700" }}>Centro de recepción sugerido</Text>
-              {asignado ? (
-                <>
-                  <Texto>
-                    {asignado.nombre} · a {Math.round(asignado.distancia_linea_recta_m)} m en línea recta
-                  </Texto>
-                  <Insignia categoria={asignado.categoria} />
-                </>
-              ) : (
-                <Texto suave>No hay un centro con cupo para tu caso.</Texto>
-              )}
-              <Texto suave>{ok.sector.centro_asignado.nota}</Texto>
-            </Tarjeta>
-          ) : null}
-          <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
-        </>
-      ) : null}
+      {vacio}
+      {mapa}
+      {detalle}
     </Pantalla>
   );
 }

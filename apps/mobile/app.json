@@ -3,11 +3,15 @@
     "name": "Evacuaciones Equipo 3",
     "slug": "evacuaciones-equipo3",
     "version": "0.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "evacuaciones",
     "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "ar.ailab.equipo3.evacuaciones",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -26,6 +30,14 @@
       "expo-router",
       "expo-sqlite",
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       [
         "expo-location",
         {

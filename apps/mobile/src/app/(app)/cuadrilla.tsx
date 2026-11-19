@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 
 import { SoloRol } from "@/components/SoloRol";
-import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import {
+  Boton,
+  Cargando,
+  COLOR,
+  ErrorCaja,
+  FilaBotones,
+  Insignia,
+  Pantalla,
+  Rejilla,
+  Tarjeta,
+  Texto,
+  Titulo,
+  Vacio,
+} from "@/components/ui";
 import { mensajeError } from "@/lib/errores";
 import { api, type Tarea } from "@/lib/servicios";
 
@@ -50,7 +63,7 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
           accessibilityState={{ checked: c.hecho, disabled: trabajando || tarea.estado === "completada" }}
           disabled={trabajando || tarea.estado === "completada"}
           onPress={() => alternar(i)}
-          style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}
+          style={{ flexDirection: "row", gap: 8, paddingVertical: 10, minHeight: 48, alignItems: "center" }}
         >
           <Text>{c.hecho ? "[x]" : "[ ]"}</Text>
           <Text style={{ flex: 1 }}>{c.item}</Text>
@@ -58,14 +71,14 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
       ))}
 
       {error ? <ErrorCaja mensaje={error} /> : null}
-      <View style={{ flexDirection: "row", gap: 8 }}>
+      <FilaBotones>
         {tarea.estado === "pendiente" ? (
           <Boton titulo="Iniciar" onPress={() => void aplicar({ estado: "en_curso" })} cargando={trabajando} />
         ) : null}
         {tarea.estado === "en_curso" ? (
           <Boton titulo="Completar" onPress={() => void aplicar({ estado: "completada" })} cargando={trabajando} />
         ) : null}
-      </View>
+      </FilaBotones>
       <Insignia categoria="SIMULADO" />
     </Tarjeta>
   );
@@ -89,7 +102,7 @@ function ListaTareas() {
   }, [cargar]);
 
   return (
-    <Pantalla>
+    <Pantalla dosColumnas>
       <Titulo>Tareas de la cuadrilla</Titulo>
       <Texto suave>
         Los cambios se guardan en el servidor al instante y requieren conexión.
@@ -97,6 +110,7 @@ function ListaTareas() {
       {error ? <ErrorCaja mensaje={error} onReintentar={cargar} /> : null}
       {!error && tareas === null ? <Cargando texto="Cargando tareas…" /> : null}
       {tareas && tareas.length === 0 ? <Vacio texto="No tenés tareas asignadas." /> : null}
+      <Rejilla>
       {(tareas ?? []).map((t) => (
         <TarjetaTarea
           key={t.id}
@@ -104,6 +118,7 @@ function ListaTareas() {
           alCambiar={(nueva) => setTareas((l) => (l ?? []).map((x) => (x.id === nueva.id ? nueva : x)))}
         />
       ))}
+      </Rejilla>
       <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
     </Pantalla>
   );

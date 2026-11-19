@@ -5,6 +5,9 @@ import { Link as RouterLink } from "react-router-dom";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
 
+/** URL pública de la APK generada con EAS Build (perfil preview). Vacía = descarga no disponible. */
+const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || "";
+
 export function AppMovil() {
   const [perfil, setPerfil] = useState<"PRODUCTOR" | "CIUDADANO">("PRODUCTOR");
   const [personas, setPersonas] = useState("5");
@@ -24,10 +27,22 @@ export function AppMovil() {
         (<code>expo-sqlite</code>) con clave de idempotencia y se sincroniza en dos tiempos (JSON primero, foto comprimida después) cuando
         vuelve la señal. También recibe las alertas y las órdenes de tu sector.
       </Text>
-      <Alert status="warning" maxW="44rem" mb={6}>
-        <AlertIcon />
-        El archivo de instalación (APK) todavía no está publicado. Se genera en la Fase 5 con EAS Build.
-      </Alert>
+      {APK_URL ? (
+        <Box mb={6} p={4} bg="superficie" border="1px solid" borderColor="borde" borderRadius="sm">
+          <Button as="a" href={APK_URL} rel="noopener" download>
+            Descargar la app para Android (APK)
+          </Button>
+          <Text fontSize="sm" mt={2}>
+            Al instalarla, Android puede pedirte que permitas instalar apps de origen desconocido. Es un prototipo: no es una
+            herramienta oficial.
+          </Text>
+        </Box>
+      ) : (
+        <Alert status="warning" maxW="44rem" mb={6}>
+          <AlertIcon />
+          El archivo de instalación (APK) todavía no está publicado. Se genera con EAS Build. Mientras tanto, podés registrarte y pedir asistencia desde la web.
+        </Alert>
+      )}
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} alignItems="start">
         <Box>

@@ -48,3 +48,11 @@ export function validarCoordenadas(lonTxt: string, latTxt: string, obligatorias:
   if (!enRango(lat, -90, 90)) e.lat = "La latitud debe estar entre -90 y 90 (por ejemplo -26,18).";
   return e;
 }
+
+/** Coordenada como la escribe el usuario en el formulario (coma decimal). */
+export const coordenadaATexto = (n: number): string => String(n).replace(".", ",");
+
+/** Lleva el foco al primer campo inválido; el scroll respeta la leyenda fija (ver scroll-margin en el tema). */
+export function enfocarPrimerError() {
+  requestAnimationFrame(() => document.querySelector<HTMLElement>('form [aria-invalid="true"]')?.focus());
+}

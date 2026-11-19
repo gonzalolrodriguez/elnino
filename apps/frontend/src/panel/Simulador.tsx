@@ -1,9 +1,10 @@
-import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, SimpleGrid, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
+import { TablaDesplazable } from "../components/TablaDesplazable";
 import { useEscenario } from "./EscenarioContext";
 import type { AccesoProps, OrigenLluvia } from "./tipos";
 import { fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
@@ -149,7 +150,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
               </Box>
             </SimpleGrid>
           )}
-          <TableContainer>
+          <TablaDesplazable etiqueta="Estado de los sectores en el escenario">
             <Table size="sm" aria-label="Estado de los sectores en el escenario">
               <Thead>
                 <Tr>
@@ -181,7 +182,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </TablaDesplazable>
           <Text fontSize="xs" color="textoSuave" mt={1}>
             El ISAD es un índice relativo SIMULADO y no reemplaza el criterio de compromiso de K10. Margen: distancia en la escala hasta el compromiso del sector (negativa si ya lo superó).
           </Text>

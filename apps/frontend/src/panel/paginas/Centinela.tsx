@@ -1,6 +1,7 @@
-import { Badge, Box, Flex, Heading, List, ListItem, SimpleGrid, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Flex, Heading, List, ListItem, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { Insignia } from "../../components/Insignia";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 import { AUDITORIA_K1 } from "../../datos/auditoriaK1";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
@@ -70,7 +71,7 @@ export default function Centinela() {
         <Text fontSize="sm" mb={2}>
           Entrada: {AUDITORIA_K1.entrada}. Salida: {AUDITORIA_K1.salida}.
         </Text>
-        <TableContainer>
+        <TablaDesplazable etiqueta="Hallazgos de la limpieza de K1">
           <Table size="sm" aria-label="Hallazgos de la limpieza de K1">
             <Thead>
               <Tr>
@@ -89,7 +90,7 @@ export default function Centinela() {
               ))}
             </Tbody>
           </Table>
-        </TableContainer>
+        </TablaDesplazable>
         <List styleType="disc" ml={5} mt={2} fontSize="sm">
           {AUDITORIA_K1.controles.map((c) => (
             <ListItem key={c}>{c}</ListItem>
@@ -150,7 +151,7 @@ export default function Centinela() {
             <Text fontSize="sm" mb={3}>
               {d.esquema}. {d.nota}
             </Text>
-            <TableContainer>
+            <TablaDesplazable etiqueta="Relaciones de K7">
               <Table size="sm" aria-label="Relaciones de K7">
                 <Thead>
                   <Tr>
@@ -186,7 +187,7 @@ export default function Centinela() {
                   ))}
                 </Tbody>
               </Table>
-            </TableContainer>
+            </TablaDesplazable>
           </>
         )} />
       </Seccion>

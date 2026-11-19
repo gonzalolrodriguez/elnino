@@ -1,8 +1,9 @@
 import { Redirect, Tabs } from "expo-router";
 
-import { Cargando } from "@/components/ui";
+import { Cargando, EnPestanasContext } from "@/components/ui";
 import { AlertasProvider, useAlertas } from "@/lib/AlertasContext";
 import { ColaProvider, useCola } from "@/lib/ColaContext";
+import { fuenteAcotada, useDiseno } from "@/lib/responsive";
 import { pestanasPorRol, useSesion, type Pestana } from "@/lib/SesionContext";
 
 const TITULOS: Record<Pestana, string> = {
@@ -19,8 +20,20 @@ const TODAS: Pestana[] = ["asistencia", "solicitudes", "alertas", "sector", "per
 function Pestanas({ visibles }: { visibles: Pestana[] }) {
   const { noLeidas } = useAlertas();
   const { pendientes } = useCola();
+  const d = useDiseno();
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: "#7c2d12" }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#7c2d12",
+        tabBarInactiveTintColor: "#52525b",
+        // La barra tiene alto fijo: su etiqueta sigue la fuente del sistema solo hasta 1,3x para no
+        // recortarse; el resto de la app escala sin tope.
+        tabBarAllowFontScaling: false,
+        tabBarLabelStyle: { fontSize: fuenteAcotada(11, d.fontScale, 1.3) },
+        tabBarItemStyle: { minHeight: 48 },
+      }}
+    >
       <Tabs.Screen name="index" options={{ href: null }} />
       {TODAS.map((p) => (
         <Tabs.Screen
@@ -50,7 +63,9 @@ export default function LayoutApp() {
   return (
     <ColaProvider>
       <AlertasProvider>
-        <Pestanas visibles={pestanasPorRol(estado.usuario.rol)} />
+        <EnPestanasContext.Provider value>
+          <Pestanas visibles={pestanasPorRol(estado.usuario.rol)} />
+        </EnPestanasContext.Provider>
       </AlertasProvider>
     </ColaProvider>
   );

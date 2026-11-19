@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
-import { hayWebGL, useMenosMovimiento } from "../lib/entorno";
+import { puedeUsar3D, useMenosMovimiento } from "../lib/entorno";
 import { LeyendaRelieve } from "../relieve/LeyendaRelieve";
 import { useRelieve } from "../relieve/useRelieve";
 import { CuencaSVG } from "./CuencaSVG";
@@ -49,7 +49,8 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function Hero({ avisoSinServicio }: { avisoSinServicio: boolean }) {
   const menosMovimiento = useMenosMovimiento();
-  const [webgl] = useState(hayWebGL);
+  // El 3D exige WebGL 2 y un equipo con recursos: en equipos limitados se usa el respaldo 2D.
+  const [webgl] = useState(puedeUsar3D);
   const { datos, fallo } = useRelieve();
   const quiere3D = webgl && !menosMovimiento && !fallo;
   const usar3D = quiere3D && !!datos;
@@ -62,7 +63,10 @@ export function Hero({ avisoSinServicio }: { avisoSinServicio: boolean }) {
         data-testid="escena-cuenca"
         data-modo={quiere3D ? "3d" : "2d"}
         position={{ base: "relative", lg: "absolute" }}
-        inset={{ lg: 0 }}
+        top={{ lg: 0 }}
+        right={{ lg: 0 }}
+        bottom={{ lg: 0 }}
+        left={{ lg: 0 }}
         h={{ base: datos ? "340px" : "240px", lg: "auto" }}
       >
         {usar3D ? (
@@ -80,7 +84,10 @@ export function Hero({ avisoSinServicio }: { avisoSinServicio: boolean }) {
           aria-hidden="true"
           display={{ base: "none", lg: "block" }}
           position="absolute"
-          inset={0}
+          top={0}
+          right={0}
+          bottom={0}
+          left={0}
           pointerEvents="none"
           bgImage="linear-gradient(90deg, var(--chakra-colors-limo-950) 0%, var(--chakra-colors-limo-950) 30%, transparent 68%)"
         />
@@ -99,10 +106,11 @@ export function Hero({ avisoSinServicio }: { avisoSinServicio: boolean }) {
       <Box
         position="relative"
         zIndex={1}
-        maxW="7xl"
+        maxW="90rem"
         mx="auto"
         px={{ base: 4, md: 8 }}
-        py={{ base: 8, lg: 14 }}
+        pt={{ base: 8, lg: 14 }}
+        pb={{ base: 8, lg: "13rem" }}
         display="grid"
         gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 360px" }}
         gap={{ base: 8, lg: 12 }}

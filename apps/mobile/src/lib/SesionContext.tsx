@@ -22,6 +22,8 @@ type Valor = {
   estado: EstadoSesion;
   entrar: (email: string, password: string) => Promise<void>;
   salir: () => Promise<void>;
+  /** Cierra la sesión solo en el teléfono, sin avisar al servidor (p. ej. al cambiar de servidor). */
+  salirLocal: () => Promise<void>;
 };
 
 const Contexto = createContext<Valor | null>(null);
@@ -65,7 +67,12 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     setEstado({ tipo: "anonimo" });
   }, []);
 
-  const valor = useMemo(() => ({ estado, entrar, salir }), [estado, entrar, salir]);
+  const salirLocal = useCallback(async () => {
+    await limpiarSesionLocal();
+    setEstado({ tipo: "anonimo" });
+  }, []);
+
+  const valor = useMemo(() => ({ estado, entrar, salir, salirLocal }), [estado, entrar, salir, salirLocal]);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
 

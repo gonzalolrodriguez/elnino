@@ -95,7 +95,7 @@ export default function Landing() {
 
       {/* Franja de síntesis territorial e hidrológica al día de corte */}
       <Box as="section" aria-label="Síntesis territorial al día de corte" bg="pizarra.100" borderBottom="1px solid" borderColor="borde" py={{ base: 6, md: 8 }}>
-        <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }}>
+        <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }}>
           <Flex justify="space-between" align="baseline" wrap="wrap" gap={2} mb={4}>
             <Heading as="h2" size="sm" color="pizarra.800" textTransform="uppercase" letterSpacing="0.04em">
               Panorama operativo al corte oficial (31/10/2026)
@@ -144,7 +144,7 @@ export default function Landing() {
       </Box>
 
       {/* Selector de ingreso por perfil en tarjetas visuales */}
-      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
+      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
         <Flex justify="space-between" align="flex-end" wrap="wrap" gap={4} mb={{ base: 6, md: 8 }}>
           <Box>
             <Heading as="h2" id="titulo-perfiles" size="xl">
@@ -200,7 +200,7 @@ export default function Landing() {
       </Box>
 
       <Box bg="pizarra.100" py={{ base: 10, md: 16 }} borderTop="1px solid" borderColor="borde">
-        <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
+        <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
           <Box>
             <Heading as="h2" size="lg" mb={4}>
               Por qué importa antes de que llueva ("Ventana Seca")
@@ -231,7 +231,7 @@ export default function Landing() {
         </Box>
       </Box>
 
-      <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={10}>
+      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={10}>
         <EstadoBackend />
         <Text mt={4} fontSize="sm">
           Fuentes y supuestos de cada cifra:{" "}

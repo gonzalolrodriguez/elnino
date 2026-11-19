@@ -133,6 +133,8 @@ export default function MiCuenta() {
       </Heading>
       <Text mb={4}>Hola, {usuario?.nombre_visible}.</Text>
 
+      <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "repeat(2, minmax(0, 1fr))" }} columnGap={10} alignItems="start" maxW="80rem">
+
       <Bloque titulo="Mis datos" recurso={yo} vacio="Sin datos.">
         {(u) => (
           <Pares
@@ -195,6 +197,7 @@ export default function MiCuenta() {
           </Box>
         )}
       </Bloque>
+      </Box>
     </Layout>
   );
 }

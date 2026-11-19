@@ -4,6 +4,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { TablaDesplazable } from "../components/TablaDesplazable";
 import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
 import { K10_FECHA, MARGEN_RIESGO_M, PRONOSTICO_CFS_V2, SECTORES_K10, UMBRAL_ALERTA } from "../datos/kit";
@@ -204,6 +205,7 @@ export default function Informacion() {
 
   return (
     <Layout titulo="Información">
+      <Box maxW="80rem" mx="auto">
       <Heading as="h1" size="2xl" maxW="40rem">
         Información para entender la crecida
       </Heading>
@@ -299,8 +301,9 @@ export default function Informacion() {
                   </Text>
                 </Box>
               </Box>
-              <Box overflowX="auto">
-                <Table size="sm" variant="simple">
+              <Box minW={0}>
+                <TablaDesplazable etiqueta="Sectores de evaluación K10">
+                <Table size="sm" variant="simple" aria-label="Sectores de evaluación K10">
                   <Thead>
                     <Tr>
                       <Th>Sector</Th>
@@ -325,6 +328,7 @@ export default function Informacion() {
                     ))}
                   </Tbody>
                 </Table>
+                </TablaDesplazable>
                 <Text fontSize="xs" color="textoSuave" mt={2}>
                   S4 se compromete 0,30 m antes del nivel de alerta: a 1,90 m del valor observado al corte.
                 </Text>
@@ -365,6 +369,7 @@ export default function Informacion() {
             </UnorderedList>
           </Seccion>
         </Box>
+      </Box>
       </Box>
     </Layout>
   );

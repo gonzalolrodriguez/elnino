@@ -1,6 +1,7 @@
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 
+import { ServidorEnUso, useServidorActual } from "@/components/ServidorEnUso";
 import { Boton, Campo, ErrorCaja, Pantalla, Texto, Titulo } from "@/components/ui";
 import { ErrorApi } from "@/lib/api";
 import { mensajeError } from "@/lib/errores";
@@ -9,6 +10,7 @@ import { useSesion } from "@/lib/SesionContext";
 export default function Login() {
   const { estado, entrar } = useSesion();
   const router = useRouter();
+  const servidor = useServidorActual();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -48,11 +50,12 @@ export default function Login() {
         autoComplete="password"
       />
       {error ? <ErrorCaja mensaje={error} /> : null}
+      <ServidorEnUso url={servidor} onCambiar={() => router.push("/")} />
       <Boton
         titulo="Ingresar"
         onPress={enviar}
         cargando={cargando}
-        deshabilitado={!email.trim() || !password}
+        deshabilitado={!servidor || !email.trim() || !password}
       />
       <Texto suave>¿No tenés cuenta?</Texto>
       <Boton titulo="Registrarme" variante="secundario" onPress={() => router.push("/registro")} />

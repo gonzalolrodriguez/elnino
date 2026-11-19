@@ -44,7 +44,8 @@ pip install -r requirements-dev.txt
 | `CORS_ORIGINS` | no | Orígenes permitidos (por defecto `http://localhost:5173,http://localhost:8081`) |
 | `BACKEND_PORT` | no | Puerto del anfitrión para el backend en Docker (por defecto 8000) |
 | `COMPOSE_PROJECT_NAME` | no | Nombre del proyecto de Compose; permite tener dos copias a la vez |
-| `VITE_API_URL`, `EXPO_PUBLIC_API_URL` | no | URL del backend para la web y la app (por defecto `http://localhost:8000`) |
+| `VITE_API_URL`, `EXPO_PUBLIC_API_URL` | no | URL del backend para la web y valor por defecto de la app (la app permite cambiarla en «Servidor»; por defecto `http://localhost:8000` en la web) |
+| `VITE_APK_URL` | no | Enlace de descarga del APK que muestra la web en `/app` |
 
 Las claves se generan así:
 
@@ -178,7 +179,7 @@ pnpm -r typecheck                            # tsc --noEmit en web, app y shared
 pnpm --filter @evacuaciones/frontend test    # vitest: 53 pruebas (pnpm test hace lo mismo)
 pnpm --filter @evacuaciones/frontend lint
 pnpm --filter @evacuaciones/frontend build
-pnpm --filter @evacuaciones/mobile test      # jest-expo: 36 pruebas
+pnpm --filter @evacuaciones/mobile test      # jest-expo: 72 pruebas
 ```
 
 ## App móvil (`apps/mobile`)
@@ -187,28 +188,33 @@ Expo SDK 58 + expo-router. Pantallas: registro y login, perfil, pedido de asiste
 
 **Expo Go o development build.** Expo Go alcanza para probar registro, login, perfil, solicitudes, cola offline y alertas. El mapa del sector con `react-native-maps` y el push remoto necesitan un development build o el APK; en Expo Go el mapa puede no mostrarse. El push remoto (FCM) está fuera del alcance: las alertas llegan como notificaciones locales mientras la app está abierta.
 
-**Conexión con el backend desde un teléfono físico.** `localhost` no sirve en el teléfono:
+**Servidor configurable en la app.** Un mismo APK sirve en cualquier red: la URL del backend se elige dentro de la app y no está fija en la compilación. Está en «Servidor» en la pantalla de bienvenida (antes de ingresar) y en el Perfil (después de ingresar):
 
-1. Averiguar la IP de la PC en la red local (`ipconfig`) y poner el teléfono en la misma red.
-2. Levantar el backend escuchando en todas las interfaces (el de Docker ya lo hace; local: `uvicorn app.main:app --host 0.0.0.0 --port 8000`) y permitir el puerto 8000 en el firewall de Windows.
-3. Definir `EXPO_PUBLIC_API_URL=http://<IP-de-la-PC>:8000` antes de `pnpm dev:mobile`.
-4. Agregar ese origen a `CORS_ORIGINS` si se prueba la web desde otro equipo. La app nativa no está sujeta a CORS.
+1. Averiguar la IP de la PC con `ipconfig` y poner el teléfono en la misma red Wi-Fi.
+2. Levantar el backend escuchando en todas las interfaces (el de Docker ya lo hace; local: `uvicorn app.main:app --host 0.0.0.0 --port 8000`).
+3. Permitir el puerto 8000 en el firewall de Windows. Ejecutar **una vez, en una consola como administrador**: `netsh advfirewall firewall add rule name="Evacuaciones backend 8000" dir=in action=allow protocol=TCP localport=8000`
+4. En la app, escribir `http://<IP-de-la-PC>:8000` (ej.: `http://192.168.1.50:8000`), tocar «Probar conexión» (consulta `GET /api/v1/salud`, con tiempo máximo de 5 s) y «Guardar». La app quita una barra final o un `/api/v1` escrito por error. «Restablecer valor por defecto» vuelve al valor de compilación.
+5. Si se cambia el servidor con la sesión abierta, la app avisa que la sesión se cierra (el token pertenece al otro servidor) y, si hay solicitudes sin enviar, permite conservarlas o descartarlas. Cada solicitud en cola guarda el servidor para el que se creó y solo se envía a ese servidor y con la misma cuenta; las de otro servidor figuran como «Pendientes para otro servidor (host)» en Mis solicitudes, con opción de descartarlas.
+
+La URL vigente se lee en cada llamada (HTTP, cola offline, fotos y WebSocket `ws://`/`wss://`), así que el cambio aplica sin reiniciar. La app nativa no está sujeta a CORS: no hace falta tocar `CORS_ORIGINS` (solo si se prueba la web desde otro equipo). El APK permite tráfico HTTP sin cifrar (`usesCleartextTraffic`, vía `expo-build-properties`) para poder hablar con un backend de la red local; ver el compromiso en `docs/seguridad.md`.
 
 | Variable | Dónde | Uso |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | app móvil | URL base del backend (por defecto `http://localhost:8000`) |
+| `EXPO_PUBLIC_API_URL` | app móvil (compilación, opcional) | Valor por defecto del servidor. Si falta, la app arranca sin servidor y pide configurarlo |
 | `EXPO_PUBLIC_SMS_DESTINO` | app móvil | Número al que se dirige el SMS de respaldo `SOS-FSA`; si falta, el usuario elige el destinatario. La app solo abre la app de mensajes: nunca envía sola |
 | `GOOGLE_MAPS_API_KEY` | compilación del APK | Clave de Google Maps SDK for Android para ver el mapa. Se lee en `app.config.ts` al compilar; no se guarda en el repositorio |
+| `VITE_APK_URL` | web (compilación) | Enlace de descarga del APK; con ella la ruta `/app` muestra el botón de descarga |
 
-**APK con EAS Build** (requiere la cuenta de Expo del equipo; pendiente de compilar):
+**APK con EAS Build** (requiere la cuenta de Expo del equipo):
 
 ```bash
 cd apps/mobile
 npx eas login
-GOOGLE_MAPS_API_KEY=<clave> npx eas build --profile preview --platform android   # perfil preview, buildType apk
+npx eas build --profile preview --platform android   # perfil preview, buildType apk
+# con mapa: GOOGLE_MAPS_API_KEY=<clave> npx eas build --profile preview --platform android
 ```
 
-En EAS la clave se define como secreto del proyecto (`npx eas secret:create`) en lugar de pasarla por la línea de comandos.
+En EAS la clave se define como secreto del proyecto (`npx eas secret:create`) en lugar de pasarla por la línea de comandos. Al terminar, EAS entrega un enlace de descarga del `.apk`. Para distribuirlo: adjuntar el archivo a la release `v1.0-entrega` de GitHub y poner la URL del asset en `VITE_APK_URL` al compilar la web.
 
 **Adjuntos en el backend.** Las fotos se guardan en disco con estas variables (todas opcionales):
 
@@ -230,6 +236,8 @@ pnpm --filter @evacuaciones/frontend datos      # regenera los JSON estáticos d
 - Rutas públicas: `/` (landing), `/informacion` (antes `/el-nino`, que redirige), `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
 - Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/cuadrilla` (cuadrilla y admin: tareas asignadas, checklist, alertas y tiempo real), `/comando/*` (operador, decisor y admin; ver "Panel operativo"), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
 - Pruebas y calidad: `pnpm --filter @evacuaciones/frontend test`, `lint` y `build`.
+- Navegadores admitidos (`browserslist` de `apps/frontend/package.json`): Chrome 70+, Edge 79+, Safari y iOS 12+, Firefox 78+, Samsung Internet 10+. `vite build` genera un paquete moderno y otro heredado (`@vitejs/plugin-legacy`, con polyfills de core-js) que el navegador elige solo. El 3D de la landing y el mapa operativo exigen WebGL 2: sin él (o en equipos de 2 núcleos o 2 GB de memoria o menos, solo la landing) se usa el esquema 2D, y el mapa muestra un aviso con el simulador y las listas disponibles.
+- Adaptable de 320 px a 2560 px: el menú se pliega bajo 768 px, las páginas de formulario muestran un panel de apoyo a la derecha desde 992 px, las tablas anchas se desplazan dentro de su propia región (enfocable con el teclado), y se respetan `prefers-reduced-motion`, `prefers-contrast: more`, `forced-colors` y los objetivos táctiles de 44 px (`pointer: coarse`).
 
 ## Panel operativo
 

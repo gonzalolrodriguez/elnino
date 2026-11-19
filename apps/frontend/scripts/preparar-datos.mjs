@@ -193,3 +193,49 @@ if (ARCHIVOS_RELIEVE.every((a) => existsSync(resolve(rel, a)))) {
 } else {
   console.warn("public/relieve: faltan archivos en data/geo/relieve/ (ejecutá apps/backend/scripts/descargar_relieve.py); se omite.");
 }
+
+// --- Contorno de la provincia de Formosa para avisar si una ubicación cae fuera (formularios de registro) ---
+// Salida: public/capas/provincia_contorno.json (anillos exteriores simplificados a ~200 m; se carga bajo demanda).
+const provGeo = JSON.parse(readFileSync(resolve(geo, "provincia.geojson"), "utf-8"));
+// Douglas-Peucker (tolerancia ~0,002° ≈ 200 m): el aviso es orientativo, no un límite jurídico.
+function simplificar(pts, tol) {
+  if (pts.length < 3) return pts;
+  const [ax, ay] = pts[0];
+  const [bx, by] = pts[pts.length - 1];
+  const len = Math.hypot(bx - ax, by - ay) || 1e-12;
+  let max = 0;
+  let idx = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.abs((by - ay) * pts[i][0] - (bx - ax) * pts[i][1] + bx * ay - by * ax) / len;
+    if (d > max) {
+      max = d;
+      idx = i;
+    }
+  }
+  if (max <= tol) return [pts[0], pts[pts.length - 1]];
+  return [...simplificar(pts.slice(0, idx + 1), tol).slice(0, -1), ...simplificar(pts.slice(idx), tol)];
+}
+const anillos = provGeo.features.flatMap((f) =>
+  (f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates).map((poligono) => {
+    const sal = [];
+    for (const [x, y] of poligono[0]) {
+      const p = [Number(x.toFixed(3)), Number(y.toFixed(3))];
+      const u = sal[sal.length - 1];
+      if (!u || u[0] !== p[0] || u[1] !== p[1]) sal.push(p);
+    }
+    // Anillo cerrado: se parte en dos por el punto más alejado del primero para no degenerar la recta base.
+    const m = sal.reduce((k, p, i) => (Math.hypot(p[0] - sal[0][0], p[1] - sal[0][1]) > Math.hypot(sal[k][0] - sal[0][0], sal[k][1] - sal[0][1]) ? i : k), 0);
+    return [...simplificar(sal.slice(0, m + 1), 0.002).slice(0, -1), ...simplificar(sal.slice(m), 0.002)];
+  }),
+);
+writeFileSync(
+  resolve(pub, "provincia_contorno.json"),
+  JSON.stringify({
+    categoria: "DOCUMENTO DE REFERENCIA",
+    fuente: "IGN - Capas SIG (WFS), provincia de Formosa",
+    fecha_descarga: provGeo.metadata?.fecha_descarga ?? "",
+    nota: "Contorno simplificado (~200 m): solo sirve para avisar si un punto queda fuera de la provincia.",
+    anillos,
+  }),
+);
+console.log(`public/capas/provincia_contorno.json: ${Math.round(statSync(resolve(pub, "provincia_contorno.json")).size / 1024)} KB`);

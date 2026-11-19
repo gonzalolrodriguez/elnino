@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, Heading, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Heading, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
 import { Insignia } from "../../components/Insignia";
@@ -9,6 +9,7 @@ import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Ascenso, Lluvia, SerieFormosa } from "../tipos";
 import { Cargando, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 /** Convierte los puntos de la API en serie diaria con huecos (null): los días sin dato no se interpolan. */
 export function aSerieDiaria(s: SerieFormosa): SerieDiaria {
@@ -63,7 +64,7 @@ function TablaLluvia({ l }: { l: Lluvia }) {
           </Badge>
         ))}
       </Flex>
-      <TableContainer maxH="16rem" overflowY="auto">
+      <TablaDesplazable etiqueta="Lecturas de lluvia recientes" maxH="16rem" overflowY="auto">
         <Table size="sm" variant="simple">
           <Thead position="sticky" top={0} bg="superficie">
             <Tr>
@@ -90,7 +91,7 @@ function TablaLluvia({ l }: { l: Lluvia }) {
             ))}
           </Tbody>
         </Table>
-      </TableContainer>
+      </TablaDesplazable>
     </>
   );
 }
@@ -101,7 +102,7 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
       <Text fontSize="sm" mb={2}>
         Altura de referencia: <strong>{fmtM(a.altura_actual_m)}</strong> {a.fecha_altura ? `(${fmtFecha(a.fecha_altura)}, DATO OBSERVADO)` : "(valor indicado, SIMULADO)"}.
       </Text>
-      <TableContainer mb={4}>
+      <TablaDesplazable etiqueta="Velocidades de ascenso por período" mb={4}>
         <Table size="sm" aria-label="Velocidades de ascenso por período">
           <Thead>
             <Tr>
@@ -126,14 +127,14 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
             ))}
           </Tbody>
         </Table>
-      </TableContainer>
+      </TablaDesplazable>
       <Flex align="center" gap={2} mb={2}>
         <Heading as="h3" size="xs">
           ¿Cuánto tiempo queda?
         </Heading>
         <Insignia categoria={a.categoria_proyeccion} />
       </Flex>
-      <TableContainer>
+      <TablaDesplazable etiqueta="Tiempo restante hasta cada umbral">
         <Table size="sm" aria-label="Tiempo restante hasta cada umbral">
           <Thead>
             <Tr>
@@ -156,7 +157,7 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
             ))}
           </Tbody>
         </Table>
-      </TableContainer>
+      </TablaDesplazable>
       <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1.5px dashed" borderColor="cat.simulado.borde" borderRadius="sm" fontSize="sm" data-testid="supuesto-lineal">
         <strong>Supuesto:</strong> {a.supuesto} El INA no publica pronósticos a más de {a.horizonte_pronostico_oficial_dias} días.
       </Box>

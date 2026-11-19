@@ -1,14 +1,15 @@
 import { Alert } from "react-native";
 
+import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
-import { Boton, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Boton, Pantalla, Rejilla, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import { useSesion, useUsuario } from "@/lib/SesionContext";
 
 export default function Perfil() {
   const usuario = useUsuario();
-  const { salir } = useSesion();
+  const { salir, salirLocal } = useSesion();
   const { pendientes, borrarLocal } = useCola();
   const ciudadania = usuario.rol === "ciudadano" || usuario.rol === "productor";
 
@@ -33,7 +34,7 @@ export default function Perfil() {
   };
 
   return (
-    <Pantalla>
+    <Pantalla dosColumnas>
       <Titulo>Perfil</Titulo>
       <Tarjeta>
         <Texto>{usuario.nombre_visible}</Texto>
@@ -44,8 +45,13 @@ export default function Perfil() {
         </Texto>
       </Tarjeta>
 
-      {ciudadania ? <FormGrupoFamiliar /> : null}
-      {usuario.rol === "productor" ? <FormEstablecimientos /> : null}
+      <Rejilla>
+        {ciudadania ? <FormGrupoFamiliar /> : null}
+        {usuario.rol === "productor" ? <FormEstablecimientos /> : null}
+        <ConfigServidor
+          sesion={{ pendientes, descartarPendientes: borrarLocal, cerrarSesionLocal: salirLocal }}
+        />
+      </Rejilla>
       {!ciudadania && usuario.rol !== "cuadrilla" ? (
         <Texto suave>
           Los mandos operativos trabajan desde el panel web. Esta app solo muestra tus alertas.

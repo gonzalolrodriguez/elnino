@@ -155,6 +155,7 @@ export default function Cuadrilla() {
         {ESTADOS_WS[ws]}. Las tareas y checklists de abajo son datos de demostración.
       </Text>
 
+      <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 3fr) minmax(0, 2fr)" }} columnGap={6} alignItems="start" maxW="90rem">
       <Seccion titulo="Tareas asignadas" categoria="SIMULADO" id="sec-mis-tareas" derecha={<Button size="xs" variant="outline" onClick={recargarTareas}>Actualizar</Button>}>
         <Cargando
           carga={tareas}
@@ -183,6 +184,7 @@ export default function Cuadrilla() {
           hijos={(d) => <Avisos avisos={d.map((n) => (leidas.includes(n.id) ? { ...n, leida: true } : n))} alMarcar={(id) => void marcar(id)} />}
         />
       </Seccion>
+      </Box>
     </Layout>
   );
 }

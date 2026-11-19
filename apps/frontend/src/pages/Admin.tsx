@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../components/Formulario";
@@ -7,6 +7,7 @@ import { useCarga } from "../lib/useCarga";
 import { api } from "../panel/api";
 import type { UsuarioAdmin } from "../panel/tipos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
+import { TablaDesplazable } from "../components/TablaDesplazable";
 
 const ROLES_ALTA = ["cuadrilla", "operador", "decisor", "admin"] as const;
 
@@ -170,7 +171,7 @@ export default function Admin() {
       </Seccion>
       <Seccion titulo="Usuarios" id="sec-usuarios">
         <Cargando carga={usuarios} esVacio={(d) => d.length === 0} vacio="No hay usuarios." hijos={(d) => (
-          <TableContainer>
+          <TablaDesplazable etiqueta="Usuarios">
             <Table size="sm" aria-label="Usuarios">
               <Thead>
                 <Tr>
@@ -189,7 +190,7 @@ export default function Admin() {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </TablaDesplazable>
         )} />
       </Seccion>
     </Layout>

@@ -1,6 +1,7 @@
 import { Redirect, useRouter } from "expo-router";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
+import { ConfigServidor } from "@/components/ConfigServidor";
 import { EstadoBackend } from "@/components/EstadoBackend";
 import { Boton, Cargando, Pantalla, Texto, Titulo } from "@/components/ui";
 import { useSesion } from "@/lib/SesionContext";
@@ -32,9 +33,10 @@ export default function Bienvenida() {
         />
       </View>
       <EstadoBackend />
-      <Text style={{ fontSize: 12, color: "#52525b" }}>
+      <ConfigServidor />
+      <Texto suave pequeno>
         Los mandos operativos ingresan con una cuenta institucional creada por el administrador.
-      </Text>
+      </Texto>
     </Pantalla>
   );
 }
