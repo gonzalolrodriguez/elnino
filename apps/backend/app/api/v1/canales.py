@@ -4,6 +4,8 @@ Cada endpoint recibe el mismo formato que usaría el proveedor real y verifica l
 del cuerpo crudo en ``X-Hub-Signature-256: sha256=<hex>`` (el esquema de la Meta Cloud API). El
 secreto sale de ``CANAL_HMAC_SECRET``. Los mensajes pasan por ``parser_mensajes`` y crean una
 ``solicitud_asistencia`` (``SOS-FSA|...``) o una ``lectura_lluvia`` (``LLUVIA <PUESTO> <MM>``).
+También resuelven la confirmación del evacuado: ``SI <codigo>``, ``NO <codigo>`` o
+``PROBLEMA <codigo> <texto>`` (el código llega en la notificación de la app) con una respuesta fija.
 
 Cómo se conectaría la Meta Cloud API real: se registra ``POST /api/v1/canales/whatsapp-sim`` (con el
 nombre definitivo) como URL de webhook de la app de Meta; Meta firma cada notificación con el
@@ -34,8 +36,10 @@ from app.db.base import SRID, ahora
 from app.db.consultas import sector_de_punto
 from app.db.modelos import SolicitudAsistencia
 from app.db.sesion import get_db
+from app.domain import evacuaciones as dom_evac
 from app.domain import normalizador as norm
 from app.domain import parser_mensajes as pm
+from app.servicios import evacuaciones as srv_evac
 from app.servicios import lluvia as srv
 
 router = APIRouter(prefix="/canales", tags=["canales"])
@@ -177,6 +181,8 @@ def _clasificar(texto: str) -> str:
         return "lluvia"
     if inicio.startswith("SOS-FSA"):
         return "sos"
+    if dom_evac.parsear_respuesta_sms(texto) is not None:
+        return "confirmacion"
     if norm.palabra_clave(texto):
         return "menu"
     return "libre"
@@ -212,6 +218,8 @@ def _insertar_solicitud(db: Session, canal: str, mensaje_id: str | None, **valor
 def _procesar_uno(db: Session, m: _Mensaje, canal: str, eventos: list) -> dict:
     """Procesa un mensaje dentro de un savepoint: un error o duplicado no afecta a los demás."""
     tipo = _clasificar(m.texto)
+    if tipo == "confirmacion":  # SI|NO|PROBLEMA <código> del evacuado
+        return srv_evac.procesar_respuesta_sms(db, m.texto, canal, eventos)
     if tipo == "menu":
         palabra = norm.palabra_clave(m.texto)
         return {

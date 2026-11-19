@@ -34,7 +34,7 @@ from app.db.modelos import (
 )
 from app.db.sesion import get_db
 from app.domain import ascenso
-from app.servicios import contexto, recomendacion
+from app.servicios import contexto, evacuaciones, recomendacion
 
 router = APIRouter(tags=["panel"])
 _MANDOS = ("operador", "decisor", "admin")
@@ -283,6 +283,7 @@ def panel_resumen(
         "centros": bloque_centros,
         "cuadrillas": bloque_cuadrillas,
         "ordenes": bloque_ordenes,
+        "evacuaciones": evacuaciones.bloque_panel(db),
         "lluvia_7d": bloque_lluvia,
         "frescura": {
             "rio_ultima_lectura": None if ultima is None else ultima[0].isoformat(),

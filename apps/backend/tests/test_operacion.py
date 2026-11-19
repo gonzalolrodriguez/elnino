@@ -223,7 +223,8 @@ def test_tareas_cuadrilla_actualiza_las_suyas_y_transiciones(client, como, db):
     )
     mis = client.get("/api/v1/tareas", headers=como("cuadrilla")).json()["tareas"]
     assert mis, "la cuadrilla de demo (humana) debe recibir tareas"
-    t = mis[0]
+    # Las tareas ya cerradas con constancia (otras pruebas y el seed) no sirven para este caso.
+    t = next(x for x in mis if x["estado"] == "pendiente")
     r = client.patch(
         f"/api/v1/tareas/{t['id']}", headers=como("cuadrilla"), json={"estado": "completada"}
     )

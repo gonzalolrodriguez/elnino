@@ -15,7 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config.settings import get_settings
 
-_ADJUNTO = re.compile(r"^/api/v1/solicitudes/\d+/adjuntos/?$")
+_ADJUNTO = re.compile(r"^/api/v1/(?:solicitudes/\d+/adjuntos|tareas/\d+/cierre/adjuntos)/?$")
 _HOLGURA = 64 * 1024  # encabezados multipart y demás
 
 

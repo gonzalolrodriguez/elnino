@@ -14,6 +14,7 @@ from app.api.v1 import (
     canales,
     centinela,
     datos,
+    evacuaciones,
     lluvia,
     meta,
     mi,
@@ -126,7 +127,18 @@ def crear_app() -> FastAPI:
     app.include_router(meta.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(usuarios.router, prefix="/api/v1")
-    for modulo in (datos, lluvia, canales, operacion, solicitudes, mi, centinela, panel, ws):
+    for modulo in (
+        datos,
+        lluvia,
+        canales,
+        operacion,
+        evacuaciones,
+        solicitudes,
+        mi,
+        centinela,
+        panel,
+        ws,
+    ):
         app.include_router(modulo.router, prefix="/api/v1")
     app.include_router(simulacion.router, prefix="/api/v1")
     app.include_router(simulacion.router_ruteo, prefix="/api/v1")

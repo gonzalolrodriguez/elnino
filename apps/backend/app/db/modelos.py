@@ -406,6 +406,58 @@ class Tarea(Base):
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 
+class ConstanciaTarea(Base):
+    """Constancia de cierre de una tarea de evacuación: destino, personas, animales y fotos."""
+
+    __tablename__ = "constancias_tarea"
+    __table_args__ = (
+        Index(
+            "uq_constancia_idempotencia",
+            "cerrada_por",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tarea_id: Mapped[int] = mapped_column(ForeignKey("tareas.id", ondelete="CASCADE"), unique=True)
+    cerrada_por: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
+    rol_operativo: Mapped[str | None] = mapped_column(String(60))
+    geom_destino = mapped_column(_punto())
+    centro_id: Mapped[int | None] = mapped_column(ForeignKey("centros_recepcion.id"))
+    # Distancia entre el destino GPS y el centro elegido, calculada al cerrar (None sin centro).
+    distancia_a_centro_m: Mapped[float | None] = mapped_column(Float)
+    personas_trasladadas: Mapped[int] = mapped_column(Integer, default=0)
+    animales_trasladados: Mapped[dict | None] = mapped_column(JSONB)  # {especie: cantidad}
+    nota: Mapped[str | None] = mapped_column(Text)
+    adjuntos: Mapped[list | None] = mapped_column(JSONB)
+    idempotency_key: Mapped[str | None] = mapped_column(String(36))
+    categoria: Mapped[str] = mapped_column(String(30), default="SIMULADO")
+    creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+
+
+class ConfirmacionEvacuado(Base):
+    """Confirmación del evacuado sobre el traslado (app o SMS con código)."""
+
+    __tablename__ = "confirmaciones_evacuado"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tarea_id: Mapped[int] = mapped_column(ForeignKey("tareas.id", ondelete="CASCADE"), unique=True)
+    solicitud_id: Mapped[int | None] = mapped_column(
+        ForeignKey("solicitudes_asistencia.id"), index=True
+    )
+    usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    canal: Mapped[str | None] = mapped_column(String(20))  # app|sms_sim|whatsapp_sim|ivr_sim
+    respuesta: Mapped[str | None] = mapped_column(
+        String(10)
+    )  # si|no|problema; NULL = sin responder
+    comentario: Mapped[str | None] = mapped_column(Text)
+    codigo: Mapped[str] = mapped_column(String(8), unique=True)
+    creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+    respondida_en: Mapped[datetime | None] = mapped_column(_TZ)
+
+
 class Orden(Base):
     __tablename__ = "ordenes"
     __table_args__ = (
@@ -436,6 +488,10 @@ class Notificacion(Base):
         ForeignKey("usuarios.id", ondelete="CASCADE"), index=True
     )
     orden_id: Mapped[int | None] = mapped_column(ForeignKey("ordenes.id"))
+    # orden (alerta u orden de evacuación) | confirmacion_evacuacion | discrepancia
+    tipo: Mapped[str] = mapped_column(String(30), default="orden", server_default="orden")
+    # Datos para que el cliente actúe (p. ej. tarea, solicitud y código de la confirmación).
+    datos: Mapped[dict | None] = mapped_column(JSONB)
     mensaje: Mapped[str] = mapped_column(Text)
     leida: Mapped[bool] = mapped_column(Boolean, default=False)
     creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)

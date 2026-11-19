@@ -77,3 +77,8 @@ velocidad_lancha_kmh:
 acceso_red_vial_buffer_m:
   valor: 25
   fuente: SUPUESTO (radio alrededor de un acceso dentro del cual una arista de la red vial se considera ese mismo camino; si el acceso se cierra, se cortan las aristas contenidas en ese radio)
+
+# --- Constancias de evacuación ---
+distancia_max_destino_m:
+  valor: 500
+  fuente: SUPUESTO (si el destino GPS de la constancia queda a más de esta distancia del centro elegido, la evacuación se marca "con discrepancia" para revisar; no es una acusación)

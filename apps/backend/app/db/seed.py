@@ -14,9 +14,9 @@ from datetime import date, datetime
 from pathlib import Path
 
 from geoalchemy2 import WKTElement
-from geoalchemy2.shape import from_shape
+from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -28,17 +28,21 @@ from app.db.consultas import sector_de_punto
 from app.db.modelos import (
     Acceso,
     CentroRecepcion,
+    ConfirmacionEvacuado,
     Cuadrilla,
     Establecimiento,
     Estacion,
     GrupoFamiliar,
     IntegranteCuadrilla,
     LecturaHidrometrica,
+    Notificacion,
     PuestoPluviometrico,
     RecursoSimulado,
     RolOperativo,
     Sector,
+    SolicitudAsistencia,
     StockProductivo,
+    Tarea,
     Usuario,
 )
 from app.db.sesion import get_sessionmaker
@@ -331,6 +335,123 @@ def sembrar_cuadrillas(db: Session) -> int:
     return nuevas
 
 
+# Casos de demostración de constancias (SIMULADO): (usuario demo, tipo de pedido, desvío del destino
+# respecto del centro en metros, respuesta del evacuado). ``None`` = sin responder.
+CASOS_CONSTANCIAS = (
+    ("ciudadano1@demo.evacuaciones.invalid", "evacuacion", 0.0, "si"),
+    ("productor1@demo.evacuaciones.invalid", "ganado", 0.0, None),
+    ("ciudadano2@demo.evacuaciones.invalid", "evacuacion", 1200.0, None),
+)
+
+
+def sembrar_constancias_demo(db: Session) -> int:
+    """Tres evacuaciones cerradas de ejemplo (verificada, sin confirmar y con discrepancia).
+
+    Pasan por la misma lógica que el endpoint de cierre. Son SIMULADO: pedidos de usuarios de demo
+    cerrados por la cuadrilla de demo. Idempotente por el título de la tarea.
+    """
+    from app.domain.ruteo import haversine_m
+    from app.servicios import evacuaciones as srv_evac
+
+    firmante = db.execute(
+        select(Usuario).where(Usuario.email == "cuadrilla@demo.evacuaciones.invalid")
+    ).scalar_one_or_none()
+    centros = db.execute(
+        select(
+            CentroRecepcion.id,
+            func.ST_X(CentroRecepcion.geom),
+            func.ST_Y(CentroRecepcion.geom),
+        ).order_by(CentroRecepcion.id)
+    ).all()
+    if firmante is None or not centros:
+        return 0
+    nuevas = 0
+    for email, tipo, desvio_m, respuesta in CASOS_CONSTANCIAS:
+        usuario = db.execute(select(Usuario).where(Usuario.email == email)).scalar_one_or_none()
+        titulo = f"[DEMO] Traslado registrado · {email.split('@')[0]}"
+        if usuario is None or db.execute(select(Tarea.id).where(Tarea.titulo == titulo)).first():
+            continue
+        grupo = db.execute(
+            select(GrupoFamiliar).where(GrupoFamiliar.usuario_id == usuario.id)
+        ).scalar_one_or_none()
+        est = (
+            db.execute(select(Establecimiento).where(Establecimiento.productor_id == usuario.id))
+            .scalars()
+            .first()
+        )
+        if grupo is not None and grupo.domicilio is not None:
+            origen, personas, animales = to_shape(grupo.domicilio), grupo.integrantes, 0
+        elif est is not None:
+            origen, personas, animales = to_shape(est.geom_tranquera), 0, 30
+        else:
+            continue
+        solicitud = SolicitudAsistencia(
+            solicitante_id=usuario.id,
+            origen="app",
+            tipo=tipo,
+            personas=personas,
+            animales=animales,
+            texto="Pedido de demostración (SIMULADO)",
+            geom=_punto(origen.x, origen.y),
+            sector_id=sector_de_punto(db, origen.x, origen.y),
+            estado="en_curso",
+            detalle={"demo": "constancias"},
+        )
+        db.add(solicitud)
+        db.flush()
+        cuadrilla_tipo = "ganadera" if animales else "humana"
+        cuadrilla = (
+            db.execute(
+                select(Cuadrilla)
+                .where(Cuadrilla.tipo_incidente == cuadrilla_tipo)
+                .order_by(Cuadrilla.id)
+            )
+            .scalars()
+            .first()
+        )
+        tarea = Tarea(
+            cuadrilla_id=cuadrilla.id if cuadrilla else None,
+            solicitud_id=solicitud.id,
+            sector_id=solicitud.sector_id,
+            titulo=titulo,
+            descripcion="Traslado de demostración con constancia (SIMULADO)",
+            estado="en_curso",
+        )
+        db.add(tarea)
+        db.flush()
+        cid, cx, cy = min(centros, key=lambda c: haversine_m(origen.x, origen.y, c[1], c[2]))
+        # El desvío se aplica hacia el este (1 grado de longitud ~ 100 km en esta latitud).
+        constancia, _ = srv_evac.cerrar_tarea(
+            db,
+            tarea,
+            firmante,
+            firmante.rol_operativo or firmante.rol,
+            lon=cx + desvio_m / 100000.0,
+            lat=cy,
+            centro_id=cid,
+            personas=personas,
+            animales={"bovinos": animales} if animales else {},
+            nota="Constancia de demostración (SIMULADO): sin personas reales.",
+            clave=None,
+        )
+        solicitud.estado = "resuelta"
+        if respuesta:
+            k = db.execute(
+                select(ConfirmacionEvacuado).where(ConfirmacionEvacuado.tarea_id == tarea.id)
+            ).scalar_one()
+            srv_evac.registrar_confirmacion(db, k.id, respuesta, None, "app", usuario.id)
+            for n in db.execute(
+                select(Notificacion).where(
+                    Notificacion.usuario_id == usuario.id,
+                    Notificacion.tipo == srv_evac.TIPO_CONFIRMACION,
+                )
+            ).scalars():
+                n.leida = True
+        nuevas += 1
+    db.flush()
+    return nuevas
+
+
 def sembrar_todo(db: Session) -> dict[str, int]:
     """Carga los datos base; los usuarios y cuadrillas de demo solo con ``SEED_DEMO=true``."""
     demo = get_settings().seed_demo
@@ -346,6 +467,7 @@ def sembrar_todo(db: Session) -> dict[str, int]:
         "usuarios_demo_nuevos": sembrar_usuarios(db) if demo else 0,
         "cuadrillas_nuevas": sembrar_cuadrillas(db) if demo else 0,
     }
+    resultado["constancias_demo_nuevas"] = sembrar_constancias_demo(db) if demo else 0
     db.commit()
     return resultado
 

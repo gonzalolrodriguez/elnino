@@ -1,6 +1,8 @@
 """Difusión de eventos en tiempo real por WebSocket (``/api/v1/ws``).
 
-Eventos: ``escenario``, ``solicitud``, ``orden`` y ``tarea``. Los endpoints son síncronos (corren en
+Eventos: ``escenario``, ``solicitud``, ``orden``, ``tarea``, ``constancia`` y ``discrepancia``.
+(``constancia`` y ``discrepancia`` solo llevan ids, estado y motivos: nunca ubicaciones.)
+Los endpoints son síncronos (corren en
 un hilo) y llaman a ``publicar``, que entrega el mensaje al bucle de eventos del servidor. Cada
 conexión recibe solo lo que su rol puede ver:
 
@@ -8,6 +10,7 @@ conexión recibe solo lo que su rol puede ver:
 - ``orden``: también las personas alcanzadas por la orden (``destinatarios``: quienes viven o
   producen en los sectores). Ciudadanía y productores de otros sectores no la reciben.
 - ``solicitud``: además, el propio solicitante.
+- ``constancia`` y ``discrepancia``: solo ``mandos``; la ciudadanía no las recibe.
 
 Cada envío es concurrente y tiene su propio plazo (``PLAZO_ENVIO_S``): un cliente lento o colgado no
 retrasa a los demás ni al hilo que publicó; si no responde a tiempo se lo desconecta.

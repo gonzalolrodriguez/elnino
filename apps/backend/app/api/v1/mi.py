@@ -347,6 +347,8 @@ def _notif_a_dict(n: Notificacion) -> dict:
     return {
         "id": n.id,
         "orden_id": n.orden_id,
+        "tipo": n.tipo,
+        "datos": n.datos,
         "mensaje": n.mensaje,
         "leida": n.leida,
         "creada_en": n.creada_en.isoformat(),
