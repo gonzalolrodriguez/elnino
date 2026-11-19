@@ -1,11 +1,12 @@
 import { Box, Button, Flex, Link, Text, useToast } from "@chakra-ui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { Layout } from "../components/Layout";
 import { describirEvento, useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { EscenarioProvider } from "./EscenarioContext";
+import { etiquetaRol, etiquetaRolOperativo } from "../lib/etiquetas";
 
 const SECCIONES = [
   { to: "/comando", fin: true, texto: "Monitor" },
@@ -31,10 +32,28 @@ export function PanelLayout() {
   const { usuario, token } = useAuth();
   const toast = useToast();
 
+  // Solo avisan las órdenes y las solicitudes; el resto (escenario, tareas) actualiza las pantallas sin interrumpir.
+  // Si llegan en ráfaga se agrupan en un único aviso con el contador, en vez de apilar uno por evento.
+  const acumulados = useRef<Record<string, number>>({});
   const alEvento = useCallback(
     (e: EventoTiempoReal) => {
+      if (e.tipo !== "orden" && e.tipo !== "solicitud") return;
+      const id = `evento-${e.tipo}`;
       const { titulo, detalle } = describirEvento(e);
-      toast({ title: titulo, description: detalle, status: e.tipo === "orden" ? "warning" : "info", duration: 6000, isClosable: true, position: "bottom-right" });
+      const n = (acumulados.current[id] = (acumulados.current[id] ?? 0) + 1);
+      const opciones = {
+        title: n > 1 ? `${titulo} (${n} nuevas)` : titulo,
+        description: n > 1 ? `Última: ${detalle}` : detalle,
+        status: e.tipo === "orden" ? ("warning" as const) : ("info" as const),
+        duration: 6000,
+        isClosable: true,
+        position: "bottom-right" as const,
+        onCloseComplete: () => {
+          acumulados.current[id] = 0;
+        },
+      };
+      if (toast.isActive(id)) toast.update(id, opciones);
+      else toast({ id, ...opciones });
     },
     [toast],
   );
@@ -66,7 +85,7 @@ export function PanelLayout() {
               Panel operativo
             </Text>
             <Text fontSize="sm" color="textoSuave" mb={3}>
-              {usuario ? `${usuario.rol}${usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""}` : ""}
+              {usuario ? `${etiquetaRol(usuario.rol)}${usuario.rol_operativo ? ` · ${etiquetaRolOperativo(usuario.rol_operativo)}` : ""}` : ""}
             </Text>
             <Button
               type="button"

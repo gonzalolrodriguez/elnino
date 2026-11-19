@@ -9,6 +9,7 @@ import { api } from "../api";
 import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
 import { Cargando, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
+import { etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
 
 const TIPO_INCIDENTE = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" } as const;
 const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
@@ -58,7 +59,7 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
                 <Tr key={c.id}>
                   <Td>{c.nombre}</Td>
                   <Td>{TIPO_INCIDENTE[c.tipo_incidente as keyof typeof TIPO_INCIDENTE] ?? c.tipo_incidente}</Td>
-                  <Td whiteSpace="normal">{c.integrantes.map((i) => i.rol_operativo).join(", ") || "sin integrantes"}</Td>
+                  <Td whiteSpace="normal">{c.integrantes.map((i) => etiquetaRolOperativo(i.rol_operativo)).join(", ") || "sin integrantes"}</Td>
                   <Td whiteSpace="normal">{c.roles_faltantes.join(", ") || "plantilla completa"}</Td>
                 </Tr>
               ))}
@@ -132,7 +133,7 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                   <Td whiteSpace="normal">{t.titulo}</Td>
                   <Td>{t.sector_id ?? "—"}</Td>
                   <Td>
-                    <Badge>{t.estado.replace("_", " ")}</Badge>
+                    <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
                   </Td>
                   <Td>
                     <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
@@ -214,21 +215,21 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                 return (
                   <Tr key={s.id}>
                     <Td>{s.id}</Td>
-                    <Td>{s.tipo}</Td>
-                    <Td>{s.origen}</Td>
+                    <Td>{etiquetaTipoSolicitud(s.tipo)}</Td>
+                    <Td>{etiquetaOrigenSolicitud(s.origen)}</Td>
                     <Td>{s.sector_id ?? "—"}</Td>
                     <Td isNumeric>{fmtNum(s.personas)}</Td>
                     <Td isNumeric>{fmtNum(s.animales)}</Td>
                     <Td>
-                      <Badge>{s.estado.replace("_", " ")}</Badge>
+                      <Badge>{etiquetaEstadoSolicitud(s.estado)}</Badge>
                     </Td>
                     <Td>
                       {sig ? (
                         <Button size="xs" variant="outline" onClick={() => void avanzar(s, sig)}>
-                          {sig.replace("_", " ")}
+                          {etiquetaEstadoSolicitud(sig)}
                         </Button>
                       ) : (
-                        "resuelta"
+                        "Resuelta"
                       )}
                     </Td>
                   </Tr>

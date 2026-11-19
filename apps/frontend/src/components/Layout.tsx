@@ -31,7 +31,8 @@ function Enlace({ to, children }: { to: string; children: ReactNode }) {
 
 function etiquetaPrivada(rol: string) {
   if (rol === "ciudadano" || rol === "productor") return "Mi cuenta";
-  return rol === "cuadrilla" ? "Mis tareas" : "Panel";
+  if (rol === "admin") return "Administración";
+  return rol === "cuadrilla" ? "Mis tareas" : "Panel operativo";
 }
 
 function IconoMenu({ abierto }: { abierto: boolean }) {
@@ -138,7 +139,8 @@ function Navegacion() {
           {estado === "autenticado" && usuario ? (
             <>
               <li><Enlace to={rutaInicio(usuario.rol)}>{etiquetaPrivada(usuario.rol)}</Enlace></li>
-              {usuario.rol === "admin" && <li><Enlace to="/cuadrilla">Cuadrilla</Enlace></li>}
+              {usuario.rol === "admin" && <li><Enlace to="/comando">Panel operativo</Enlace></li>}
+              {usuario.rol === "admin" && <li><Enlace to="/cuadrilla">Tareas de cuadrilla</Enlace></li>}
               <li>
                 <Button size="sm" variant="outline" onClick={() => void cerrarSesion()} my={{ base: 1, md: 0 }} ml={{ md: 2 }}>
                   Cerrar sesión
@@ -229,7 +231,7 @@ function Pie() {
             <Text fontWeight={700} color="oscuro.fg" mb={3}>
               Ayuda y privacidad
             </Text>
-            <Text>Esta plataforma no reemplaza al 103 ni a Defensa Civil. Ante una emergencia, llame al 103.</Text>
+            <Text>Esta plataforma no reemplaza al 103 ni a Defensa Civil. Ante una emergencia, llamá al 103.</Text>
             <Text mt={2}>
               Tus datos se usan solo para la gestión de emergencias, según la Ley 25.326. Podés pedir el acceso, la rectificación o la supresión.
             </Text>

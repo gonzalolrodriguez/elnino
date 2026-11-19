@@ -1,9 +1,11 @@
 import { Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { useState } from "react";
 
+import { useAuth } from "../auth/AuthContext";
 import { EstadoBackend } from "../components/EstadoBackend";
 import { AlertaError } from "../components/Formulario";
 import { Layout } from "../components/Layout";
+import { etiquetaEstadoUsuario, etiquetaRol } from "../lib/etiquetas";
 import { useCarga } from "../lib/useCarga";
 import { api } from "../panel/api";
 import type { UsuarioAdmin } from "../panel/tipos";
@@ -14,6 +16,8 @@ const ROLES_ALTA = ["cuadrilla", "operador", "decisor", "admin"] as const;
 
 function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: { codigo: string; nombre: string }[]; alCambiar: () => void }) {
   const toast = useToast();
+  const { usuario } = useAuth();
+  const esYo = usuario?.id === u.id;
   const [error, setError] = useState<unknown>(null);
 
   async function modificar(cambio: Record<string, unknown>) {
@@ -31,7 +35,7 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: { codigo
     <Tr>
       <Td>{u.nombre_visible}</Td>
       <Td>{u.email}</Td>
-      <Td>{u.rol}</Td>
+      <Td>{etiquetaRol(u.rol)}</Td>
       <Td>
         {institucional ? (
           <Select aria-label={`Rol operativo de ${u.email}`} size="xs" bg="superficie" value={u.rol_operativo ?? ""} placeholder="Sin rol operativo" onChange={(e) => void modificar({ rol_operativo: e.target.value || null })}>
@@ -47,11 +51,18 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: { codigo
         {error !== null && <AlertaError error={error} />}
       </Td>
       <Td>
-        <Badge colorScheme={u.estado === "activo" ? "green" : "gray"}>{u.estado}</Badge>
+        <Badge colorScheme={u.estado === "activo" ? "green" : "gray"}>{etiquetaEstadoUsuario(u.estado)}</Badge>
       </Td>
       <Td>{u.ultimo_login ? fmtFecha(u.ultimo_login) : "nunca"}</Td>
       <Td>
-        <Button size="xs" variant="outline" onClick={() => void modificar({ estado: u.estado === "activo" ? "inactivo" : "activo" })}>
+        <Button
+          size="xs"
+          variant="outline"
+          isDisabled={esYo && u.estado === "activo"}
+          title={esYo && u.estado === "activo" ? "No podés desactivar tu propia cuenta" : undefined}
+          aria-label={esYo && u.estado === "activo" ? "Desactivar (no disponible: es tu propia cuenta)" : undefined}
+          onClick={() => void modificar({ estado: u.estado === "activo" ? "inactivo" : "activo" })}
+        >
           {u.estado === "activo" ? "Desactivar" : "Activar"}
         </Button>
       </Td>
@@ -126,7 +137,7 @@ function FormAlta({ roles, alCrear }: { roles: { codigo: string; nombre: string 
           <Select id="alta-rol" size="sm" bg="superficie" value={rol} onChange={(e) => setRol(e.target.value)}>
             {ROLES_ALTA.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {etiquetaRol(r)}
               </option>
             ))}
           </Select>

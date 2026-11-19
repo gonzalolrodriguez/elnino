@@ -1,10 +1,13 @@
 import { Alert, AlertIcon, Box, Button, Heading, Link, Text, VStack } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+
+import { rutaInicio, useAuth } from "../auth/AuthContext";
 
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
+import { Plegable } from "../components/Plegable";
 import { BloqueApoyo, PaginaFormulario, ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
@@ -14,6 +17,8 @@ import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validar
 type Creado = { id: number; email: string; nombre_visible: string; rol: string };
 
 export default function RegistroCiudadano() {
+  const { iniciarSesion } = useAuth();
+  const navigate = useNavigate();
   const [v, setV] = useState({
     email: "",
     password: "",
@@ -77,7 +82,14 @@ export default function RegistroCiudadano() {
     }
     setEnviando(true);
     try {
-      setCreado(await solicitar<Creado>("/auth/registro/ciudadano", { cuerpo }));
+      const nuevo = await solicitar<Creado>("/auth/registro/ciudadano", { cuerpo });
+      try {
+        // Igual que en la app: tras registrarse se inicia sesión sola.
+        const u = await iniciarSesion(v.email, v.password);
+        navigate(rutaInicio(u.rol), { replace: true });
+      } catch {
+        setCreado(nuevo);
+      }
     } catch (x) {
       setErrorApi(x);
     } finally {
@@ -150,11 +162,13 @@ export default function RegistroCiudadano() {
             <Heading as="h2" size="sm" pt={2}>
               Domicilio (opcional)
             </Heading>
-            <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4}>
-              <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
-              <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
-            </Box>
-            <BotonUbicacion onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <BotonUbicacion primario onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
+              <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
+                <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
+                <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
+              </Box>
+            </Plegable>
             <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
             {puntoValido && sector && (
               <Text fontSize="sm" role="status">

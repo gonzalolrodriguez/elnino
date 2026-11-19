@@ -60,7 +60,7 @@ export default function Login() {
               </Box>
             </BloqueApoyo>
             <Box borderTop="1px solid" borderColor="borde" pt={1}>
-              <Plegable titulo={<Heading as="h2" size="sm">Si no puede ingresar</Heading>}>
+              <Plegable titulo={<Heading as="h2" size="sm">Si no podés ingresar</Heading>}>
                 <Text fontSize="sm" pb={2}>
                   Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
                   más tarde.

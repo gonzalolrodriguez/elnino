@@ -16,15 +16,17 @@ export const MENSAJES_UBICACION: Record<ErrorUbicacion, string> = {
 type Props = {
   /** Recibe la ubicación del dispositivo (grados decimales, 5 decimales). */
   onUbicacion: (lon: number, lat: number, precisionM: number) => void;
+  /** Camino principal del formulario: botón lleno y de tamaño completo (en vez del botón secundario). */
+  primario?: boolean;
 };
 
 /** Completa longitud y latitud con la ubicación del dispositivo. Solo actúa tras un clic. */
-export function BotonUbicacion({ onUbicacion }: Props) {
+export function BotonUbicacion({ onUbicacion, primario = false }: Props) {
   const { estado, pedir } = useUbicacionDispositivo(onUbicacion);
   const buscando = estado.fase === "buscando";
   return (
     <Box>
-      <Button size="sm" variant="outline" type="button" onClick={pedir} isLoading={buscando} loadingText="Buscando tu ubicación…">
+      <Button size={primario ? "md" : "sm"} variant={primario ? "solid" : "outline"} minH="2.75rem" type="button" onClick={pedir} isLoading={buscando} loadingText="Buscando tu ubicación…">
         Usar mi ubicación actual
       </Button>
       <Box aria-live="polite" mt={2}>
