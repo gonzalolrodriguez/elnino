@@ -4,8 +4,9 @@ import { Link as RouterLink } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 
-/** URL pública de la APK generada con EAS Build (perfil preview). Vacía = descarga no disponible. */
-const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || "";
+/** APK publicada por EAS Build (perfil preview, build b08751c6 del 19/11/2026). VITE_APK_URL la reemplaza. */
+const APK_URL_EAS = "https://expo.dev/artifacts/eas/DPhHMaMeOlWckYbImnaICQY-QZdvivoYwiOcL0v2HVg.apk";
+const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || APK_URL_EAS;
 
 export function AppMovil() {
   return (
