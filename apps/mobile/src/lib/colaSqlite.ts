@@ -148,6 +148,11 @@ export class RepositorioSqlite implements RepositorioCola {
     await db.runAsync("DELETE FROM cola_solicitudes WHERE id = ?", id);
   }
 
+  async eliminarDeOtrosUsuarios(usuarioId: number): Promise<void> {
+    const db = await this.db();
+    await db.runAsync("DELETE FROM cola_solicitudes WHERE usuario_id <> ?", usuarioId);
+  }
+
   async borrarDeUsuario(usuarioId: number): Promise<void> {
     const db = await this.db();
     await db.runAsync("DELETE FROM cola_solicitudes WHERE usuario_id = ?", usuarioId);

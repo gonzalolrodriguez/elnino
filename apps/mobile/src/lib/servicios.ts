@@ -1,3 +1,5 @@
+import { Image } from "react-native";
+
 import { ErrorApi, peticion } from "@/lib/api";
 import type { DatosSolicitud, ResultadoEnvio, ResultadoFoto } from "@/lib/cola";
 
@@ -153,7 +155,30 @@ export async function enviarSolicitud(
   }
 }
 
-/** Segundo tiempo: sube la foto ya comprimida (JPEG) como adjunto de la solicitud. */
+/**
+ * `true` si la imagen local todavía existe. `Image.getSize` solo lee el archivo (sin red): rechaza
+ * enseguida si el sistema borró la caché o el archivo se movió.
+ */
+export function archivoExiste(uri: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      Image.getSize(
+        uri,
+        () => resolve(true),
+        () => resolve(false),
+      );
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Segundo tiempo: sube la foto ya comprimida (JPEG) como adjunto de la solicitud. Si el envío falla
+ * por red y la foto ya no está en el teléfono, se informa como rechazo definitivo (la solicitud ya
+ * llegó): si no, el fallo de `fetch` pasaría por caída de red y se reintentaría para siempre,
+ * bloqueando a las solicitudes que siguen en la cola.
+ */
 export async function subirFotoSolicitud(servidorId: number, fotoUri: string): Promise<ResultadoFoto> {
   try {
     const form = new FormData();
@@ -162,7 +187,11 @@ export async function subirFotoSolicitud(servidorId: number, fotoUri: string): P
     await peticion<unknown>(`/solicitudes/${servidorId}/adjuntos`, { metodo: "POST", cuerpo: form });
     return { ok: true };
   } catch (e) {
-    return clasificar(e);
+    const falla = clasificar(e);
+    if (falla.tipo === "red" && !(await archivoExiste(fotoUri))) {
+      return { ok: false, tipo: "rechazo", mensaje: "la foto ya no está en el teléfono" };
+    }
+    return falla;
   }
 }
 

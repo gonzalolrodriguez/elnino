@@ -58,6 +58,11 @@ export function ColaProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    // Teléfono compartido: lo que dejó otra cuenta (ubicación, texto) no queda en la cola de esta.
+    void cola.limpiarAjenos(usuario.id).catch(() => undefined);
+  }, [cola, usuario.id]);
+
+  useEffect(() => {
     void refrescar();
     void vaciar();
     const intervalo = setInterval(() => void vaciar(), INTERVALO_MS);
