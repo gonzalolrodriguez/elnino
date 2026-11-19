@@ -135,7 +135,7 @@ export default function Produccion() {
   return (
     <>
       <Heading as="h1" size="lg" mb={4}>
-        Arca Productiva
+        Producción y ganado
       </Heading>
       <AvisoSimulado>El rodeo de ejemplo es el caso de control (8 preñadas, 10 con cría, 10 terneros, 1 vaquillona y 1 toro). Las capacidades y raciones son supuestos a verificar, no normativa.</AvisoSimulado>
       <Seccion titulo="Calculadora ganadera" categoria="SIMULADO" id="sec-ganaderia">

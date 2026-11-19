@@ -31,7 +31,7 @@ export default function Centinela() {
   return (
     <>
       <Heading as="h1" size="lg" mb={4}>
-        Centinela: auditoría de datos y de afirmaciones
+        Auditoría de datos (Centinela)
       </Heading>
 
       <Seccion titulo="Auditoría de la limpieza de K1" categoria="DATO OBSERVADO" id="sec-k1">

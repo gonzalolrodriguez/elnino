@@ -326,6 +326,15 @@ export default function MapaOperativo() {
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const [ruta, setRuta] = useState<Ruta | null>(null);
   const [modoOrigen, setModoOrigen] = useState(false);
+  const [verTraslados, setVerTraslados] = useState(false);
+  const evacuaciones = useCarga(() => (verTraslados ? api.evacuaciones({ limite: 200 }) : Promise.resolve(null)), [verTraslados]);
+  const traslados = useMemo(
+    () =>
+      (verTraslados ? (evacuaciones.datos?.evacuaciones ?? []) : [])
+        .filter((e) => e.constancia && e.origen && ["cerrada_cuadrilla", "verificada", "con_discrepancia"].includes(e.estado))
+        .map((e) => ({ id: e.tarea_id, origen: [e.origen!.lon, e.origen!.lat] as [number, number], destino: [e.constancia!.destino.lon, e.constancia!.destino.lat] as [number, number], estado: e.estado })),
+    [verTraslados, evacuaciones.datos],
+  );
   const [origenManual, setOrigenManual] = useState<{ lon: number; lat: number } | null>(null);
 
   const listaAccesos = useMemo(() => (accesos.datos?.features ?? []).map((f) => f.properties as unknown as AccesoProps), [accesos.datos]);
@@ -381,6 +390,7 @@ export default function MapaOperativo() {
                 ruta={ruta}
                 modoOrigen={modoOrigen}
                 origenRuta={origenManual}
+                traslados={traslados}
                 onAcceso={(a) => setSeleccion(a.id)}
                 onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
               />
@@ -427,6 +437,24 @@ export default function MapaOperativo() {
           </Seccion>
           <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo">
             <PanelRuteo ruta={ruta} setRuta={setRuta} origenManual={origenManual} setOrigenManual={setOrigenManual} modoOrigen={modoOrigen} setModoOrigen={setModoOrigen} />
+          </Seccion>
+          <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados">
+            <Checkbox size="sm" isChecked={verTraslados} onChange={(e) => setVerTraslados(e.target.checked)}>
+              Mostrar traslados cerrados (origen del pedido a destino marcado)
+            </Checkbox>
+            {verTraslados && evacuaciones.estado === "error" && (
+              <Text fontSize="sm" mt={2} role="alert">
+                No se pudieron cargar los traslados.
+              </Text>
+            )}
+            {verTraslados && evacuaciones.estado === "ok" && (
+              <Text fontSize="xs" color="textoSuave" mt={2} data-testid="leyenda-traslados">
+                {traslados.length === 0 ? "Todavía no hay evacuaciones cerradas con origen y destino." : `${traslados.length} ${traslados.length === 1 ? "traslado" : "traslados"}. Línea verde: verificada por el evacuado; ámbar: cerrada sin confirmar; roja: con discrepancia a revisar. El punto marca el destino.`}
+              </Text>
+            )}
+            <Text fontSize="xs" color="textoSuave" mt={2}>
+              Solo para roles operativos: la ubicación del evacuado es un dato sensible.
+            </Text>
           </Seccion>
           <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas">
             <Cargando carga={capas} hijos={(c) => (

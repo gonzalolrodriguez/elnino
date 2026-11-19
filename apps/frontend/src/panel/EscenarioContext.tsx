@@ -9,10 +9,31 @@ type Contexto = {
   fijarLluvia: (mm: number, origen?: OrigenLluvia) => void;
   alternarCamino: (id: number) => void;
   escenario: Escenario | null;
+  /** Entrada con la que se calculó `escenario` (null si todavía no se calculó). */
+  entradaCalculada: EntradaEscenario | null;
+  /** true si hay un resultado pero los controles ya no coinciden con lo que se calculó. */
+  desactualizado: boolean;
   calculando: boolean;
   error: unknown;
   simular: () => Promise<Escenario | null>;
+  /** Altura observada (DATO OBSERVADO) con la que se compara el escenario activo. */
+  alturaObservada: number;
+  fijarAlturaObservada: (m: number) => void;
+  /** true si la altura elegida difiere de la observada: lo que se ve en el panel es una simulación. */
+  escenarioSimulado: boolean;
+  /** Vuelve a la altura observada y deja la lluvia simulada en cero. */
+  volverAObservado: () => void;
 };
+
+function mismaEntrada(a: EntradaEscenario, b: EntradaEscenario): boolean {
+  return (
+    a.altura_formosa_m === b.altura_formosa_m &&
+    a.lluvia_mm === b.lluvia_mm &&
+    a.lluvia_origen === b.lluvia_origen &&
+    a.caminos_cerrados.length === b.caminos_cerrados.length &&
+    [...a.caminos_cerrados].sort().join(",") === [...b.caminos_cerrados].sort().join(",")
+  );
+}
 
 const Ctx = createContext<Contexto | null>(null);
 
@@ -28,8 +49,10 @@ export function EscenarioProvider({ children }: { children: ReactNode }) {
     caminos_cerrados: [],
   });
   const [escenario, setEscenario] = useState<Escenario | null>(null);
+  const [entradaCalculada, setEntradaCalculada] = useState<EntradaEscenario | null>(null);
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [alturaObservada, setAlturaObservada] = useState(ALTURA_CORTE_M);
 
   const fijarAltura = useCallback((m: number) => setEntrada((e) => ({ ...e, altura_formosa_m: m })), []);
   const fijarLluvia = useCallback((mm: number, origen?: OrigenLluvia) => setEntrada((e) => ({ ...e, lluvia_mm: mm, lluvia_origen: origen ?? e.lluvia_origen })), []);
@@ -48,6 +71,7 @@ export function EscenarioProvider({ children }: { children: ReactNode }) {
     try {
       const r = await api.escenario(entrada);
       setEscenario(r);
+      setEntradaCalculada(entrada);
       return r;
     } catch (e) {
       setError(e);
@@ -57,9 +81,14 @@ export function EscenarioProvider({ children }: { children: ReactNode }) {
     }
   }, [entrada]);
 
+  const fijarAlturaObservada = useCallback((m: number) => setAlturaObservada(m), []);
+  const volverAObservado = useCallback(() => setEntrada((e) => ({ ...e, altura_formosa_m: alturaObservada, lluvia_mm: 0 })), [alturaObservada]);
+  const escenarioSimulado = Math.abs(entrada.altura_formosa_m - alturaObservada) >= 0.005;
+
+  const desactualizado = escenario !== null && entradaCalculada !== null && !mismaEntrada(entrada, entradaCalculada);
   const valor = useMemo(
-    () => ({ entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, calculando, error, simular }),
-    [entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, calculando, error, simular],
+    () => ({ entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular, alturaObservada, fijarAlturaObservada, escenarioSimulado, volverAObservado }),
+    [entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular, alturaObservada, fijarAlturaObservada, escenarioSimulado, volverAObservado],
   );
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

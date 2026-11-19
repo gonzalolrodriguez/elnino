@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.v1.esquemas import UsuarioActualizar, UsuarioCrear, UsuarioOut
+from app.api.v1.esquemas import UsuarioActualizar, UsuarioAdminOut, UsuarioCrear, UsuarioOut
 from app.core import auditoria, sesiones
 from app.core.eventos import difusor
 from app.core.rbac import ROLES_INSTITUCIONALES, ip_cliente, requiere_rol
 from app.core.seguridad import hashear_password
+from app.db.base import ahora
 from app.db.modelos import IntentoLogin, RolOperativo, Usuario
 from app.db.sesion import get_db
 
@@ -23,21 +26,41 @@ def _validar_rol_operativo(db: Session, codigo: str | None) -> None:
         raise HTTPException(422, f"rol_operativo desconocido: {codigo}")
 
 
-@router.get("", response_model=list[UsuarioOut])
+def _con_bloqueo(db: Session, usuarios: list[Usuario]) -> list[UsuarioAdminOut]:
+    """Intentos fallidos (suma de redes) y bloqueo vigente más lejano de cada usuario."""
+    ids = [u.id for u in usuarios]
+    por_usuario: dict[int, tuple[int, datetime | None]] = {}
+    for i in db.execute(select(IntentoLogin).where(IntentoLogin.usuario_id.in_(ids))).scalars():
+        n, hasta = por_usuario.get(i.usuario_id, (0, None))
+        vigente = i.bloqueado_hasta if i.bloqueado_hasta and i.bloqueado_hasta > ahora() else None
+        por_usuario[i.usuario_id] = (
+            n + i.intentos,
+            max(filter(None, [hasta, vigente]), default=None),
+        )
+    salida = []
+    for u in usuarios:
+        n, hasta = por_usuario.get(u.id, (0, None))
+        base = UsuarioOut.model_validate(u).model_dump()
+        salida.append(UsuarioAdminOut(**base, intentos_fallidos=n, bloqueado_hasta=hasta))
+    return salida
+
+
+@router.get("", response_model=list[UsuarioAdminOut])
 def listar(
     request: Request,
     limite: int = Query(default=50, ge=1, le=200),
     desplazamiento: int = Query(default=0, ge=0),
     admin: Usuario = Depends(requiere_rol("admin")),
     db: Session = Depends(get_db),
-) -> list[Usuario]:
+) -> list[UsuarioAdminOut]:
     auditoria.registrar(db, "lectura_datos_personales", "usuarios", admin.id, ip_cliente(request))
     db.commit()
-    return list(
+    filas = list(
         db.execute(
             select(Usuario).order_by(Usuario.id).limit(limite).offset(desplazamiento)
         ).scalars()
     )
+    return _con_bloqueo(db, filas)
 
 
 @router.post("", response_model=UsuarioOut, status_code=201)

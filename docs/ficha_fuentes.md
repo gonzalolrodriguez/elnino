@@ -188,3 +188,12 @@ Estas frases aparecen en la página `/informacion` (`apps/frontend/src/pages/Inf
 3. ~~"anega caminos y campos en horas"~~ — **corregida**: ahora dice "con muy poco margen de aviso (alrededor de 24 horas según el documento base del equipo)". Fuente: documento base del equipo (`DocumentoBase-IA-Lab-Evacuaciones.docx`); es una estimación del equipo, no una cifra oficial.
 
 Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del kit, la carpeta `IA-Lab` y el documento base del equipo, ya citados).
+
+## Números de emergencia (app móvil y respuestas por SMS)
+
+| Qué muestra la herramienta | Valor | Fuente (URL) | Categoría | Fecha de consulta |
+|---|---|---|---|---|
+| Defensa Civil | 103 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
+| Prefectura Naval Argentina (emergencia náutica) | 106 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
+| Policía / emergencias | 911 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
+| Emergencias ambientales | 105 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |

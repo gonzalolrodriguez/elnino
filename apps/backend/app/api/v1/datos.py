@@ -274,7 +274,10 @@ def serie_ascenso(
     La proyección es lineal (SUPUESTO) y se da como rango entre la tasa más alta y la más baja.
     """
     serie = contexto.serie_diaria(db)
-    fecha_ultima, altura_ultima = contexto.ultima_lectura(serie)
+    ultima = contexto.ultima_lectura_o_none(serie)
+    if ultima is None and altura_actual_m is None:
+        raise contexto.ErrorSinLecturas
+    fecha_ultima, altura_ultima = ultima or (None, None)
     altura = altura_ultima if altura_actual_m is None else altura_actual_m
     umbrales = contexto.umbrales_formosa(db)
     tasas = ascenso.tasas_m_dia(serie)

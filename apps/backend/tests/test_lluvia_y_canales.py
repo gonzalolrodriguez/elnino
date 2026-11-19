@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import uuid
 from datetime import date, timedelta
 
 import openpyxl
@@ -176,7 +177,12 @@ def test_importar_rechaza_archivo_invalido_y_exige_rol(client, como):
 
 
 def _wa(texto: str, ts: int | None = None) -> bytes:
-    msg = {"from": "5493700000000", "id": "wamid.TEST", "type": "text", "text": {"body": texto}}
+    msg = {
+        "from": "5493700000000",
+        "id": f"wamid.{uuid.uuid4().hex}",
+        "type": "text",
+        "text": {"body": texto},
+    }
     if ts:
         msg["timestamp"] = str(ts)
     return json.dumps(
@@ -240,9 +246,13 @@ def test_sms_lluvia_crea_lectura_simulada_y_mal_formado_422(client, db):
         and lectura.origen == "simulado"
         and lectura.categoria == "SIMULADO"
     )
-    for texto in ("LLUVIA PLUV-SIM-C", "LLUVIA PLUV-SIM-C abc", "LLUVIA NO-EXISTE 5", "hola"):
+    for texto in ("LLUVIA PLUV-SIM-C", "LLUVIA PLUV-SIM-C abc", "LLUVIA NO-EXISTE 5"):
         mal = json.dumps({"remitente": "+54", "texto": texto}).encode()
         assert _post(client, "sms-sim", mal).status_code == 422, texto
+    # Un texto que no se entiende no es un error: se responde con la guía y no se registra nada.
+    hola = json.dumps({"remitente": "+54", "texto": "hola"}).encode()
+    r = _post(client, "sms-sim", hola)
+    assert r.status_code == 201 and r.json()["resultados"][0]["tipo"] == "no_entendido"
 
 
 def test_ivr_y_payload_invalido(client):
@@ -254,13 +264,22 @@ def test_ivr_y_payload_invalido(client):
     assert _post(client, "ivr-sim", b"no-json").status_code == 422
 
 
-def test_whatsapp_un_mensaje_invalido_no_guarda_ninguno(client, db):
+def test_whatsapp_un_mensaje_invalido_no_tira_a_los_validos(client, db):
     antes = len(db.execute(select(SolicitudAsistencia.id)).all())
     msgs = [
-        {"type": "text", "text": {"body": "SOS-FSA|-26.18,-58.139|CIUDADANO|FAM:2"}},
-        {"type": "text", "text": {"body": "LLUVIA"}},
+        {
+            "id": f"wamid.{uuid.uuid4().hex}",
+            "type": "text",
+            "text": {"body": "SOS-FSA|-26.18,-58.139|CIUDADANO|FAM:2"},
+        },
+        {"id": f"wamid.{uuid.uuid4().hex}", "type": "text", "text": {"body": "LLUVIA"}},
     ]
     cuerpo = json.dumps({"entry": [{"changes": [{"value": {"messages": msgs}}]}]}).encode()
-    assert _post(client, "whatsapp-sim", cuerpo).status_code == 422
+    r = _post(client, "whatsapp-sim", cuerpo)
+    assert r.status_code == 201
+    assert [x["estado"] for x in r.json()["resultados"]] == ["creado", "error"]
     db.expire_all()
-    assert len(db.execute(select(SolicitudAsistencia.id)).all()) == antes
+    assert len(db.execute(select(SolicitudAsistencia.id)).all()) == antes + 1
+    # Todos inválidos: sigue siendo 422.
+    solo_mal = json.dumps({"entry": [{"changes": [{"value": {"messages": [msgs[1]]}}]}]}).encode()
+    assert _post(client, "whatsapp-sim", solo_mal).status_code == 422

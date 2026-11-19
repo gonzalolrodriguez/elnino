@@ -56,11 +56,96 @@ function normalizarDetalle(d: unknown): DetalleError[] {
     .filter((x): x is DetalleError => x !== null);
 }
 
-type Opciones = { metodo?: string; cuerpo?: unknown; autenticado?: boolean };
+type Opciones = { metodo?: string; cuerpo?: unknown; autenticado?: boolean; cabeceras?: Record<string, string> };
 
-/** Llama a la API y convierte las respuestas de error en `ApiError`. */
-export async function solicitar<T>(ruta: string, op: Opciones = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+// --- Renovación de sesión -------------------------------------------------------------------------
+// El refresh rota la cookie: dos pedidos simultáneos con la misma cookie hacen que el backend revoque la
+// familia y deje la sesión cerrada. Por eso hay una sola renovación en vuelo por pestaña (promesa de módulo)
+// y las pestañas se turnan (Web Locks; respaldo con BroadcastChannel).
+
+export type ResultadoRefresh =
+  | { estado: "ok"; datos: unknown }
+  | { estado: "rechazada" } // 401/403: la sesión ya no sirve
+  | { estado: "transitoria" }; // red, 5xx o 429: se conserva la sesión y se reintenta más tarde
+
+/** Esperas entre reintentos de la renovación (ms). Mutable para poder acelerarlas en pruebas. */
+export const reintentosRefresh = { esperasMs: [800, 2500] as number[] };
+
+const NOMBRE_CERROJO = "e3_refresh";
+let refrescoEnCurso: Promise<ResultadoRefresh> | null = null;
+let canal: BroadcastChannel | null | undefined;
+let otraPestanaDesde = 0;
+
+function obtenerCanal(): BroadcastChannel | null {
+  if (canal !== undefined) return canal;
+  try {
+    canal = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(NOMBRE_CERROJO);
+    canal?.addEventListener("message", (e: MessageEvent) => {
+      otraPestanaDesde = e.data === "inicio" ? Date.now() : 0;
+    });
+  } catch {
+    canal = null;
+  }
+  return canal;
+}
+
+const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+async function intentarRefresh(): Promise<ResultadoRefresh> {
+  const esperas = reintentosRefresh.esperasMs;
+  for (let i = 0; i <= esperas.length; i++) {
+    try {
+      const datos = await solicitarCrudo<unknown>("/auth/refresh", { metodo: "POST", cuerpo: {} });
+      return { estado: "ok", datos };
+    } catch (e) {
+      if (e instanceof ApiError && (e.estado === 401 || e.estado === 403)) return { estado: "rechazada" };
+      if (i < esperas.length) await dormir(esperas[i]);
+    }
+  }
+  return { estado: "transitoria" };
+}
+
+async function conTurno(fn: () => Promise<ResultadoRefresh>): Promise<ResultadoRefresh> {
+  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
+  if (locks?.request) return (await locks.request(NOMBRE_CERROJO, fn)) as ResultadoRefresh;
+  // Respaldo: si otra pestaña avisó que está renovando, se espera su aviso de fin (hasta 5 s).
+  const c = obtenerCanal();
+  if (c && Date.now() - otraPestanaDesde < 5000) {
+    const limite = Date.now() + 5000;
+    while (otraPestanaDesde !== 0 && Date.now() < limite) await dormir(100);
+  }
+  c?.postMessage("inicio");
+  try {
+    return await fn();
+  } finally {
+    c?.postMessage("fin");
+  }
+}
+
+/** Renueva el token de acceso con la cookie de refresh. Una sola llamada en vuelo, aunque la pidan varios. */
+export function refrescarSesion(): Promise<ResultadoRefresh> {
+  if (!refrescoEnCurso) {
+    refrescoEnCurso = conTurno(intentarRefresh).finally(() => {
+      refrescoEnCurso = null;
+    });
+  }
+  return refrescoEnCurso;
+}
+
+type ManejadorSesion = { renovar: () => Promise<boolean>; cerrar: () => void };
+let manejadorSesion: ManejadorSesion | null = null;
+/** El AuthProvider registra cómo renovar y cerrar la sesión para que `solicitar` pueda reintentar tras un 401. */
+export function registrarManejadorSesion(m: ManejadorSesion | null): void {
+  manejadorSesion = m;
+}
+
+/** Pide al AuthProvider que renueve el token (p. ej. tras un cierre 1008 del WebSocket). false si no hay sesión o falló. */
+export async function renovarSesion(): Promise<boolean> {
+  return manejadorSesion ? manejadorSesion.renovar() : false;
+}
+
+async function solicitarCrudo<T>(ruta: string, op: Opciones = {}): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json", ...(op.cabeceras ?? {}) };
   if (op.cuerpo !== undefined) headers["Content-Type"] = "application/json";
   if (op.autenticado && tokenAcceso) headers.Authorization = `Bearer ${tokenAcceso}`;
   let r: Response;
@@ -90,6 +175,28 @@ export async function solicitar<T>(ruta: string, op: Opciones = {}): Promise<T> 
     );
   }
   return datos as T;
+}
+
+/**
+ * Llama a la API y convierte las respuestas de error en `ApiError`.
+ * Ante un 401 con sesión iniciada renueva el token una vez y repite el pedido; si igual falla, cierra la sesión local.
+ */
+export async function solicitar<T>(ruta: string, op: Opciones = {}): Promise<T> {
+  try {
+    return await solicitarCrudo<T>(ruta, op);
+  } catch (e) {
+    const reintentable =
+      e instanceof ApiError && e.estado === 401 && op.autenticado && tokenAcceso && manejadorSesion && !ruta.startsWith("/auth/");
+    if (!reintentable) throw e;
+    const m = manejadorSesion as ManejadorSesion;
+    if (!(await m.renovar())) throw e;
+    try {
+      return await solicitarCrudo<T>(ruta, op);
+    } catch (e2) {
+      if (e2 instanceof ApiError && e2.estado === 401) m.cerrar();
+      throw e2;
+    }
+  }
 }
 
 export async function obtenerSalud(): Promise<Salud> {

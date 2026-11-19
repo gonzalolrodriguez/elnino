@@ -14,9 +14,10 @@ const TITULOS: Record<Pestana, string> = {
   sector: "Sector",
   perfil: "Perfil",
   cuadrilla: "Tareas",
+  monitor: "Monitor",
 };
 
-const TODAS: Pestana[] = ["asistencia", "solicitudes", "alertas", "sector", "perfil", "cuadrilla"];
+const TODAS: Pestana[] = ["asistencia", "solicitudes", "alertas", "sector", "perfil", "cuadrilla", "monitor"];
 
 function Pestanas({ visibles }: { visibles: Pestana[] }) {
   const { noLeidas } = useAlertas();

@@ -73,6 +73,7 @@ jest.mock("@/lib/AlertasContext", () => ({
   }),
 }));
 
+jest.mock("@/lib/cacheLocal", () => ({ leerCache: jest.fn(async () => null), guardarCache: jest.fn(), borrarCache: jest.fn() }));
 jest.mock("@/lib/dispositivo", () => ({
   obtenerUbicacion: jest.fn(),
   tomarFotoComprimida: jest.fn(),

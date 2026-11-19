@@ -10,6 +10,9 @@ export type EstadoUbicacion =
 
 export const OPCIONES_UBICACION: PositionOptions = { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 };
 
+/** Tope duro de espera (ms), por encima del `timeout` de la API del navegador. */
+const TOPE_ESPERA_MS = 15_000;
+
 /** Redondea a 5 decimales (≈ 1 m). */
 export const redondear5 = (n: number) => Number(n.toFixed(5));
 
@@ -41,8 +44,13 @@ export function useUbicacionDispositivo(alObtener?: (lon: number, lat: number, p
       return;
     }
     setEstado({ fase: "buscando" });
+    // Respaldo: algunos navegadores no llaman nunca al callback (p. ej. si se ignora el aviso de permiso).
+    const respaldo = setTimeout(() => {
+      if (id === solicitud.current) setEstado((e) => (e.fase === "buscando" ? { fase: "error", error: "tiempo" } : e));
+    }, TOPE_ESPERA_MS);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        clearTimeout(respaldo);
         if (id !== solicitud.current) return;
         const lon = redondear5(pos.coords.longitude);
         const lat = redondear5(pos.coords.latitude);
@@ -51,6 +59,7 @@ export function useUbicacionDispositivo(alObtener?: (lon: number, lat: number, p
         callback.current?.(lon, lat, precision);
       },
       (err) => {
+        clearTimeout(respaldo);
         if (id !== solicitud.current) return;
         // 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
         const error: ErrorUbicacion = err.code === 1 ? "denegado" : err.code === 3 ? "tiempo" : "no_disponible";

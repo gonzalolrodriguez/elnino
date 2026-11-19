@@ -88,8 +88,8 @@ def test_limite_de_tamano_y_de_cantidad(client, monkeypatch):
     sid = _crear(client, h).json()["id"]
     assert _subir(client, h, sid, JPEG + b"\x00" * 100).status_code == 413
     assert _subir(client, h, sid, JPEG).status_code == 201
-    assert _subir(client, h, sid, JPEG).status_code == 201
-    assert _subir(client, h, sid, JPEG).status_code == 409
+    assert _subir(client, h, sid, JPEG + b"").status_code == 201
+    assert _subir(client, h, sid, JPEG + b"").status_code == 409
 
 
 def test_idempotency_key_devuelve_la_original_sin_duplicar(client):

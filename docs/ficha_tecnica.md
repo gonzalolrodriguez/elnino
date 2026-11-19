@@ -13,7 +13,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 
 - **Limpieza de K1 reproducible** (`python -m app.ingest.limpieza_k1`): 8.347 filas de entrada, 8.335 finales (8.334 válidos y 1 en cuarentena); máximo 9,81 m (05–06/01/2016); registro en `docs/registro_limpieza.md`. Probado con pruebas del backend.
 - **Simulador de escenario** (`POST /simulacion/escenario`): con 7,60 m y 40 mm, S4 queda comprometido y aislado, S1 y S3 en riesgo, S2 normal y el río normal a 0,20 m de la alerta; una altura de 13 m se rechaza con 422. Verificado en un backend real y con pruebas.
-- **Caminos no transitables:** el operador marca un acceso como cerrado con su motivo y el escenario lo recalcula (`PATCH /accesos/{id}`).
+- **Caminos no transitables:** el operador marca un acceso como cerrado con su motivo y el escenario lo recalcula (`PATCH /accesos/{id}`). El cierre también excluye los tramos de la red vial asociados a ese acceso en el ruteo con pgRouting (probado con pruebas del backend).
 - **Recomendador y comparador de alternativas:** personas por sector (K10 más familias registradas en el polígono), asignación a centros por capacidad con quiénes quedan sin lugar, viajes por vehículo y tres alternativas lado a lado. Es una recomendación, no una orden.
 - **Ruteo** vehicular, de camión jaula y de arreo con pgRouting sobre la red OSM del corredor; sin red cargada, estimación aproximada con su limitación a la vista.
 - **Arca Productiva** (calculadora ganadera): reproduce el caso de control (150 m², 1 camión con divisiones, 58,4 kg de maíz y 5,5 kg de pellet por día).
@@ -21,27 +21,75 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 - **Centinela:** auditoría de la limpieza de K1, verificador de las afirmaciones de K6 (refuta "10,7 m en 2016" y "superó la evacuación en octubre" con datos de K1) y de las siete relaciones de K7 (algunas "no verificables con la capa disponible").
 - **Monitor hidrométrico:** serie K1 con umbrales de K3, picos y velocidades de ascenso de 2015–16, 2019 y octubre de 2026, con rango y supuesto lineal.
 - **Lluvia:** partes por formulario, planilla UPCA (vacío distinto de 0) y canales simulados (WhatsApp, SMS, IVR) con firma HMAC; el origen siempre queda visible.
-- **Portal público:** landing con esquema 3D de la cuenca y alternativa 2D, página Información (El Niño, serie K1, sectores y fuentes), registro de ciudadanía y de productores con consentimiento, y área "mi cuenta".
-- **Seguridad:** Argon2id, JWT de 15 minutos con refresh rotativo, RBAC por endpoint y por recurso, cifrado AES-GCM de campos sensibles y bitácora de accesos con hash encadenado (`docs/seguridad.md`).
-- **App móvil (Expo):** registro, login, perfil, pedido de asistencia con cola offline (envío en dos tiempos e idempotencia), alertas, mapa del sector y modo cuadrilla.
-- **Prueba desde clonado limpio:** siguiendo solo el README, el backend con Docker, la web y la app pasan sus pruebas (backend 202, web 53, app 36).
+- **Portal público:**
+  - Landing con el relieve real de la cuenca en 3D (SRTM, curvas de nivel, departamentos) y alternativa 2D.
+  - El recorrido del agua desde el Pantanal hasta la confluencia con el Paraná se puede explorar: arrastrar, zoom y una barra para recorrer el río por sus hitos.
+  - Página Información (El Niño, serie K1, sectores y fuentes).
+  - Registro de ciudadanía y de productores con consentimiento y ubicación del dispositivo.
+  - Área "mi cuenta" con el estado del sector, pedido de ayuda y edición del grupo familiar.
+  - Diseño accesible: tipografía para baja visión, 320 px a 4K y navegadores antiguos.
+- **Tablero de decisión** (`/comando`):
+  - Para el decisor: río frente a umbrales con tendencia y tiempo restante con su supuesto, estado de los cuatro sectores, pedidos por estado, sector y canal, ocupación de centros, cuadrillas, órdenes, lluvia por origen y antigüedad de cada dato.
+  - Para el operador, la cola de pedidos va primero.
+  - Para el administrador: usuarios, cuentas bloqueadas, integridad de la bitácora de accesos y estado del servicio.
+- **Constancias y validación cruzada de evacuaciones:**
+  - La cuadrilla cierra cada tarea con una constancia: destino por GPS, centro, personas y animales trasladados, fotos, nota y rol firmante. Funciona sin conexión desde la app.
+  - El evacuado confirma "¿llegaste a X?" por la app o por SMS desde su teléfono registrado.
+  - Cada evacuación queda pendiente, en curso, cerrada por la cuadrilla, verificada o con discrepancia. Una discrepancia es una marca para revisar, no una acusación.
+  - Esta información se ve en el tablero, en una página propia y como capa de traslados en el mapa.
+- **Sin datos móviles:**
+  - Desde la app y sin cuenta: "Llamar al 103" y "Pedir ayuda por SMS", con el mensaje armado con el GPS del teléfono, que funciona sin datos.
+  - Guía "Qué hacer" offline con los números 103, 106, 911 y 105.
+  - Los canales simulados aceptan texto libre ("somos 5 y tenemos 40 vacas") y una referencia de ubicación cuando no hay GPS, que luego verifica un operador.
+  - Responden a las palabras clave `AYUDA`, `INFO` y `SOS`.
+- **Seguridad:**
+  - Contraseñas con Argon2id.
+  - Acceso con JWT de 15 minutos y refresh rotativo. El refresh admite un único reintento de 30 s ligado al mismo cliente, pensado para redes rurales.
+  - Login con respuesta genérica.
+  - RBAC por endpoint y por recurso.
+  - Cifrado AES-GCM de campos sensibles.
+  - Bitácora de accesos con hash encadenado.
+  - Idempotencia en pedidos, órdenes y constancias.
+  - Cuotas blandas sin CAPTCHA.
+  - Mapeo a OWASP Top 10:2025 y Mobile Top 10 2024 en `docs/seguridad.md`.
+- **App móvil (Expo):**
+  - Registro, login y perfil.
+  - Pedido de asistencia con cola offline: envío en dos tiempos, idempotencia y reintentos acotados.
+  - Estado del sector visible sin conexión, alertas y mapa del sector.
+  - Modo cuadrilla con cierre con constancia.
+  - Pestaña Monitor para mandos.
+  - Pantalla de conexión aparte de login y registro.
+- **Pruebas automáticas al 19/11/2026:** backend 290, web 192, app 220. El APK generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
-No se pudo comprobar todavía: el aspecto y el comportamiento visual en un navegador y en un teléfono físico (mapa, gráficos, diseño adaptable, cámara y GPS), la subida de fotos desde un dispositivo real y la compilación del APK.
+No se pudo comprobar todavía en pantalla y con sesión real el tablero, las constancias y el panel. Hay pruebas automáticas con datos simulados. Tampoco se comprobó la fluidez del 3D en distintos equipos ni el uso completo de la app en campo: cámara, GPS y cola sin señal.
 
 ## Qué falta para que la mesa la use
 - **Datos reales de la autoridad:** qué edificios son centros de recepción y su capacidad (hoy `SIMULADO`; las escuelas del Mapa Educativo son solo candidatas), recursos disponibles, responsables por rol y sectores definitivos (K10 es simulado y está "a validar por la mesa"). Dependen de Defensa Civil y del comité.
 - **Datos que el kit no trae:** lluvia observada (conectar la red de partes de la Policía/UPCA), cotas y barrios reales, caminos con su estado real, catastro parcelario de Formosa (sin descarga pública; hoy los productores de demostración se ubican en el paraje, sin parcela), población por radio censal (INDEC 2022) y las series K2, K4 y K5 pendientes del kit.
 - **Verificación de supuestos:** capacidad de camiones jaula y de vehículos categoría B, raciones, dormidero, velocidades por superficie, umbrales de lluvia por tipo de camino y pesos del ISAD son supuestos del equipo (`apps/backend/app/config/supuestos.yaml`); necesitan validación de INTA, SENASA y Vialidad.
-- **Integraciones reales:** WhatsApp (Meta Cloud API), gateway SMS, IVR del 103 y notificaciones push remotas (FCM), hoy simulados o locales.
-- **Para operar en serio:** despliegue con HTTPS, MFA para usuarios institucionales, auditoría de dependencias, inscripción de la base ante la AAIP y prueba con usuarios de campo. Estimación del equipo: varias semanas de trabajo sostenido y la participación de la autoridad; no hay una cifra confirmada.
+- **Integraciones reales:** WhatsApp (Meta Cloud API), gateway SMS y número de voz (IVR), y notificaciones push remotas (FCM). Hoy están simulados o son locales. Están documentados los proveedores posibles y sus restricciones en Argentina. Por ejemplo, el short code para SMS demora semanas de aprobación.
+- **Voz e IA (hoja de ruta):**
+  - Transcripción de llamadas en español rioplatense: Whisper local o un servicio en la nube, a evaluar.
+  - Asistente orientativo que ayude a armar el reporte. Solo orienta y estructura; nunca decide.
+  - El equipo todavía no decidió si la IA corre en la nube o en el equipo local.
+- **Lugares reales en la base:** las escuelas del Mapa Educativo y las localidades de BAHRA están descargadas en `data/geo/`, pero la carga de demostración todavía usa centros y puestos de lluvia simulados.
+- **Para operar en serio:**
+  - Despliegue con HTTPS y un perfil de compilación de la app sin tráfico `http`.
+  - Verificación en dos pasos (MFA) para usuarios institucionales.
+  - Recuperación de cuenta sin contraseña (OTP o sesión ligada al dispositivo).
+  - Migrar `react-router` a la versión 7, que tiene un aviso de seguridad moderado sin parche en la 6.
+  - Inscripción de la base ante la AAIP.
+  - Prueba con usuarios de campo.
+
+  Estimación del equipo: varias semanas de trabajo sostenido y la participación de la autoridad. No hay una cifra confirmada.
 
 ## Cómo está hecha
 - **Backend:** Python 3.12 (probado con 3.13), FastAPI 0.115, Pydantic 2, SQLAlchemy 2 + GeoAlchemy2, Alembic, PostgreSQL 16 con PostGIS y pgRouting (imagen `pgrouting/pgrouting:16-3.4-3.6.1`), Argon2, PyJWT, `cryptography`, slowapi, openpyxl, pytest y ruff.
-- **Web:** React 18, TypeScript, Vite 6, Chakra UI 2, Framer Motion, React Three Fiber y Drei (landing), MapLibre GL y Deck.gl (mapa), vitest.
+- **Web:** React 18, TypeScript, Vite 6, Chakra UI 2, Framer Motion, React Three Fiber y Drei (landing), MapLibre GL 6 y Deck.gl (mapa), tipografía Atkinson Hyperlegible Next, `@vitejs/plugin-legacy` (navegadores antiguos), vitest.
 - **App móvil:** Expo SDK 58, React Native 0.88, expo-router, expo-sqlite, expo-secure-store, expo-location, react-native-maps, jest-expo; APK con EAS Build (perfil `preview`).
 - **Monorepo:** pnpm 10 con workspaces; Node 24.
 - **Datos:** kit del evento (K1, K3, K10, planilla) sin modificar; capas oficiales de IGN, BAHRA/Georef, Mapa Educativo, REFES y OpenStreetMap, versionadas con su fuente, licencia y fecha (`data/geo/`).
-- **Uso de IA:** se usó Claude Code (Anthropic) como asistente de desarrollo para escribir código, pruebas y documentación bajo la dirección del equipo. Las decisiones de alcance, stack y diseño (D1 a D8 y P1 a P12) las tomó el equipo y quedan registradas en `docs/decisiones.md`; el trabajo se hizo por fases con revisión humana antes de cada commit. El producto no usa IA en su lógica de decisión: el escenario, el recomendador, el ruteo y los verificadores son reglas y cálculos deterministas con supuestos explícitos. El informe K6, generado por IA, se trata como material a auditar: el verificador contrasta cada afirmación con K1, K3 y K9 y muestra el veredicto con su evidencia. Una IA asistió también en el diseño inicial (investigación y pilares), cuyos errores se corrigen en CLAUDE.md §16.
+- **Uso de IA:** se usó Claude Code (Anthropic) como asistente de desarrollo para escribir código, pruebas y documentación bajo la dirección del equipo. Las decisiones de alcance, stack y diseño (D1 a D8 y P1 a P12) las tomó el equipo y quedan registradas en `docs/decisiones.md`; el trabajo se hizo por fases con revisión humana antes de cada commit. Usamos agentes de IA para auditorías de solo lectura: bugs, diseño y organización de la información, seguridad OWASP, canales sin datos e imágenes satelitales. Las revisiones automáticas de seguridad marcaron fallas, que se corrigieron con pruebas; las que quedan abiertas figuran como riesgos aceptados en `docs/seguridad.md`. El producto no usa IA en su lógica de decisión: el escenario, el recomendador, el ruteo y los verificadores son reglas y cálculos deterministas con supuestos explícitos. El informe K6, generado por IA, se trata como material a auditar: el verificador contrasta cada afirmación con K1, K3 y K9 y muestra el veredicto con su evidencia. Una IA asistió también en el diseño inicial (investigación y pilares), cuyos errores se corrigen en CLAUDE.md §16.
 
 ## Lo que la herramienta no puede decir
 - **No decide ni ordena una evacuación:** la orden la emite una persona con rol autorizado y queda registrada; la plataforma solo recomienda y simula.
@@ -57,6 +105,8 @@ No se pudo comprobar todavía: el aspecto y el comportamiento visual en un naveg
 - **Chacras y campos reales:** no hay padrón parcelario abierto; los productores y familias son ficticios y no se asocian a parcelas reales.
 - **Tres frases cualitativas de la página Información (tema El Niño)** (rezago de semanas a meses, aviso con semanas de anticipación, anegamiento en horas) no tienen fuente oficial precisa; están declaradas en `docs/ficha_fuentes.md`.
 - **Datos posteriores al corte (31/10/2026)** están apagados por defecto.
+- **Una evacuación "verificada" no es una prueba.** Solo significa que la constancia de la cuadrilla y la respuesta del evacuado coinciden. Un SMS puede suplantarse en la red móvil. La distancia máxima entre destino y centro (500 m) es un supuesto. Una discrepancia solo marca el caso para revisarlo.
+- **Los pedidos por texto libre o sin GPS** tienen ubicación aproximada y siempre requieren la verificación de un operador. La plataforma nunca completa datos que la persona no dio.
 
 ## Cómo se arranca (cinco líneas)
 Requisitos: Node 24, pnpm 10, Python 3.12 o superior y Docker. Detalle y puertos en el `README.md`.
@@ -68,4 +118,4 @@ Requisitos: Node 24, pnpm 10, Python 3.12 o superior y Docker. Detalle y puertos
 
 ## Repositorio
 
-Tema elegido: Desafío 06 · Evacuaciones (simulador). URL del monorepo: https://github.com/gonzalolrodriguez/elnino · Commit o tag evaluable: tag `v1.0-entrega` (a crear sobre `main` después del merge de la Fase 6). Frontend: `apps/frontend`; backend: `apps/backend`; app móvil: `apps/mobile`; paquete compartido: `packages/shared`. Configuración: `.env.example`. Comandos de ejecución y de prueba: `README.md`. Fuentes: `docs/ficha_fuentes.md`; limpieza de K1: `docs/registro_limpieza.md`; contrato: `docs/contrato_api.md` y `docs/openapi.json`; arquitectura: `docs/arquitectura.md`; seguridad: `docs/seguridad.md`.
+Tema elegido: Desafío 06 · Evacuaciones (simulador). URL del monorepo: https://github.com/gonzalolrodriguez/elnino · Commit o tag evaluable: tag `v1.0-entrega` sobre `main` (se mueve al último merge antes de la entrega del 21/11). Frontend: `apps/frontend`; backend: `apps/backend`; app móvil: `apps/mobile`; paquete compartido: `packages/shared`. Configuración: `.env.example`. Comandos de ejecución y de prueba: `README.md`. Fuentes: `docs/ficha_fuentes.md`; limpieza de K1: `docs/registro_limpieza.md`; contrato: `docs/contrato_api.md` y `docs/openapi.json`; arquitectura: `docs/arquitectura.md`; seguridad: `docs/seguridad.md`.

@@ -40,6 +40,21 @@ class Settings(BaseSettings):
     rate_limit_registro: str = "10/minute"
     cookie_secure: bool = True
 
+    # Entorno: "produccion" oculta /docs y /openapi.json y fuerza la cookie Secure.
+    entorno: str = "desarrollo"
+    # Usuarios de demostración (``python -m app.db.seed``): apagado por defecto (producción);
+    # el docker-compose del demo lo enciende con SEED_DEMO=true.
+    seed_demo: bool = False
+
+    # Gracia de rotación del refresh (<= 30 s): un token recién rotado puede reutilizarse UNA vez,
+    # desde el mismo cliente y la misma red, por un reintento tras perder la respuesta.
+    refresh_gracia_segundos: int = 30
+    # Cuota blanda de baja fricción para solicitudes de asistencia por persona usuaria.
+    solicitudes_max_por_hora: int = 20
+    adjuntos_max_bytes_por_usuario: int = 25 * 1024 * 1024
+    # Tope global del cuerpo de cualquier solicitud (salvo subida de adjuntos y planilla).
+    cuerpo_max_bytes: int = 1024 * 1024
+
     # Secreto compartido para firmar (HMAC SHA-256) los webhooks de los canales simulados.
     canal_hmac_secret: str = ""
 
@@ -52,6 +67,15 @@ class Settings(BaseSettings):
     # Contraseñas de los usuarios de demostración (solo para `python -m app.db.seed`).
     demo_password: str = ""
     demo_admin_password: str = ""
+
+    @property
+    def es_produccion(self) -> bool:
+        return self.entorno.strip().lower() in ("produccion", "producción", "production", "prod")
+
+    @property
+    def cookie_segura(self) -> bool:
+        """En producción la cookie del refresh siempre es Secure."""
+        return True if self.es_produccion else self.cookie_secure
 
     @property
     def adjuntos_ruta(self) -> Path:

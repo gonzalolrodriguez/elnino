@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
-import { API_URL } from "./api";
+import { API_URL, renovarSesion } from "./api";
+import { etiquetaEstadoEvacuacion, etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaMotivoDiscrepancia } from "./etiquetas";
 
-export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea"; datos: Record<string, unknown> };
+const TIPO_ORDEN: Record<string, string> = { alerta: "Alerta", evacuacion_preventiva: "Evacuación preventiva", evacuacion: "Evacuación" };
+
+export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea" | "constancia" | "discrepancia"; datos: Record<string, unknown> };
 export type EstadoWs = "desconectado" | "conectando" | "conectado";
 
 const CIERRE_NO_AUTORIZADO = 1008;
-const ESPERA_REINTENTO_MS = 4000;
+const ESPERA_BASE_MS = 1000;
+const ESPERA_MAX_MS = 30_000;
+
+/** Espera exponencial con tope y algo de azar, para que muchos paneles no reconecten a la vez. */
+export function esperaReintento(intento: number, azar: number = Math.random()): number {
+  const base = Math.min(ESPERA_MAX_MS, ESPERA_BASE_MS * 2 ** intento);
+  return Math.round(base * (0.75 + azar * 0.5));
+}
 
 export function urlWs(): string {
   return `${API_URL.replace(/^http/, "ws")}/api/v1/ws`;
@@ -29,6 +39,7 @@ export function useTiempoReal(token: string | null, alEvento: (e: EventoTiempoRe
     let activo = true;
     let socket: WebSocket | null = null;
     let temporizador: ReturnType<typeof setTimeout> | null = null;
+    let intentos = 0;
 
     const conectar = () => {
       setEstado("conectando");
@@ -37,8 +48,10 @@ export function useTiempoReal(token: string | null, alEvento: (e: EventoTiempoRe
       socket.onmessage = (m: MessageEvent) => {
         try {
           const msg = JSON.parse(String(m.data)) as { tipo?: string; datos?: Record<string, unknown> };
-          if (msg.tipo === "conectado") setEstado("conectado");
-          else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea") {
+          if (msg.tipo === "conectado") {
+            intentos = 0;
+            setEstado("conectado");
+          } else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea" || msg.tipo === "constancia" || msg.tipo === "discrepancia") {
             callback.current({ tipo: msg.tipo, datos: msg.datos ?? {} });
           }
         } catch {
@@ -48,8 +61,16 @@ export function useTiempoReal(token: string | null, alEvento: (e: EventoTiempoRe
       socket.onclose = (c: CloseEvent) => {
         if (!activo) return;
         setEstado("desconectado");
-        // Un cierre 1008 es token vencido o inválido: se espera al token renovado (nuevo efecto), no se reintenta con el mismo.
-        if (c.code !== CIERRE_NO_AUTORIZADO) temporizador = setTimeout(conectar, ESPERA_REINTENTO_MS);
+        const espera = esperaReintento(intentos++);
+        if (c.code === CIERRE_NO_AUTORIZADO) {
+          // Token vencido o inválido: se renueva antes de reconectar. Si la renovación tiene éxito cambia `token`
+          // y este efecto se reinicia solo; si no, se reintenta con espera creciente.
+          void renovarSesion().finally(() => {
+            if (activo) temporizador = setTimeout(conectar, espera);
+          });
+        } else {
+          temporizador = setTimeout(conectar, espera);
+        }
       };
     };
     conectar();
@@ -72,6 +93,8 @@ const TITULOS: Record<EventoTiempoReal["tipo"], string> = {
   solicitud: "Solicitud de asistencia",
   orden: "Orden emitida",
   tarea: "Tarea actualizada",
+  constancia: "Constancia de evacuación",
+  discrepancia: "Evacuación para revisar",
 };
 
 export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle: string } {
@@ -80,11 +103,16 @@ export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle:
   if (e.tipo === "escenario") {
     detalle = d.motivo === "acceso_actualizado" ? `Un acceso se marcó ${d.transitable ? "transitable" : "no transitable"}.` : "Se calculó un escenario.";
   } else if (e.tipo === "solicitud") {
-    detalle = `Solicitud ${d.id ?? ""} en estado ${String(d.estado ?? "")}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}.`;
+    detalle = `Solicitud ${d.id ?? ""} en estado ${etiquetaEstadoSolicitud(String(d.estado ?? "")).toLowerCase()}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}.`;
   } else if (e.tipo === "orden") {
-    detalle = `Orden ${String(d.tipo ?? "")} para ${Array.isArray(d.sectores) ? d.sectores.join(", ") : "los sectores indicados"}.`;
+    detalle = `Orden de ${(TIPO_ORDEN[String(d.tipo)] ?? String(d.tipo ?? "")).toLowerCase()} para ${Array.isArray(d.sectores) ? d.sectores.join(", ") : "los sectores indicados"}.`;
+  } else if (e.tipo === "constancia") {
+    detalle = `La tarea ${d.tarea_id ?? ""}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""} quedó ${etiquetaEstadoEvacuacion(String(d.estado ?? "")).toLowerCase()}.`;
+  } else if (e.tipo === "discrepancia") {
+    const motivos = Array.isArray(d.motivos) ? d.motivos.map((m) => etiquetaMotivoDiscrepancia(String(m))).join(" ") : "";
+    detalle = `Tarea ${d.tarea_id ?? ""}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}: ${motivos || "hay algo para revisar."}`;
   } else {
-    detalle = d.estado ? `Tarea ${d.id ?? ""}: ${String(d.estado)}.` : "Se crearon o reasignaron tareas.";
+    detalle = d.estado ? `Tarea ${d.id ?? ""}: ${etiquetaEstadoTarea(String(d.estado)).toLowerCase()}.` : "Se crearon o reasignaron tareas.";
   }
   return { titulo: TITULOS[e.tipo], detalle };
 }

@@ -35,6 +35,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
+import { etiquetaOrigenLluvia } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
@@ -51,17 +52,19 @@ const SECTORES = ["S1", "S2", "S3", "S4"];
 
 function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
   const { usuario } = useAuth();
-  const { entrada, escenario } = useEscenario();
+  const { entrada, escenario, desactualizado } = useEscenario();
   const esDecisor = usuario?.rol === "decisor";
   const dialogo = useDisclosure();
   const cancelar = useRef<HTMLButtonElement>(null);
   const [tipo, setTipo] = useState<TipoOrden>("evacuacion_preventiva");
-  const [sectores, setSectores] = useState<string[]>(escenario?.resumen.comprometidos ?? []);
+  const [sectores, setSectores] = useState<string[]>(escenario && !desactualizado ? escenario.resumen.comprometidos : []);
   const [fundamento, setFundamento] = useState("");
   const [fecha, setFecha] = useState("");
   const [intento, setIntento] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [emitiendo, setEmitiendo] = useState(false);
+  // Una clave por envío: un reintento del mismo envío (red caída, doble clic) no emite la orden dos veces.
+  const claveEnvio = useRef<{ clave: string; firma: string } | null>(null);
 
   const errorFundamento = intento && fundamento.trim().length < 10 ? "El fundamento debe tener al menos 10 caracteres." : null;
   const errorSectores = intento && sectores.length === 0 ? "Elegí al menos un sector." : null;
@@ -73,10 +76,16 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
   }
 
   async function emitir() {
+    if (emitiendo) return;
     setEmitiendo(true);
     setError(null);
     try {
-      const o = await api.emitirOrden({ tipo, sectores, fundamento: fundamento.trim(), ...(fecha ? { fecha_simulada: fecha } : {}) });
+      const cuerpo = { tipo, sectores, fundamento: fundamento.trim(), ...(fecha ? { fecha_simulada: fecha } : {}) };
+      // Misma clave mientras el envío sea el mismo; si se editó el formulario, es otro envío.
+      const firma = JSON.stringify(cuerpo);
+      if (claveEnvio.current?.firma !== firma) claveEnvio.current = { clave: crypto.randomUUID(), firma };
+      const o = await api.emitirOrden(cuerpo, claveEnvio.current.clave);
+      claveEnvio.current = null;
       dialogo.onClose();
       setFundamento("");
       setIntento(false);
@@ -141,9 +150,9 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
           <FormErrorMessage>{errorFundamento}</FormErrorMessage>
         </FormControl>
         <Text fontSize="xs" color="textoSuave" mb={2}>
-          Escenario de referencia: {fmtM(entrada.altura_formosa_m)} en Puerto Formosa, {entrada.lluvia_mm} mm ({entrada.lluvia_origen}). Citá la evidencia en el fundamento.
+          Escenario de referencia: {fmtM(entrada.altura_formosa_m)} en Puerto Formosa, {entrada.lluvia_mm} mm ({etiquetaOrigenLluvia(entrada.lluvia_origen)}). Citá la evidencia en el fundamento.
         </Text>
-        <Button type="submit" size="sm" colorScheme="red" isDisabled={!esDecisor}>
+        <Button type="submit" size="sm" colorScheme="red" isDisabled={!esDecisor || emitiendo}>
           Revisar y emitir orden
         </Button>
       </fieldset>
@@ -164,7 +173,7 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
               <Button ref={cancelar} onClick={dialogo.onClose}>
                 Cancelar
               </Button>
-              <Button colorScheme="red" onClick={() => void emitir()} isLoading={emitiendo}>
+              <Button colorScheme="red" onClick={() => void emitir()} isLoading={emitiendo} isDisabled={emitiendo}>
                 Emitir orden
               </Button>
             </AlertDialogFooter>

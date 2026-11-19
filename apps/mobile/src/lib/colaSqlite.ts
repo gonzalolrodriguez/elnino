@@ -1,7 +1,7 @@
 import * as SQLite from "expo-sqlite";
 
 import { cargarServidor, obtenerUrlServidor } from "@/lib/servidor";
-import type { DatosSolicitud, ItemCola, RepositorioCola } from "@/lib/cola";
+import type { DatosCola, ItemCola, RepositorioCola } from "@/lib/cola";
 
 type Fila = {
   id: number;
@@ -38,7 +38,7 @@ function aItem(f: Fila): ItemCola {
   return {
     id: f.id,
     usuarioId: f.usuario_id,
-    datos: JSON.parse(f.datos) as DatosSolicitud,
+    datos: JSON.parse(f.datos) as DatosCola,
     fotoUri: f.foto_uri,
     estado: f.estado,
     intentos: f.intentos,
@@ -146,6 +146,11 @@ export class RepositorioSqlite implements RepositorioCola {
   async eliminar(id: number): Promise<void> {
     const db = await this.db();
     await db.runAsync("DELETE FROM cola_solicitudes WHERE id = ?", id);
+  }
+
+  async eliminarDeOtrosUsuarios(usuarioId: number): Promise<void> {
+    const db = await this.db();
+    await db.runAsync("DELETE FROM cola_solicitudes WHERE usuario_id <> ?", usuarioId);
   }
 
   async borrarDeUsuario(usuarioId: number): Promise<void> {

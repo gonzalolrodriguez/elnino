@@ -20,6 +20,7 @@ os.environ["JWT_SECRET"] = "secreto-jwt-solo-para-pruebas-0123456789abcdef"
 os.environ["FIELD_ENCRYPTION_KEY"] = base64.b64encode(b"k" * 32).decode("ascii")
 os.environ["DEMO_PASSWORD"] = "ClaveDemoPruebas2026"
 os.environ["COOKIE_SECURE"] = "false"
+os.environ["SEED_DEMO"] = "true"
 os.environ["RATE_LIMIT_ACTIVO"] = "false"
 os.environ["LOGIN_MAX_INTENTOS"] = "5"
 os.environ["CANAL_HMAC_SECRET"] = "secreto-canales-solo-para-pruebas"

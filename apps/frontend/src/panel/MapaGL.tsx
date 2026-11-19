@@ -1,7 +1,7 @@
 import type { Layer } from "@deck.gl/core";
-import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, LineLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo, useRef } from "react";
 
@@ -25,9 +25,13 @@ export type PropsMapa = {
   ruta: Ruta | null;
   modoOrigen: boolean;
   origenRuta: { lon: number; lat: number } | null;
+  /** Traslados de evacuaciones ya cerradas (origen del pedido a destino marcado). Opcional y solo para roles operativos. */
+  traslados?: Traslado[];
   onAcceso: (a: AccesoProps) => void;
   onPunto: (lon: number, lat: number) => void;
 };
+
+export type Traslado = { id: number; origen: [number, number]; destino: [number, number]; estado: string };
 
 type RGBA = [number, number, number, number];
 
@@ -54,6 +58,11 @@ const COLOR_CAPA: Record<string, string> = {
   establecimientos_salud: hexDe("mapa.salud"),
   comisarias_destacamentos: hexDe("mapa.policia"),
   cursos_agua: hexDe("mapa.agua"),
+};
+const COLOR_TRASLADO: Record<string, RGBA> = {
+  verificada: rgbaDe("confirmacion"),
+  cerrada_cuadrilla: rgbaDe("umbral.alerta"),
+  con_discrepancia: rgbaDe("acceso.cerrado"),
 };
 const COLOR_CURVA = hexDe("alerta.800");
 const COLOR_DEPARTAMENTO = hexDe("pizarra.700");
@@ -303,6 +312,31 @@ export default function MapaGL(props: PropsMapa) {
         lineWidthMinPixels: 3,
       }),
     );
+    if (props.traslados && props.traslados.length > 0) {
+      const colorDe = (t: Traslado): RGBA => COLOR_TRASLADO[t.estado] ?? COLOR_TRASLADO.cerrada_cuadrilla;
+      out.push(
+        new LineLayer<Traslado>({
+          id: "traslados",
+          data: props.traslados,
+          getSourcePosition: (t) => t.origen,
+          getTargetPosition: (t) => t.destino,
+          getColor: colorDe,
+          getWidth: 3,
+          widthUnits: "pixels",
+        }),
+        new ScatterplotLayer<Traslado>({
+          id: "traslados-destino",
+          data: props.traslados,
+          getPosition: (t) => t.destino,
+          getRadius: 6,
+          radiusUnits: "pixels",
+          getFillColor: colorDe,
+          getLineColor: BLANCO,
+          stroked: true,
+          lineWidthMinPixels: 2,
+        }),
+      );
+    }
     if (origenRuta) {
       out.push(
         new ScatterplotLayer<{ lon: number; lat: number }>({

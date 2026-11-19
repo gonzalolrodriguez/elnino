@@ -38,7 +38,7 @@ export function AppMovil() {
         ) : (
           <Alert status="info" mb={6}>
             <AlertIcon />
-            La descarga de la app todavía no está disponible. Mientras tanto, podés registrarte y pedir asistencia desde la web.
+            La descarga de la app todavía no está disponible. Mientras tanto, podés registrarte y pedir asistencia desde la web (con conexión a internet).
           </Alert>
         )}
         <Heading as="h2" size="md" mb={2}>

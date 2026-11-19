@@ -2,7 +2,7 @@ import { act, fireEvent, renderHook, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fijarToken } from "./lib/api";
-import { useTiempoReal } from "./lib/ws";
+import { esperaReintento, useTiempoReal } from "./lib/ws";
 import { validarBitacora } from "./panel/paginas/Bitacora";
 import { llamadas, renderRuta, sesion, simularFetch } from "./test/utils";
 
@@ -113,9 +113,9 @@ describe("acceso por rol", () => {
   });
 
   it("solo el admin entra a /admin: un operador es redirigido al panel", async () => {
-    conSesion("operador", { "GET /serie/formosa": ok({ umbrales: {}, picos: [], puntos: [], notas: [], n: 0 }) });
+    conSesion("operador");
     renderRuta("/admin");
-    expect(await screen.findByRole("heading", { name: /Monitor hidrométrico/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Tablero" })).toBeInTheDocument();
   });
 });
 
@@ -183,6 +183,22 @@ describe("mapa y simulador", () => {
     expect(screen.getByTestId("resultado-rio")).toHaveTextContent("0,20 m de la alerta");
     const [, init] = llamadas(f, "POST /simulacion/escenario")[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toEqual({ altura_formosa_m: 7.6, lluvia_mm: 40, lluvia_origen: "simulado", caminos_cerrados: [] });
+  });
+
+  it("si se mueven los controles después de calcular, el resultado queda marcado como desactualizado", async () => {
+    const f = conSesion("operador", { ...RUTAS_MAPA, "POST /simulacion/escenario": ok(ESCENARIO_8_1) });
+    renderRuta("/comando/mapa");
+    fireEvent.change(await screen.findByLabelText(/Altura de Puerto Formosa/), { target: { value: "7.6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Calcular escenario" }));
+    await screen.findByTestId("sector-S4");
+    expect(screen.queryByTestId("resultado-desactualizado")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Altura de Puerto Formosa/), { target: { value: "8.2" } });
+    const aviso = await screen.findByTestId("resultado-desactualizado");
+    expect(aviso).toHaveTextContent("Resultado desactualizado");
+    fireEvent.click(within(aviso).getByRole("button", { name: "Recalcular" }));
+    await waitFor(() => expect(llamadas(f, "POST /simulacion/escenario")).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByTestId("resultado-desactualizado")).not.toBeInTheDocument());
   });
 
   it("marcar un acceso como no transitable llama a PATCH con el motivo", async () => {
@@ -255,7 +271,7 @@ describe("tiempo real", () => {
     expect(await screen.findByText("Orden emitida")).toBeInTheDocument();
   });
 
-  it("al renovarse el token cierra la conexión vieja y abre otra con el token nuevo; un cierre 1008 no reintenta", () => {
+  it("al renovarse el token cierra la conexión vieja y abre otra con el token nuevo; un cierre 1008 no reintenta", async () => {
     const alEvento = vi.fn();
     const { rerender } = renderHook(({ t }: { t: string | null }) => useTiempoReal(t, alEvento), { initialProps: { t: "token-a" as string | null } });
     act(() => FakeWS.instancias[0].onopen?.());
@@ -267,11 +283,21 @@ describe("tiempo real", () => {
     act(() => FakeWS.instancias[1].onopen?.());
     expect(FakeWS.instancias[1].sent).toEqual([JSON.stringify({ token: "token-b" })]);
 
+    // Un cierre 1008 (token vencido) no reintenta enseguida: renueva el token y reconecta con espera creciente.
     vi.useFakeTimers();
     act(() => FakeWS.instancias[1].onclose?.({ code: 1008 }));
-    vi.advanceTimersByTime(10_000);
-    vi.useRealTimers();
+    await vi.advanceTimersByTimeAsync(500);
     expect(FakeWS.instancias).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(2000);
+    vi.useRealTimers();
+    expect(FakeWS.instancias).toHaveLength(3);
+  });
+
+  it("la espera de reconexión crece de forma exponencial y tiene tope", () => {
+    expect(esperaReintento(0, 0.5)).toBe(1000);
+    expect(esperaReintento(1, 0.5)).toBe(2000);
+    expect(esperaReintento(3, 0.5)).toBe(8000);
+    expect(esperaReintento(20, 0.5)).toBe(30_000);
   });
 
   it("sin token no abre conexión", () => {
@@ -310,7 +336,7 @@ describe("monitor y Centinela", () => {
       }),
       "GET /lluvia": ok({ lecturas: [], n: 0, sin_dato_observado: true, nota: "" }),
     });
-    renderRuta("/comando");
+    renderRuta("/comando/rio");
     const ultima = await screen.findByTestId("monitor-ultima");
     expect(ultima).toHaveTextContent("5,60 m");
     expect(within(ultima.parentElement as HTMLElement).getByText("DATO OBSERVADO")).toBeInTheDocument();

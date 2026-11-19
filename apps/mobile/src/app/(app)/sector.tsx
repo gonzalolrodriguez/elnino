@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { MapaSector } from "@/components/MapaSector";
+import { MapaConRespaldo } from "@/components/MapaSector";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
+import { etiquetaEstadoSector, etiquetaTipoOrden } from "@/lib/etiquetas";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
 
 type Carga =
@@ -12,7 +13,6 @@ type Carga =
   | { tipo: "ok"; sector: MiSector; geo: GeoSectores | null; centros: Centro[] }
   | { tipo: "error"; mensaje: string };
 
-const ESTADO_TEXTO = { normal: "Normal", en_riesgo: "En riesgo", comprometido: "Comprometido" } as const;
 
 export default function Sector() {
   const d = useDiseno();
@@ -70,7 +70,16 @@ export default function Sector() {
 
   const mapa =
     ok && ok.sector.sectores.length > 0 ? (
-      <MapaSector geo={geoMapa} estados={estados} centro={centroMapa} alto={d.columnas === 2 ? "lleno" : undefined} />
+      <MapaConRespaldo
+        geo={geoMapa}
+        estados={estados}
+        centro={centroMapa}
+        alto={d.columnas === 2 ? "lleno" : undefined}
+        resumen={{
+          sectores: ok.sector.sectores.map((s) => ({ id: s.id, nombre: s.nombre, estado: s.estado })),
+          centro: asignado ? { nombre: asignado.nombre } : null,
+        }}
+      />
     ) : null;
 
   const detalle = ok ? (
@@ -99,7 +108,7 @@ export default function Sector() {
                 color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.avisoTexto : COLOR.ok,
               }}
             >
-              {ESTADO_TEXTO[s.estado]}
+              {etiquetaEstadoSector(s.estado)}
               {s.aislado ? " · aislado (sin accesos transitables)" : ""}
             </Text>
             <Texto>Altura de compromiso: {s.altura_compromiso_m.toFixed(2)} m</Texto>
@@ -111,7 +120,7 @@ export default function Sector() {
             ))}
             {s.alertas.map((a) => (
               <Texto key={a.orden_id}>
-                Orden #{a.orden_id} ({a.tipo}): {a.fundamento}
+                Orden #{a.orden_id} ({etiquetaTipoOrden(a.tipo)}): {a.fundamento}
               </Texto>
             ))}
             <Insignia categoria={s.categoria} />

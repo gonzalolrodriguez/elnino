@@ -268,6 +268,8 @@ export type Tarea = {
 export type Notificacion = {
   id: number;
   orden_id: number | null;
+  tipo?: string;
+  datos?: Record<string, unknown> | null;
   mensaje: string;
   leida: boolean;
   creada_en: string;
@@ -335,6 +337,8 @@ export type UsuarioAdmin = {
   rol_operativo: string | null;
   estado: string;
   ultimo_login: string | null;
+  intentos_fallidos?: number;
+  bloqueado_hasta?: string | null;
 };
 
 export type CapaOficial = {
@@ -355,4 +359,187 @@ export type CapaOficial = {
   nombre_fuente: string;
   licencia: string;
   fecha_actualizacion: string;
+};
+
+/** Tableros de decisión: GET /panel/resumen y GET /admin/resumen (ver docs/contrato_api.md). */
+export type BloqueResumen = { categoria: Categoria; fuente: string; fecha_dato: string | null };
+
+export type TiempoAUmbral = { objetivo: string; valor_m: number; ya_alcanzado: boolean; dias_minimo: number | null; dias_maximo: number | null };
+
+export type ResumenRio = BloqueResumen & {
+  disponible: boolean;
+  altura_m?: number;
+  fecha_lectura?: string;
+  umbral_alerta_m?: number;
+  umbral_evacuacion_m?: number;
+  distancia_a_alerta_m?: number;
+  distancia_a_evacuacion_m?: number;
+  tendencia_7d_m?: number | null;
+  tendencia_7d_m_por_dia?: number | null;
+  tiempo_a_umbrales?: TiempoAUmbral[];
+  supuesto_proyeccion?: string;
+  categoria_proyeccion?: Categoria;
+};
+
+export type ResumenSector = {
+  id: string;
+  nombre: string;
+  estado: EstadoSector;
+  aislado: boolean;
+  margen_a_compromiso_m: number;
+  altura_compromiso_m: number;
+  personas_k10: number;
+  personas_registradas: number;
+  familias_registradas: number;
+  animales_expuestos: number;
+  colmenas: number;
+  accesos: { nombre: string; superficie: string; estado: EstadoAcceso }[];
+  centro_sugerido: {
+    personas: { id: number; nombre: string; tipo: string; distancia_linea_recta_m: number } | null;
+    animales: { id: number; nombre: string; tipo: string; distancia_linea_recta_m: number } | null;
+    nota: string;
+  } | null;
+};
+
+export type ResumenCentro = {
+  id: number;
+  nombre: string;
+  tipo: string;
+  capacidad_personas: number;
+  capacidad_animales: number;
+  ocupacion: number;
+  ocupacion_pct: number | null;
+};
+
+export type ResumenCuadrilla = {
+  id: number;
+  nombre: string;
+  tipo_incidente: string;
+  estado: string;
+  tareas: Record<string, number>;
+};
+
+export type EstadoEvacuacion = "pendiente" | "en_curso" | "cerrada_cuadrilla" | "verificada" | "con_discrepancia";
+
+export type ResumenEvacuaciones = BloqueResumen & {
+  total?: number;
+  por_estado: Partial<Record<EstadoEvacuacion, number>>;
+  por_sector?: Record<string, Partial<Record<EstadoEvacuacion, number>>>;
+  verificadas_pct?: number | null;
+  discrepancias_abiertas?: number;
+  personas_trasladadas?: number;
+  animales_trasladados?: Record<string, number>;
+  animales_trasladados_total?: number;
+  distancia_max_destino_m?: number;
+};
+
+export type ResumenPanel = {
+  generado_en: string;
+  leyenda: string;
+  categoria: Categoria;
+  fuente: string;
+  fecha_dato: string;
+  rio: ResumenRio;
+  sectores: BloqueResumen & { altura_usada_m: number; items: ResumenSector[] };
+  solicitudes: BloqueResumen & {
+    total: number;
+    por_estado: Record<string, number>;
+    por_sector: Record<string, number>;
+    por_origen: Record<string, number>;
+    recibidas_mas_antigua_min: number | null;
+    a_verificar: number;
+  };
+  centros: BloqueResumen & { items: ResumenCentro[] };
+  cuadrillas: BloqueResumen & { items: ResumenCuadrilla[]; tareas_sin_cuadrilla: number };
+  ordenes: BloqueResumen & {
+    recientes: { id: number; tipo: TipoOrden; sectores: string[]; emitida_por_rol: string | null; creada_en: string }[];
+    bitacora_borradores: number;
+  };
+  lluvia_7d: BloqueResumen & {
+    desde: string;
+    sin_dato_observado: boolean;
+    por_origen: Record<string, { lecturas: number; mm_total: number; sin_medicion: number; categoria: Categoria }>;
+  };
+  frescura: { rio_ultima_lectura: string | null; k10_sectores: string | null; lluvia_ultima_lectura: string | null; fecha_corte: string };
+  evacuaciones?: ResumenEvacuaciones;
+};
+
+export type ResumenAdmin = BloqueResumen & {
+  generado_en: string;
+  usuarios: {
+    total: number;
+    por_rol: Record<string, number>;
+    por_estado: Record<string, number>;
+    sin_login_30_dias: number;
+    cuentas_bloqueadas: number;
+    intentos_fallidos_en_curso: number;
+    bloqueos: { usuario_id: number | null; ip: string | null; bloqueado_hasta: string }[];
+  };
+  auditoria: { cadena_integra: boolean; primera_fila_inconsistente: number | null; filas: number };
+  servicio: { base_de_datos: string; websockets_activos: number; version: string };
+};
+
+/** Constancias de evacuación (ver docs/contrato_api.md, "Constancias de evacuación"). */
+export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro";
+
+export type Constancia = {
+  id: number;
+  rol_operativo: string | null;
+  destino: { lat: number; lon: number; centro_id: number | null; centro_nombre: string | null; distancia_a_centro_m: number | null };
+  personas_trasladadas: number;
+  animales_trasladados: Record<string, number>;
+  nota: string | null;
+  adjuntos: { n: number; mime: string; bytes: number }[];
+  creada_en: string;
+};
+
+export type ConfirmacionEvacuado = {
+  respuesta: "si" | "no" | "problema";
+  canal: string;
+  comentario: string | null;
+  solicitada_en: string;
+  respondida_en: string | null;
+};
+
+export type Evacuacion = {
+  tarea_id: number;
+  tarea_estado: string;
+  estado: EstadoEvacuacion;
+  titulo: string;
+  sector_id: string | null;
+  cuadrilla_id: number | null;
+  cuadrilla_nombre: string | null;
+  solicitud_id: number | null;
+  orden_id: number | null;
+  origen: { lat: number; lon: number; tipo: "solicitud" | "sector" } | null;
+  constancia: Constancia | null;
+  confirmacion: ConfirmacionEvacuado | null;
+  discrepancia: { motivos: MotivoDiscrepancia[] } | null;
+  actualizado_en: string;
+  categoria: Categoria;
+  fuente: string;
+};
+
+export type ListaEvacuaciones = { evacuaciones: Evacuacion[]; total: number; limite: number; offset: number; categoria: Categoria; fuente: string; fecha_dato: string };
+
+export type CierreEvacuacion = {
+  lat: number;
+  lon: number;
+  centro_id?: number;
+  personas_trasladadas: number;
+  animales_trasladados: Record<string, number>;
+  nota?: string;
+};
+
+export type ConsultaConfirmacion = {
+  id: number;
+  tarea_id: number;
+  solicitud_id: number | null;
+  codigo: string;
+  centro_nombre: string | null;
+  respondida: boolean;
+  respuesta: "si" | "no" | "problema" | null;
+  comentario: string | null;
+  solicitada_en: string;
+  respondida_en: string | null;
 };

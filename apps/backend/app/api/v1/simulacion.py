@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core import constantes
 from app.core.eventos import difusor
 from app.core.rbac import requiere_rol
+from app.core.tiempo import hoy_ar
 from app.db.modelos import Alternativa, Usuario
 from app.db.sesion import get_db
 from app.domain import ruteo as dom_ruteo
@@ -64,7 +64,7 @@ def escenario(
         **salida,
         "categoria": "SIMULADO",
         "fuente": f"{contexto.FUENTE_K10}; umbrales K3; supuestos.yaml",
-        "fecha_dato": date.today().isoformat(),
+        "fecha_dato": hoy_ar().isoformat(),
     }
     difusor.publicar(
         "escenario", {"motivo": "simulacion", "resumen": e.resumen, "altura_m": e.altura_m}
@@ -109,6 +109,13 @@ class AlternativaEditable(BaseModel):
     nombre: str | None = Field(default=None, max_length=120)
     orden_sectores: list[str] | None = Field(default=None, max_length=10)
     centros_excluidos: list[int] = Field(default_factory=list, max_length=50)
+
+    @field_validator("orden_sectores")
+    @classmethod
+    def sin_repetidos(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError("orden_sectores no puede repetir sectores")
+        return v
 
 
 class AlternativasIn(EscenarioIn):
@@ -161,7 +168,7 @@ def alternativas(
         "comparacion": recomendacion.tabla_comparacion(alts),
         "categoria": "SIMULADO",
         "fuente": recomendacion.FUENTE,
-        "fecha_dato": date.today().isoformat(),
+        "fecha_dato": hoy_ar().isoformat(),
     }
 
 
@@ -209,7 +216,7 @@ def ruteo(
         datos.lluvia_mm,
         cerrados,
     )
-    r["fecha_dato"] = date.today().isoformat()
+    r["fecha_dato"] = hoy_ar().isoformat()
     r["fuente"] = "red_vial cargada (si la hay) y accesos SIMULADO; supuestos.yaml"
     r["leyenda"] = constantes.LEYENDA
     return r

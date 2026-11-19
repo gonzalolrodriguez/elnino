@@ -56,8 +56,9 @@ racion_diaria_kg:
     vaca_con_cria: {maiz: 3.1, pellet_girasol: 0.35}
     vaquillona: {maiz: 2.5, pellet_girasol: 0.2}
     toro: {maiz: 2.5, pellet_girasol: 0.2}
+    novillo: {maiz: 2.5, pellet_girasol: 0.2}
     ternero: {maiz: 0.0, pellet_girasol: 0.0}
-  fuente: INTA (a verificar). Vaca preñada 2,8 kg de maíz + 200 g de pellet; vaca con cría 3,0 a 3,2 kg + 200 a 500 g (se usan 3,1 y 0,35). Vaquillona y toro 2,5 kg + 0,2 kg y ternero al pie sin ración propia son SUPUESTO
+  fuente: INTA (a verificar). Vaca preñada 2,8 kg de maíz + 200 g de pellet; vaca con cría 3,0 a 3,2 kg + 200 a 500 g (se usan 3,1 y 0,35). Vaquillona, novillo y toro 2,5 kg + 0,2 kg y ternero al pie sin ración propia son SUPUESTO
 ventana_inicio_ganado_horas:
   valor: [24, 48]
   fuente: SUPUESTO (anticipación recomendada del traslado de ganado respecto del compromiso previsto)
@@ -73,3 +74,23 @@ dias_proyeccion_horizonte:
 velocidad_lancha_kmh:
   valor: 15
   fuente: SUPUESTO (traslado fluvial de sectores aislados)
+acceso_red_vial_buffer_m:
+  valor: 25
+  fuente: SUPUESTO (radio alrededor de un acceso dentro del cual una arista de la red vial se considera ese mismo camino; si el acceso se cierra, se cortan las aristas contenidas en ese radio)
+
+# --- Constancias de evacuación ---
+distancia_max_destino_m:
+  valor: 500
+  fuente: SUPUESTO (si el destino GPS de la constancia queda a más de esta distancia del centro elegido, la evacuación se marca "con discrepancia" para revisar; no es una acusación)
+vigencia_codigo_horas:
+  valor: 72
+  fuente: SUPUESTO (horas durante las que el código de confirmación sirve por SMS; el operador puede reabrir la consulta con un código nuevo)
+confirmacion_sms_invalidos_por_hora:
+  valor: 5
+  fuente: SUPUESTO (intentos fallidos por hora de un mismo remitente contra un mismo código existente; superado el tope se ignora a ese remitente para ese código)
+confirmacion_sms_fallos_por_codigo:
+  valor: 10
+  fuente: SUPUESTO (intentos fallidos por hora contra un mismo código, sumando todos los remitentes; superado el tope el código queda invalidado para SMS y el operador puede reabrir la consulta con uno nuevo)
+confirmacion_sms_desconocidos_por_hora:
+  valor: 20
+  fuente: SUPUESTO (códigos inexistentes probados por hora desde un mismo remitente; superado el tope se ignoran sus códigos inexistentes, pero un código válido de su teléfono registrado sigue funcionando)

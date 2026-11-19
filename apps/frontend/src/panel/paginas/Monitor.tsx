@@ -175,7 +175,7 @@ export default function Monitor() {
   return (
     <>
       <Heading as="h1" size="lg" mb={4}>
-        Monitor hidrométrico y pluviométrico
+        Río y lluvia
       </Heading>
       <Seccion titulo="Puerto Formosa: serie diaria, umbrales y picos" categoria="DATO OBSERVADO" id="sec-serie">
         <Cargando carga={serie} hijos={(s) => <SerieYCifras s={s} />} />

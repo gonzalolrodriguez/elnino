@@ -89,7 +89,7 @@ export function useUsuario(): Usuario {
 }
 
 /** Pestañas visibles por rol. La de cuadrilla solo existe para ese rol. */
-export type Pestana = "asistencia" | "solicitudes" | "alertas" | "sector" | "perfil" | "cuadrilla";
+export type Pestana = "asistencia" | "solicitudes" | "alertas" | "sector" | "perfil" | "cuadrilla" | "monitor";
 
 export function pestanasPorRol(rol: Rol): Pestana[] {
   switch (rol) {
@@ -98,6 +98,9 @@ export function pestanasPorRol(rol: Rol): Pestana[] {
       return ["asistencia", "solicitudes", "alertas", "sector", "perfil"];
     case "cuadrilla":
       return ["cuadrilla", "alertas", "perfil"];
+    case "operador":
+    case "decisor":
+      return ["monitor", "alertas", "perfil"];
     default:
       return ["alertas", "perfil"];
   }

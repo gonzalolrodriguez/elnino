@@ -5,12 +5,8 @@ import { Boton, Campo, Cargando, COLOR, ErrorCaja, Subtitulo, Tarjeta, Texto } f
 import { ErrorApi } from "@/lib/api";
 import { obtenerUbicacion } from "@/lib/dispositivo";
 import { mensajeError } from "@/lib/errores";
+import { validarGrupo } from "@/lib/grupoFamiliar";
 import { api, type GrupoFamiliar } from "@/lib/servicios";
-
-const entero = (v: string, por: number): number => {
-  const n = Number.parseInt(v, 10);
-  return Number.isFinite(n) && n >= 0 ? n : por;
-};
 
 export function FormGrupoFamiliar() {
   const [cargando, setCargando] = useState(true);
@@ -22,6 +18,8 @@ export function FormGrupoFamiliar() {
   const [telefono, setTelefono] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lon: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Falla de carga distinta de 404: no se muestra el formulario para no pisar datos con valores vacios. */
+  const [falloCarga, setFalloCarga] = useState<string | null>(null);
   const [guardado, setGuardado] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -38,11 +36,14 @@ export function FormGrupoFamiliar() {
   const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
+    setFalloCarga(null);
     try {
       aplicar(await api.grupo());
     } catch (e) {
-      // 404 = todavía no cargó su grupo familiar: formulario vacío, no es un error.
-      if (!(e instanceof ErrorApi && e.estado === 404)) setError(mensajeError(e));
+      // 404 = todavía no cargó su grupo familiar: formulario vacío, no es un error. Cualquier otra
+      // falla (red, 5xx) NO habilita el formulario: guardar con valores por defecto borraría los
+      // datos que ya existen en el servidor (salud, vulnerabilidad, teléfono cifrado).
+      if (!(e instanceof ErrorApi && e.estado === 404)) setFalloCarga(mensajeError(e));
     } finally {
       setCargando(false);
     }
@@ -55,13 +56,15 @@ export function FormGrupoFamiliar() {
   const guardar = async () => {
     setError(null);
     setGuardado(null);
+    const v = validarGrupo({ integrantes, menores, mayores, mascotas });
+    if ("error" in v) {
+      setError(v.error);
+      return;
+    }
     setGuardando(true);
     try {
       const g = await api.guardarGrupo({
-        integrantes: Math.max(entero(integrantes, 1), 1),
-        menores: entero(menores, 0),
-        mayores: entero(mayores, 0),
-        mascotas: entero(mascotas, 0),
+        ...v.ok,
         telefono: telefono.trim() || null,
         salud: previo?.salud ?? null,
         vulnerabilidad: previo?.vulnerabilidad ?? null,
@@ -77,6 +80,14 @@ export function FormGrupoFamiliar() {
   };
 
   if (cargando) return <Cargando texto="Cargando grupo familiar…" />;
+  if (falloCarga) {
+    return (
+      <Tarjeta>
+        <Subtitulo>Grupo familiar y domicilio</Subtitulo>
+        <ErrorCaja mensaje={`No pudimos cargar tus datos. ${falloCarga}`} onReintentar={() => void cargar()} />
+      </Tarjeta>
+    );
+  }
 
   return (
     <Tarjeta>

@@ -1,5 +1,6 @@
 /**
- * Cola offline de solicitudes de asistencia (CLAUDE.md §5.5). La lógica es independiente del
+ * Cola offline de solicitudes de asistencia, cierres de tareas con constancia y confirmaciones del
+ * evacuado (CLAUDE.md §5.5). La lógica es independiente del
  * almacenamiento: `RepositorioCola` se implementa con expo-sqlite en producción (`colaSqlite.ts`)
  * y en memoria en las pruebas.
  */
@@ -8,18 +9,64 @@ export type DatosSolicitud = {
   tipo: "evacuacion" | "asistencia" | "ganado" | "logistica" | "otro";
   personas: number;
   animales: number;
-  lon: number;
-  lat: number;
+  /** Coordenadas: van juntas o ninguna (sin GPS hace falta `referencia_ubicacion`). */
+  lon?: number;
+  lat?: number;
   texto: string | null;
+  /** Campo propio del backend; se omite cuando está vacío (no se manda `null`). */
+  referencia_ubicacion?: string;
   origen: "app";
 };
+
+/** Resultado del cierre que devuelve el backend: lo que la cuadrilla ve en palabras simples. */
+export type ResultadoCierre = {
+  estado: string;
+  motivos_discrepancia: string[];
+  confirmacion_solicitada: boolean;
+  repetida: boolean;
+};
+
+/**
+ * Cierre de una tarea con constancia. Va en dos tiempos como las solicitudes: primero el JSON
+ * (`POST /tareas/{id}/cierre`, con clave de idempotencia) y después las fotos, una por una; cada
+ * foto subida se quita de `fotos`.
+ */
+export type DatosCierre = {
+  clase: "cierre";
+  tarea_id: number;
+  lat: number;
+  lon: number;
+  centro_id?: number;
+  personas_trasladadas: number;
+  animales_trasladados: Record<string, number>;
+  nota?: string;
+  /** URIs locales todavía no subidas. */
+  fotos: string[];
+  resultado?: ResultadoCierre;
+};
+
+/** Respuesta del evacuado a la consulta de traslado (`POST /mi/confirmaciones`). */
+export type DatosConfirmacion = {
+  clase: "confirmacion";
+  solicitud_id: number;
+  respuesta: "si" | "no" | "problema";
+  comentario?: string;
+  resultado?: { repetida: boolean };
+};
+
+/** Lo que guarda la cola. Una solicitud no tiene `clase` (formato original, sigue siendo válido). */
+export type DatosCola = DatosSolicitud | DatosCierre | DatosConfirmacion;
+
+export const esCierre = (d: DatosCola): d is DatosCierre => "clase" in d && d.clase === "cierre";
+export const esConfirmacion = (d: DatosCola): d is DatosConfirmacion => "clase" in d && d.clase === "confirmacion";
+export const esSolicitud = (d: DatosCola): d is DatosSolicitud => !("clase" in d);
 
 export type EstadoItem = "pendiente" | "enviada" | "rechazada";
 
 export type ItemCola = {
   id: number;
   usuarioId: number;
-  datos: DatosSolicitud;
+  datos: DatosCola;
   fotoUri: string | null;
   estado: EstadoItem;
   intentos: number;
@@ -50,10 +97,12 @@ export interface RepositorioCola {
   listar(usuarioId: number): Promise<ItemCola[]>;
   actualizar(id: number, cambios: Partial<Omit<ItemCola, "id">>): Promise<void>;
   eliminar(id: number): Promise<void>;
+  /** Borra los ítems de cualquier usuario distinto del indicado (teléfono compartido). */
+  eliminarDeOtrosUsuarios(usuarioId: number): Promise<void>;
 }
 
 export type ResultadoEnvio =
-  | { ok: true; servidorId: number }
+  | { ok: true; servidorId: number; resultado?: ResultadoCierre | { repetida: boolean } }
   | { ok: false; tipo: "red" | "sesion" | "rechazo"; mensaje: string };
 
 export type ResultadoFoto =
@@ -64,14 +113,18 @@ export type Dependencias = {
   repo: RepositorioCola;
   hayRed: () => Promise<boolean>;
   /** Primer tiempo: JSON mínimo con la clave de idempotencia del ítem. */
-  enviar: (datos: DatosSolicitud, claveIdempotencia: string) => Promise<ResultadoEnvio>;
-  /** Segundo tiempo: sube la foto comprimida a la solicitud ya creada. */
-  subirFoto: (servidorId: number, fotoUri: string) => Promise<ResultadoFoto>;
+  enviar(datos: DatosCola, claveIdempotencia: string): Promise<ResultadoEnvio>;
+  /** Segundo tiempo: sube la foto comprimida a la solicitud (o a la constancia) ya creada. */
+  subirFoto(servidorId: number, fotoUri: string, datos: DatosCola): Promise<ResultadoFoto>;
   /** URL normalizada del servidor vigente; se evalúa en cada operación. Por defecto "". */
   servidorActual?: () => string;
   ahora?: () => number;
   /** Generador de UUID; por defecto `crypto.randomUUID` o un v4 de respaldo. */
   generarClave?: () => string;
+  /** Intentos fallidos tras los cuales el ítem se rechaza para no bloquear la cola. Por defecto 10. */
+  maxIntentos?: number;
+  /** Antigüedad (ms) tras la cual un ítem que sigue fallando se rechaza. Por defecto 3 días. */
+  maxEdadMs?: number;
 };
 
 export type VaciadoResultado = {
@@ -91,6 +144,11 @@ export function uuidV4(): string {
   });
 }
 
+export const MAX_INTENTOS = 10;
+export const MAX_EDAD_MS = 3 * 24 * 60 * 60_000;
+/** Los ítems enviados se conservan un día en el teléfono y después se purgan. */
+export const RETENCION_ENVIADAS_MS = 24 * 60 * 60_000;
+
 const BASE_MS = 5_000;
 const MAX_MS = 5 * 60_000;
 
@@ -99,8 +157,16 @@ export function esperaBackoffMs(intentos: number): number {
   return Math.min(BASE_MS * 2 ** Math.max(intentos - 1, 0), MAX_MS);
 }
 
+function fotosPendientes(item: ItemCola): string[] {
+  if (esCierre(item.datos)) return item.datos.fotos;
+  return item.fotoUri && !item.fotoSubida ? [item.fotoUri] : [];
+}
+
 export class ColaOffline {
   private vaciando: Promise<VaciadoResultado> | null = null;
+  /** Se pidió vaciar mientras otro vaciado estaba en curso: se encadena una segunda pasada. */
+  private repetir = false;
+  private repetirForzado = false;
 
   constructor(private readonly dep: Dependencias) {}
 
@@ -108,7 +174,7 @@ export class ColaOffline {
     return (this.dep.ahora ?? Date.now)();
   }
 
-  async encolar(usuarioId: number, datos: DatosSolicitud, fotoUri: string | null): Promise<ItemCola> {
+  async encolar(usuarioId: number, datos: DatosCola, fotoUri: string | null): Promise<ItemCola> {
     return this.dep.repo.insertar({
       usuarioId,
       datos,
@@ -159,11 +225,33 @@ export class ColaOffline {
    * `forzar` ignora la espera del backoff (botón de reintento manual).
    */
   vaciar(usuarioId: number, forzar = false): Promise<VaciadoResultado> {
-    if (this.vaciando) return this.vaciando;
-    this.vaciando = this.vaciarInterno(usuarioId, forzar).finally(() => {
+    if (this.vaciando) {
+      // Algo se insertó (o cambió la red) durante el vaciado en curso: el ciclo hace otra pasada.
+      this.repetir = true;
+      this.repetirForzado ||= forzar;
+      return this.vaciando;
+    }
+    this.vaciando = this.ciclo(usuarioId, forzar).finally(() => {
       this.vaciando = null;
     });
     return this.vaciando;
+  }
+
+  private async ciclo(usuarioId: number, forzar: boolean): Promise<VaciadoResultado> {
+    let total = await this.vaciarInterno(usuarioId, forzar);
+    while (this.repetir) {
+      const forzado = this.repetirForzado;
+      this.repetir = false;
+      this.repetirForzado = false;
+      const r = await this.vaciarInterno(usuarioId, forzado);
+      total = {
+        enviadas: total.enviadas + r.enviadas,
+        rechazadas: total.rechazadas + r.rechazadas,
+        pendientes: r.pendientes,
+        sinRed: r.sinRed,
+      };
+    }
+    return total;
   }
 
   private async vaciarInterno(usuarioId: number, forzar: boolean): Promise<VaciadoResultado> {
@@ -173,7 +261,7 @@ export class ColaOffline {
       res.pendientes = (await this.pendientes(usuarioId)).length;
       return res;
     }
-    for (const item of await this.pendientes(usuarioId)) {
+    for (let item of await this.pendientes(usuarioId)) {
       if (!forzar && item.proximoIntento > this.ahora()) break;
       let servidorId = item.servidorId;
       if (servidorId === null) {
@@ -190,34 +278,91 @@ export class ColaOffline {
             res.rechazadas += 1;
             continue;
           }
+          if (r.tipo === "red" && this.agotado(item)) {
+            // Un ítem que no logra enviarse no debe bloquear a los que siguen.
+            await this.dep.repo.actualizar(item.id, {
+              estado: "rechazada",
+              intentos: item.intentos + 1,
+              ultimoError: `No se pudo enviar después de ${item.intentos + 1} intentos: ${r.mensaje}`,
+            });
+            res.rechazadas += 1;
+            continue;
+          }
           await this.reprogramar(item, r.mensaje);
           break;
         }
         servidorId = r.servidorId;
-        await this.dep.repo.actualizar(item.id, { servidorId, ultimoError: null });
+        const cambios: Partial<Omit<ItemCola, "id">> = { servidorId, ultimoError: null };
+        if (r.resultado && !esSolicitud(item.datos)) {
+          // Se guarda lo que respondió el servidor para mostrarlo en palabras simples.
+          cambios.datos = { ...item.datos, resultado: r.resultado } as DatosCola;
+        }
+        await this.dep.repo.actualizar(item.id, cambios);
+        item = { ...item, ...cambios };
       }
 
-      if (item.fotoUri && !item.fotoSubida) {
-        const f = await this.dep.subirFoto(servidorId, item.fotoUri);
+      let detener = false;
+      let actual: ItemCola = { ...item, servidorId };
+      const sujeto = esCierre(item.datos) ? "La constancia" : "La solicitud";
+      for (const uri of fotosPendientes(actual)) {
+        const f = await this.dep.subirFoto(servidorId, uri, actual.datos);
         if (f.ok) {
-          await this.dep.repo.actualizar(item.id, { fotoSubida: true, ultimoError: null });
+          actual = await this.quitarFoto(actual, uri, true, { ultimoError: null });
         } else if (f.tipo === "rechazo") {
-          // La solicitud ya llegó: la foto rechazada no debe reintentarse ni bloquear el envío.
-          await this.dep.repo.actualizar(item.id, {
-            fotoUri: null,
-            ultimoError: `La solicitud se envió, pero el servidor no aceptó la foto: ${f.mensaje}`,
+          // Lo principal ya llegó: la foto rechazada no debe reintentarse ni bloquear el envío.
+          actual = await this.quitarFoto(actual, uri, false, {
+            ultimoError: `${sujeto} se envió, pero el servidor no aceptó la foto: ${f.mensaje}`,
+          });
+        } else if (f.tipo === "red" && this.agotado(item)) {
+          // Tras muchos intentos se abandona la foto y se sigue con la cola.
+          actual = await this.quitarFoto(actual, uri, false, {
+            intentos: item.intentos + 1,
+            ultimoError: `${sujeto} se envió, pero la foto no pudo subirse: ${f.mensaje}`,
           });
         } else {
           await this.reprogramar(item, f.mensaje);
+          detener = true;
           break;
         }
       }
+      if (detener) break;
 
       await this.dep.repo.actualizar(item.id, { estado: "enviada" });
       res.enviadas += 1;
     }
+    // Se purgan las enviadas viejas en cada vaciado (también el del arranque de la app).
+    await this.purgarEnviadas(usuarioId, this.ahora() - RETENCION_ENVIADAS_MS);
     res.pendientes = (await this.pendientes(usuarioId)).length;
     return res;
+  }
+
+  /** Saca una foto de las pendientes (subida o abandonada) y persiste el cambio. */
+  private async quitarFoto(
+    item: ItemCola,
+    uri: string,
+    subida: boolean,
+    cambios: Partial<Omit<ItemCola, "id">>,
+  ): Promise<ItemCola> {
+    let nuevo: Partial<Omit<ItemCola, "id">>;
+    if (esCierre(item.datos)) {
+      nuevo = { datos: { ...item.datos, fotos: item.datos.fotos.filter((f) => f !== uri) }, ...cambios };
+    } else {
+      nuevo = subida ? { fotoSubida: true, ...cambios } : { fotoUri: null, ...cambios };
+    }
+    await this.dep.repo.actualizar(item.id, nuevo);
+    return { ...item, ...nuevo };
+  }
+
+  /** `true` si este fallo reintentable ya superó el máximo de intentos o de antigüedad. */
+  private agotado(item: ItemCola): boolean {
+    const maxIntentos = this.dep.maxIntentos ?? MAX_INTENTOS;
+    const maxEdad = this.dep.maxEdadMs ?? MAX_EDAD_MS;
+    return item.intentos + 1 >= maxIntentos || this.ahora() - item.creadoEn > maxEdad;
+  }
+
+  /** Quita de la cola los ítems de otras cuentas (p. ej. al ingresar otra persona en el teléfono). */
+  async limpiarAjenos(usuarioId: number): Promise<void> {
+    await this.dep.repo.eliminarDeOtrosUsuarios(usuarioId);
   }
 
   private async reprogramar(item: ItemCola, mensaje: string): Promise<void> {
@@ -259,5 +404,8 @@ export class RepositorioMemoria implements RepositorioCola {
   }
   async eliminar(id: number): Promise<void> {
     this.filas = this.filas.filter((f) => f.id !== id);
+  }
+  async eliminarDeOtrosUsuarios(usuarioId: number): Promise<void> {
+    this.filas = this.filas.filter((f) => f.usuarioId === usuarioId);
   }
 }

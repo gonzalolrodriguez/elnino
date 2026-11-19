@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
@@ -9,6 +10,7 @@ import { api } from "../api";
 import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
 import { Cargando, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
+import { etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
 
 const TIPO_INCIDENTE = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" } as const;
 const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
@@ -58,7 +60,7 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
                 <Tr key={c.id}>
                   <Td>{c.nombre}</Td>
                   <Td>{TIPO_INCIDENTE[c.tipo_incidente as keyof typeof TIPO_INCIDENTE] ?? c.tipo_incidente}</Td>
-                  <Td whiteSpace="normal">{c.integrantes.map((i) => i.rol_operativo).join(", ") || "sin integrantes"}</Td>
+                  <Td whiteSpace="normal">{c.integrantes.map((i) => etiquetaRolOperativo(i.rol_operativo)).join(", ") || "sin integrantes"}</Td>
                   <Td whiteSpace="normal">{c.roles_faltantes.join(", ") || "plantilla completa"}</Td>
                 </Tr>
               ))}
@@ -132,7 +134,7 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                   <Td whiteSpace="normal">{t.titulo}</Td>
                   <Td>{t.sector_id ?? "—"}</Td>
                   <Td>
-                    <Badge>{t.estado.replace("_", " ")}</Badge>
+                    <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
                   </Td>
                   <Td>
                     <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
@@ -166,10 +168,20 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
 }
 
 function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
-  const carga = useCarga(() => api.solicitudes());
+  // Los filtros viven en la URL: el tablero enlaza acá con `?estado=recibida` o `?sector=S4`.
+  const [params, setParams] = useSearchParams();
+  const estadoFiltro = params.get("estado") ?? "";
+  const sectorFiltro = params.get("sector") ?? "";
+  const carga = useCarga(() => api.solicitudes({ estado: estadoFiltro || undefined, sector_id: sectorFiltro || undefined, limite: 200 }), [estadoFiltro, sectorFiltro]);
   const toast = useToast();
   const [error, setError] = useState<unknown>(null);
   const [cuadrilla, setCuadrilla] = useState("");
+  const cambiarFiltro = (clave: "estado" | "sector", valor: string) => {
+    const nuevo = new URLSearchParams(params);
+    if (valor) nuevo.set(clave, valor);
+    else nuevo.delete(clave);
+    setParams(nuevo, { replace: true });
+  };
 
   async function avanzar(s: Solicitud, estado: string) {
     setError(null);
@@ -193,7 +205,35 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
         ))}
       </Select>
     }>
-      <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio="No hay solicitudes en la cola." hijos={(d) => (
+      <Flex gap={3} wrap="wrap" mb={3}>
+        <FormControl w="12rem">
+          <FormLabel htmlFor="op-filtro-estado" fontSize="sm" mb={0}>
+            Estado
+          </FormLabel>
+          <Select id="op-filtro-estado" size="sm" bg="superficie" value={estadoFiltro} onChange={(e) => cambiarFiltro("estado", e.target.value)}>
+            <option value="">Todos</option>
+            {ESTADOS_SOLICITUD.map((e) => (
+              <option key={e} value={e}>
+                {etiquetaEstadoSolicitud(e)}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl w="10rem">
+          <FormLabel htmlFor="op-filtro-sector" fontSize="sm" mb={0}>
+            Sector
+          </FormLabel>
+          <Select id="op-filtro-sector" size="sm" bg="superficie" value={sectorFiltro} onChange={(e) => cambiarFiltro("sector", e.target.value)}>
+            <option value="">Todos</option>
+            {["S1", "S2", "S3", "S4"].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+      </Flex>
+      <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio={estadoFiltro || sectorFiltro ? "No hay solicitudes con esos filtros." : "No hay solicitudes en la cola."} hijos={(d) => (
         <TablaDesplazable etiqueta="Solicitudes">
           <Table size="sm" aria-label="Solicitudes">
             <Thead>
@@ -214,21 +254,21 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                 return (
                   <Tr key={s.id}>
                     <Td>{s.id}</Td>
-                    <Td>{s.tipo}</Td>
-                    <Td>{s.origen}</Td>
+                    <Td>{etiquetaTipoSolicitud(s.tipo)}</Td>
+                    <Td>{etiquetaOrigenSolicitud(s.origen)}</Td>
                     <Td>{s.sector_id ?? "—"}</Td>
                     <Td isNumeric>{fmtNum(s.personas)}</Td>
                     <Td isNumeric>{fmtNum(s.animales)}</Td>
                     <Td>
-                      <Badge>{s.estado.replace("_", " ")}</Badge>
+                      <Badge>{etiquetaEstadoSolicitud(s.estado)}</Badge>
                     </Td>
                     <Td>
                       {sig ? (
                         <Button size="xs" variant="outline" onClick={() => void avanzar(s, sig)}>
-                          {sig.replace("_", " ")}
+                          {etiquetaEstadoSolicitud(sig)}
                         </Button>
                       ) : (
-                        "resuelta"
+                        "Resuelta"
                       )}
                     </Td>
                   </Tr>
@@ -251,7 +291,7 @@ export default function Operacion() {
   return (
     <>
       <Heading as="h1" size="lg" mb={1}>
-        Operación
+        Solicitudes y cuadrillas
       </Heading>
       <Flex align="center" gap={2} mb={4}>
         <Insignia categoria="SIMULADO" />

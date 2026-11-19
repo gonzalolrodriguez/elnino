@@ -223,7 +223,8 @@ def test_tareas_cuadrilla_actualiza_las_suyas_y_transiciones(client, como, db):
     )
     mis = client.get("/api/v1/tareas", headers=como("cuadrilla")).json()["tareas"]
     assert mis, "la cuadrilla de demo (humana) debe recibir tareas"
-    t = mis[0]
+    # Las tareas ya cerradas con constancia (otras pruebas y el seed) no sirven para este caso.
+    t = next(x for x in mis if x["estado"] == "pendiente")
     r = client.patch(
         f"/api/v1/tareas/{t['id']}", headers=como("cuadrilla"), json={"estado": "completada"}
     )
@@ -625,10 +626,14 @@ def test_websocket_exige_token_y_recibe_eventos(client, como):
         )
         assert ws_op.receive_json()["tipo"] == "escenario"
 
+        # La alerta va al sector de la persona: solo quienes viven o producen ahí la reciben.
+        mi_sector = client.get("/api/v1/mi/sector", headers=como("ciudadano1")).json()["sectores"][
+            0
+        ]
         o = client.post(
             "/api/v1/ordenes",
             headers=como("decisor"),
-            json={"tipo": "alerta", "sectores": ["S4"], "fundamento": FUNDAMENTO},
+            json={"tipo": "alerta", "sectores": [mi_sector["id"]], "fundamento": FUNDAMENTO},
         )
         assert o.status_code == 201
         evento = ws_op.receive_json()

@@ -64,6 +64,7 @@ def listar(
     puesto: str | None = Query(default=None, max_length=40),
     origen: str | None = Query(default=None, max_length=20),
     limite: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0, le=1000000),
     db: Session = Depends(get_db),
 ) -> dict:
     consulta = (
@@ -71,6 +72,7 @@ def listar(
         .join(PuestoPluviometrico, PuestoPluviometrico.id == LecturaLluvia.puesto_id)
         .order_by(LecturaLluvia.fecha.desc(), LecturaLluvia.turno.desc(), LecturaLluvia.id.desc())
         .limit(limite)
+        .offset(offset)
     )
     if desde:
         consulta = consulta.where(LecturaLluvia.fecha >= desde)
@@ -84,6 +86,8 @@ def listar(
     return {
         "lecturas": lecturas,
         "n": len(lecturas),
+        "offset": offset,
+        "limite": limite,
         "sin_dato_observado": not any(x["categoria"] != "SIMULADO" for x in lecturas),
         "nota": NOTA,
     }

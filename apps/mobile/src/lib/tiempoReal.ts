@@ -24,6 +24,12 @@ type Opciones = {
   crearSocket?: (url: string) => Socket;
   esperaBaseMs?: number;
   esperaMaxMs?: number;
+  /**
+   * Tiempo máximo (ms) para completar el saludo (`conectado`) tras abrir el socket. En una red sin
+   * salida el socket puede quedar "conectando" sin fallar nunca: pasado el plazo se cierra y se
+   * reintenta. El servidor no envía pings, por lo que no hay señal de vida posterior al saludo.
+   */
+  esperaSaludoMs?: number;
 };
 
 export function urlWebSocket(apiUrl: string): string {
@@ -39,6 +45,8 @@ export class CanalEventos {
   private activo = false;
   private intentos = 0;
   private temporizador: ReturnType<typeof setTimeout> | null = null;
+  private vigilante: ReturnType<typeof setTimeout> | null = null;
+  private conectado = false;
 
   constructor(private readonly op: Opciones) {}
 
@@ -52,6 +60,8 @@ export class CanalEventos {
     this.activo = false;
     if (this.temporizador) clearTimeout(this.temporizador);
     this.temporizador = null;
+    this.quitarVigilante();
+    this.conectado = false;
     const s = this.socket;
     this.socket = null;
     if (s) {
@@ -74,9 +84,25 @@ export class CanalEventos {
     }
     this.op.alEstado?.("conectando");
     const crear = this.op.crearSocket ?? ((u: string) => new WebSocket(u) as unknown as Socket);
-    const url = typeof this.op.url === "function" ? this.op.url() : this.op.url;
-    const s = crear(url);
+    let s: Socket;
+    try {
+      const url = typeof this.op.url === "function" ? this.op.url() : this.op.url;
+      s = crear(url);
+    } catch {
+      // URL inválida o WebSocket no disponible: se reintenta con espera creciente en vez de romper.
+      this.op.alEstado?.("desconectado");
+      this.programar();
+      return;
+    }
     this.socket = s;
+    this.conectado = false;
+    this.quitarVigilante();
+    this.vigilante = setTimeout(() => {
+      if (this.socket !== s || this.conectado) return;
+      this.cerrarSocket();
+      this.op.alEstado?.("desconectado");
+      this.programar();
+    }, this.op.esperaSaludoMs ?? 15000);
     s.onopen = () => {
       s.send(JSON.stringify({ token }));
     };
@@ -85,6 +111,8 @@ export class CanalEventos {
         const e = JSON.parse(String(m.data)) as EventoServidor;
         if (e.tipo === "conectado") {
           this.intentos = 0;
+          this.conectado = true;
+          this.quitarVigilante();
           this.op.alEstado?.("conectado");
         }
         if (e.tipo === "conectado" || (EVENTOS_WS as readonly string[]).includes(e.tipo)) {
@@ -98,6 +126,8 @@ export class CanalEventos {
     s.onclose = (e) => {
       if (this.socket !== s) return;
       this.socket = null;
+      this.conectado = false;
+      this.quitarVigilante();
       this.op.alEstado?.("desconectado");
       if (!this.activo) return;
       if (e.code === WS_CIERRE_POLITICA) {
@@ -109,6 +139,37 @@ export class CanalEventos {
         this.programar();
       }
     };
+  }
+
+  private quitarVigilante(): void {
+    if (this.vigilante) clearTimeout(this.vigilante);
+    this.vigilante = null;
+  }
+
+  private cerrarSocket(): void {
+    const s = this.socket;
+    this.socket = null;
+    if (!s) return;
+    s.onclose = null;
+    try {
+      s.close();
+    } catch {
+      // ya cerrado
+    }
+  }
+
+  /**
+   * Reconecta de inmediato (sin esperar el backoff) si el canal no está conectado. Se llama al volver
+   * la red o al pasar la app a primer plano, donde el sistema pudo haber cortado el socket.
+   */
+  reconectarYa(): void {
+    if (!this.activo || this.conectado) return;
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.temporizador = null;
+    this.cerrarSocket();
+    this.quitarVigilante();
+    this.intentos = 0;
+    this.conectar();
   }
 
   private programar(): void {

@@ -35,7 +35,7 @@ function armar(opciones: {
     repo,
     hayRed: async () => estado.red,
     enviar: async (d, clave) => {
-      enviados.push(d.texto ?? "");
+      enviados.push((d as DatosSolicitud).texto ?? "");
       claves.push(clave);
       return respuestas.shift() ?? { ok: true, servidorId: 100 + enviados.length };
     },
@@ -221,7 +221,7 @@ describe("ColaOffline: servidor del ítem", () => {
       repo: new RepositorioMemoria(),
       hayRed: async () => true,
       enviar: async (d) => {
-        enviados.push(`${estado.servidor}|${d.texto}`);
+        enviados.push(`${estado.servidor}|${(d as DatosSolicitud).texto}`);
         return { ok: true, servidorId: 1 };
       },
       subirFoto: async () => ({ ok: true }),
@@ -271,5 +271,129 @@ describe("ColaOffline: servidor del ítem", () => {
   it("hostDeUrl muestra el host con puerto", () => {
     expect(hostDeUrl("http://192.168.1.50:8000")).toBe("192.168.1.50:8000");
     expect(hostDeUrl("https://api.invalid/prefijo")).toBe("api.invalid");
+  });
+});
+
+describe("ColaOffline: máximo de intentos, fotos perdidas y segunda pasada", () => {
+  function armarCon(opciones: {
+    enviar: (d: DatosSolicitud) => Promise<ResultadoEnvio>;
+    subirFoto?: (id: number, uri: string) => Promise<ResultadoFoto>;
+    maxIntentos?: number;
+  }) {
+    const estado = { ahora: 1_000_000 };
+    const repo = new RepositorioMemoria();
+    const cola = new ColaOffline({
+      repo,
+      hayRed: async () => true,
+      enviar: opciones.enviar,
+      subirFoto: opciones.subirFoto ?? (async () => ({ ok: true })),
+      ahora: () => estado.ahora,
+      generarClave: () => "k",
+      maxIntentos: opciones.maxIntentos ?? 3,
+    });
+    return { cola, estado, repo };
+  }
+
+  it("tras el máximo de intentos el ítem pasa a rechazada y el siguiente se envía", async () => {
+    const enviados: string[] = [];
+    const { cola, estado } = armarCon({
+      enviar: async (d) => {
+        enviados.push((d as DatosSolicitud).texto ?? "");
+        return d.texto === "malo"
+          ? { ok: false, tipo: "red", mensaje: "500" }
+          : { ok: true, servidorId: 9 };
+      },
+    });
+    await cola.encolar(1, datos("malo"), null);
+    await cola.encolar(1, datos("bueno"), null);
+
+    // Intentos 1 y 2: el ítem malo se reprograma y bloquea el resto (la red puede haberse caído).
+    let r = await cola.vaciar(1, true);
+    expect(r).toMatchObject({ enviadas: 0, rechazadas: 0, pendientes: 2 });
+    estado.ahora += 10 * 60_000;
+    await cola.vaciar(1, true);
+    expect(enviados).toEqual(["malo", "malo"]);
+
+    // Tercer intento: se agota, se rechaza y la cola sigue con "bueno".
+    r = await cola.vaciar(1, true);
+    expect(r).toMatchObject({ enviadas: 1, rechazadas: 1, pendientes: 0 });
+    const items = await cola.listar(1);
+    expect(items.map((i) => i.estado)).toEqual(["rechazada", "enviada"]);
+    expect(items[0].ultimoError).toContain("3 intentos");
+  });
+
+  it("un fallo de sesión (401) nunca agota los intentos", async () => {
+    const { cola } = armarCon({
+      maxIntentos: 1,
+      enviar: async () => ({ ok: false, tipo: "sesion", mensaje: "401" }),
+    });
+    await cola.encolar(1, datos("a"), null);
+    await cola.vaciar(1, true);
+    expect((await cola.listar(1))[0].estado).toBe("pendiente");
+  });
+
+  it("una foto que ya no existe (rechazo) no bloquea: la solicitud queda enviada y la cola sigue", async () => {
+    const { cola } = armarCon({
+      enviar: async () => ({ ok: true, servidorId: 5 }),
+      subirFoto: async () => ({ ok: false, tipo: "rechazo", mensaje: "la foto ya no está en el teléfono" }),
+    });
+    await cola.encolar(1, datos("con foto"), "file:///perdida.jpg");
+    await cola.encolar(1, datos("siguiente"), null);
+    const r = await cola.vaciar(1, true);
+    expect(r).toMatchObject({ enviadas: 2, pendientes: 0 });
+    const [primero] = await cola.listar(1);
+    expect(primero.fotoUri).toBeNull();
+    expect(primero.estado).toBe("enviada");
+  });
+
+  it("una foto que falla por red muchas veces se abandona sin perder la solicitud", async () => {
+    const { cola, estado } = armarCon({
+      maxIntentos: 2,
+      enviar: async () => ({ ok: true, servidorId: 5 }),
+      subirFoto: async () => ({ ok: false, tipo: "red", mensaje: "sin red" }),
+    });
+    await cola.encolar(1, datos("foto"), "file:///x.jpg");
+    await cola.vaciar(1, true);
+    expect((await cola.listar(1))[0].estado).toBe("pendiente");
+    estado.ahora += 10 * 60_000;
+    await cola.vaciar(1, true);
+    const [item] = await cola.listar(1);
+    expect(item).toMatchObject({ estado: "enviada", fotoUri: null });
+  });
+
+  it("si se inserta algo durante un vaciado en curso, se encadena una segunda pasada", async () => {
+    let liberar: () => void = () => undefined;
+    const compuerta = new Promise<void>((res) => (liberar = res));
+    const enviados: string[] = [];
+    const { cola } = armarCon({
+      enviar: async (d) => {
+        enviados.push((d as DatosSolicitud).texto ?? "");
+        if (d.texto === "primero") await compuerta;
+        return { ok: true, servidorId: 1 };
+      },
+    });
+    await cola.encolar(1, datos("primero"), null);
+    const en_curso = cola.vaciar(1, true);
+    await Promise.resolve();
+    await cola.encolar(1, datos("segundo"), null);
+    const segunda = cola.vaciar(1, true);
+    liberar();
+    const r = await Promise.all([en_curso, segunda]);
+    expect(enviados).toEqual(["primero", "segundo"]);
+    expect(r[1].enviadas).toBe(2);
+  });
+
+  it("purga las enviadas de más de un día y quita los ítems de otras cuentas", async () => {
+    const { cola, estado } = armarCon({ enviar: async () => ({ ok: true, servidorId: 1 }) });
+    await cola.encolar(1, datos("vieja"), null);
+    await cola.vaciar(1, true);
+    expect(await cola.listar(1)).toHaveLength(1);
+    estado.ahora += 2 * 24 * 60 * 60_000;
+    await cola.vaciar(1, true);
+    expect(await cola.listar(1)).toHaveLength(0);
+
+    await cola.encolar(2, datos("de otra cuenta"), null);
+    await cola.limpiarAjenos(1);
+    expect(await cola.listar(2)).toHaveLength(0);
   });
 });

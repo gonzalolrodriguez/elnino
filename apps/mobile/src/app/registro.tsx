@@ -1,23 +1,22 @@
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 
 import { EnlaceConexion } from "@/components/EnlaceConexion";
 import { Boton, Campo, COLOR, ErrorCaja, Opcion, Opciones, Pantalla, Subtitulo, Texto, Titulo } from "@/components/ui";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
+import { leerEntero } from "@/lib/ayudaSms";
 import { esErrorConexion, mensajeError } from "@/lib/errores";
+import { validarGrupo } from "@/lib/grupoFamiliar";
 import { api, type ItemStock } from "@/lib/servicios";
 import { useSesion } from "@/lib/SesionContext";
 
 type TipoCuenta = "ciudadano" | "productor";
 
-const entero = (v: string, por: number): number => {
-  const n = Number.parseInt(v, 10);
-  return Number.isFinite(n) && n >= 0 ? n : por;
-};
 
 export default function Registro() {
   const { estado, entrar } = useSesion();
+  const router = useRouter();
   const [tipo, setTipo] = useState<TipoCuenta>("ciudadano");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +35,8 @@ export default function Registro() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fallaConexion, setFallaConexion] = useState(false);
+  /** La cuenta se creó pero el ingreso automático falló: reintentar "Crear cuenta" daría 409. */
+  const [cuentaCreada, setCuentaCreada] = useState(false);
 
   if (estado.tipo === "autenticado") return <Redirect href="/(app)" />;
 
@@ -57,7 +58,25 @@ export default function Registro() {
 
   const enviar = async () => {
     setError(null);
+    setFallaConexion(false);
+    let grupo: ReturnType<typeof validarGrupo> | null = null;
+    let cantidadStock = 0;
+    if (tipo === "ciudadano") {
+      grupo = validarGrupo({ integrantes, menores, mayores, mascotas });
+      if ("error" in grupo) {
+        setError(grupo.error);
+        return;
+      }
+    } else {
+      const c = leerEntero(cantidad);
+      if (c === null) {
+        setError("La cantidad de animales se escribe con números, sin signos ni letras.");
+        return;
+      }
+      cantidadStock = c;
+    }
     setCargando(true);
+    let creada = false;
     try {
       const base = {
         email: email.trim(),
@@ -65,20 +84,17 @@ export default function Registro() {
         nombre_visible: nombre.trim(),
         consentimiento,
       };
-      if (tipo === "ciudadano") {
+      if (grupo && "ok" in grupo) {
         await api.registroCiudadano({
           ...base,
-          integrantes: Math.max(entero(integrantes, 1), 1),
-          menores: entero(menores, 0),
-          mayores: entero(mayores, 0),
-          mascotas: entero(mascotas, 0),
+          ...grupo.ok,
           telefono: telefono.trim() || undefined,
           ...(ubicacion ? { lon: ubicacion.lon, lat: ubicacion.lat } : {}),
         });
       } else {
         const stock: ItemStock[] =
-          entero(cantidad, 0) > 0
-            ? [{ especie: especie.trim(), categoria_animal: categoriaAnimal.trim(), cantidad: entero(cantidad, 0) }]
+          cantidadStock > 0
+            ? [{ especie: especie.trim(), categoria_animal: categoriaAnimal.trim(), cantidad: cantidadStock }]
             : [];
         await api.registroProductor({
           ...base,
@@ -90,10 +106,16 @@ export default function Registro() {
           },
         });
       }
+      creada = true;
       await entrar(email, password);
     } catch (e) {
-      setFallaConexion(esErrorConexion(e));
-      setError(mensajeError(e));
+      if (creada) {
+        // La cuenta existe: no se muestra un error de registro, se invita a ingresar.
+        setCuentaCreada(true);
+      } else {
+        setFallaConexion(esErrorConexion(e));
+        setError(mensajeError(e));
+      }
     } finally {
       setCargando(false);
     }
@@ -171,13 +193,18 @@ export default function Registro() {
         </Text>
       </View>
 
+      {cuentaCreada ? (
+        <ErrorCaja mensaje="Tu cuenta se creó, pero no pudimos ingresar automáticamente. No la vuelvas a crear: tocá «Ir a Ingresar» y entrá con tu correo y tu contraseña.">
+          <Boton titulo="Ir a Ingresar" onPress={() => router.replace("/login")} />
+        </ErrorCaja>
+      ) : null}
       {error ? <ErrorCaja mensaje={error}>{fallaConexion ? <EnlaceConexion /> : null}</ErrorCaja> : null}
       {faltantes.length > 0 ? <Texto suave>Falta: {faltantes.join(", ")}.</Texto> : null}
       <Boton
         titulo="Crear cuenta"
         onPress={enviar}
         cargando={cargando}
-        deshabilitado={faltantes.length > 0}
+        deshabilitado={faltantes.length > 0 || cuentaCreada}
       />
     </Pantalla>
   );

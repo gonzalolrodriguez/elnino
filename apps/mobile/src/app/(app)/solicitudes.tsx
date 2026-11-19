@@ -17,18 +17,11 @@ import {
   Titulo,
   Vacio,
 } from "@/components/ui";
-import { hostDeUrl } from "@/lib/cola";
+import { esCierre, esSolicitud, hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
+import { descripcionItemCola, etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
 import { api, type Solicitud } from "@/lib/servicios";
-
-const ETIQUETA_ESTADO: Record<Solicitud["estado"], string> = {
-  recibida: "Recibida",
-  verificada: "Verificada",
-  asignada: "Asignada a una cuadrilla",
-  en_curso: "En curso",
-  resuelta: "Resuelta",
-};
 
 type Carga =
   | { tipo: "cargando" }
@@ -47,11 +40,15 @@ export default function Solicitudes() {
     }
   }, []);
 
+  // Se vuelve a consultar cuando cambia la cantidad de ítems o cuando alguno pasa a "enviada"
+  // (la longitud de la lista no cambia en esa transición).
+  const enviadasLocales = items.filter((i) => i.estado === "enviada").length;
   useEffect(() => {
     void cargar();
-  }, [cargar, items.length]);
+  }, [cargar, items.length, enviadasLocales]);
 
-  const locales = items.filter((i) => i.estado !== "enviada" && !otroServidor.some((o) => o.id === i.id));
+  // Los cierres con constancia pertenecen a la pestaña de la cuadrilla.
+  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !otroServidor.some((o) => o.id === i.id));
 
   return (
     <Pantalla dosColumnas>
@@ -66,9 +63,13 @@ export default function Solicitudes() {
               <Text style={{ fontWeight: "600" }}>
                 {i.estado === "pendiente" ? "Pendiente de envío" : "Rechazada por el servidor"}
               </Text>
-              <Texto>
-                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
-              </Texto>
+              <Texto>{descripcionItemCola(i.datos)}</Texto>
+              {esSolicitud(i.datos) && i.datos.referencia_ubicacion ? (
+                <Texto suave>Referencia: {i.datos.referencia_ubicacion}</Texto>
+              ) : null}
+              {esSolicitud(i.datos) && i.datos.lat === undefined ? (
+                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+              ) : null}
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
                 <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text>
@@ -101,9 +102,7 @@ export default function Solicitudes() {
               <Text style={{ fontWeight: "600" }}>
                 Pendientes para otro servidor ({hostDeUrl(i.servidorUrl)})
               </Text>
-              <Texto>
-                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
-              </Texto>
+              <Texto>{descripcionItemCola(i.datos)}</Texto>
               <Texto suave>
                 No se envía a este servidor. Se enviará si volvés a ese servidor con esta cuenta.
               </Texto>
@@ -125,14 +124,23 @@ export default function Solicitudes() {
           {carga.filas.map((s) => (
             <Tarjeta key={s.id}>
               <Text style={{ fontWeight: "700" }}>
-                #{s.id} · {ETIQUETA_ESTADO[s.estado]}
+                #{s.id} · {etiquetaEstadoSolicitud(s.estado)}
               </Text>
               <Texto>
-                {s.tipo} · {s.personas} personas · {s.animales} animales
+                {etiquetaTipoSolicitud(s.tipo)} · {s.personas} personas · {s.animales} animales
                 {s.sector_id ? ` · sector ${s.sector_id}` : ""}
               </Texto>
               {s.texto ? <Texto suave>{s.texto}</Texto> : null}
-              <Texto suave>{new Date(s.actualizado_en).toLocaleString("es-AR")}</Texto>
+              {s.referencia_ubicacion ? <Texto suave>Referencia: {s.referencia_ubicacion}</Texto> : null}
+              {s.ubicacion_aproximada ? (
+                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+              ) : null}
+              {s.requiere_verificacion && !s.ubicacion_aproximada ? (
+                <Texto>Un operador va a verificar este pedido</Texto>
+              ) : null}
+              <Texto suave>
+                {etiquetaOrigen(s.origen)} · actualizada el {formatearFechaHora(s.actualizado_en)}
+              </Texto>
               <Insignia categoria={s.categoria} />
             </Tarjeta>
           ))}

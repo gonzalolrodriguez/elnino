@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Alert } from "react-native";
 
+import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
 import { Boton, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { borrarCache } from "@/lib/cacheLocal";
 import { useCola } from "@/lib/ColaContext";
+import { etiquetaRol, etiquetaRolOperativo } from "@/lib/etiquetas";
 import { useSesion, useUsuario } from "@/lib/SesionContext";
 
 export default function Perfil() {
@@ -19,6 +22,7 @@ export default function Perfil() {
     const confirmar = async () => {
       // Borrado local: la cola contiene ubicación y texto de la persona y no debe quedar en el teléfono.
       await borrarLocal();
+      await borrarCache();
       await salir();
     };
     if (pendientes > 0) {
@@ -42,8 +46,8 @@ export default function Perfil() {
         <Subtitulo>{usuario.nombre_visible}</Subtitulo>
         <Texto suave>{usuario.email}</Texto>
         <Texto suave>
-          {usuario.rol}
-          {usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""}
+          {etiquetaRol(usuario.rol)}
+          {usuario.rol_operativo ? ` · ${etiquetaRolOperativo(usuario.rol_operativo)}` : ""}
         </Texto>
       </Tarjeta>
 
@@ -59,9 +63,7 @@ export default function Perfil() {
         )}
       </Rejilla>
       {!ciudadania && usuario.rol !== "cuadrilla" ? (
-        <Texto suave>
-          Los mandos operativos trabajan desde el panel web. Esta app solo muestra tus alertas.
-        </Texto>
+        <AvisoPanelWeb />
       ) : null}
 
       <Boton titulo="Cerrar sesión" variante="peligro" onPress={cerrar} />

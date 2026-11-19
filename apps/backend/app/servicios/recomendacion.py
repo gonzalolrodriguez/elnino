@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config.settings import supuesto
+from app.core.tiempo import hoy_ar
 from app.db.modelos import (
     Cuadrilla,
     Establecimiento,
@@ -103,28 +103,53 @@ def cargar_exposicion(db: Session) -> dict[str, Exposicion]:
 
 
 def entrada_ganaderia(items: list[tuple[str, str, int]]) -> ganaderia.EntradaGanaderia:
-    """Convierte filas de stock ``(especie, categoría, cantidad)`` en la entrada del cálculo."""
+    """Convierte filas de stock ``(especie, categoría, cantidad)`` en la entrada del cálculo.
+
+    La especie y la categoría se normalizan con alias y plurales (``vacas``, ``colmenas``...). Lo
+    que no se puede clasificar NO se descarta en silencio: cuenta como "sin clasificar" cuando es
+    ganado bovino de categoría genérica o desconocida, y genera un aviso en la salida.
+    """
     bovinos: dict[str, int] = {}
     sin_clasificar = 0
     menores: dict[str, int] = {}
-    colmenas = 0
+    colmenas = colmenas_muertas = 0
+    avisos: list[str] = []
     for especie, categoria, cantidad in items:
-        clave = ganaderia.sin_tildes(especie.casefold()).strip()
-        if clave.startswith("bovin"):
+        canonica_especie = ganaderia.especie_canonica(especie)
+        if canonica_especie == ganaderia.ESPECIE_BOVINO:
             canonica = ganaderia.categoria_canonica(categoria)
             if canonica is None:
                 sin_clasificar += cantidad
+                avisos.append(
+                    f"{cantidad} bovinos con categoría '{categoria}' sin clasificar: indicar "
+                    f"{', '.join(ganaderia.CATEGORIAS_BOVINAS_PERMITIDAS)}."
+                )
             else:
                 bovinos[canonica] = bovinos.get(canonica, 0) + cantidad
-        elif clave in ganaderia.ESPECIES_MENORES:
-            menores[clave] = menores.get(clave, 0) + cantidad
-        elif clave.startswith("colmena") or clave.startswith("abeja"):
-            colmenas += cantidad
+        elif canonica_especie in ganaderia.ESPECIES_MENORES:
+            menores[canonica_especie] = menores.get(canonica_especie, 0) + cantidad
+        elif canonica_especie == ganaderia.ESPECIE_APICULTURA:
+            if "muert" in ganaderia.sin_tildes(categoria.casefold()):
+                colmenas_muertas += cantidad
+            else:
+                colmenas += cantidad
+        elif canonica_especie == "equino":
+            avisos.append(
+                f"{cantidad} equinos declarados: la plataforma no calcula recursos para equinos "
+                "(sin supuesto cargado); coordinar su traslado aparte."
+            )
+        else:
+            avisos.append(
+                f"{cantidad} animales de la especie '{especie}' no se pudieron clasificar y no "
+                "entran en el cálculo."
+            )
     return ganaderia.EntradaGanaderia(
         bovinos=bovinos,
         bovinos_sin_clasificar=sin_clasificar,
         menores=menores or None,
         colmenas_vivas=colmenas,
+        colmenas_muertas=colmenas_muertas,
+        avisos_clasificacion=tuple(avisos),
     )
 
 
@@ -134,8 +159,8 @@ def roles_de_cuadrillas(db: Session) -> dict[str, list[str]]:
     for tipo in cuadrillas.TIPOS:
         c = db.execute(
             select(Cuadrilla)
-            .where(Cuadrilla.tipo_incidente == tipo, Cuadrilla.estado == "disponible")
-            .order_by(Cuadrilla.id)
+            .where(Cuadrilla.tipo_incidente == tipo)
+            .order_by((Cuadrilla.estado != "disponible"), Cuadrilla.id)
             .limit(1)
         ).scalar_one_or_none()
         if c is not None:
@@ -322,6 +347,7 @@ def construir_plan(
         disp = datos.recursos.get(modo, {}).get("cantidad", 0)
         viajes = math.ceil(asignadas / cap) if cap else 0
         rondas = math.ceil(viajes / disp) if disp else 0
+        sin_flota = bool(asignadas) and not (cap and disp)
         asig_centros = [a for a in res_p.asignaciones if a.demanda_id == sid]
         principal = max(asig_centros, key=lambda a: a.cantidad, default=None)
         ida_min = None
@@ -337,6 +363,10 @@ def construir_plan(
         viajes_por_vehiculo[modo] = viajes_por_vehiculo.get(modo, 0) + viajes
         if disp and viajes > disp:
             faltantes_veh[modo] = faltantes_veh.get(modo, 0) + (viajes - disp)
+        elif sin_flota:  # no hay ningun vehiculo de ese tipo: faltante total, no "0 minutos"
+            faltantes_veh[modo] = faltantes_veh.get(modo, 0) + max(
+                math.ceil(asignadas / (cap or 1)), 1
+            )
         if modo == "lancha":
             aislados_lancha += 1
         elif superficie != "pavimento":
@@ -347,6 +377,13 @@ def construir_plan(
         cat_b = sum(calc["transporte"]["vehiculos_categoria_b"].values()) if calc else 0
         camiones_necesarios += camiones
         advertencias: list[str] = []
+        if sin_flota:
+            advertencias.append(
+                f"No hay vehículos '{modo}' cargados: no se puede estimar el traslado de las "
+                f"{asignadas} personas asignadas (faltante total, sin tiempo calculado)."
+            )
+        if calc:
+            advertencias.extend(calc["advertencias"])
         if camiones and superficie in (None, "tierra"):
             advertencias.append(
                 "El camión jaula no usa caminos de tierra: sin acceso firme, evaluar arreo a un "
@@ -396,9 +433,10 @@ def construir_plan(
                     "viajes": viajes,
                     "vehiculos_disponibles": disp,
                     "rondas": rondas,
+                    "sin_flota": sin_flota,
                     "tiempo_ida_min": ida_min,
-                    "tiempo_para_completar_min": completar_min,
-                    "tiempo_acumulado_min": acumulado,
+                    "tiempo_para_completar_min": None if sin_flota else completar_min,
+                    "tiempo_acumulado_min": None if sin_flota else acumulado,
                 },
                 "asignacion_personas": [
                     {"centro_id": a.centro_id, "centro": a.centro_nombre, "cantidad": a.cantidad}
@@ -490,7 +528,7 @@ def recomendar(
         ],
         "categoria": "SIMULADO",
         "fuente": FUENTE,
-        "fecha_dato": date.today().isoformat(),
+        "fecha_dato": hoy_ar().isoformat(),
     }
 
 
