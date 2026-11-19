@@ -13,14 +13,13 @@ llamador los publique después de confirmar la transacción.
 
 from __future__ import annotations
 
-import hashlib
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import timedelta
 
 from fastapi import HTTPException
 from geoalchemy2 import WKTElement
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.config.settings import supuesto
@@ -63,6 +62,8 @@ RESPUESTA_SMS_GENERICA = (
 )
 ACCION_SMS_INVALIDA = "confirmacion_sms_invalida"
 ACCION_SMS_BLOQUEADA = "confirmacion_sms_bloqueada"
+ACCION_SMS_DESCONOCIDA = "confirmacion_sms_desconocida"
+ACCION_SMS_CODIGO_INVALIDADO = "confirmacion_sms_codigo_invalidado"
 
 
 def distancia_max_m() -> float:
@@ -457,24 +458,40 @@ def _telefono_del_solicitante(db: Session, usuario_id: int | None) -> str | None
     return cifrado.descifrar(valor, "grupos_familiares.telefono")
 
 
-def _recurso_remitente(remitente: str | None) -> str:
-    """Identificador del remitente para la bitácora: hash, nunca el número."""
-    digitos = dom.normalizar_telefono(remitente)
-    huella = hashlib.sha256(digitos.encode()).hexdigest()[:16] if digitos else "sin_remitente"
-    return f"canales/sms/{huella}"
+def _clave_remitente(remitente: str | None) -> str:
+    """Pseudónimo (HMAC con clave del servidor) de la forma canónica del teléfono del remitente.
+
+    Nunca se registra el número. Los remitentes sin teléfono válido comparten una clave.
+    """
+    return cifrado.pseudonimo(dom.clave_telefono(remitente) or "sin_remitente", "sms-remitente")
 
 
-def _auditorias_recientes(db: Session, accion: str, recurso: str) -> int:
+def _clave_codigo(codigo: str) -> str:
+    return cifrado.pseudonimo(codigo, "sms-codigo")
+
+
+def _bloquear(db: Session, clave: str) -> None:
+    """Candado de transacción sobre ``clave``: los conteos y las altas de fallos se serializan."""
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": clave})
+
+
+def _contar(db: Session, accion: str, recurso: str | None = None, patron: str | None = None) -> int:
     desde = ahora() - timedelta(hours=1)
-    return db.execute(
+    consulta = (
         select(func.count())
         .select_from(AuditoriaAcceso)
-        .where(
-            AuditoriaAcceso.accion == accion,
-            AuditoriaAcceso.recurso == recurso,
-            AuditoriaAcceso.fecha >= desde,
-        )
-    ).scalar_one()
+        .where(AuditoriaAcceso.accion == accion, AuditoriaAcceso.fecha >= desde)
+    )
+    if recurso is not None:
+        consulta = consulta.where(AuditoriaAcceso.recurso == recurso)
+    if patron is not None:
+        consulta = consulta.where(AuditoriaAcceso.recurso.like(patron))
+    return db.execute(consulta).scalar_one()
+
+
+def _bloqueo_una_vez(db: Session, recurso: str, detalle: str) -> None:
+    if _contar(db, ACCION_SMS_BLOQUEADA, recurso) == 0:
+        auditoria.registrar(db, ACCION_SMS_BLOQUEADA, recurso, None, None, detalle)
 
 
 def procesar_respuesta_sms(
@@ -482,56 +499,99 @@ def procesar_respuesta_sms(
 ) -> dict | None:
     """Procesa ``SI|NO|PROBLEMA <código>``. ``None`` si el texto no tiene ese formato.
 
-    La respuesta solo tiene efecto si el código existe, no venció y el remitente es el teléfono
-    registrado del solicitante. En **todos** los casos se devuelve el mismo texto, para no revelar
-    qué códigos existen. Cada intento fallido queda en la bitácora de accesos (con el remitente
-    hasheado) y, superado el límite por hora, el remitente se ignora (``confirmacion_sms_bloqueada``).
+    La respuesta solo tiene efecto si el código existe, no venció ni fue invalidado y el remitente
+    es el teléfono registrado del solicitante. En **todos** los casos se devuelve el mismo texto,
+    para no revelar qué códigos existen. Los fallos se limitan sin bloquear a quien presenta un
+    código válido desde su teléfono:
+
+    - contra un código **existente**: tope por (remitente, código) y tope por código sumando a todos
+      los remitentes (superado, el código queda invalidado para SMS);
+    - contra códigos **inexistentes**: tope grueso por remitente (que nunca frena un código válido).
+
+    Los conteos se hacen bajo un candado de transacción por clave (``pg_advisory_xact_lock``), de
+    modo que fallos simultáneos no superan los topes. Cada fallo queda en la bitácora de accesos con
+    remitente y código seudonimizados (HMAC).
     """
     parsed = dom.parsear_respuesta_sms(texto)
     if parsed is None:
         return None
     resultado = {"tipo": "confirmacion", "estado": "recibido", "respuesta": RESPUESTA_SMS_GENERICA}
-    recurso = _recurso_remitente(remitente)
-    maximo = int(supuesto("confirmacion_sms_invalidos_por_hora"))
-    if _auditorias_recientes(db, ACCION_SMS_INVALIDA, recurso) >= maximo:
-        if _auditorias_recientes(db, ACCION_SMS_BLOQUEADA, recurso) == 0:
-            auditoria.registrar(
-                db, ACCION_SMS_BLOQUEADA, recurso, None, None, f"más de {maximo} intentos en 1 h"
-            )
-        return resultado
+    sender = _clave_remitente(remitente)
+    code = _clave_codigo(parsed.codigo)
+    # Orden fijo de candados (remitente, luego código): sin interbloqueos.
+    _bloquear(db, f"sms:r:{sender}")
+    _bloquear(db, f"sms:c:{code}")
+
     k = db.execute(
         select(ConfirmacionEvacuado).where(ConfirmacionEvacuado.codigo == parsed.codigo)
     ).scalar_one_or_none()
     solicitud = db.get(SolicitudAsistencia, k.solicitud_id) if k and k.solicitud_id else None
-    motivo = None
-    if k is None or solicitud is None:
-        motivo = "codigo_desconocido"
-    elif ahora() > k.creada_en + timedelta(hours=float(supuesto("vigencia_codigo_horas"))):
-        motivo = "codigo_vencido"
-    elif not dom.telefonos_coinciden(
-        remitente, _telefono_del_solicitante(db, solicitud.solicitante_id)
-    ):
-        motivo = "remitente_no_coincide"
-    if motivo is not None:
-        auditoria.registrar(db, ACCION_SMS_INVALIDA, recurso, None, None, motivo)
+
+    if k is None or solicitud is None or k.codigo_invalidado_en is not None:
+        # Código inexistente (o invalidado): solo cuenta contra el remitente, con un tope grueso.
+        recurso = f"canales/sms/{sender}"
+        tope = int(supuesto("confirmacion_sms_desconocidos_por_hora"))
+        if _contar(db, ACCION_SMS_DESCONOCIDA, recurso) >= tope:
+            _bloqueo_una_vez(db, recurso, f"más de {tope} códigos inexistentes en 1 h")
+        else:
+            auditoria.registrar(
+                db, ACCION_SMS_DESCONOCIDA, recurso, None, None, "codigo_desconocido"
+            )
         return resultado
-    estado, k, efectos = registrar_confirmacion(
-        db, k.id, parsed.respuesta, parsed.comentario, canal, solicitud.solicitante_id
+
+    vencido = ahora() > k.creada_en + timedelta(hours=float(supuesto("vigencia_codigo_horas")))
+    coincide = dom.telefonos_coinciden(
+        remitente, _telefono_del_solicitante(db, solicitud.solicitante_id)
     )
-    if estado == "registrada":
+    if not vencido and coincide:
+        estado, k, efectos = registrar_confirmacion(
+            db, k.id, parsed.respuesta, parsed.comentario, canal, solicitud.solicitante_id
+        )
+        if estado == "registrada":
+            auditoria.registrar(
+                db,
+                "confirmacion_evacuado",
+                f"tareas/{k.tarea_id}/confirmacion",
+                solicitud.solicitante_id,
+                None,
+                f"{parsed.respuesta}:{canal}",
+            )
+            eventos.extend(efectos.eventos)
+        return resultado
+
+    # Fallo contra un código existente: vencido o teléfono distinto.
+    recurso_par = f"canales/sms/{sender}/{code}"
+    if _contar(db, ACCION_SMS_INVALIDA, recurso_par) >= int(
+        supuesto("confirmacion_sms_invalidos_por_hora")
+    ):
+        _bloqueo_una_vez(db, recurso_par, "tope de intentos de este remitente contra este código")
+        return resultado
+    auditoria.registrar(
+        db,
+        ACCION_SMS_INVALIDA,
+        recurso_par,
+        None,
+        None,
+        "codigo_vencido" if vencido else "remitente_no_coincide",
+    )
+    if _contar(db, ACCION_SMS_INVALIDA, patron=f"canales/sms/%/{code}") >= int(
+        supuesto("confirmacion_sms_fallos_por_codigo")
+    ):
+        k.codigo_invalidado_en = ahora()
         auditoria.registrar(
             db,
-            "confirmacion_evacuado",
+            ACCION_SMS_CODIGO_INVALIDADO,
             f"tareas/{k.tarea_id}/confirmacion",
-            solicitud.solicitante_id,
             None,
-            f"{parsed.respuesta}:{canal}",
+            None,
+            "demasiados intentos fallidos por SMS",
         )
-        eventos.extend(efectos.eventos)
     return resultado
 
 
-def reabrir_confirmacion(db: Session, tarea_id: int) -> tuple[ConfirmacionEvacuado, str, Resultado]:
+def reabrir_confirmacion(
+    db: Session, tarea_id: int
+) -> tuple[ConfirmacionEvacuado, str | None, Resultado]:
     """Reabre una confirmación respondida (la corrige un operador).
 
     Borra la respuesta, genera un código nuevo con vigencia renovada y se lo notifica de nuevo al
@@ -545,12 +605,13 @@ def reabrir_confirmacion(db: Session, tarea_id: int) -> tuple[ConfirmacionEvacua
     ).scalar_one_or_none()
     if k is None:
         raise HTTPException(404, "La evacuación no tiene una confirmación para reabrir")
-    if k.respuesta is None:
+    if k.respuesta is None and k.codigo_invalidado_en is None:
         raise HTTPException(409, "La confirmación todavía no fue respondida")
     previa = k.respuesta
     k.respuesta = k.comentario = k.canal = k.usuario_id = k.respondida_en = None
     k.codigo = _codigo_nuevo(db)
     k.creada_en = ahora()
+    k.codigo_invalidado_en = None
     db.flush()
     tarea = db.get(Tarea, tarea_id)
     constancia = db.execute(

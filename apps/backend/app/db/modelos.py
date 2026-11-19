@@ -456,6 +456,8 @@ class ConfirmacionEvacuado(Base):
     codigo: Mapped[str] = mapped_column(String(8), unique=True)
     creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
     respondida_en: Mapped[datetime | None] = mapped_column(_TZ)
+    # El código quedó invalidado para SMS por demasiados intentos fallidos (la app no se afecta).
+    codigo_invalidado_en: Mapped[datetime | None] = mapped_column(_TZ)
 
 
 class Orden(Base):

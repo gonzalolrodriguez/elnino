@@ -11,7 +11,9 @@ import base64
 import os
 
 from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from app.config.settings import get_settings
 
@@ -45,3 +47,21 @@ def descifrar(valor: str, contexto: str = "") -> str:
     except (InvalidTag, ValueError) as exc:
         raise ErrorDescifrado("No se pudo descifrar el campo") from exc
     return claro.decode("utf-8")
+
+
+def pseudonimo(valor: str, proposito: str = "pseudonimo") -> str:
+    """Pseudónimo estable y no reversible de ``valor`` (HMAC-SHA256, 32 caracteres hexadecimales).
+
+    La clave se deriva con HKDF de ``FIELD_ENCRYPTION_KEY`` y del ``proposito`` (separación de
+    usos): sin la clave del servidor no se puede recalcular ni probar un teléfono candidato, algo
+    que sí permite un hash simple de un dominio tan chico como los números de teléfono.
+    """
+    clave = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=f"evacuaciones/{proposito}".encode(),
+    ).derive(get_settings().clave_cifrado())
+    h = hmac.HMAC(clave, hashes.SHA256())
+    h.update(valor.encode("utf-8"))
+    return h.finalize().hex()[:32]

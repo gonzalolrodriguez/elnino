@@ -113,12 +113,16 @@ def normalizar_telefono(texto: str | None) -> str:
     return "".join(c for c in (texto or "") if c.isdigit())
 
 
-def telefonos_coinciden(a: str | None, b: str | None) -> bool:
-    """Compara dos teléfonos por sus últimos 10 dígitos (tolera prefijo de país, 9 y 0/15).
+def clave_telefono(texto: str | None) -> str | None:
+    """Forma canónica del teléfono: sus últimos 10 dígitos (tolera prefijo de país, 9 y 0/15).
 
-    Un número de menos de 8 dígitos nunca coincide: no identifica a nadie.
+    Es la **única** forma que se usa para comparar y para armar claves de límite. Un número de
+    menos de 8 dígitos no identifica a nadie: ``None``.
     """
-    da, db = normalizar_telefono(a), normalizar_telefono(b)
-    if len(da) < 8 or len(db) < 8:
-        return False
-    return da[-10:] == db[-10:]
+    digitos = normalizar_telefono(texto)
+    return digitos[-10:] if len(digitos) >= 8 else None
+
+
+def telefonos_coinciden(a: str | None, b: str | None) -> bool:
+    ca, cb = clave_telefono(a), clave_telefono(b)
+    return ca is not None and ca == cb

@@ -87,4 +87,10 @@ vigencia_codigo_horas:
   fuente: SUPUESTO (horas durante las que el código de confirmación sirve por SMS; el operador puede reabrir la consulta con un código nuevo)
 confirmacion_sms_invalidos_por_hora:
   valor: 5
-  fuente: SUPUESTO (intentos de confirmación por SMS fallidos por remitente y hora; superado el tope se ignoran los mensajes de ese remitente)
+  fuente: SUPUESTO (intentos fallidos por hora de un mismo remitente contra un mismo código existente; superado el tope se ignora a ese remitente para ese código)
+confirmacion_sms_fallos_por_codigo:
+  valor: 10
+  fuente: SUPUESTO (intentos fallidos por hora contra un mismo código, sumando todos los remitentes; superado el tope el código queda invalidado para SMS y el operador puede reabrir la consulta con uno nuevo)
+confirmacion_sms_desconocidos_por_hora:
+  valor: 20
+  fuente: SUPUESTO (códigos inexistentes probados por hora desde un mismo remitente; superado el tope se ignoran sus códigos inexistentes, pero un código válido de su teléfono registrado sigue funcionando)

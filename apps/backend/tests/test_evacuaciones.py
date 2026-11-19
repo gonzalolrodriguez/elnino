@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import uuid
@@ -12,6 +14,7 @@ from sqlalchemy import func, select, update
 
 from app.api.v1.canales import firmar
 from app.config.settings import get_settings
+from app.core import cifrado
 from app.db.base import ahora
 from app.db.modelos import (
     AuditoriaAcceso,
@@ -21,6 +24,7 @@ from app.db.modelos import (
     Usuario,
 )
 from app.domain import evacuaciones as dom
+from app.servicios import evacuaciones as srv
 from tests.test_operacion import S4, _usuario_nuevo
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 60
@@ -537,28 +541,124 @@ def test_sms_no_y_problema_marcan_discrepancia(client, como, db):
     assert libre["tipo"] != "confirmacion"
 
 
-def test_limite_de_intentos_invalidos_por_remitente(client, como, db):
+def _contar_auditoria(db, accion: str, recurso: str | None = None) -> int:
+    db.expire_all()
+    consulta = (
+        select(func.count()).select_from(AuditoriaAcceso).where(AuditoriaAcceso.accion == accion)
+    )
+    if recurso is not None:
+        consulta = consulta.where(AuditoriaAcceso.recurso == recurso)
+    return db.execute(consulta).scalar_one()
+
+
+def _desconocido(i: int) -> str:
+    return f"KKKKKK{i // 8 + 2}{i % 8 + 2}"  # 8 caracteres, con dígitos, distintos
+
+
+def test_clave_de_limite_usa_la_misma_forma_canonica_que_la_comparacion():
+    formas = ["+54 9 370 4123456", "03704123456", "370-4123456", "(370) 412 3456", "+5493704123456"]
+    claves = {dom.clave_telefono(f) for f in formas}
+    assert claves == {"3704123456"}
+    # La clave de límite (seudónimo) es idéntica para todas las formas del mismo número.
+    assert len({srv._clave_remitente(f) for f in formas}) == 1
+    assert srv._clave_remitente("3704123457") != srv._clave_remitente("3704123456")
+    assert all(dom.telefonos_coinciden(formas[0], f) for f in formas)
+    assert not dom.telefonos_coinciden("1234567", "1234567")  # menos de 8 dígitos: no identifica
+
+
+def test_seudonimo_hmac_consistente_no_reversible_y_dependiente_de_la_clave(monkeypatch):
+    a = cifrado.pseudonimo("3704123456", "sms-remitente")
+    assert a == cifrado.pseudonimo("3704123456", "sms-remitente")
+    assert len(a) == 32 and "3704123456" not in a
+    assert a != hashlib.sha256(b"3704123456").hexdigest()[:32]  # no es un hash simple
+    assert a != cifrado.pseudonimo("3704123456", "sms-codigo")  # separación de usos
+    assert a != cifrado.pseudonimo("3704123457", "sms-remitente")
+    # Con otra clave del servidor el seudónimo cambia: no se puede recalcular sin ella.
+    monkeypatch.setenv("FIELD_ENCRYPTION_KEY", base64.b64encode(b"z" * 32).decode("ascii"))
+    get_settings.cache_clear()
+    try:
+        assert cifrado.pseudonimo("3704123456", "sms-remitente") != a
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
+
+
+def test_codigo_valido_del_titular_funciona_tras_spam_de_codigos_desconocidos(client, como, db):
     p, _ = _cerrar(client, como, db)
     codigo = _codigo(client, p["h"])
-    atacante = _telefono_nuevo()
-    for i in range(5):  # 5 intentos inválidos por hora
-        _sms(client, f"SI KKKKKKK{i + 2}", atacante)
-    n_bloq = lambda: db.execute(  # noqa: E731
-        select(func.count())
-        .select_from(AuditoriaAcceso)
-        .where(AuditoriaAcceso.accion == "confirmacion_sms_bloqueada")
-    ).scalar_one()
-    db.expire_all()
-    antes = n_bloq()
-    # Con el límite superado se ignora al remitente, aunque ahora use el código correcto.
-    r = _estado_sms(_sms(client, f"SI {codigo}", atacante))
+    for i in range(25):  # supera el tope grueso (20) del remitente
+        _sms(client, f"SI {_desconocido(i)}", p["tel"])
+    assert _contar_auditoria(db, "confirmacion_sms_bloqueada") >= 1
+    r = _estado_sms(_sms(client, f"SI {codigo}", p["tel"]))
     assert r["respuesta"].startswith(GENERICA)
-    db.expire_all()
-    assert n_bloq() == antes + 1
-    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
-    # Otro remitente (el titular) no está bloqueado.
-    _sms(client, f"SI {codigo}", p["tel"])
     assert _estado(client, como, p["tarea_id"])["estado"] == "verificada"
+
+
+def test_tope_por_remitente_y_codigo_y_tope_por_codigo_invalida_el_codigo(client, como, db):
+    p, _ = _cerrar(client, como, db)
+    codigo = _codigo(client, p["h"])
+    ajeno1, ajeno2 = _telefono_nuevo(), _telefono_nuevo()
+    # Un solo remitente aporta como máximo 5 fallos contra el código: no puede invalidarlo solo.
+    for _ in range(8):
+        _sms(client, f"NO {codigo}", ajeno1)
+    assert _contar_auditoria(db, "confirmacion_sms_codigo_invalidado") == 0
+    # Otro remitente completa los 10 fallos por código: el código queda invalidado y se audita.
+    antes = _contar_auditoria(db, "confirmacion_sms_codigo_invalidado")
+    for _ in range(5):
+        _sms(client, f"NO {codigo}", ajeno2)
+    assert _contar_auditoria(db, "confirmacion_sms_codigo_invalidado") == antes + 1
+    # Invalidado: ni el titular puede usarlo por SMS (la respuesta sigue siendo la genérica)...
+    r = _estado_sms(_sms(client, f"SI {codigo}", p["tel"]))
+    assert r["respuesta"].startswith(GENERICA)
+    assert _estado(client, como, p["tarea_id"])["estado"] == "cerrada_cuadrilla"
+    # ...pero la app no se afecta y un operador puede reabrir con un código nuevo.
+    ok = client.post(
+        "/api/v1/mi/confirmaciones",
+        json={"solicitud_id": p["solicitud_id"], "respuesta": "problema"},
+        headers=p["h"],
+    )
+    assert ok.status_code == 201
+    assert (
+        client.post(
+            f"/api/v1/evacuaciones/{p['tarea_id']}/confirmacion/reabrir", headers=como("operador")
+        ).status_code
+        == 200
+    )
+    _sms(client, f"SI {_codigo(client, p['h'])}", p["tel"])
+    assert _estado(client, como, p["tarea_id"])["estado"] == "verificada"
+
+
+def test_fallos_simultaneos_no_superan_los_topes(client, como, db):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.db.sesion import get_sessionmaker
+
+    atacante = _telefono_nuevo()
+    recurso = f"canales/sms/{srv._clave_remitente(atacante)}"
+
+    def intento(i: int) -> None:
+        with get_sessionmaker()() as sesion:
+            srv.procesar_respuesta_sms(sesion, f"SI {_desconocido(i)}", "sms_sim", atacante, [])
+            sesion.commit()
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        list(pool.map(intento, range(40)))
+    assert _contar_auditoria(db, srv.ACCION_SMS_DESCONOCIDA, recurso) == 20  # exactamente el tope
+    assert _contar_auditoria(db, "confirmacion_sms_bloqueada", recurso) == 1
+    # El mismo conteo exacto para fallos concurrentes contra un código existente.
+    p, _ = _cerrar(client, como, db)
+    codigo = _codigo(client, p["h"])
+    ajeno = _telefono_nuevo()
+    par = f"canales/sms/{srv._clave_remitente(ajeno)}/{srv._clave_codigo(codigo)}"
+
+    def contra_codigo(_: int) -> None:
+        with get_sessionmaker()() as sesion:
+            srv.procesar_respuesta_sms(sesion, f"NO {codigo}", "sms_sim", ajeno, [])
+            sesion.commit()
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        list(pool.map(contra_codigo, range(30)))
+    assert _contar_auditoria(db, srv.ACCION_SMS_INVALIDA, par) == 5
 
 
 def test_codigo_vencido_por_sms_no_tiene_efecto(client, como, db):
