@@ -1,7 +1,7 @@
 import type { Rol } from "@evacuaciones/shared";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { fijarToken, solicitar } from "../lib/api";
+import { fijarToken, refrescarSesion, registrarManejadorSesion, solicitar } from "../lib/api";
 
 export type Usuario = {
   id: number;
@@ -32,6 +32,7 @@ const AuthCtx = createContext<Contexto | null>(null);
 // Solo una marca no sensible ("hubo sesión"): sirve para intentar restaurarla con la cookie HttpOnly.
 // El token de acceso nunca se guarda en el navegador.
 const MARCA = "e3_sesion";
+const REINTENTO_SESION_MS = 30_000;
 function leerMarca(): boolean {
   try {
     return window.localStorage.getItem(MARCA) === "1";
@@ -83,19 +84,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const renovar = useCallback(async (): Promise<boolean> => {
-    try {
-      const s = await solicitar<unknown>("/auth/refresh", { metodo: "POST", cuerpo: {} });
-      if (!esSesion(s)) {
-        limpiar();
-        return false;
-      }
-      aplicar(s, () => void renovar());
+    // Una sola renovación en vuelo (ver `refrescarSesion`): el doble montaje de StrictMode no duplica el pedido.
+    const r = await refrescarSesion();
+    if (r.estado === "ok" && esSesion(r.datos)) {
+      aplicar(r.datos, () => void renovar());
       return true;
-    } catch {
-      limpiar();
+    }
+    if (r.estado === "transitoria") {
+      // Sin red o servicio caído: no se pierde la sesión. Se reintenta más tarde y, si es la carga inicial,
+      // se muestra como anónimo sin borrar la marca para que un nuevo intento la restaure.
+      setEstado((e) => (e === "cargando" ? "anonimo" : e));
+      if (temporizador.current) clearTimeout(temporizador.current);
+      temporizador.current = setTimeout(() => void renovar(), REINTENTO_SESION_MS);
       return false;
     }
+    limpiar();
+    return false;
   }, [aplicar, limpiar]);
+
+  useEffect(() => {
+    registrarManejadorSesion({ renovar, cerrar: limpiar });
+    return () => registrarManejadorSesion(null);
+  }, [renovar, limpiar]);
 
   useEffect(() => {
     if (estado === "cargando") void renovar();
