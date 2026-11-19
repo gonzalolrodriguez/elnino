@@ -359,3 +359,22 @@ def test_semilla_no_crea_usuarios_demo_si_seed_demo_es_falso(db, monkeypatch):
     monkeypatch.setattr(get_settings(), "seed_demo", False)
     resultado = sembrar_todo(db)
     assert resultado["usuarios_demo_nuevos"] == 0 and resultado["cuadrillas_nuevas"] == 0
+
+
+def test_reemplazo_de_sucesor_ya_reemplazado_se_trata_como_reutilizacion(client, db, monkeypatch):
+    """Si entre en_gracia y el reemplazo otro pedido ya revocó al sucesor (rowcount 0), cae la familia."""
+    from app.core import sesiones
+
+    _, sesion = _sesion_movil(client)
+    r1 = _refrescar(client, sesion["refresh_token"])
+    assert r1.status_code == 200
+    original = sesiones.reemplazar_sucesor
+
+    def carrera(db_, s):
+        original(db_, s)  # "otro pedido" ya reemplazó al sucesor
+        return original(db_, s)  # el segundo intento afecta 0 filas
+
+    monkeypatch.setattr(sesiones, "reemplazar_sucesor", carrera)
+    assert _refrescar(client, sesion["refresh_token"]).status_code == 401
+    monkeypatch.undo()
+    assert _refrescar(client, r1.json()["refresh_token"]).status_code == 401  # familia revocada

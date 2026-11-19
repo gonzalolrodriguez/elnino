@@ -260,7 +260,7 @@ def refresh(
         # Token ya rotado: solo se tolera UN reintento inmediato (respuesta perdida) del mismo
         # cliente y red; cualquier otra reutilización se trata como robo.
         if sesiones.en_gracia(db, sesion, ip, cliente):
-            return _sucesora(db, sesion, usuario, response, x_cliente, ip)
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip, invalido)
         return _reutilizado(db, sesion, ip, invalido)
 
     if sesion.expira_en <= ahora():
@@ -271,7 +271,7 @@ def refresh(
     if not sesiones.consumir(db, sesion.id):
         db.refresh(sesion)
         if sesion.revocado_en is not None and sesiones.en_gracia(db, sesion, ip, cliente):
-            return _sucesora(db, sesion, usuario, response, x_cliente, ip)
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip, invalido)
         return _reutilizado(db, sesion, ip, invalido)
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
@@ -284,9 +284,10 @@ def refresh(
     return salida
 
 
-def _sucesora(db, sesion, usuario, response, x_cliente, ip) -> SesionOut:
+def _sucesora(db, sesion, usuario, response, x_cliente, ip, invalido) -> SesionOut:
     """Reintento de gracia: reemplaza al sucesor (sin ramas paralelas) y emite su relevo."""
-    sesiones.reemplazar_sucesor(db, sesion)
+    if not sesiones.reemplazar_sucesor(db, sesion):  # otro pedido ya lo reemplazó: es reutilización
+        return _reutilizado(db, sesion, ip, invalido)
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
     )

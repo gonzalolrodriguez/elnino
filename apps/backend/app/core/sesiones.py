@@ -95,7 +95,9 @@ def en_gracia(db: Session, sesion: SesionRefresh, ip: str | None, cliente: str) 
         or sesion.rotada_ip != clave_ip(ip)
     ):
         return False
-    sucesor = db.get(SesionRefresh, sesion.reemplazado_por)
+    sucesor = db.execute(
+        select(SesionRefresh).where(SesionRefresh.id == sesion.reemplazado_por).with_for_update()
+    ).scalar_one_or_none()
     if sucesor is None or sucesor.revocado_en is not None or sucesor.expira_en <= ahora_:
         return False
     usada = db.execute(
@@ -106,10 +108,15 @@ def en_gracia(db: Session, sesion: SesionRefresh, ip: str | None, cliente: str) 
     return usada.rowcount == 1
 
 
-def reemplazar_sucesor(db: Session, sesion: SesionRefresh) -> None:
-    """Revoca el sucesor vigente de ``sesion`` (queda una sola sesión viva por familia)."""
-    db.execute(
+def reemplazar_sucesor(db: Session, sesion: SesionRefresh) -> bool:
+    """Revoca el sucesor vigente de ``sesion`` (queda una sola sesión viva por familia).
+
+    Devuelve ``True`` solo si revocó exactamente una fila: si otra solicitud ya lo reemplazó
+    (rowcount 0) quien llama debe tratar el pedido como reutilización.
+    """
+    resultado = db.execute(
         update(SesionRefresh)
         .where(SesionRefresh.id == sesion.reemplazado_por, SesionRefresh.revocado_en.is_(None))
         .values(revocado_en=ahora())
     )
+    return resultado.rowcount == 1
