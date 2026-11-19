@@ -18,6 +18,7 @@ from app.api.v1.esquemas import (
 )
 from app.config.settings import get_settings
 from app.core import auditoria, bloqueo, cifrado, sesiones
+from app.core.bloqueo import clave_ip
 from app.core.eventos import difusor
 from app.core.limitador import limite_login, limite_registro, limiter
 from app.core.rbac import ip_cliente, usuario_actual
@@ -253,38 +254,44 @@ def refresh(
     usuario = db.get(Usuario, sesion.usuario_id)
     if usuario is None or usuario.estado != "activo":
         raise invalido
+    cliente = "movil" if _es_movil(x_cliente) else "web"
 
     if sesion.revocado_en is not None:
-        # Token ya rotado hace instantes (reintento de red, otra pestaña): se entrega una sesión
-        # sucesora de la misma familia en vez de cerrar todo. Fuera de la ventana de gracia, o con
-        # la familia cerrada, es una reutilización y se asume robo.
-        if sesiones.en_gracia(db, sesion):
-            return _sucesora(db, sesion, usuario, response, x_cliente, ip, "refresh_gracia")
+        # Token ya rotado: solo se tolera UN reintento inmediato (respuesta perdida) del mismo
+        # cliente y red; cualquier otra reutilización se trata como robo.
+        if sesiones.en_gracia(db, sesion, ip, cliente):
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip)
         return _reutilizado(db, sesion, ip, invalido)
 
     if sesion.expira_en <= ahora():
         raise invalido
 
     # Se marca el token como usado de forma atómica ANTES de emitir el nuevo: si dos solicitudes
-    # llegan a la vez con el mismo refresh, solo una lo consume; la otra cae en la gracia.
+    # llegan a la vez con el mismo refresh, solo una lo consume; la otra pasa por la gracia.
     if not sesiones.consumir(db, sesion.id):
         db.refresh(sesion)
-        if sesiones.en_gracia(db, sesion):
-            return _sucesora(db, sesion, usuario, response, x_cliente, ip, "refresh_gracia")
+        if sesion.revocado_en is not None and sesiones.en_gracia(db, sesion, ip, cliente):
+            return _sucesora(db, sesion, usuario, response, x_cliente, ip)
         return _reutilizado(db, sesion, ip, invalido)
     salida, nueva = _abrir_sesion(
         db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
     )
     sesion.reemplazado_por = nueva.id
+    sesion.rotada_ip = clave_ip(ip)
+    sesion.rotada_cliente = cliente
     auditoria.registrar(db, "refresh", "auth", usuario.id, ip)
     db.commit()
     return salida
 
 
-def _sucesora(db, sesion, usuario, response, x_cliente, ip, accion) -> SesionOut:
-    """Sesión nueva de la misma familia para un token rotado dentro de la ventana de gracia."""
-    salida, _ = _abrir_sesion(db, usuario, response, _es_movil(x_cliente), familia=sesion.familia)
-    auditoria.registrar(db, accion, "auth", usuario.id, ip)
+def _sucesora(db, sesion, usuario, response, x_cliente, ip) -> SesionOut:
+    """Reintento de gracia: reemplaza al sucesor (sin ramas paralelas) y emite su relevo."""
+    sesiones.reemplazar_sucesor(db, sesion)
+    salida, nueva = _abrir_sesion(
+        db, usuario, response, _es_movil(x_cliente), familia=sesion.familia
+    )
+    sesion.reemplazado_por = nueva.id
+    auditoria.registrar(db, "refresh_gracia", "auth", usuario.id, ip)
     db.commit()
     return salida
 

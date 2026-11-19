@@ -24,6 +24,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -101,6 +102,10 @@ class SesionRefresh(Base):
     expira_en: Mapped[datetime] = mapped_column(_TZ)
     revocado_en: Mapped[datetime | None] = mapped_column(_TZ)
     reemplazado_por: Mapped[int | None] = mapped_column(Integer)
+    # Contexto de la rotación y uso único de la gracia (ver ``sesiones.en_gracia``).
+    rotada_ip: Mapped[str | None] = mapped_column(String(64))
+    rotada_cliente: Mapped[str | None] = mapped_column(String(20))
+    gracia_usada_en: Mapped[datetime | None] = mapped_column(_TZ)
 
 
 class Sector(Base):
@@ -323,6 +328,24 @@ class StockProductivo(Base):
 
 class SolicitudAsistencia(Base):
     __tablename__ = "solicitudes_asistencia"
+    __table_args__ = (
+        # Idempotencia de POST /solicitudes (Idempotency-Key) sin ventana de tiempo.
+        Index(
+            "uq_solicitud_idempotencia",
+            "solicitante_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+        # Duplicados de un mismo mensaje de canal (reintentos del proveedor).
+        Index(
+            "uq_solicitud_mensaje_externo",
+            "origen",
+            "mensaje_externo_id",
+            unique=True,
+            postgresql_where=text("mensaje_externo_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     solicitante_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
@@ -336,6 +359,8 @@ class SolicitudAsistencia(Base):
     sector_id: Mapped[str | None] = mapped_column(ForeignKey("sectores.id"))
     detalle: Mapped[dict | None] = mapped_column(JSONB)
     adjuntos: Mapped[list | None] = mapped_column(JSONB)
+    idempotency_key: Mapped[str | None] = mapped_column(String(36))
+    mensaje_externo_id: Mapped[str | None] = mapped_column(String(120))
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
@@ -379,6 +404,15 @@ class Tarea(Base):
 
 class Orden(Base):
     __tablename__ = "ordenes"
+    __table_args__ = (
+        Index(
+            "uq_orden_idempotencia",
+            "emitida_por",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tipo: Mapped[str] = mapped_column(String(30))  # alerta|evacuacion_preventiva|evacuacion
@@ -386,6 +420,7 @@ class Orden(Base):
     emitida_por: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
     rol_operativo: Mapped[str | None] = mapped_column(String(60))
     fundamento: Mapped[str] = mapped_column(Text)
+    idempotency_key: Mapped[str | None] = mapped_column(String(36))
     creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 

@@ -16,7 +16,7 @@ from app.core.limitador import limiter
 from app.db.base import ahora
 from app.db.modelos import AuditoriaAcceso, SesionRefresh
 from app.main import app, crear_app
-from tests.conftest import bearer, correo_unico, datos_ciudadano, iniciar_sesion
+from tests.conftest import correo_unico, datos_ciudadano, iniciar_sesion
 from tests.test_operacion import S4, _usuario_nuevo
 from tests.test_seguridad_fase2 import _cliente_desde
 
@@ -38,17 +38,65 @@ def _sesion_movil(client):
     return datos, iniciar_sesion(client, datos["email"], datos["password"]).json()
 
 
-def test_token_rotado_hace_instantes_recibe_sucesora_sin_revocar_la_familia(client):
+def test_reintento_por_respuesta_perdida_funciona_una_sola_vez(client, db):
     _, sesion = _sesion_movil(client)
     r1 = _refrescar(client, sesion["refresh_token"])
-    r2 = _refrescar(client, sesion["refresh_token"])  # otra pestaña / reintento de red
+    r2 = _refrescar(client, sesion["refresh_token"])  # el cliente no recibió la respuesta de r1
     assert r1.status_code == 200 and r2.status_code == 200
     assert r1.json()["refresh_token"] != r2.json()["refresh_token"]
-    # La familia sigue viva: ambos sucesores y sus accesos funcionan.
-    for r in (r1, r2):
-        acceso = bearer(r.json()["access_token"])
-        assert client.get("/api/v1/auth/yo", headers=acceso).status_code == 200
-    assert _refrescar(client, r1.json()["refresh_token"]).status_code == 200
+    # Una sola sesión viva por familia: el sucesor de r1 quedó revocado, sin ramas paralelas.
+    db.expire_all()
+    vivas = db.execute(
+        select(func.count())
+        .select_from(SesionRefresh)
+        .where(
+            SesionRefresh.usuario_id == r2.json()["usuario"]["id"],
+            SesionRefresh.revocado_en.is_(None),
+        )
+    ).scalar_one()
+    assert vivas == 1
+    assert _refrescar(client, r2.json()["refresh_token"]).status_code == 200
+
+
+def test_segunda_reutilizacion_dentro_de_la_ventana_revoca_la_familia(client):
+    _, sesion = _sesion_movil(client)
+    r1 = _refrescar(client, sesion["refresh_token"])
+    r2 = _refrescar(client, sesion["refresh_token"])  # gracia (primer reuso)
+    assert r1.status_code == r2.status_code == 200
+    assert _refrescar(client, sesion["refresh_token"]).status_code == 401  # segundo reuso: robo
+    assert _refrescar(client, r2.json()["refresh_token"]).status_code == 401  # familia revocada
+
+
+def test_reuso_desde_otra_ip_o_otro_cliente_revoca_la_familia(base_de_datos):
+    casa = _cliente_desde("198.51.100.50")
+    datos = datos_ciudadano()
+    casa.post(REGISTRO, json=datos)
+    sesion = iniciar_sesion(casa, datos["email"], datos["password"]).json()
+    r1 = _refrescar(casa, sesion["refresh_token"])
+    ladron = _cliente_desde("203.0.113.66")
+    assert _refrescar(ladron, sesion["refresh_token"]).status_code == 401
+    assert _refrescar(casa, r1.json()["refresh_token"]).status_code == 401  # familia revocada
+
+    sesion = iniciar_sesion(casa, datos["email"], datos["password"]).json()
+    r1 = _refrescar(casa, sesion["refresh_token"])
+    otro_cliente = casa.post(  # misma red, pero como cliente web (sin X-Cliente movil)
+        "/api/v1/auth/refresh", json={"refresh_token": sesion["refresh_token"]}
+    )
+    assert otro_cliente.status_code == 401
+    assert _refrescar(casa, r1.json()["refresh_token"]).status_code == 401
+
+
+def test_token_vencido_no_tiene_gracia(client, db):
+    _, sesion = _sesion_movil(client)
+    r1 = _refrescar(client, sesion["refresh_token"])
+    assert r1.status_code == 200
+    db.execute(
+        update(SesionRefresh)
+        .where(SesionRefresh.reemplazado_por.is_not(None))
+        .values(expira_en=ahora() - timedelta(seconds=1))
+    )
+    db.commit()
+    assert _refrescar(client, sesion["refresh_token"]).status_code == 401
 
 
 def test_reutilizar_fuera_de_la_gracia_revoca_la_familia(client, db):
@@ -149,16 +197,18 @@ def test_cuota_blanda_de_solicitudes_con_mensaje_y_retry_after(client, monkeypat
 
 def test_tope_de_almacenamiento_de_adjuntos_por_usuario(client, monkeypatch, tmp_path):
     monkeypatch.setattr(get_settings(), "adjuntos_dir", str(tmp_path))
-    monkeypatch.setattr(get_settings(), "adjuntos_max_bytes_por_usuario", len(JPEG) * 2)
+    monkeypatch.setattr(get_settings(), "adjuntos_max_bytes_por_usuario", (len(JPEG) + 1) * 2)
     _, h = _usuario_nuevo(client)
     sid = client.post("/api/v1/solicitudes", json=CUERPO, headers=h).json()["id"]
     url = f"/api/v1/solicitudes/{sid}/adjuntos"
 
-    def subir():
-        return client.post(url, files={"archivo": ("f", JPEG, "image/jpeg")}, headers=h)
+    def subir(n):
+        return client.post(
+            url, files={"archivo": ("f", JPEG + bytes([n]), "image/jpeg")}, headers=h
+        )
 
-    assert subir().status_code == 201 and subir().status_code == 201
-    r = subir()
+    assert subir(1).status_code == 201 and subir(2).status_code == 201
+    r = subir(3)
     assert r.status_code == 413 and "fotos" in r.json()["error"]["mensaje"]
 
 

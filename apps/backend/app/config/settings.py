@@ -46,9 +46,9 @@ class Settings(BaseSettings):
     # el docker-compose del demo lo enciende con SEED_DEMO=true.
     seed_demo: bool = False
 
-    # Gracia de rotación del refresh: un token recién rotado que se reutiliza dentro de esta
-    # ventana (pestañas, reintentos de red) recibe una sesión sucesora en vez de revocar la familia.
-    refresh_gracia_segundos: int = 45
+    # Gracia de rotación del refresh (<= 30 s): un token recién rotado puede reutilizarse UNA vez,
+    # desde el mismo cliente y la misma red, por un reintento tras perder la respuesta.
+    refresh_gracia_segundos: int = 30
     # Cuota blanda de baja fricción para solicitudes de asistencia por persona usuaria.
     solicitudes_max_por_hora: int = 20
     adjuntos_max_bytes_por_usuario: int = 25 * 1024 * 1024
