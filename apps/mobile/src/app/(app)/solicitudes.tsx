@@ -17,10 +17,10 @@ import {
   Titulo,
   Vacio,
 } from "@/components/ui";
-import { hostDeUrl } from "@/lib/cola";
+import { esCierre, esSolicitud, hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
-import { etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
+import { descripcionItemCola, etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
 import { api, type Solicitud } from "@/lib/servicios";
 
 type Carga =
@@ -47,7 +47,8 @@ export default function Solicitudes() {
     void cargar();
   }, [cargar, items.length, enviadasLocales]);
 
-  const locales = items.filter((i) => i.estado !== "enviada" && !otroServidor.some((o) => o.id === i.id));
+  // Los cierres con constancia pertenecen a la pestaña de la cuadrilla.
+  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !otroServidor.some((o) => o.id === i.id));
 
   return (
     <Pantalla dosColumnas>
@@ -62,10 +63,13 @@ export default function Solicitudes() {
               <Text style={{ fontWeight: "600" }}>
                 {i.estado === "pendiente" ? "Pendiente de envío" : "Rechazada por el servidor"}
               </Text>
-              <Texto>
-                {etiquetaTipoSolicitud(i.datos.tipo)} · {i.datos.personas} personas · {i.datos.animales} animales
-              </Texto>
-              {i.datos.referencia_ubicacion ? <Texto suave>Referencia: {i.datos.referencia_ubicacion}</Texto> : null}
+              <Texto>{descripcionItemCola(i.datos)}</Texto>
+              {esSolicitud(i.datos) && i.datos.referencia_ubicacion ? (
+                <Texto suave>Referencia: {i.datos.referencia_ubicacion}</Texto>
+              ) : null}
+              {esSolicitud(i.datos) && i.datos.lat === undefined ? (
+                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+              ) : null}
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
                 <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text>
@@ -98,9 +102,7 @@ export default function Solicitudes() {
               <Text style={{ fontWeight: "600" }}>
                 Pendientes para otro servidor ({hostDeUrl(i.servidorUrl)})
               </Text>
-              <Texto>
-                {etiquetaTipoSolicitud(i.datos.tipo)} · {i.datos.personas} personas · {i.datos.animales} animales
-              </Texto>
+              <Texto>{descripcionItemCola(i.datos)}</Texto>
               <Texto suave>
                 No se envía a este servidor. Se enviará si volvés a ese servidor con esta cuenta.
               </Texto>

@@ -1,7 +1,7 @@
 import { Image } from "react-native";
 
 import { ErrorApi, peticion } from "@/lib/api";
-import type { DatosSolicitud, ResultadoEnvio, ResultadoFoto } from "@/lib/cola";
+import { esCierre, esConfirmacion, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
 
 /** Tipos de las respuestas de la API que consume la app (contrato: docs/contrato_api.md). */
 export type Categoria = "DATO OBSERVADO" | "DOCUMENTO DE REFERENCIA" | "SIMULADO";
@@ -24,12 +24,40 @@ export type Solicitud = {
   requiere_verificacion?: boolean;
 };
 
+/** Datos de la notificación `confirmacion_evacuacion` (`GET /mi/notificaciones`). */
+export type DatosConfirmacionEvacuacion = {
+  tarea_id: number;
+  solicitud_id: number;
+  codigo: string;
+  centro_nombre: string | null;
+  respuestas: string[];
+};
+
 export type Notificacion = {
   id: number;
   orden_id: number | null;
+  /** `orden`, `confirmacion_evacuacion` o `discrepancia`; ausente en backends anteriores. */
+  tipo?: string;
+  datos?: Record<string, unknown> | null;
   mensaje: string;
   leida: boolean;
   creada_en: string;
+};
+
+export type RespuestaEvacuado = "si" | "no" | "problema";
+
+/** Consulta de confirmación propia (`GET /mi/confirmaciones`); nunca trae ubicaciones. */
+export type ConsultaConfirmacion = {
+  id: number;
+  tarea_id: number;
+  solicitud_id: number;
+  codigo: string;
+  centro_nombre: string | null;
+  respondida: boolean;
+  respuesta: RespuestaEvacuado | null;
+  comentario: string | null;
+  solicitada_en: string;
+  respondida_en: string | null;
 };
 
 export type GrupoFamiliar = {
@@ -171,6 +199,16 @@ export type CuadrillaPanel = {
   tareas: Partial<Record<"pendiente" | "en_curso" | "completada" | "cancelada", number>>;
 };
 
+export type EvacuacionesPanel = BloquePanel & {
+  total?: number;
+  por_estado?: Record<string, number>;
+  verificadas_pct?: number;
+  discrepancias_abiertas?: number;
+  personas_trasladadas?: number;
+  animales_trasladados?: Record<string, number>;
+  animales_trasladados_total?: number;
+};
+
 /** `GET /panel/resumen` (mandos). Todo lo que no es el río ni los sectores puede faltar. */
 export type PanelResumen = {
   generado_en?: string;
@@ -191,7 +229,7 @@ export type PanelResumen = {
     fecha_corte?: string | null;
   };
   /** Bloque de evacuaciones (constancias): se muestra solo si el backend lo envía. */
-  evacuaciones?: (BloquePanel & Record<string, unknown>) | null;
+  evacuaciones?: EvacuacionesPanel | null;
   categoria: Categoria;
   fuente: string;
   fecha_dato: string | null;
@@ -236,6 +274,70 @@ export async function enviarSolicitud(
   }
 }
 
+type RespuestaCierre = {
+  evacuacion?: { estado: string; motivos_discrepancia?: string[]; confirmacion_solicitada?: boolean };
+  repetida?: boolean;
+};
+
+/** Cuerpo de `POST /tareas/{id}/cierre`: solo los campos del contrato (el backend prohíbe extras). */
+export function cuerpoCierre(d: DatosCierre): Record<string, unknown> {
+  return {
+    lat: d.lat,
+    lon: d.lon,
+    ...(d.centro_id ? { centro_id: d.centro_id } : {}),
+    personas_trasladadas: d.personas_trasladadas,
+    animales_trasladados: d.animales_trasladados,
+    ...(d.nota ? { nota: d.nota } : {}),
+  };
+}
+
+/** Cierre con constancia: la `Idempotency-Key` es obligatoria y se conserva en los reintentos. */
+export async function enviarCierre(datos: DatosCierre, clave: string): Promise<ResultadoEnvio> {
+  try {
+    const r = await peticion<RespuestaCierre>(`/tareas/${datos.tarea_id}/cierre`, {
+      metodo: "POST",
+      cuerpo: cuerpoCierre(datos),
+      cabeceras: { "Idempotency-Key": clave },
+    });
+    return {
+      ok: true,
+      servidorId: datos.tarea_id,
+      resultado: {
+        estado: r.evacuacion?.estado ?? "cerrada_cuadrilla",
+        motivos_discrepancia: r.evacuacion?.motivos_discrepancia ?? [],
+        confirmacion_solicitada: r.evacuacion?.confirmacion_solicitada ?? false,
+        repetida: Boolean(r.repetida),
+      },
+    };
+  } catch (e) {
+    return clasificar(e);
+  }
+}
+
+/** Respuesta del evacuado: 201 la primera vez, 200 repetida; otra respuesta distinta da 409 (rechazo). */
+export async function enviarConfirmacion(datos: DatosConfirmacion): Promise<ResultadoEnvio> {
+  try {
+    const r = await peticion<{ id: number; repetida?: boolean }>("/mi/confirmaciones", {
+      metodo: "POST",
+      cuerpo: {
+        solicitud_id: datos.solicitud_id,
+        respuesta: datos.respuesta,
+        ...(datos.comentario ? { comentario: datos.comentario } : {}),
+      },
+    });
+    return { ok: true, servidorId: r.id, resultado: { repetida: Boolean(r.repetida) } };
+  } catch (e) {
+    return clasificar(e);
+  }
+}
+
+/** Despacha el primer tiempo según la clase del ítem de la cola. */
+export function enviarItem(datos: DatosCola, clave: string): Promise<ResultadoEnvio> {
+  if (esCierre(datos)) return enviarCierre(datos, clave);
+  if (esConfirmacion(datos)) return enviarConfirmacion(datos);
+  return enviarSolicitud(datos, clave);
+}
+
 /**
  * `true` si la imagen local todavía existe. `Image.getSize` solo lee el archivo (sin red): rechaza
  * enseguida si el sistema borró la caché o el archivo se movió.
@@ -261,11 +363,20 @@ export function archivoExiste(uri: string): Promise<boolean> {
  * bloqueando a las solicitudes que siguen en la cola.
  */
 export async function subirFotoSolicitud(servidorId: number, fotoUri: string): Promise<ResultadoFoto> {
+  return subirFotoA(`/solicitudes/${servidorId}/adjuntos`, fotoUri);
+}
+
+/** Despacha la subida de la foto: a la solicitud o a la constancia del cierre (`servidorId` = tarea). */
+export function subirFotoItem(servidorId: number, fotoUri: string, datos: DatosCola): Promise<ResultadoFoto> {
+  return subirFotoA(esCierre(datos) ? `/tareas/${servidorId}/cierre/adjuntos` : `/solicitudes/${servidorId}/adjuntos`, fotoUri);
+}
+
+async function subirFotoA(ruta: string, fotoUri: string): Promise<ResultadoFoto> {
   try {
     const form = new FormData();
     // En React Native un archivo local se adjunta como { uri, name, type }.
     form.append("archivo", { uri: fotoUri, name: "foto.jpg", type: "image/jpeg" } as unknown as Blob);
-    await peticion<unknown>(`/solicitudes/${servidorId}/adjuntos`, { metodo: "POST", cuerpo: form });
+    await peticion<unknown>(ruta, { metodo: "POST", cuerpo: form });
     return { ok: true };
   } catch (e) {
     const falla = clasificar(e);
@@ -288,6 +399,7 @@ export const api = {
   establecimientos: () => peticion<{ establecimientos: Establecimiento[] }>("/mi/establecimientos"),
   guardarStock: (id: number, stock: ItemStock[]) =>
     peticion<unknown>(`/mi/establecimientos/${id}/stock`, { metodo: "PUT", cuerpo: { stock } }),
+  confirmaciones: () => peticion<{ confirmaciones: ConsultaConfirmacion[]; pendientes: number }>("/mi/confirmaciones"),
   miSector: () => peticion<MiSector>("/mi/sector"),
   panelResumen: () => peticion<PanelResumen>("/panel/resumen"),
   centros: () => peticion<{ centros: Centro[] }>("/centros"),

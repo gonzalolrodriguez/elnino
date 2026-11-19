@@ -137,6 +137,31 @@ describe("asistencia", () => {
     expect(enviado.texto).toBeNull();
   });
 
+  it("sin GPS se puede enviar con una referencia: va sin coordenadas y queda como ubicación aproximada", async () => {
+    mockEstado = usuario("ciudadano");
+    mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
+    const Asistencia = require("@/app/(app)/asistencia").default;
+    await render(conSafe(<Asistencia />));
+    await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
+    expect(screen.getByText("Enviar solicitud").props).toBeDefined();
+    await fireEvent.changeText(screen.getByLabelText("Referencia de ubicación (paraje, camino, escuela cercana)"), "Paraje El Colorado");
+    expect(screen.getByText("Ubicación aproximada: un operador la va a verificar")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Enviar solicitud"));
+    await waitFor(() => expect(mockEnviar).toHaveBeenCalledTimes(1));
+    const enviado = mockEnviar.mock.calls[0][0];
+    expect(enviado.referencia_ubicacion).toBe("Paraje El Colorado");
+    expect("lat" in enviado || "lon" in enviado).toBe(false);
+  });
+
+  it("sin GPS ni referencia no se puede enviar", async () => {
+    mockEstado = usuario("ciudadano");
+    const Asistencia = require("@/app/(app)/asistencia").default;
+    await render(conSafe(<Asistencia />));
+    await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
+    await fireEvent.press(screen.getByText("Enviar solicitud"));
+    expect(mockEnviar).not.toHaveBeenCalled();
+  });
+
   it("sin referencia no manda el campo", async () => {
     mockEstado = usuario("ciudadano");
     mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });

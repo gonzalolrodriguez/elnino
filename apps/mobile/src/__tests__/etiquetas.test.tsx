@@ -16,6 +16,8 @@ jest.mock("@/lib/SesionContext", () => ({
   useUsuario: () => ({ id: 7, email: "x", nombre_visible: "x", rol: "ciudadano", rol_operativo: null, estado: "activo" }),
 }));
 
+jest.mock("@/lib/ColaContext", () => ({ useCola: () => ({ enviar: jest.fn() }) }));
+
 const mockMiSector = jest.fn();
 jest.mock("@/lib/servicios", () => ({ api: { miSector: (...a: unknown[]) => mockMiSector(...a) } }));
 

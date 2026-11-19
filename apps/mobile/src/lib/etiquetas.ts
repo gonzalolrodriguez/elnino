@@ -1,3 +1,5 @@
+import { esCierre, esConfirmacion, type DatosCola } from "@/lib/cola";
+
 /**
  * Etiquetas legibles (español rioplatense) para los códigos que devuelve la API. Ningún código crudo
  * (`en_curso`, `sms_sim`, `evacuacion`) debe llegar a la pantalla: se pasa siempre por acá.
@@ -54,6 +56,28 @@ const ROL: Record<string, string> = {
   decisor: "Decisor",
   admin: "Administración",
 };
+
+
+const RESPUESTA_EVACUADO: Record<string, string> = { si: "Sí, llegué", no: "No llegué", problema: "Hubo un problema" };
+
+/** Resumen de un ítem de la cola local en palabras simples (solicitud, cierre o respuesta). */
+export function descripcionItemCola(d: DatosCola): string {
+  if (esCierre(d)) return `Cierre con constancia de la tarea #${d.tarea_id}`;
+  if (esConfirmacion(d)) return `Tu respuesta sobre el traslado: ${RESPUESTA_EVACUADO[d.respuesta] ?? d.respuesta}`;
+  return `${etiquetaTipoSolicitud(d.tipo)} · ${d.personas} personas · ${d.animales} animales`;
+}
+
+/** Estados derivados de una evacuación, en palabras simples. */
+const ESTADO_EVACUACION: Record<string, string> = {
+  pendiente: "Pendiente",
+  en_curso: "En curso",
+  cerrada_cuadrilla: "Cerrada por la cuadrilla, a la espera de la confirmación de la persona evacuada",
+  verificada: "Verificada: la persona evacuada confirmó la llegada",
+  con_discrepancia: "Marcada para revisar: un operador va a mirar el caso (no es una acusación)",
+};
+export const etiquetaEstadoEvacuacion = (c: string) => buscar(ESTADO_EVACUACION, c);
+export const etiquetaEstadoEvacuacionCorta = (c: string) =>
+  buscar({ ...ESTADO_EVACUACION, cerrada_cuadrilla: "Cerrada por la cuadrilla", verificada: "Verificadas", con_discrepancia: "Con discrepancia" }, c);
 
 /** Códigos desconocidos: se muestran sin guiones bajos y con la primera letra en mayúscula. */
 function legible(codigo: string): string {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text } from "react-native";
 
+import { FormCierre } from "@/components/FormCierre";
 import { SoloRol } from "@/components/SoloRol";
 import {
   Boton,
@@ -17,11 +18,17 @@ import {
   Titulo,
   Vacio,
 } from "@/components/ui";
+import { esCierre } from "@/lib/cola";
+import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { api, type Tarea } from "@/lib/servicios";
 
-function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea) => void }) {
+function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar: (t: Tarea) => void; alCerrada: () => void }) {
+  const { items } = useCola();
+  const [cerrando, setCerrando] = useState(false);
+  // Cierre ya guardado en el teléfono que todavía no llegó al servidor.
+  const cierreLocal = items.find((i) => esCierre(i.datos) && i.datos.tarea_id === tarea.id && i.estado === "pendiente");
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
@@ -77,12 +84,23 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
           <Boton titulo="Completar" onPress={() => void aplicar({ estado: "completada" })} cargando={trabajando} />
         ) : null}
       </FilaBotones>
+      {cierreLocal ? (
+        <Texto>Cierre con constancia guardado en el teléfono: se envía solo cuando haya conexión.</Texto>
+      ) : null}
+      {!cerrada && !cierreLocal && !cerrando ? (
+        <Boton titulo="Cerrar con constancia" variante="secundario" onPress={() => setCerrando(true)} />
+      ) : null}
+      {cerrando ? (
+        <FormCierre tareaId={tarea.id} alEnviado={alCerrada} alCerrar={() => setCerrando(false)} />
+      ) : null}
       <Insignia categoria="SIMULADO" />
     </Tarjeta>
   );
 }
 
 function ListaTareas() {
+  const { items, descartar } = useCola();
+  const rechazados = items.filter((i) => esCierre(i.datos) && i.estado === "rechazada");
   const [tareas, setTareas] = useState<Tarea[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,7 +121,8 @@ function ListaTareas() {
     <Pantalla dosColumnas>
       <Titulo>Tareas de la cuadrilla</Titulo>
       <Texto suave>
-        Los cambios se guardan en el servidor al instante y requieren conexión.
+        Los cambios de estado requieren conexión. El cierre con constancia se puede cargar sin
+        conexión: queda en el teléfono y se envía solo.
       </Texto>
       {error ? <ErrorCaja mensaje={error} onReintentar={cargar} /> : null}
       {!error && tareas === null ? <Cargando texto="Cargando tareas…" /> : null}
@@ -114,9 +133,19 @@ function ListaTareas() {
           key={t.id}
           tarea={t}
           alCambiar={(nueva) => setTareas((l) => (l ?? []).map((x) => (x.id === nueva.id ? nueva : x)))}
+          alCerrada={() => void cargar()}
         />
       ))}
       </Rejilla>
+      {rechazados.map((i) => (
+        <Tarjeta key={i.id}>
+          <Text style={{ fontWeight: "600" }}>
+            {i.datos && esCierre(i.datos) ? `Cierre de la tarea #${i.datos.tarea_id}` : "Envío"} rechazado por el servidor
+          </Text>
+          {i.ultimoError ? <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text> : null}
+          <Boton titulo="Descartar" variante="peligro" onPress={() => void descartar(i.id)} />
+        </Tarjeta>
+      ))}
       <Enlace titulo="Actualizar" onPress={cargar} />
     </Pantalla>
   );

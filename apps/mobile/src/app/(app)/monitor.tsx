@@ -6,7 +6,7 @@ import { SoloRol } from "@/components/SoloRol";
 import { Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { mensajeError } from "@/lib/errores";
-import { etiquetaEstadoSector, etiquetaEstadoSolicitud, etiquetaEstadoTarea, formatearFechaHora } from "@/lib/etiquetas";
+import { etiquetaEstadoSector, etiquetaEstadoEvacuacionCorta, etiquetaEstadoSolicitud, etiquetaEstadoTarea, formatearFechaHora } from "@/lib/etiquetas";
 import { fechaCorta, metros, numeroAR, posicionesBarra, textoTendencia, textoTiempoAUmbral } from "@/lib/panel";
 import { obtenerUrlServidor } from "@/lib/servidor";
 import { api, type PanelResumen } from "@/lib/servicios";
@@ -186,19 +186,27 @@ function Cuadrillas({ r }: { r: NonNullable<PanelResumen["cuadrillas"]> }) {
   );
 }
 
-/** Bloque `evacuaciones` (constancias): se muestra solo si el backend lo envía; cifras y textos simples. */
+/** Bloque `evacuaciones` (constancias de cierre y confirmaciones): se muestra solo si el backend lo envía. */
 function Evacuaciones({ b }: { b: NonNullable<PanelResumen["evacuaciones"]> }) {
-  const meta = new Set(["categoria", "fuente", "fecha_dato"]);
-  const filas = Object.entries(b).filter(([k, v]) => !meta.has(k) && (typeof v === "number" || typeof v === "string"));
+  const estados = Object.entries(b.por_estado ?? {});
+  const animales = Object.entries(b.animales_trasladados ?? {}).filter(([, n]) => n > 0);
   return (
     <Tarjeta>
       <Subtitulo>Evacuaciones</Subtitulo>
-      {filas.map(([k, v]) => (
-        <Texto key={k}>
-          {k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}: {typeof v === "number" ? numeroAR(v, 0) : String(v)}
+      <Texto>Total: {numeroAR(b.total ?? 0, 0)}</Texto>
+      {estados.map(([e, n]) => (
+        <Texto key={e} suave>
+          {etiquetaEstadoEvacuacionCorta(e)}: {numeroAR(n, 0)}
         </Texto>
       ))}
-      <Insignia categoria={b.categoria} />
+      {typeof b.verificadas_pct === "number" ? <Texto>Verificadas por la persona evacuada: {numeroAR(b.verificadas_pct, 0)} %</Texto> : null}
+      <Texto>Discrepancias abiertas: {numeroAR(b.discrepancias_abiertas ?? 0, 0)}</Texto>
+      <Texto>Personas trasladadas: {numeroAR(b.personas_trasladadas ?? 0, 0)}</Texto>
+      <Texto>
+        Animales trasladados: {numeroAR(b.animales_trasladados_total ?? 0, 0)}
+        {animales.length > 0 ? ` (${animales.map(([e, n]) => `${e} ${numeroAR(n, 0)}`).join(", ")})` : ""}
+      </Texto>
+      <Insignia categoria={b.categoria ?? "SIMULADO"} />
     </Tarjeta>
   );
 }

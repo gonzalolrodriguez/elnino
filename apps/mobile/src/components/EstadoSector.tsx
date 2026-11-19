@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
+import { TarjetaConfirmacion, useConsultas } from "@/components/TarjetaConfirmacion";
 import { COLOR, Cargando, Insignia, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { etiquetaEstadoSector, etiquetaTipoOrden, formatearFechaHora } from "@/lib/etiquetas";
@@ -21,6 +22,35 @@ const COLOR_ESTADO = { normal: COLOR.ok, en_riesgo: COLOR.avisoTexto, comprometi
  * fecha («actualizado el …») para que nadie tome por vigente un dato viejo.
  */
 export function EstadoSector() {
+  return (
+    <>
+      <ConsultasPendientes />
+      <TarjetaSector />
+    </>
+  );
+}
+
+/** Consultas de traslado sin responder: van arriba de todo, porque piden una respuesta de la persona. */
+function ConsultasPendientes() {
+  const { consultas, recargar } = useConsultas();
+  return (
+    <>
+      {consultas
+        .filter((c) => !c.respondida)
+        .map((c) => (
+          <TarjetaConfirmacion
+            key={`${c.id}-${c.codigo}`}
+            solicitudId={c.solicitud_id}
+            codigo={c.codigo}
+            centroNombre={c.centro_nombre}
+            alResponder={() => void recargar()}
+          />
+        ))}
+    </>
+  );
+}
+
+function TarjetaSector() {
   const usuario = useUsuario();
   const [vista, setVista] = useState<Vista>({ tipo: "cargando" });
   const clave = `mi_sector:${usuario.id}:${obtenerUrlServidor()}`;

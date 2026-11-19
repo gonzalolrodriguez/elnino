@@ -9,11 +9,11 @@ import {
   type ReactNode,
 } from "react";
 
-import { ColaOffline, type DatosSolicitud, type ItemCola, type VaciadoResultado } from "@/lib/cola";
+import { ColaOffline, type DatosCola, type ItemCola, type VaciadoResultado } from "@/lib/cola";
 import { RepositorioSqlite } from "@/lib/colaSqlite";
 import { escucharRed, hayRed } from "@/lib/red";
 import { escucharServidor, obtenerUrlServidor } from "@/lib/servidor";
-import { enviarSolicitud, subirFotoSolicitud } from "@/lib/servicios";
+import { enviarItem, subirFotoItem } from "@/lib/servicios";
 import { useUsuario } from "@/lib/SesionContext";
 
 type Valor = {
@@ -24,7 +24,7 @@ type Valor = {
   otroServidor: ItemCola[];
   sinRed: boolean;
   /** Guarda la solicitud en la cola local y trata de enviarla de inmediato. */
-  enviar: (datos: DatosSolicitud, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean }>;
+  enviar: (datos: DatosCola, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean; rechazada: string | null; resultado: DatosCola | null }>;
   reintentar: () => Promise<VaciadoResultado>;
   descartar: (id: number) => Promise<void>;
   borrarLocal: () => Promise<void>;
@@ -36,7 +36,7 @@ const INTERVALO_MS = 15_000;
 export function ColaProvider({ children }: { children: ReactNode }) {
   const usuario = useUsuario();
   const repo = useRef(new RepositorioSqlite()).current;
-  const cola = useMemo(() => new ColaOffline({ repo, hayRed, enviar: enviarSolicitud, subirFoto: subirFotoSolicitud, servidorActual: obtenerUrlServidor }), [repo]);
+  const cola = useMemo(() => new ColaOffline({ repo, hayRed, enviar: enviarItem, subirFoto: subirFotoItem, servidorActual: obtenerUrlServidor }), [repo]);
   const [items, setItems] = useState<ItemCola[]>([]);
   const [sinRed, setSinRed] = useState(false);
   // Al cambiar el servidor se recalcula qué ítems corresponden al vigente.
@@ -86,6 +86,9 @@ export function ColaProvider({ children }: { children: ReactNode }) {
         enviadaYa: r.enviadas > 0 && actual?.estado === "enviada",
         // La solicitud ya llegó al servidor pero la foto espera su turno (sin red o reintento).
         fotoPendiente: actual?.estado === "pendiente" && actual.servidorId !== null,
+        // El servidor rechazó el envío (p. ej. 409): se informa el motivo en vez de decir «se enviará».
+        rechazada: actual?.estado === "rechazada" ? (actual.ultimoError ?? "El servidor no aceptó el envío.") : null,
+        resultado: actual?.datos ?? null,
       };
     },
     [cola, usuario.id, vaciar],

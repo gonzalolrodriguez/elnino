@@ -35,7 +35,7 @@ function armar(opciones: {
     repo,
     hayRed: async () => estado.red,
     enviar: async (d, clave) => {
-      enviados.push(d.texto ?? "");
+      enviados.push((d as DatosSolicitud).texto ?? "");
       claves.push(clave);
       return respuestas.shift() ?? { ok: true, servidorId: 100 + enviados.length };
     },
@@ -221,7 +221,7 @@ describe("ColaOffline: servidor del ítem", () => {
       repo: new RepositorioMemoria(),
       hayRed: async () => true,
       enviar: async (d) => {
-        enviados.push(`${estado.servidor}|${d.texto}`);
+        enviados.push(`${estado.servidor}|${(d as DatosSolicitud).texto}`);
         return { ok: true, servidorId: 1 };
       },
       subirFoto: async () => ({ ok: true }),
@@ -298,7 +298,7 @@ describe("ColaOffline: máximo de intentos, fotos perdidas y segunda pasada", ()
     const enviados: string[] = [];
     const { cola, estado } = armarCon({
       enviar: async (d) => {
-        enviados.push(d.texto ?? "");
+        enviados.push((d as DatosSolicitud).texto ?? "");
         return d.texto === "malo"
           ? { ok: false, tipo: "red", mensaje: "500" }
           : { ok: true, servidorId: 9 };
@@ -367,7 +367,7 @@ describe("ColaOffline: máximo de intentos, fotos perdidas y segunda pasada", ()
     const enviados: string[] = [];
     const { cola } = armarCon({
       enviar: async (d) => {
-        enviados.push(d.texto ?? "");
+        enviados.push((d as DatosSolicitud).texto ?? "");
         if (d.texto === "primero") await compuerta;
         return { ok: true, servidorId: 1 };
       },

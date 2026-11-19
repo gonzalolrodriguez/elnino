@@ -1,7 +1,7 @@
 import * as SQLite from "expo-sqlite";
 
 import { cargarServidor, obtenerUrlServidor } from "@/lib/servidor";
-import type { DatosSolicitud, ItemCola, RepositorioCola } from "@/lib/cola";
+import type { DatosCola, ItemCola, RepositorioCola } from "@/lib/cola";
 
 type Fila = {
   id: number;
@@ -38,7 +38,7 @@ function aItem(f: Fila): ItemCola {
   return {
     id: f.id,
     usuarioId: f.usuario_id,
-    datos: JSON.parse(f.datos) as DatosSolicitud,
+    datos: JSON.parse(f.datos) as DatosCola,
     fotoUri: f.foto_uri,
     estado: f.estado,
     intentos: f.intentos,

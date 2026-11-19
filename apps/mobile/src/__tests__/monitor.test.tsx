@@ -169,15 +169,31 @@ describe("pestaña Monitor", () => {
     await waitFor(() => expect(screen.getByText("5,60 m")).toBeTruthy());
   });
 
-  it("muestra el bloque de evacuaciones solo si llega", async () => {
+  it("muestra el bloque de evacuaciones solo si llega, con su categoría", async () => {
     mockResumen.mockResolvedValue({
       ...resumen,
-      evacuaciones: { categoria: "SIMULADO", fuente: "x", fecha_dato: null, evacuadas: 12, pendientes: 3 },
+      evacuaciones: {
+        categoria: "SIMULADO",
+        fuente: "x",
+        fecha_dato: null,
+        total: 5,
+        por_estado: { cerrada_cuadrilla: 2, verificada: 2, con_discrepancia: 1 },
+        verificadas_pct: 40,
+        discrepancias_abiertas: 1,
+        personas_trasladadas: 1234,
+        animales_trasladados: { bovinos: 12 },
+        animales_trasladados_total: 12,
+      },
     });
     const Monitor = require("@/app/(app)/monitor").default;
     await render(conSafe(<Monitor />));
     await screen.findByText("Evacuaciones");
-    expect(screen.getByText("Evacuadas: 12")).toBeTruthy();
+    expect(screen.getByText("Verificadas: 2")).toBeTruthy();
+    expect(screen.getByText("Con discrepancia: 1")).toBeTruthy();
+    expect(screen.getByText("Verificadas por la persona evacuada: 40 %")).toBeTruthy();
+    expect(screen.getByText("Discrepancias abiertas: 1")).toBeTruthy();
+    expect(screen.getByText("Personas trasladadas: 1.234")).toBeTruthy();
+    expect(screen.getByText(/Animales trasladados: 12 \(bovinos 12\)/)).toBeTruthy();
   });
 
   it("río sin lectura: lo dice sin inventar cifras", async () => {

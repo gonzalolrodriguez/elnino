@@ -58,14 +58,16 @@ export default function Asistencia() {
 
   const hayContenido = entero(personas) > 0 || entero(animales) > 0 || texto.trim().length > 0 || referencia.trim().length > 0;
 
+  // El backend pide coordenadas (juntas) o una referencia; sin GPS el pedido queda «aproximado».
+  const puedeEnviar = (ubicacion !== null || referencia.trim().length > 0) && hayContenido;
+
   const datos = (): DatosSolicitud | null =>
-    ubicacion
+    ubicacion || referencia.trim()
       ? {
           tipo,
           personas: entero(personas),
           animales: entero(animales),
-          lon: ubicacion.lon,
-          lat: ubicacion.lat,
+          ...(ubicacion ? { lon: ubicacion.lon, lat: ubicacion.lat } : {}),
           texto: texto.trim().slice(0, MAX_TEXTO) || null,
           // Campo propio del backend; se omite si está vacío.
           ...(referencia.trim() ? { referencia_ubicacion: referencia.trim() } : {}),
@@ -175,8 +177,8 @@ export default function Asistencia() {
         maxLength={60}
       />
       <Texto suave pequeno>
-        Ayuda a los operadores a encontrarte y por SMS viaja como «cómo se llega». Para el envío por
-        internet hace falta además tomar la ubicación con el GPS.
+        Ayuda a los operadores a encontrarte y por SMS viaja como «cómo se llega». Si no tomás la
+        ubicación con el GPS, igual podés enviar el pedido con esta referencia.
       </Texto>
 
       <Tarjeta>
@@ -252,11 +254,14 @@ export default function Asistencia() {
         titulo="Enviar solicitud"
         onPress={pedir}
         cargando={trabajando}
-        deshabilitado={!ubicacion || !hayContenido}
+        deshabilitado={!puedeEnviar}
       />
-      {!ubicacion || !hayContenido ? (
+      {!ubicacion && referencia.trim() ? (
+        <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+      ) : null}
+      {!puedeEnviar ? (
         <Texto suave>
-          Para enviar hace falta la ubicación y al menos personas, animales o un detalle.
+          Para enviar hace falta la ubicación o una referencia, y al menos personas, animales o un detalle.
         </Texto>
       ) : null}
 
