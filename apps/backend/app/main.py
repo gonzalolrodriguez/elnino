@@ -18,6 +18,7 @@ from app.api.v1 import (
     meta,
     mi,
     operacion,
+    panel,
     simulacion,
     solicitudes,
     usuarios,
@@ -28,6 +29,7 @@ from app.core import constantes
 from app.core.cabeceras import cabeceras_de_seguridad
 from app.core.cuerpo import LimiteCuerpo
 from app.core.limitador import limiter
+from app.servicios.contexto import ErrorSinLecturas
 
 CODIGOS_HTTP = {
     400: "solicitud_invalida",
@@ -104,6 +106,10 @@ def crear_app() -> FastAPI:
             headers={"Retry-After": str(max(espera, 1))},
         )
 
+    @app.exception_handler(ErrorSinLecturas)
+    async def sin_lecturas(_: Request, exc: ErrorSinLecturas) -> JSONResponse:
+        return _error(503, "no_disponible", ErrorSinLecturas.mensaje)
+
     @app.exception_handler(Exception)
     async def error_inesperado(_: Request, exc: Exception) -> JSONResponse:
         # Sin trazas ni detalles internos hacia el cliente (el servidor ya registra la excepción).
@@ -120,7 +126,7 @@ def crear_app() -> FastAPI:
     app.include_router(meta.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(usuarios.router, prefix="/api/v1")
-    for modulo in (datos, lluvia, canales, operacion, solicitudes, mi, centinela, ws):
+    for modulo in (datos, lluvia, canales, operacion, solicitudes, mi, centinela, panel, ws):
         app.include_router(modulo.router, prefix="/api/v1")
     app.include_router(simulacion.router, prefix="/api/v1")
     app.include_router(simulacion.router_ruteo, prefix="/api/v1")

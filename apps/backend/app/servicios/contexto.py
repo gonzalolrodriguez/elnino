@@ -28,6 +28,12 @@ ESTACION_FORMOSA = 57
 FUENTE_K10 = "K10 · K10_sectores_simulados.geojson"
 
 
+class ErrorSinLecturas(Exception):
+    """No hay lecturas válidas de Puerto Formosa cargadas (la API responde 503)."""
+
+    mensaje = "Todavía no hay lecturas de altura del río cargadas; correr la carga inicial (seed)."
+
+
 @dataclass(frozen=True)
 class SectorGeo:
     id: str
@@ -155,6 +161,16 @@ def serie_diaria(
 
 
 def ultima_lectura(serie: dict[date, float]) -> tuple[date, float]:
+    """Última lectura de la serie; ``ErrorSinLecturas`` (503) si no hay ninguna."""
+    if not serie:
+        raise ErrorSinLecturas
+    ultimo = max(serie)
+    return ultimo, serie[ultimo]
+
+
+def ultima_lectura_o_none(serie: dict[date, float]) -> tuple[date, float] | None:
+    if not serie:
+        return None
     ultimo = max(serie)
     return ultimo, serie[ultimo]
 

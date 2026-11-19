@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core import constantes
@@ -109,6 +109,13 @@ class AlternativaEditable(BaseModel):
     nombre: str | None = Field(default=None, max_length=120)
     orden_sectores: list[str] | None = Field(default=None, max_length=10)
     centros_excluidos: list[int] = Field(default_factory=list, max_length=50)
+
+    @field_validator("orden_sectores")
+    @classmethod
+    def sin_repetidos(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError("orden_sectores no puede repetir sectores")
+        return v
 
 
 class AlternativasIn(EscenarioIn):

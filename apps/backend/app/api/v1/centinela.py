@@ -79,13 +79,24 @@ def _rol_responsable(db: Session, usuario: Usuario, indicado: str | None) -> str
 @router.get("/bitacora")
 def listar_bitacora(
     estado: str | None = Query(default=None, max_length=20),
+    limite: int = Query(default=200, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=100000),
     _: Usuario = Depends(requiere_rol(*_MANDOS)),
     db: Session = Depends(get_db),
 ) -> dict:
-    consulta = select(BitacoraDecision).order_by(BitacoraDecision.id.desc()).limit(200)
+    consulta = select(BitacoraDecision)
     if estado:
         consulta = consulta.where(BitacoraDecision.estado == estado)
-    return {"entradas": [_bitacora_a_dict(b) for b in db.execute(consulta).scalars()]}
+    total = db.execute(select(func.count()).select_from(consulta.subquery())).scalar_one()
+    filas = db.execute(
+        consulta.order_by(BitacoraDecision.id.desc()).limit(limite).offset(offset)
+    ).scalars()
+    return {
+        "entradas": [_bitacora_a_dict(b) for b in filas],
+        "total": total,
+        "limite": limite,
+        "offset": offset,
+    }
 
 
 @router.post("/bitacora", status_code=201)
@@ -249,8 +260,18 @@ class BovinoIn(BaseModel):
 
 class MenorIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    especie: str = Field(pattern="^(caprino|ovino|porcino)$")
+    especie: str = Field(max_length=40)
     cantidad: int = Field(ge=0, le=100000)
+
+    @field_validator("especie")
+    @classmethod
+    def menor_valida(cls, v: str) -> str:
+        canonica = ganaderia.especie_canonica(v)
+        if canonica not in ganaderia.ESPECIES_MENORES:
+            raise ValueError(
+                f"Especie no reconocida: '{v}'. Usar: {', '.join(ganaderia.ESPECIES_MENORES)}"
+            )
+        return canonica
 
 
 class ColmenasIn(BaseModel):
@@ -274,13 +295,16 @@ def calculo_ganadero(datos: CalculoGanaderoIn, _: Usuario = Depends(usuario_actu
     sin_clasificar = 0
     for b in datos.bovinos:
         canonica = ganaderia.categoria_canonica(b.categoria)
-        if canonica is None:
+        if canonica is None and ganaderia.es_categoria_generica(b.categoria):
+            sin_clasificar += b.cantidad  # cuenta para dormidero y camiones; se avisa
+        elif canonica is None:
             raise HTTPException(
                 422,
-                f"Categoría bovina desconocida: '{b.categoria}'. Usar: vaca preñada, vaca vacía, "
-                "vaca con cría, ternero, vaquillona o toro.",
+                f"Categoría bovina desconocida: '{b.categoria}'. Usar: "
+                + ", ".join(ganaderia.CATEGORIAS_BOVINAS_PERMITIDAS),
             )
-        bovinos[canonica] = bovinos.get(canonica, 0) + b.cantidad
+        else:
+            bovinos[canonica] = bovinos.get(canonica, 0) + b.cantidad
     menores: dict[str, int] = {}
     for o in datos.otros:
         menores[o.especie] = menores.get(o.especie, 0) + o.cantidad

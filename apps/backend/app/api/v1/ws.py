@@ -47,25 +47,30 @@ async def eventos(ws: WebSocket) -> None:
     try:
         primero = await asyncio.wait_for(ws.receive_json(), timeout=ESPERA_TOKEN_S)
         token = primero.get("token") if isinstance(primero, dict) else None
-    except (TimeoutError, ValueError, WebSocketDisconnect):
-        token = None
+    except (TimeoutError, ValueError, KeyError, TypeError, RuntimeError, WebSocketDisconnect):
+        token = None  # incluye marcos binarios o mal formados: no tumban el servidor
     identidad = await run_in_threadpool(_usuario, token) if isinstance(token, str) else None
     if identidad is None:
         await ws.close(code=1008)
         return
-    await difusor.conectar(ws, *identidad)
-    await ws.send_json({"tipo": "conectado", "datos": {"rol": identidad[1]}})
     exp = identidad[2]
     try:
+        # La conexión se registra dentro del try: si algo falla después (p. ej. el cliente se va
+        # antes del saludo), el ``finally`` la quita del difusor y no queda un socket fantasma.
+        await difusor.conectar(ws, *identidad)
+        await ws.send_json({"tipo": "conectado", "datos": {"rol": identidad[1]}})
         while True:
             restante = exp - time.time()
             if restante <= 0:
                 break
             try:
-                # Se ignora lo que envíe el cliente; el plazo es el vencimiento del token.
-                await asyncio.wait_for(ws.receive_text(), timeout=restante)
+                # Se ignora lo que envíe el cliente (texto o binario); el plazo es el vencimiento
+                # del token. Solo importa saber si se desconectó.
+                mensaje = await asyncio.wait_for(ws.receive(), timeout=restante)
             except TimeoutError:
                 break
+            if mensaje["type"] == "websocket.disconnect":
+                return
         await ws.close(code=1008)
     except (WebSocketDisconnect, RuntimeError):
         pass

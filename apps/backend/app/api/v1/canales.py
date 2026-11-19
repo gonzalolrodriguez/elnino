@@ -17,20 +17,24 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from geoalchemy2 import WKTElement
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.core.eventos import difusor
 from app.core.tiempo import ARGENTINA
-from app.db.base import SRID
+from app.db.base import SRID, ahora
 from app.db.consultas import sector_de_punto
 from app.db.modelos import SolicitudAsistencia
 from app.db.sesion import get_db
+from app.domain import normalizador as norm
 from app.domain import parser_mensajes as pm
 from app.servicios import lluvia as srv
 
@@ -112,12 +116,28 @@ class SMSIn(_Base):
     remitente: str = Field(max_length=40)
     texto: str = Field(max_length=1000)
     recibido_en: datetime | None = None
+    mensaje_id: str | None = Field(default=None, max_length=100)
 
 
 class IVRIn(_Base):
+    """Llamada del IVR ya transcripta. ``turnos`` permite un guion (una línea por turno)."""
+
     llamada_id: str = Field(max_length=60)
-    transcripcion: str = Field(max_length=1000)
+    transcripcion: str | None = Field(default=None, max_length=1000)
+    turnos: list[str] | None = Field(default=None, max_length=30)
     recibido_en: datetime | None = None
+
+    @model_validator(mode="after")
+    def con_texto(self):
+        if not (self.transcripcion or "").strip() and not any(
+            (t or "").strip() for t in self.turnos or []
+        ):
+            raise ValueError("Indicar transcripcion o turnos")
+        return self
+
+    def texto(self) -> str:
+        partes = [self.transcripcion or "", *(self.turnos or [])]
+        return " ".join(p.strip() for p in partes if p and p.strip())[:1000]
 
 
 def _momento(valor: str | datetime | None) -> datetime:
@@ -144,40 +164,95 @@ def _turno(momento: datetime) -> str:
     return "07" if momento.hour < 12 else "17"
 
 
-def _procesar(db: Session, mensajes: list[tuple[str, datetime]], canal: str) -> dict:
-    """Valida todos los mensajes primero (422 si alguno está mal formado) y recién ahí guarda."""
-    analizados = []
-    for texto, momento in mensajes:
-        try:
-            tipo = pm.clasificar(texto)
-            analizados.append(
-                (
-                    tipo,
-                    pm.parsear_lluvia(texto) if tipo == "lluvia" else pm.parsear_sos(texto),
-                    momento,
-                )
-            )
-        except pm.ErrorParseo as exc:
-            raise HTTPException(422, f"Mensaje inválido: {exc}") from exc
-    if not analizados:
-        raise HTTPException(422, "No hay mensajes de texto para procesar")
+@dataclass
+class _Mensaje:
+    texto: str
+    momento: datetime
+    mensaje_id: str | None = None
 
-    resultados: list[dict] = []
-    eventos: list[tuple[str, dict, int | None]] = []
-    for tipo, datos, momento in analizados:
-        if tipo == "lluvia":
-            try:
+
+def _clasificar(texto: str) -> str:
+    inicio = texto.strip().upper()
+    if inicio.startswith("LLUVIA"):
+        return "lluvia"
+    if inicio.startswith("SOS-FSA"):
+        return "sos"
+    if norm.palabra_clave(texto):
+        return "menu"
+    return "libre"
+
+
+def _solicitud_existente(db: Session, canal: str, mensaje_id: str) -> int | None:
+    return db.execute(
+        select(SolicitudAsistencia.id).where(
+            SolicitudAsistencia.origen == canal,
+            SolicitudAsistencia.mensaje_externo_id == mensaje_id,
+        )
+    ).scalar_one_or_none()
+
+
+def _insertar_solicitud(db: Session, canal: str, mensaje_id: str | None, **valores) -> int | None:
+    """Inserta con ON CONFLICT sobre (origen, mensaje_externo_id); ``None`` si ya existía."""
+    stmt = insert(SolicitudAsistencia).values(
+        origen=canal,
+        mensaje_externo_id=mensaje_id,
+        estado="recibida",
+        creado_en=ahora(),
+        actualizado_en=ahora(),
+        **valores,
+    )
+    if mensaje_id is not None:
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=["origen", "mensaje_externo_id"],
+            index_where=text("mensaje_externo_id IS NOT NULL"),
+        )
+    return db.execute(stmt.returning(SolicitudAsistencia.id)).scalar_one_or_none()
+
+
+def _procesar_uno(db: Session, m: _Mensaje, canal: str, eventos: list) -> dict:
+    """Procesa un mensaje dentro de un savepoint: un error o duplicado no afecta a los demás."""
+    tipo = _clasificar(m.texto)
+    if tipo == "menu":
+        palabra = norm.palabra_clave(m.texto)
+        return {
+            "tipo": "menu",
+            "estado": "respuesta",
+            "palabra": palabra,
+            "respuesta": norm.RESPUESTAS_MENU[palabra],
+            "categoria_respuesta": "DOCUMENTO DE REFERENCIA",
+            "fuente_respuesta": f"{norm.FUENTE_EMERGENCIAS} (consultado el {norm.FECHA_CONSULTA_EMERGENCIAS})",
+        }
+    if tipo == "lluvia":
+        datos = pm.parsear_lluvia(m.texto)
+        try:
+            with db.begin_nested():
                 lectura, advertencias = srv.registrar_lectura(
-                    db, datos.codigo_puesto, momento.date(), _turno(momento), datos.mm, "simulado"
+                    db,
+                    datos.codigo_puesto,
+                    m.momento.date(),
+                    _turno(m.momento),
+                    datos.mm,
+                    "simulado",
                 )
-            except srv.ErrorLluvia as exc:
-                db.rollback()
-                # Puesto desconocido o dato inválido en el mensaje: es un problema del mensaje.
-                raise HTTPException(422 if exc.estado == 404 else exc.estado, exc.mensaje) from exc
-            resultados.append({"tipo": "lluvia", "id": lectura.id, "advertencias": advertencias})
-        else:
-            solicitud = SolicitudAsistencia(
-                origen=canal,
+        except srv.ErrorLluvia as exc:
+            if exc.estado == 409:  # lectura repetida (reintento del canal): no es un error
+                return {"tipo": "lluvia", "estado": "duplicado", "detalle": exc.mensaje}
+            # Puesto desconocido o dato inválido en el mensaje: es un problema del mensaje.
+            raise pm.ErrorParseo(exc.mensaje) from exc
+        return {
+            "tipo": "lluvia",
+            "estado": "creado",
+            "id": lectura.id,
+            "advertencias": advertencias,
+        }
+
+    if tipo == "sos":
+        datos = pm.parsear_sos(m.texto)
+        with db.begin_nested():
+            nuevo_id = _insertar_solicitud(
+                db,
+                canal,
+                m.mensaje_id,
                 tipo=f"sos_{datos.perfil}",
                 personas=datos.familiares,
                 animales=datos.bovinos,
@@ -191,17 +266,102 @@ def _procesar(db: Session, mensajes: list[tuple[str, datetime]], canal: str) -> 
                     "canal": canal,
                 },
             )
-            db.add(solicitud)
-            db.flush()
-            resultados.append(
-                {"tipo": "solicitud", "id": solicitud.id, "sector_id": solicitud.sector_id}
-            )
-            eventos.append(
-                ("solicitud", {"id": solicitud.id, "estado": "recibida", "origen": canal}, None)
-            )
+        if nuevo_id is None:
+            return {
+                "tipo": "solicitud",
+                "estado": "duplicado",
+                "id": _solicitud_existente(db, canal, m.mensaje_id),
+            }
+        sol = db.get(SolicitudAsistencia, nuevo_id)
+        eventos.append(("solicitud", {"id": sol.id, "estado": "recibida", "origen": canal}))
+        return {"tipo": "solicitud", "estado": "creado", "id": sol.id, "sector_id": sol.sector_id}
+
+    # Texto libre: se extrae lo que el mensaje dice y se marca "a verificar por el operador".
+    libre = norm.normalizar(m.texto)
+    if not libre.util:
+        return {
+            "tipo": "no_entendido",
+            "estado": "respuesta",
+            "respuesta": norm.RESPUESTA_NO_ENTENDIDO,
+        }
+    detalle = {
+        "canal": canal,
+        "normalizador": {
+            "especie": libre.especie,
+            "acceso": libre.acceso,
+            "faltantes": libre.faltantes,
+        },
+        "a_verificar": "A verificar por operador: texto libre sin coordenadas",
+    }
+    with db.begin_nested():
+        nuevo_id = _insertar_solicitud(
+            db,
+            canal,
+            m.mensaje_id,
+            tipo="sos_texto",
+            personas=libre.personas or 0,
+            animales=libre.animales or 0,
+            texto=libre.texto,
+            geom=None,
+            sector_id=None,
+            ubicacion_aproximada=True,
+            referencia_ubicacion=libre.referencia_ubicacion,
+            requiere_verificacion=True,
+            detalle=detalle,
+        )
+    if nuevo_id is None:
+        return {
+            "tipo": "solicitud",
+            "estado": "duplicado",
+            "id": _solicitud_existente(db, canal, m.mensaje_id),
+        }
+    eventos.append(("solicitud", {"id": nuevo_id, "estado": "recibida", "origen": canal}))
+    return {
+        "tipo": "solicitud",
+        "estado": "creado",
+        "id": nuevo_id,
+        "sector_id": None,
+        "ubicacion_aproximada": True,
+        "requiere_verificacion": True,
+        "extraido": {
+            "personas": libre.personas,
+            "animales": libre.animales,
+            "especie": libre.especie,
+            "acceso": libre.acceso,
+            "referencia_ubicacion": libre.referencia_ubicacion,
+            "faltantes": libre.faltantes,
+        },
+        "respuesta": (
+            f"Recibimos tu mensaje (pedido #{nuevo_id}). Un operador lo va a verificar. "
+            "Si hay peligro inmediato, llamá al 103."
+        ),
+    }
+
+
+def _procesar(db: Session, mensajes: list[_Mensaje], canal: str) -> dict:
+    """Procesa cada mensaje por separado (savepoint): uno inválido o repetido no tira a los demás.
+
+    Si ningún mensaje se pudo procesar y hubo errores, responde 422 con el primero (así un SMS mal
+    formado sigue dando 422); si hubo al menos un mensaje válido, responde 201 con el detalle de
+    cada uno (``estado``: ``creado``, ``duplicado``, ``respuesta`` o ``error``).
+    """
+    if not mensajes:
+        raise HTTPException(422, "No hay mensajes de texto para procesar")
+    resultados: list[dict] = []
+    eventos: list[tuple[str, dict]] = []
+    errores: list[str] = []
+    for m in mensajes:
+        try:
+            resultados.append(_procesar_uno(db, m, canal, eventos))
+        except pm.ErrorParseo as exc:
+            errores.append(str(exc))
+            resultados.append({"tipo": "error", "estado": "error", "mensaje": str(exc)})
+    if len(errores) == len(mensajes):
+        db.rollback()
+        raise HTTPException(422, f"Mensaje inválido: {errores[0]}")
     db.commit()
-    for tipo, datos, usuario_id in eventos:
-        difusor.publicar(tipo, datos, usuario_id)
+    for tipo, datos in eventos:
+        difusor.publicar(tipo, datos)
     return {"canal": canal, "categoria": "SIMULADO", "resultados": resultados}
 
 
@@ -212,7 +372,7 @@ def whatsapp(cuerpo: bytes = Depends(cuerpo_firmado), db: Session = Depends(get_
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, "Payload con formato de WhatsApp inválido") from exc
     mensajes = [
-        (m.text.body, _momento(m.timestamp))
+        _Mensaje(m.text.body, _momento(m.timestamp), m.id)
         for e in datos.entry
         for c in e.changes
         for m in c.value.messages
@@ -227,7 +387,16 @@ def sms(cuerpo: bytes = Depends(cuerpo_firmado), db: Session = Depends(get_db)) 
         datos = SMSIn.model_validate(json.loads(cuerpo))
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, "Payload SMS inválido") from exc
-    return _procesar(db, [(datos.texto, _momento(datos.recibido_en))], "sms_sim")
+    momento = _momento(datos.recibido_en)
+    mid = datos.mensaje_id
+    if mid is None and datos.recibido_en is not None:  # mismo remitente, texto y hora = reintento
+        mid = (
+            "h-"
+            + hashlib.sha256(
+                f"{datos.remitente}|{datos.texto}|{datos.recibido_en.isoformat()}".encode()
+            ).hexdigest()[:40]
+        )
+    return _procesar(db, [_Mensaje(datos.texto, momento, mid)], "sms_sim")
 
 
 @router.post("/ivr-sim", status_code=201)
@@ -236,4 +405,6 @@ def ivr(cuerpo: bytes = Depends(cuerpo_firmado), db: Session = Depends(get_db)) 
         datos = IVRIn.model_validate(json.loads(cuerpo))
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, "Payload IVR inválido") from exc
-    return _procesar(db, [(datos.transcripcion, _momento(datos.recibido_en))], "ivr_sim")
+    return _procesar(
+        db, [_Mensaje(datos.texto(), _momento(datos.recibido_en), datos.llamada_id)], "ivr_sim"
+    )

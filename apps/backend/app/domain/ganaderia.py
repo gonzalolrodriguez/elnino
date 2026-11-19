@@ -18,6 +18,7 @@ LOTE_DE = {
     "vaca_vacia": "vientres_toros",
     "toro": "vientres_toros",
     "vaquillona": "vaquillonas",
+    "novillo": "vaquillonas",
     "vaca_con_cria": "vacas_con_cria_terneros",
     "ternero": "vacas_con_cria_terneros",
 }
@@ -26,22 +27,78 @@ NOMBRE_LOTE = {
     "vaquillonas": "Vaquillonas",
     "vacas_con_cria_terneros": "Vacas con cría y terneros",
 }
+# Vocabulario cerrado. Las claves de los alias van en minúsculas, sin tildes y en singular
+# (``_normalizar`` baja el plural de cada palabra antes de buscar).
+ESPECIE_BOVINO = "bovino"
+ESPECIE_APICULTURA = "apicultura"
+ESPECIES_MENORES = ("caprino", "ovino", "porcino")
+ESPECIES_PERMITIDAS = ("bovino", "ovino", "caprino", "porcino", "equino", "apicultura")
+_ALIAS_ESPECIE = {
+    "bovino": "bovino",
+    "vacuno": "bovino",
+    "ganado bovino": "bovino",
+    "ganado vacuno": "bovino",
+    "vaca": "bovino",
+    "toro": "bovino",
+    "ternero": "bovino",
+    "novillo": "bovino",
+    "vaquillona": "bovino",
+    "ovino": "ovino",
+    "oveja": "ovino",
+    "carnero": "ovino",
+    "cordero": "ovino",
+    "ganado ovino": "ovino",
+    "caprino": "caprino",
+    "cabra": "caprino",
+    "chivo": "caprino",
+    "cabrito": "caprino",
+    "ganado caprino": "caprino",
+    "porcino": "porcino",
+    "cerdo": "porcino",
+    "cerda": "porcino",
+    "chancho": "porcino",
+    "lechon": "porcino",
+    "equino": "equino",
+    "caballo": "equino",
+    "yegua": "equino",
+    "potrillo": "equino",
+    "apicultura": "apicultura",
+    "apicola": "apicultura",
+    "colmena": "apicultura",
+    "abeja": "apicultura",
+    "apiario": "apicultura",
+}
+# Categorías bovinas: alias -> nombre canónico (con su lote y su ración más abajo/en supuestos).
 _ALIAS = {
     "vaca prenada": "vaca_prenada",
-    "vaca preñada": "vaca_prenada",
     "vientre prenado": "vaca_prenada",
     "vaca vacia": "vaca_vacia",
+    "vientre vacio": "vaca_vacia",
     "vaca con cria": "vaca_con_cria",
     "vaca con cria al pie": "vaca_con_cria",
+    "vaca parida": "vaca_con_cria",
     "ternero": "ternero",
-    "terneros": "ternero",
+    "ternera": "ternero",
     "ternero al pie": "ternero",
+    "cria": "ternero",
     "vaquillona": "vaquillona",
-    "vaquillonas": "vaquillona",
+    "novillo": "novillo",
+    "novillito": "novillo",
     "toro": "toro",
-    "toros": "toro",
 }
-ESPECIES_MENORES = ("caprino", "ovino", "porcino")
+# Palabras que nombran al ganado bovino sin decir la categoría: se cuentan (dormidero y camiones)
+# pero no tienen lote ni ración, y se avisa.
+_GENERICAS = {"vaca", "vacuno", "bovino", "ganado", "hacienda", "rodeo", "ganado bovino"}
+CATEGORIAS_BOVINAS_PERMITIDAS = (
+    "vaca preñada",
+    "vaca vacía",
+    "vaca con cría",
+    "ternero",
+    "vaquillona",
+    "novillo",
+    "toro",
+)
+GENERICA = "generica"
 
 
 def sin_tildes(texto: str) -> str:
@@ -50,14 +107,39 @@ def sin_tildes(texto: str) -> str:
     )
 
 
+def _normalizar(texto: str) -> str:
+    """Minúsculas, sin tildes ni signos, con el plural bajado a singular palabra por palabra.
+
+    ``"Vacas con crías"`` -> ``"vaca con cria"``; ``"Ovejas"`` -> ``"oveja"``.
+    """
+    limpio = "".join(c if c.isalnum() or c.isspace() else " " for c in sin_tildes(texto.casefold()))
+    palabras = []
+    for p in limpio.split():
+        if len(p) > 4 and p.endswith("es") and p[:-2].endswith(("n", "r", "l", "d", "z")):
+            p = p[:-2]  # plurales en consonante: lechones -> lechon
+        elif len(p) > 3 and p.endswith("s"):
+            p = p[:-1]
+        palabras.append(p)
+    return " ".join(palabras)
+
+
+def especie_canonica(texto: str) -> str | None:
+    """``"Vacas"``/``"bovinos"`` -> ``bovino``; ``"colmenas"`` -> ``apicultura``; ``None`` si no."""
+    return _ALIAS_ESPECIE.get(_normalizar(texto))
+
+
 def categoria_canonica(texto: str) -> str | None:
-    """Normaliza ``"Vaca preñada"`` → ``vaca_prenada``; ``None`` si no es una categoría conocida."""
-    clave = " ".join(sin_tildes(texto.casefold()).split())
+    """Normaliza ``"Vacas preñadas"`` -> ``vaca_prenada``; ``None`` si no es una categoría."""
+    clave = _normalizar(texto)
     if clave in _ALIAS:
         return _ALIAS[clave]
-    if clave in LOTE_DE:
-        return clave
+    if clave.replace(" ", "_") in LOTE_DE:
+        return clave.replace(" ", "_")
     return None
+
+
+def es_categoria_generica(texto: str) -> bool:
+    return _normalizar(texto) in _GENERICAS
 
 
 @dataclass(frozen=True)
@@ -67,6 +149,8 @@ class EntradaGanaderia:
     menores: dict[str, int] | None = None  # caprino|ovino|porcino -> cabezas
     colmenas_vivas: int = 0
     colmenas_muertas: int = 0
+    # Avisos de filas de stock que no se pudieron clasificar (se muestran, no se descartan).
+    avisos_clasificacion: tuple[str, ...] = ()
     traslado_colmenas: str = "vehicular"  # vehicular | a_pie
     superficie_albardon_m2: float | None = None
 
@@ -119,7 +203,7 @@ def calcular(entrada: EntradaGanaderia) -> dict:
     menores = {e: n for e, n in (entrada.menores or {}).items() if n > 0}
     vehiculos_b = {e: math.ceil(n / capacidad_b) for e, n in menores.items()}
 
-    advertencias: list[str] = []
+    advertencias: list[str] = list(entrada.avisos_clasificacion)
     if entrada.bovinos_sin_clasificar:
         advertencias.append(
             f"{entrada.bovinos_sin_clasificar} bovinos con categoría no reconocida: cuentan para "

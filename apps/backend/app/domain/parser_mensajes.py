@@ -31,6 +31,9 @@ _BOV = re.compile(r"^BOV:(\d{1,5})(?:\(([^()]{0,80})\))?$", re.IGNORECASE)
 _FAM = re.compile(r"^FAM:(\d{1,3})$", re.IGNORECASE)
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 MAX_TEXTO = 500
+# Caja de la provincia de Formosa (lon_min, lat_min, lon_max, lat_max), con margen: SUPUESTO de
+# validación para rechazar 0,0 o lat/lon invertidas, no un límite administrativo.
+BBOX_FORMOSA = (-62.7, -27.8, -57.3, -22.2)
 
 
 @dataclass(frozen=True)
@@ -78,6 +81,13 @@ def parsear_sos(mensaje: str) -> MensajeSOS:
         raise ErrorParseo("Coordenadas inválidas: se espera lat,lon") from exc
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         raise ErrorParseo("Coordenadas fuera de rango")
+    if not (
+        BBOX_FORMOSA[1] <= lat <= BBOX_FORMOSA[3] and BBOX_FORMOSA[0] <= lon <= BBOX_FORMOSA[2]
+    ):
+        raise ErrorParseo(
+            "Las coordenadas están fuera de la provincia de Formosa (o con lat y lon invertidas, "
+            "o en 0,0). Formato: lat,lon, por ejemplo -26.18,-58.17"
+        )
     perfil = _PERFILES.get(partes[2].upper())
     if perfil is None:
         raise ErrorParseo("PERFIL debe ser CIUDADANO o PRODUCTOR")

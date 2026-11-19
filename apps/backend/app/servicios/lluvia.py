@@ -17,6 +17,7 @@ import openpyxl
 from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from sqlalchemy import cast, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings, supuesto
@@ -168,8 +169,14 @@ def registrar_lectura(
         categoria=categoria,
         fuente=fuente,
     )
-    db.add(fila)
-    db.flush()
+    try:
+        # Savepoint: si otra solicitud inserta la misma lectura entre la comprobación y este INSERT,
+        # el indice unico lo detecta y se responde 409 (no 500).
+        with db.begin_nested():
+            db.add(fila)
+            db.flush()
+    except IntegrityError as exc:
+        raise ErrorLluvia(409, "Ya existe una lectura de ese puesto, fecha y turno") from exc
     return fila, advertencia_vecinos(db, puesto, fecha, turno, mm)
 
 
@@ -284,11 +291,21 @@ def exportar_planilla(db: Session, anio_hidrologico: int, departamento: str | No
     if departamento:
         consulta = consulta.where(func.lower(PuestoPluviometrico.zona) == departamento.lower())
     por_dia: dict[tuple, dict] = {}
-    for puesto, lectura in db.execute(consulta).all():
+    filas = db.execute(consulta).all()
+    # Si un puesto tiene turnos 07/17 el mismo día que un acumulado diario (DI), se usan los turnos
+    # y el DI se descarta (seria sumar dos veces la misma lluvia) con una observacion.
+    con_turnos = {
+        (lec.fecha, p.id) for p, lec in filas if lec.turno in TURNOS and lec.mm is not None
+    }
+    for puesto, lectura in filas:
+        doble = lectura.turno == TURNO_DIARIO and (lectura.fecha, puesto.id) in con_turnos
         d = por_dia.setdefault(
             (lectura.fecha, puesto.id),
-            {"puesto": puesto, "mm": None, "origenes": set(), "categorias": set()},
+            {"puesto": puesto, "mm": None, "origenes": set(), "categorias": set(), "doble": False},
         )
+        if doble:
+            d["doble"] = True
+            continue
         if lectura.mm is not None:  # vacío no suma ni se vuelve 0
             d["mm"] = (d["mm"] or Decimal(0)) + lectura.mm
         d["origenes"].add(lectura.origen)
@@ -324,7 +341,12 @@ def exportar_planilla(db: Session, anio_hidrologico: int, departamento: str | No
         hoja.cell(
             row=fila,
             column=8,
-            value=f"origen: {', '.join(sorted(d['origenes']))} · {', '.join(sorted(d['categorias']))}",
+            value=f"origen: {', '.join(sorted(d['origenes']))} · {', '.join(sorted(d['categorias']))}"
+            + (
+                " · se usaron los turnos 07/17 y se descartó el acumulado diario"
+                if d["doble"]
+                else ""
+            ),
         )
         fila += 1
     salida = io.BytesIO()

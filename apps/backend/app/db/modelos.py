@@ -361,6 +361,10 @@ class SolicitudAsistencia(Base):
     adjuntos: Mapped[list | None] = mapped_column(JSONB)
     idempotency_key: Mapped[str | None] = mapped_column(String(36))
     mensaje_externo_id: Mapped[str | None] = mapped_column(String(120))
+    # Pedidos por texto libre sin coordenadas: ubicación por referencia y verificación del operador.
+    ubicacion_aproximada: Mapped[bool] = mapped_column(Boolean, default=False)
+    referencia_ubicacion: Mapped[str | None] = mapped_column(Text)
+    requiere_verificacion: Mapped[bool] = mapped_column(Boolean, default=False)
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 

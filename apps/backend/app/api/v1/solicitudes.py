@@ -6,6 +6,7 @@ La ciudadanía y los productores ven únicamente sus propias solicitudes.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import timedelta
 from typing import Literal
@@ -24,7 +25,8 @@ from fastapi import (
 from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
@@ -36,6 +38,7 @@ from app.db.consultas import sector_de_punto
 from app.db.modelos import Cuadrilla, SolicitudAsistencia, Tarea, Usuario
 from app.db.sesion import get_db
 from app.domain import cuadrillas
+from app.servicios import ordenes as srv_ordenes
 
 router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 _MANDOS = ("operador", "decisor", "admin")
@@ -77,10 +80,22 @@ def solicitud_a_dict(s: SolicitudAsistencia, con_ubicacion: bool = True) -> dict
         "adjuntos": [
             {"n": a["n"], "mime": a["mime"], "bytes": a["bytes"]} for a in (s.adjuntos or [])
         ],
+        "ubicacion_aproximada": bool(s.ubicacion_aproximada),
+        "referencia_ubicacion": s.referencia_ubicacion,
+        "requiere_verificacion": bool(s.requiere_verificacion),
         "creado_en": s.creado_en.isoformat(),
         "actualizado_en": s.actualizado_en.isoformat(),
         "categoria": "SIMULADO",
     }
+
+
+def _por_clave(db: Session, usuario_id: int, clave: str) -> SolicitudAsistencia | None:
+    return db.execute(
+        select(SolicitudAsistencia).where(
+            SolicitudAsistencia.solicitante_id == usuario_id,
+            SolicitudAsistencia.idempotency_key == clave,
+        )
+    ).scalar_one_or_none()
 
 
 def _aplicar_cuota(db: Session, usuario: Usuario) -> None:
@@ -133,33 +148,42 @@ def crear(
             clave = str(uuid.UUID(idempotency_key))
         except ValueError:
             raise HTTPException(422, "Idempotency-Key debe ser un UUID") from None
-        previa = db.execute(
-            select(SolicitudAsistencia)
-            .where(
-                SolicitudAsistencia.solicitante_id == usuario.id,
-                SolicitudAsistencia.creado_en >= ahora() - timedelta(hours=24),
-                SolicitudAsistencia.detalle["idempotency_key"].astext == clave,
-            )
-            .order_by(SolicitudAsistencia.id)
-            .limit(1)
-        ).scalar_one_or_none()
+        previa = _por_clave(db, usuario.id, clave)
         if previa is not None:
             response.status_code = 200
             return solicitud_a_dict(previa)
     _aplicar_cuota(db, usuario)
-    solicitud = SolicitudAsistencia(
-        solicitante_id=usuario.id,
-        origen=datos.origen,
-        tipo=datos.tipo,
-        personas=datos.personas,
-        animales=datos.animales,
-        texto=datos.texto,
-        geom=WKTElement(f"POINT({datos.lon} {datos.lat})", srid=SRID),
-        sector_id=sector_de_punto(db, datos.lon, datos.lat),
-        detalle={"idempotency_key": clave} if clave else None,
-    )
-    db.add(solicitud)
-    db.flush()
+    valores = {
+        "solicitante_id": usuario.id,
+        "origen": datos.origen,
+        "tipo": datos.tipo,
+        "personas": datos.personas,
+        "animales": datos.animales,
+        "texto": datos.texto,
+        "geom": WKTElement(f"POINT({datos.lon} {datos.lat})", srid=SRID),
+        "sector_id": sector_de_punto(db, datos.lon, datos.lat),
+        "estado": "recibida",
+        "idempotency_key": clave,
+        "creado_en": ahora(),
+        "actualizado_en": ahora(),
+    }
+    # ON CONFLICT sobre el índice único parcial (solicitante, clave): dos envíos simultáneos con la
+    # misma clave crean una sola solicitud, sin importar cuánto tiempo pasó entre ellos.
+    nuevo_id = db.execute(
+        insert(SolicitudAsistencia)
+        .values(**valores)
+        .on_conflict_do_nothing(
+            index_elements=["solicitante_id", "idempotency_key"],
+            index_where=text("idempotency_key IS NOT NULL"),
+        )
+        .returning(SolicitudAsistencia.id)
+    ).scalar_one_or_none()
+    if nuevo_id is None:  # perdió la carrera contra otro envío con la misma clave
+        db.rollback()
+        previa = _por_clave(db, usuario.id, clave)
+        response.status_code = 200
+        return solicitud_a_dict(previa)
+    solicitud = db.get(SolicitudAsistencia, nuevo_id)
     auditoria.registrar(
         db, "solicitud_creada", f"solicitudes/{solicitud.id}", usuario.id, ip_cliente(request)
     )
@@ -178,10 +202,11 @@ def listar(
     estado: str | None = Query(default=None, max_length=20),
     sector_id: str | None = Query(default=None, max_length=10),
     limite: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=100000),
     usuario: Usuario = Depends(requiere_rol("ciudadano", "productor", *_MANDOS)),
     db: Session = Depends(get_db),
 ) -> dict:
-    consulta = select(SolicitudAsistencia).order_by(SolicitudAsistencia.id.desc()).limit(limite)
+    consulta = select(SolicitudAsistencia)
     if usuario.rol in ("ciudadano", "productor"):
         consulta = consulta.where(SolicitudAsistencia.solicitante_id == usuario.id)
     else:
@@ -193,8 +218,18 @@ def listar(
         consulta = consulta.where(SolicitudAsistencia.estado == estado)
     if sector_id:
         consulta = consulta.where(SolicitudAsistencia.sector_id == sector_id)
-    filas = db.execute(consulta).scalars().all()
-    return {"solicitudes": [solicitud_a_dict(s) for s in filas]}
+    total = db.execute(select(func.count()).select_from(consulta.subquery())).scalar_one()
+    filas = (
+        db.execute(consulta.order_by(SolicitudAsistencia.id.desc()).limit(limite).offset(offset))
+        .scalars()
+        .all()
+    )
+    return {
+        "solicitudes": [solicitud_a_dict(s) for s in filas],
+        "total": total,
+        "limite": limite,
+        "offset": offset,
+    }
 
 
 @router.get("/{solicitud_id}")
@@ -225,8 +260,19 @@ def tipo_por_firma(datos: bytes) -> str | None:
     return None
 
 
-def _solicitud_visible(db: Session, solicitud_id: int, usuario: Usuario) -> SolicitudAsistencia:
-    s = db.get(SolicitudAsistencia, solicitud_id)
+def _solicitud_visible(
+    db: Session, solicitud_id: int, usuario: Usuario, bloquear: bool = False
+) -> SolicitudAsistencia:
+    s = (
+        db.execute(
+            select(SolicitudAsistencia)
+            .where(SolicitudAsistencia.id == solicitud_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if bloquear
+        else db.get(SolicitudAsistencia, solicitud_id)
+    )
     if s is None or (usuario.rol in ("ciudadano", "productor") and s.solicitante_id != usuario.id):
         raise HTTPException(404, "Solicitud no encontrada")
     return s
@@ -255,12 +301,14 @@ def _aplicar_tope_almacenamiento(db: Session, usuario: Usuario, nuevos: int) -> 
 def subir_adjunto(
     solicitud_id: int,
     request: Request,
+    response: Response,
     archivo: UploadFile = File(..., description="Imagen JPEG, PNG o WebP"),
     usuario: Usuario = Depends(requiere_rol("ciudadano", "productor", *_MANDOS)),
     db: Session = Depends(get_db),
 ) -> dict:
     cfg = get_settings()
-    s = _solicitud_visible(db, solicitud_id, usuario)
+    # Se bloquea la fila: dos subidas simultáneas no pueden tomar el mismo número de adjunto.
+    s = _solicitud_visible(db, solicitud_id, usuario, bloquear=True)
     if (archivo.content_type or "").lower() not in TIPOS_IMAGEN:
         raise HTTPException(
             415, "Tipo de archivo no permitido: solo image/jpeg, image/png o image/webp"
@@ -273,8 +321,19 @@ def subir_adjunto(
     mime = tipo_por_firma(contenido)
     if mime is None:
         raise HTTPException(415, "El contenido no es una imagen JPEG, PNG o WebP válida")
-    _aplicar_tope_almacenamiento(db, usuario, len(contenido))
     existentes = list(s.adjuntos or [])
+    huella = hashlib.sha256(contenido).hexdigest()
+    repetido = next((a for a in existentes if a.get("sha256") == huella), None)
+    if repetido is not None:  # la misma foto reenviada (reintento de la cola offline)
+        response.status_code = 200
+        return {
+            "n": repetido["n"],
+            "mime": repetido["mime"],
+            "bytes": repetido["bytes"],
+            "solicitud_id": s.id,
+            "duplicado": True,
+        }
+    _aplicar_tope_almacenamiento(db, usuario, len(contenido))
     if len(existentes) >= cfg.adjuntos_max_por_solicitud:
         raise HTTPException(
             409, f"Máximo de {cfg.adjuntos_max_por_solicitud} adjuntos por solicitud"
@@ -290,6 +349,7 @@ def subir_adjunto(
             "n": n,
             "mime": mime,
             "bytes": len(contenido),
+            "sha256": huella,
             "archivo": nombre,
             "subido_por": usuario.id,
             "subido_en": ahora().isoformat(),
@@ -341,7 +401,14 @@ def actualizar(
     usuario: Usuario = Depends(requiere_rol(*_MANDOS)),
     db: Session = Depends(get_db),
 ) -> dict:
-    s = db.get(SolicitudAsistencia, solicitud_id)
+    # Fila bloqueada: dos operadores que avanzan el estado a la vez se serializan (el segundo ve el
+    # estado nuevo y recibe 409 si la transición ya no corresponde).
+    s = db.execute(
+        select(SolicitudAsistencia)
+        .where(SolicitudAsistencia.id == solicitud_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
     if s is None:
         raise HTTPException(404, "Solicitud no encontrada")
     esperado = ESTADOS[ESTADOS.index(s.estado) + 1] if s.estado != "resuelta" else None
@@ -362,6 +429,10 @@ def actualizar(
             if cuadrilla
             else ("ganadera" if s.animales and not s.personas else "humana")
         )
+        if cuadrilla is None:  # sin cuadrilla indicada: la del tipo con menos carga
+            cid = srv_ordenes.cuadrilla_menos_cargada(db, tipo)
+            cuadrilla = db.get(Cuadrilla, cid) if cid else None
+        srv_ordenes.marcar_ocupada(db, cuadrilla.id if cuadrilla else None)
         db.add(
             Tarea(
                 cuadrilla_id=cuadrilla.id if cuadrilla else None,

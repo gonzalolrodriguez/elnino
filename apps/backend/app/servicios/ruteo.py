@@ -50,7 +50,12 @@ def _nodo_cercano(db: Session, lon: float, lat: float) -> tuple[int, float] | No
     return None if fila is None else (int(fila[0]), float(fila[1]))
 
 
-def _consulta_aristas(perfil: str, comprometidos: list[str], exentos: list[str]) -> str:
+def _consulta_aristas(
+    perfil: str,
+    comprometidos: list[str],
+    exentos: list[str],
+    accesos_bloqueados: list[int] | None = None,
+) -> str:
     """SQL de aristas para ``pgr_dijkstra``: costo en segundos según perfil y superficie."""
     vel = dom.velocidades(perfil)
     # Sin superficie conocida se asume tierra (criterio conservador).
@@ -76,6 +81,16 @@ def _consulta_aristas(perfil: str, comprometidos: list[str], exentos: list[str])
         "longitud_m IS NOT NULL",
         f"{superficie} IN ({permitidas})",
     ]
+    bloqueados = [int(i) for i in (accesos_bloqueados or [])]
+    if bloqueados:
+        # Un acceso cerrado (por el operador, la lluvia o el agua) corta las aristas de la red que
+        # lo recorren: las que quedan, en su mayor parte, dentro de ``acceso_red_vial_buffer_m``.
+        radio = float(supuesto("acceso_red_vial_buffer_m"))
+        where.append(
+            "NOT EXISTS (SELECT 1 FROM accesos a WHERE a.id IN ("
+            + ", ".join(str(i) for i in bloqueados)
+            + f") AND ST_Covers(ST_Buffer(a.geom::geography, {radio!r}), red_vial.geom::geography))"
+        )
     if perfil == dom.ARREO:
         if zona:
             factor = float(supuesto("arreo_penalizacion_zona_comprometida"))
@@ -95,13 +110,14 @@ def _ruta_en_red(
     destino: tuple[float, float],
     comprometidos: list[str],
     exentos: list[str],
+    accesos_bloqueados: list[int] | None = None,
 ) -> dict | None:
     maximo = float(supuesto("ruteo_distancia_maxima_a_red_m"))
     n_o = _nodo_cercano(db, *origen)
     n_d = _nodo_cercano(db, *destino)
     if n_o is None or n_d is None or n_o[1] > maximo or n_d[1] > maximo:
         return None
-    aristas = _consulta_aristas(perfil, comprometidos, exentos)
+    aristas = _consulta_aristas(perfil, comprometidos, exentos, accesos_bloqueados)
     filas = db.execute(
         text(
             "SELECT d.seq, d.edge, d.cost, r.nombre, r.superficie, r.longitud_m, r.categoria, r.fuente "
@@ -177,15 +193,30 @@ def resolver_ruta(
     """Ruta con pgRouting si hay red y alcanza; si no, estimación aproximada con su limitación."""
     sector_origen = sector_de_punto(db, *origen)
     comprometidos: list[str] = []
-    escenario = None
+    # El escenario se calcula siempre: la lluvia y los cierres de caminos valen aunque no se
+    # informe la altura del río (sin altura no hay sectores comprometidos por el agua).
+    escenario = contexto.calcular_escenario(
+        db, altura_m if altura_m is not None else 0.0, lluvia_mm, caminos_cerrados or set()
+    )
     if altura_m is not None:
-        escenario = contexto.calcular_escenario(db, altura_m, lluvia_mm, caminos_cerrados or set())
         comprometidos = [s.id for s in escenario.sectores if s.estado == esc.COMPROMETIDO]
+    # Accesos que no se pueden usar: el arreo solo respeta el cierre del operador; los vehículos
+    # también la lluvia y el anegamiento.
+    estados_cerrados = (
+        {esc.ACCESO_CERRADO_OPERADOR}
+        if perfil == dom.ARREO
+        else {esc.ACCESO_CERRADO_OPERADOR, esc.ACCESO_INTRANSITABLE_LLUVIA, esc.ACCESO_ANEGADO}
+    )
+    bloqueados = sorted(
+        a.id for sec in escenario.sectores for a in sec.accesos if a.estado in estados_cerrados
+    )
+    base_bloqueados = bloqueados
     base = {
         "perfil": perfil,
         "origen": {"lon": origen[0], "lat": origen[1], "sector_id": sector_origen},
         "destino": {"lon": destino[0], "lat": destino[1]},
         "sectores_comprometidos": comprometidos,
+        "accesos_bloqueados": bloqueados,
         "categoria": "SIMULADO",
         "nota": NOTA_CATEGORIA,
         "advertencias": [],
@@ -193,7 +224,7 @@ def resolver_ruta(
 
     if red_disponible(db):
         exentos = [sector_origen] if sector_origen in comprometidos else []
-        ruta = _ruta_en_red(db, perfil, origen, destino, comprometidos, exentos)
+        ruta = _ruta_en_red(db, perfil, origen, destino, comprometidos, exentos, base_bloqueados)
         if ruta is not None:
             if exentos and perfil != dom.ARREO:
                 base["advertencias"].append(
@@ -209,13 +240,7 @@ def resolver_ruta(
     linea = dom.haversine_m(*origen, *destino)
     candidatos: list[dom.AccesoCandidato] | None = None
     if sector_origen is not None:
-        estado = (
-            escenario.sector(sector_origen)
-            if escenario is not None
-            else contexto.calcular_escenario(db, 0.0, 0.0, caminos_cerrados or set()).sector(
-                sector_origen
-            )
-        )
+        estado = escenario.sector(sector_origen)
         candidatos = _accesos_candidatos(db, estado, *origen)
     aprox = dom.estimar_aproximado(perfil, linea, candidatos)
     if aprox is None:

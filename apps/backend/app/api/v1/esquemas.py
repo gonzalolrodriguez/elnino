@@ -6,9 +6,10 @@ import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.config.settings import get_settings
+from app.domain import ganaderia
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
@@ -71,11 +72,42 @@ class RegistroCiudadano(_Credenciales, _ConConsentimiento):
     lon: float | None = Field(default=None, ge=-180, le=180)
     lat: float | None = Field(default=None, ge=-90, le=90)
 
+    @model_validator(mode="after")
+    def coherente(self):
+        if self.menores + self.mayores > self.integrantes:
+            raise ValueError("menores + mayores no puede superar a los integrantes")
+        if (self.lon is None) != (self.lat is None):
+            raise ValueError("Indicar lon y lat juntas")
+        return self
+
 
 class StockIn(_Base):
     especie: str = Field(min_length=2, max_length=40)
     categoria_animal: str = Field(min_length=2, max_length=60)
     cantidad: int = Field(ge=0, le=100000)
+
+    @field_validator("especie")
+    @classmethod
+    def validar_especie(cls, v: str) -> str:
+        """Vocabulario cerrado: vacas -> bovino, colmenas -> apicultura."""
+        canonica = ganaderia.especie_canonica(v)
+        if canonica is None:
+            raise ValueError(
+                f"Especie no reconocida: '{v}'. Usar: {', '.join(ganaderia.ESPECIES_PERMITIDAS)}"
+            )
+        return canonica
+
+    @model_validator(mode="after")
+    def validar_categoria(self):
+        if self.especie == ganaderia.ESPECIE_BOVINO and not (
+            ganaderia.categoria_canonica(self.categoria_animal)
+            or ganaderia.es_categoria_generica(self.categoria_animal)
+        ):
+            raise ValueError(
+                f"Categoría bovina no reconocida: '{self.categoria_animal}'. Usar: "
+                + ", ".join(ganaderia.CATEGORIAS_BOVINAS_PERMITIDAS)
+            )
+        return self
 
 
 class EstablecimientoIn(_Base):
@@ -115,6 +147,13 @@ class UsuarioOut(BaseModel):
     estado: str
     creado_en: datetime
     ultimo_login: datetime | None = None
+
+
+class UsuarioAdminOut(UsuarioOut):
+    """Salida para el admin: suma el estado de bloqueo por intentos fallidos de login."""
+
+    intentos_fallidos: int = 0
+    bloqueado_hasta: datetime | None = None
 
 
 class SesionOut(BaseModel):

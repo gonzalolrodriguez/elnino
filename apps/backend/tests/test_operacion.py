@@ -625,10 +625,14 @@ def test_websocket_exige_token_y_recibe_eventos(client, como):
         )
         assert ws_op.receive_json()["tipo"] == "escenario"
 
+        # La alerta va al sector de la persona: solo quienes viven o producen ahí la reciben.
+        mi_sector = client.get("/api/v1/mi/sector", headers=como("ciudadano1")).json()["sectores"][
+            0
+        ]
         o = client.post(
             "/api/v1/ordenes",
             headers=como("decisor"),
-            json={"tipo": "alerta", "sectores": ["S4"], "fundamento": FUNDAMENTO},
+            json={"tipo": "alerta", "sectores": [mi_sector["id"]], "fundamento": FUNDAMENTO},
         )
         assert o.status_code == 201
         evento = ws_op.receive_json()

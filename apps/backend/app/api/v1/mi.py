@@ -108,20 +108,24 @@ def guardar_grupo(
     if g is None:
         g = GrupoFamiliar(usuario_id=usuario.id)
         db.add(g)
-    g.integrantes, g.menores, g.mayores, g.mascotas = (
-        datos.integrantes,
-        datos.menores,
-        datos.mayores,
-        datos.mascotas,
-    )
+    # Un campo omitido queda SIN CAMBIOS (un cliente que solo corrige la cantidad de integrantes no
+    # borra el teléfono ni los datos de salud); un campo enviado como null los borra.
+    enviados = datos.model_fields_set
+    for campo in ("integrantes", "menores", "mayores", "mascotas"):
+        if campo in enviados:
+            setattr(g, campo, getattr(datos, campo))
+    if (g.menores or 0) + (g.mayores or 0) > (g.integrantes or 1):
+        raise HTTPException(422, "menores + mayores no puede superar a los integrantes")
     datos_personales.guardar_sensibles(
-        g, telefono=datos.telefono, salud=datos.salud, vulnerabilidad=datos.vulnerabilidad
+        g,
+        **{c: getattr(datos, c) for c in ("telefono", "salud", "vulnerabilidad") if c in enviados},
     )
-    if datos.lon is not None:
-        g.domicilio = _punto(datos.lon, datos.lat)
-        g.sector_id = sector_de_punto(db, datos.lon, datos.lat)
-    else:
-        g.domicilio, g.sector_id = None, None
+    if "lon" in enviados or "lat" in enviados:
+        if datos.lon is not None:
+            g.domicilio = _punto(datos.lon, datos.lat)
+            g.sector_id = sector_de_punto(db, datos.lon, datos.lat)
+        else:
+            g.domicilio, g.sector_id = None, None
     g.actualizado_en = ahora()
     db.flush()
     auditoria.registrar(
@@ -448,7 +452,6 @@ def mi_sector(usuario: Usuario = Depends(usuario_actual), db: Session = Depends(
             + sum((calc.menores or {}).values())
         )
 
-    ordenes = db.execute(select(Orden).order_by(Orden.id.desc()).limit(50)).scalars().all()
     sectores = []
     for sid in ids:
         e = escenario.sector(sid)
@@ -473,9 +476,15 @@ def mi_sector(usuario: Usuario = Depends(usuario_actual), db: Session = Depends(
                         "fundamento": o.fundamento,
                         "creada_en": o.creada_en.isoformat(),
                     }
-                    for o in ordenes
-                    if sid in o.sectores
-                ][:5],
+                    # Filtro en SQL (JSONB @>): un sector no pierde alertas porque otras órdenes
+                    # más nuevas sean de otros sectores.
+                    for o in db.execute(
+                        select(Orden)
+                        .where(Orden.sectores.contains([sid]))
+                        .order_by(Orden.id.desc())
+                        .limit(5)
+                    ).scalars()
+                ],
                 "categoria": "SIMULADO",
                 "fuente": contexto.FUENTE_K10,
             }

@@ -5,8 +5,12 @@ un hilo) y llaman a ``publicar``, que entrega el mensaje al bucle de eventos del
 conexión recibe solo lo que su rol puede ver:
 
 - ``mandos`` (operador, decisor, admin, cuadrilla): todos los eventos.
-- ``orden``: también ciudadanía y productores (es la alerta que deben recibir).
+- ``orden``: también las personas alcanzadas por la orden (``destinatarios``: quienes viven o
+  producen en los sectores). Ciudadanía y productores de otros sectores no la reciben.
 - ``solicitud``: además, el propio solicitante.
+
+Cada envío es concurrente y tiene su propio plazo (``PLAZO_ENVIO_S``): un cliente lento o colgado no
+retrasa a los demás ni al hilo que publicó; si no responde a tiempo se lo desconecta.
 
 Autorización vigente: cada conexión guarda el vencimiento (``exp``) del token de acceso con el que
 se autenticó. Al vencer se cierra con 1008 (lo hace el temporizador de ``ws.py`` y, por si el
@@ -25,6 +29,7 @@ from dataclasses import dataclass
 from fastapi import WebSocket
 
 ROLES_MANDOS = ("operador", "decisor", "admin", "cuadrilla")
+PLAZO_ENVIO_S = 5.0
 
 
 @dataclass
@@ -75,31 +80,50 @@ class Difusor:
                 pass
         return len(objetivo)
 
-    def _destinatarios(self, tipo: str, usuario_id: int | None) -> list[_Conexion]:
+    def conexiones_activas(self) -> int:
+        with self._lock:
+            return len(self._conexiones)
+
+    def _destinatarios(
+        self, tipo: str, usuario_id: int | None, destinatarios: frozenset[int] | None
+    ) -> list[_Conexion]:
         with self._lock:
             conexiones = list(self._conexiones)
         elegidos = []
         for c in conexiones:
             if (
                 c.rol in ROLES_MANDOS
-                or tipo == "orden"
+                or (tipo == "orden" and destinatarios is not None and c.usuario_id in destinatarios)
                 or (tipo == "solicitud" and usuario_id is not None and c.usuario_id == usuario_id)
             ):
                 elegidos.append(c)
         return elegidos
 
-    async def _enviar(self, tipo: str, datos: dict, usuario_id: int | None) -> None:
-        for c in self._destinatarios(tipo, usuario_id):
-            if c.exp <= time.time():  # token vencido: no se le entrega nada y se cierra
-                self.desconectar(c.ws)
-                await self._cerrar([c])
-                continue
-            try:
-                await c.ws.send_json({"tipo": tipo, "datos": datos})
-            except Exception:
-                self.desconectar(c.ws)
+    async def _enviar_a(self, c: _Conexion, mensaje: dict) -> None:
+        if c.exp <= time.time():  # token vencido: no se le entrega nada y se cierra
+            self.desconectar(c.ws)
+            await self._cerrar([c])
+            return
+        try:
+            await asyncio.wait_for(c.ws.send_json(mensaje), timeout=PLAZO_ENVIO_S)
+        except Exception:  # cliente caído, lento o cerrado
+            self.desconectar(c.ws)
+            await self._cerrar([c], 1011)
 
-    def publicar(self, tipo: str, datos: dict, usuario_id: int | None = None) -> None:
+    async def _enviar(
+        self, tipo: str, datos: dict, usuario_id: int | None, destinatarios: frozenset[int] | None
+    ) -> None:
+        mensaje = {"tipo": tipo, "datos": datos}
+        elegidos = self._destinatarios(tipo, usuario_id, destinatarios)
+        await asyncio.gather(*(self._enviar_a(c, mensaje) for c in elegidos))
+
+    def publicar(
+        self,
+        tipo: str,
+        datos: dict,
+        usuario_id: int | None = None,
+        destinatarios: set[int] | frozenset[int] | None = None,
+    ) -> None:
         """Encola el evento (no bloquea ni falla si no hay conexiones ni bucle)."""
         with self._lock:
             bucle = self._bucle
@@ -107,7 +131,15 @@ class Difusor:
         if bucle is None or not hay or bucle.is_closed():
             return
         try:
-            asyncio.run_coroutine_threadsafe(self._enviar(tipo, datos, usuario_id), bucle)
+            asyncio.run_coroutine_threadsafe(
+                self._enviar(
+                    tipo,
+                    datos,
+                    usuario_id,
+                    None if destinatarios is None else frozenset(destinatarios),
+                ),
+                bucle,
+            )
         except RuntimeError:
             pass
 
