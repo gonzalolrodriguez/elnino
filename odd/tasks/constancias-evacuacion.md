@@ -44,7 +44,7 @@
 |---|---|---|---|
 | F1 | Backend: migración y modelo de constancia; endpoints de cierre con constancia y adjuntos, de confirmación del evacuado (app y SMS) y de estados de evacuación. Conteos en `/panel/resumen`. Tests. | escritor backend (después de C2/C3) | Hecha |
 | F2 | Web: vista de constancias y discrepancias en el panel; bloques en el tablero D1; mapa de origen a destino. | escritor web (junto con D1) | Pendiente |
-| F3 | App: cierre con constancia en la pantalla de cuadrilla (GPS, centro, fotos, nota, offline); confirmación del evacuado en Alertas o Estado de tu sector. | escritor mobile (junto con el Monitor) | Pendiente |
+| F3 | App: cierre con constancia en la pantalla de cuadrilla (GPS, centro, fotos, nota, offline); confirmación del evacuado en Alertas o Estado de tu sector. | escritor mobile (junto con el Monitor) | Hecho (adef8fa): cola offline en dos tiempos con Idempotency-Key estable, tarjeta de confirmación (app y SMS con aviso del teléfono registrado, reemplazo al reabrir), bloque evacuaciones del Monitor, envío sin GPS con referencia. tsc sin errores, jest 220/220, expo export android correcto |
 
 ## Evidencia F1 (backend, 19/11/2026)
 
