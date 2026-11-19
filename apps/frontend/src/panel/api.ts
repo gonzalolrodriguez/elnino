@@ -6,6 +6,10 @@ import type {
   CalculoGanadero,
   CamposBitacora,
   Centro,
+  CierreEvacuacion,
+  ConsultaConfirmacion,
+  Evacuacion,
+  ListaEvacuaciones,
   Cuadrilla,
   EntradaBitacora,
   EntradaEscenario,
@@ -77,6 +81,22 @@ export const api = {
     const s = q.toString();
     return solicitar<{ solicitudes: Solicitud[]; total?: number }>(`/solicitudes${s ? `?${s}` : ""}`, a);
   },
+  evacuaciones: (f: { estado?: string; sector_id?: string; limite?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (f.estado) q.set("estado", f.estado);
+    if (f.sector_id) q.set("sector_id", f.sector_id);
+    q.set("limite", String(f.limite ?? 200));
+    if (f.offset) q.set("offset", String(f.offset));
+    return solicitar<ListaEvacuaciones>(`/evacuaciones?${q.toString()}`, a);
+  },
+  constancia: (tareaId: number) => solicitar<Evacuacion>(`/tareas/${tareaId}/constancia`, a),
+  cerrarConConstancia: (tareaId: number, c: CierreEvacuacion, claveIdempotencia: string) =>
+    solicitar<{ repetida: boolean; evacuacion: { estado: string } }>(`/tareas/${tareaId}/cierre`, { ...a, cuerpo: c, cabeceras: { "Idempotency-Key": claveIdempotencia } }),
+  reabrirConfirmacion: (tareaId: number, motivo?: string) =>
+    solicitar<{ tarea_id: number; estado: string; respuesta_previa: string | null; reabierta: boolean; nota: string }>(`/evacuaciones/${tareaId}/confirmacion/reabrir`, { ...a, cuerpo: motivo ? { motivo } : {} }),
+  misConfirmaciones: () => solicitar<{ confirmaciones: ConsultaConfirmacion[]; pendientes: number }>("/mi/confirmaciones", a),
+  responderConfirmacion: (c: { solicitud_id?: number; codigo?: string; respuesta: "si" | "no" | "problema"; comentario?: string }) =>
+    solicitar<{ respuesta: string; repetida: boolean; nota: string }>("/mi/confirmaciones", { ...a, cuerpo: c }),
   resumenPanel: () => solicitar<ResumenPanel>("/panel/resumen", a),
   resumenAdmin: () => solicitar<ResumenAdmin>("/admin/resumen", a),
   avanzarSolicitud: (id: number, estado: string, cuadrilla_id?: number) =>
@@ -142,3 +162,21 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   // Se libera tarde: revocar enseguida puede cortar la descarga en algunos navegadores.
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+/** Sube una foto de la constancia (multipart, campo `archivo`). El backend responde 200 con `duplicado` si ya estaba. */
+export async function subirFotoCierre(tareaId: number, archivo: File): Promise<{ duplicado?: boolean }> {
+  const f = new FormData();
+  f.append("archivo", archivo);
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/tareas/${tareaId}/cierre/adjuntos`, { method: "POST", headers: cabeceras(), body: f, credentials: "include" });
+  } catch {
+    throw new ApiError(0, "sin_conexion", SIN_CONEXION);
+  }
+  const datos = (await r.json().catch(() => null)) as { error?: { mensaje?: string }; duplicado?: boolean } | null;
+  if (!r.ok) throw new ApiError(r.status, "error", datos?.error?.mensaje ?? `No se pudo subir la foto (error ${r.status}).`);
+  return { duplicado: datos?.duplicado };
+}
+
+/** Descarga una foto de la constancia con la sesión (no se puede usar <img src> directo: lleva token). */
+export const fotoCierre = (tareaId: number, n: number): Promise<Blob> => descargar(`/tareas/${tareaId}/cierre/adjuntos/${n}`);

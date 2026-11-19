@@ -114,7 +114,9 @@ describe("pantalla de cuadrilla", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Iniciar" }));
     await waitFor(() => expect(screen.getByTestId("estado-7")).toHaveTextContent("En curso"));
     expect(JSON.parse(String((llamadas(f, "PATCH /tareas/7")[0][1] as RequestInit).body))).toEqual({ estado: "en_curso" });
-    expect(screen.getByRole("button", { name: "Completar" })).toBeInTheDocument();
+    // Una tarea ligada a un pedido es una evacuación: se cierra con constancia, no con un "Completar" suelto.
+    expect(screen.getByRole("button", { name: "Cerrar con constancia" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Completar" })).not.toBeInTheDocument();
   });
 
   it("muestra el estado vacío y el error de carga", async () => {

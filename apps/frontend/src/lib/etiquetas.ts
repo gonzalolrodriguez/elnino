@@ -96,6 +96,34 @@ export const ORIGEN_LLUVIA: Record<string, string> = {
 };
 export const etiquetaOrigenLluvia = de(ORIGEN_LLUVIA);
 
+export const ESTADO_EVACUACION: Record<string, string> = {
+  pendiente: "Pendiente",
+  en_curso: "En curso",
+  cerrada_cuadrilla: "Cerrada por la cuadrilla, sin confirmar",
+  verificada: "Verificada por el evacuado",
+  con_discrepancia: "Con discrepancia a revisar",
+};
+export const etiquetaEstadoEvacuacion = de(ESTADO_EVACUACION);
+
+/** Motivos de discrepancia en palabras corrientes: son una marca para revisar, no una acusación. */
+export const MOTIVO_DISCREPANCIA: Record<string, string> = {
+  evacuado_dice_no: "La persona evacuada respondió que no llegó al destino informado.",
+  evacuado_reporta_problema: "La persona evacuada avisó que hubo un problema en el traslado.",
+  destino_lejos_del_centro: "El punto de destino marcado queda lejos del centro de recepción elegido.",
+};
+export const etiquetaMotivoDiscrepancia = de(MOTIVO_DISCREPANCIA);
+
+export const RESPUESTA_CONFIRMACION: Record<string, string> = { si: "Sí, llegó", no: "No llegó", problema: "Hubo un problema" };
+export const etiquetaRespuestaConfirmacion = de(RESPUESTA_CONFIRMACION);
+
+export const CANAL_CONFIRMACION: Record<string, string> = {
+  app: "App o web",
+  sms_sim: "SMS (simulado)",
+  whatsapp_sim: "WhatsApp (simulado)",
+  ivr_sim: "Llamada 103 (simulada)",
+};
+export const etiquetaCanalConfirmacion = de(CANAL_CONFIRMACION);
+
 /** Fecha y hora en horario de Argentina (UTC-3): "19/11/2026, 21:40". */
 export function fechaHora(iso: string | null | undefined): string {
   if (!iso) return "sin fecha";

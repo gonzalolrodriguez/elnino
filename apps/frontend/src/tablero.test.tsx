@@ -238,12 +238,31 @@ describe("Tablero", () => {
   it("si el backend manda el bloque de evacuaciones lo muestra", async () => {
     const r = {
       ...RESUMEN,
-      evacuaciones: { categoria: "SIMULADO", fuente: "x", fecha_dato: null, por_estado: { pendiente: 1, verificada: 2 }, por_sector: { S4: 3 }, verificadas_pct: 67, discrepancias_abiertas: 1, personas_trasladadas: 120, animales_trasladados: 30 },
+      evacuaciones: {
+        categoria: "SIMULADO",
+        fuente: "x",
+        fecha_dato: "2026-11-19",
+        total: 4,
+        por_estado: { pendiente: 1, en_curso: 0, cerrada_cuadrilla: 1, verificada: 1, con_discrepancia: 1 },
+        por_sector: { S4: { pendiente: 1, en_curso: 0, cerrada_cuadrilla: 1, verificada: 1, con_discrepancia: 1 } },
+        verificadas_pct: 33.3,
+        discrepancias_abiertas: 1,
+        personas_trasladadas: 120,
+        animales_trasladados: { bovinos: 30 },
+        animales_trasladados_total: 30,
+        distancia_max_destino_m: 500,
+      },
     };
     conSesion("decisor", { "GET /panel/resumen": ok(r) });
     renderRuta("/comando");
     expect(await screen.findByRole("heading", { name: "Evacuaciones" })).toBeInTheDocument();
-    expect(screen.getByText("67 %")).toBeInTheDocument();
+    expect(screen.getByTestId("evac-verificadas")).toHaveTextContent("33 %");
+    expect(screen.getByTestId("evac-personas")).toHaveTextContent("120");
+    expect(screen.getByTestId("evac-animales")).toHaveTextContent("30");
+    expect(screen.getByTestId("evac-sector-S4")).toHaveTextContent("1");
+    expect(screen.getByTestId("evac-aviso-discrepancias")).toHaveTextContent("1 evacuación para revisar");
+    const bloque = screen.getByRole("heading", { name: "Evacuaciones" }).closest("section") as HTMLElement;
+    expect(within(bloque).getAllByText("SIMULADO").length).toBeGreaterThan(0);
   });
 
   it("muestra el error con reintento cuando el resumen falla", async () => {

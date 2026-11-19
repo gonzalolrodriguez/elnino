@@ -10,6 +10,7 @@ import { useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { api } from "../panel/api";
 import type { Notificacion, Tarea } from "../panel/tipos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
+import { CerrarConConstancia } from "./cuadrilla/CerrarConConstancia";
 
 const ETIQUETA: Record<Tarea["estado"], string> = {
   pendiente: "Pendiente",
@@ -20,7 +21,10 @@ const ETIQUETA: Record<Tarea["estado"], string> = {
 const COLOR: Record<Tarea["estado"], string> = { pendiente: "yellow", en_curso: "blue", completada: "green", cancelada: "gray" };
 const ESTADOS_WS = { conectado: "Tiempo real conectado", conectando: "Conectando tiempo real…", desconectado: "Tiempo real desconectado" } as const;
 
-function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea) => void }) {
+function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: Tarea; alCambiar: (t: Tarea) => void; alRecargar: () => void }) {
+  const [cerrando, setCerrando] = useState(false);
+  // Las tareas de una orden o de un pedido son evacuaciones: se cierran con constancia, no con un simple "Completar".
+  const esEvacuacion = tarea.solicitud_id !== null || tarea.orden_id !== null;
   const [error, setError] = useState<unknown>(null);
   const [trabajando, setTrabajando] = useState(false);
   const cerrada = tarea.estado === "completada" || tarea.estado === "cancelada";
@@ -80,9 +84,14 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
             Iniciar
           </Button>
         )}
-        {tarea.estado === "en_curso" && (
+        {tarea.estado === "en_curso" && !esEvacuacion && (
           <Button size="sm" isLoading={trabajando} onClick={() => void aplicar({ estado: "completada" })}>
             Completar
+          </Button>
+        )}
+        {tarea.estado === "en_curso" && esEvacuacion && !cerrando && (
+          <Button size="sm" onClick={() => setCerrando(true)}>
+            Cerrar con constancia
           </Button>
         )}
         {!cerrada && (
@@ -91,6 +100,16 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
           </Button>
         )}
       </Flex>
+      {cerrando && tarea.estado === "en_curso" && (
+        <CerrarConConstancia
+          tareaId={tarea.id}
+          alCancelar={() => setCerrando(false)}
+          alTerminar={() => {
+            setCerrando(false);
+            alRecargar();
+          }}
+        />
+      )}
     </Box>
   );
 }
@@ -127,7 +146,7 @@ export default function Cuadrilla() {
 
   const alEvento = useCallback(
     (e: EventoTiempoReal) => {
-      if (e.tipo === "tarea") {
+      if (e.tipo === "tarea" || e.tipo === "constancia") {
         setLocales({});
         recargarTareas();
       } else if (e.tipo === "orden") recargarAvisos();
@@ -168,6 +187,10 @@ export default function Cuadrilla() {
                   key={t.id}
                   tarea={locales[t.id] ?? t}
                   alCambiar={(n) => setLocales((l) => ({ ...l, [n.id]: n }))}
+                  alRecargar={() => {
+                    setLocales({});
+                    recargarTareas();
+                  }}
                 />
               ))}
             </Stack>

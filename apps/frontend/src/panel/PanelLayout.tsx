@@ -29,6 +29,7 @@ export const GRUPOS_NAVEGACION: { id: string; titulo: string; secciones: Seccion
     titulo: "Respuesta",
     secciones: [
       { to: "/comando/operacion", texto: "Solicitudes y cuadrillas" },
+      { to: "/comando/evacuaciones", texto: "Evacuaciones" },
       { to: "/comando/ordenes", texto: "Órdenes" },
     ],
   },
@@ -69,14 +70,14 @@ export function PanelLayout() {
   const acumulados = useRef<Record<string, number>>({});
   const alEvento = useCallback(
     (e: EventoTiempoReal) => {
-      if (e.tipo !== "orden" && e.tipo !== "solicitud") return;
+      if (e.tipo !== "orden" && e.tipo !== "solicitud" && e.tipo !== "discrepancia") return;
       const id = `evento-${e.tipo}`;
       const { titulo, detalle } = describirEvento(e);
       const n = (acumulados.current[id] = (acumulados.current[id] ?? 0) + 1);
       const opciones = {
         title: n > 1 ? `${titulo} (${n} nuevas)` : titulo,
         description: n > 1 ? `Última: ${detalle}` : detalle,
-        status: e.tipo === "orden" ? ("warning" as const) : ("info" as const),
+        status: e.tipo === "orden" || e.tipo === "discrepancia" ? ("warning" as const) : ("info" as const),
         duration: 6000,
         isClosable: true,
         position: "bottom-right" as const,

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 import { API_URL, renovarSesion } from "./api";
-import { etiquetaEstadoSolicitud, etiquetaEstadoTarea } from "./etiquetas";
+import { etiquetaEstadoEvacuacion, etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaMotivoDiscrepancia } from "./etiquetas";
 
 const TIPO_ORDEN: Record<string, string> = { alerta: "Alerta", evacuacion_preventiva: "Evacuación preventiva", evacuacion: "Evacuación" };
 
-export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea"; datos: Record<string, unknown> };
+export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea" | "constancia" | "discrepancia"; datos: Record<string, unknown> };
 export type EstadoWs = "desconectado" | "conectando" | "conectado";
 
 const CIERRE_NO_AUTORIZADO = 1008;
@@ -51,7 +51,7 @@ export function useTiempoReal(token: string | null, alEvento: (e: EventoTiempoRe
           if (msg.tipo === "conectado") {
             intentos = 0;
             setEstado("conectado");
-          } else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea") {
+          } else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea" || msg.tipo === "constancia" || msg.tipo === "discrepancia") {
             callback.current({ tipo: msg.tipo, datos: msg.datos ?? {} });
           }
         } catch {
@@ -93,6 +93,8 @@ const TITULOS: Record<EventoTiempoReal["tipo"], string> = {
   solicitud: "Solicitud de asistencia",
   orden: "Orden emitida",
   tarea: "Tarea actualizada",
+  constancia: "Constancia de evacuación",
+  discrepancia: "Evacuación para revisar",
 };
 
 export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle: string } {
@@ -104,6 +106,11 @@ export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle:
     detalle = `Solicitud ${d.id ?? ""} en estado ${etiquetaEstadoSolicitud(String(d.estado ?? "")).toLowerCase()}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}.`;
   } else if (e.tipo === "orden") {
     detalle = `Orden de ${(TIPO_ORDEN[String(d.tipo)] ?? String(d.tipo ?? "")).toLowerCase()} para ${Array.isArray(d.sectores) ? d.sectores.join(", ") : "los sectores indicados"}.`;
+  } else if (e.tipo === "constancia") {
+    detalle = `La tarea ${d.tarea_id ?? ""}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""} quedó ${etiquetaEstadoEvacuacion(String(d.estado ?? "")).toLowerCase()}.`;
+  } else if (e.tipo === "discrepancia") {
+    const motivos = Array.isArray(d.motivos) ? d.motivos.map((m) => etiquetaMotivoDiscrepancia(String(m))).join(" ") : "";
+    detalle = `Tarea ${d.tarea_id ?? ""}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}: ${motivos || "hay algo para revisar."}`;
   } else {
     detalle = d.estado ? `Tarea ${d.id ?? ""}: ${etiquetaEstadoTarea(String(d.estado)).toLowerCase()}.` : "Se crearon o reasignaron tareas.";
   }

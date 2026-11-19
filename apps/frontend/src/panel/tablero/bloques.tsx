@@ -447,25 +447,76 @@ export function BloqueLluvia({ bloque }: { bloque: ResumenPanel["lluvia_7d"] }) 
   );
 }
 
-const ESTADOS_EVACUACION: [string, string][] = [
-  ["pendiente", "Pendiente"],
+const COLUMNAS_EVACUACION = [
+  ["pendiente", "Pendientes"],
   ["en_curso", "En curso"],
-  ["cerrada_cuadrilla", "Cerrada por la cuadrilla"],
-  ["verificada", "Verificada"],
+  ["cerrada_cuadrilla", "Cerradas sin confirmar"],
+  ["verificada", "Verificadas"],
   ["con_discrepancia", "Con discrepancia"],
-];
+] as const;
 
 export function BloqueEvacuaciones({ bloque }: { bloque: ResumenEvacuaciones }) {
-  const filas = ESTADOS_EVACUACION.map(([k, e]) => ({ id: k, etiqueta: e, valor: bloque.por_estado[k] ?? 0 }));
+  const sectores = Object.entries(bloque.por_sector ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  const animales = bloque.animales_trasladados_total ?? Object.values(bloque.animales_trasladados ?? {}).reduce((s, n) => s + n, 0);
+  const abiertas = bloque.discrepancias_abiertas ?? 0;
   return (
-    <Seccion titulo="Evacuaciones" categoria={bloque.categoria} id="tab-evacuaciones">
+    <Seccion titulo="Evacuaciones" categoria={bloque.categoria} id="tab-evacuaciones" derecha={<Link as={RouterLink} to="/comando/evacuaciones" fontSize="sm" fontWeight={600} color="primarioHover">Ver el detalle</Link>}>
       <Flex gap={6} wrap="wrap" mb={3}>
-        <Cifra etiqueta="Personas trasladadas" valor={fmtNum(bloque.personas_trasladadas ?? 0)} categoria={bloque.categoria} />
-        <Cifra etiqueta="Animales trasladados" valor={fmtNum(bloque.animales_trasladados ?? 0)} categoria={bloque.categoria} />
-        <Cifra etiqueta="Verificadas" valor={bloque.verificadas_pct === null || bloque.verificadas_pct === undefined ? "sin dato" : `${fmtNum(bloque.verificadas_pct)} %`} categoria={bloque.categoria} />
-        <Cifra etiqueta="Discrepancias abiertas" valor={fmtNum(bloque.discrepancias_abiertas ?? 0)} categoria={bloque.categoria} />
+        <Cifra testId="evac-personas" etiqueta="Personas trasladadas" valor={fmtNum(bloque.personas_trasladadas ?? 0)} categoria={bloque.categoria} />
+        <Cifra testId="evac-animales" etiqueta="Animales trasladados" valor={fmtNum(animales)} categoria={bloque.categoria} />
+        <Cifra testId="evac-verificadas" etiqueta="Verificadas por el evacuado" valor={bloque.verificadas_pct === null || bloque.verificadas_pct === undefined ? "sin dato" : `${fmtNum(bloque.verificadas_pct, 0)} %`} categoria={bloque.categoria} />
+        <Cifra testId="evac-discrepancias" etiqueta="Discrepancias abiertas" valor={fmtNum(abiertas)} categoria={bloque.categoria} />
       </Flex>
-      <Barras etiqueta="Evacuaciones por estado" filas={filas} />
+      {abiertas > 0 && (
+        <Alert status="warning" variant="subtle" fontSize="sm" mb={3} data-testid="evac-aviso-discrepancias">
+          <AlertIcon />
+          <AlertDescription>
+            {fmtNum(abiertas)} {abiertas === 1 ? "evacuación para revisar" : "evacuaciones para revisar"}: es una marca, no una acusación.{" "}
+            <Link as={RouterLink} to="/comando/evacuaciones" fontWeight={600}>
+              Revisar
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+      <TablaDesplazable etiqueta="Evacuaciones por sector y estado">
+        <Table size="sm" aria-label="Evacuaciones por sector y estado">
+          <Thead>
+            <Tr>
+              <Th>Sector</Th>
+              {COLUMNAS_EVACUACION.map(([, t]) => (
+                <Th key={t} isNumeric>
+                  {t}
+                </Th>
+              ))}
+            </Tr>
+          </Thead>
+          <Tbody>
+            {sectores.length === 0 && (
+              <Tr>
+                <Td colSpan={6}>Todavía no hay evacuaciones.</Td>
+              </Tr>
+            )}
+            {sectores.map(([id, c]) => (
+              <Tr key={id} data-testid={`evac-sector-${id}`}>
+                <Td>{id === "sin_sector" ? "Sin sector" : id}</Td>
+                {COLUMNAS_EVACUACION.map(([k]) => (
+                  <Td key={k} isNumeric>
+                    {fmtNum(c[k] ?? 0)}
+                  </Td>
+                ))}
+              </Tr>
+            ))}
+            <Tr fontWeight={700} data-testid="evac-total">
+              <Td>Total</Td>
+              {COLUMNAS_EVACUACION.map(([k]) => (
+                <Td key={k} isNumeric>
+                  {fmtNum(bloque.por_estado[k] ?? 0)}
+                </Td>
+              ))}
+            </Tr>
+          </Tbody>
+        </Table>
+      </TablaDesplazable>
     </Seccion>
   );
 }

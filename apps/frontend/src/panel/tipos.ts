@@ -268,6 +268,8 @@ export type Tarea = {
 export type Notificacion = {
   id: number;
   orden_id: number | null;
+  tipo?: string;
+  datos?: Record<string, unknown> | null;
   mensaje: string;
   leida: boolean;
   creada_en: string;
@@ -417,13 +419,18 @@ export type ResumenCuadrilla = {
   tareas: Record<string, number>;
 };
 
+export type EstadoEvacuacion = "pendiente" | "en_curso" | "cerrada_cuadrilla" | "verificada" | "con_discrepancia";
+
 export type ResumenEvacuaciones = BloqueResumen & {
-  por_estado: Record<string, number>;
-  por_sector?: Record<string, number>;
+  total?: number;
+  por_estado: Partial<Record<EstadoEvacuacion, number>>;
+  por_sector?: Record<string, Partial<Record<EstadoEvacuacion, number>>>;
   verificadas_pct?: number | null;
   discrepancias_abiertas?: number;
   personas_trasladadas?: number;
-  animales_trasladados?: number;
+  animales_trasladados?: Record<string, number>;
+  animales_trasladados_total?: number;
+  distancia_max_destino_m?: number;
 };
 
 export type ResumenPanel = {
@@ -470,4 +477,69 @@ export type ResumenAdmin = BloqueResumen & {
   };
   auditoria: { cadena_integra: boolean; primera_fila_inconsistente: number | null; filas: number };
   servicio: { base_de_datos: string; websockets_activos: number; version: string };
+};
+
+/** Constancias de evacuación (ver docs/contrato_api.md, "Constancias de evacuación"). */
+export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro";
+
+export type Constancia = {
+  id: number;
+  rol_operativo: string | null;
+  destino: { lat: number; lon: number; centro_id: number | null; centro_nombre: string | null; distancia_a_centro_m: number | null };
+  personas_trasladadas: number;
+  animales_trasladados: Record<string, number>;
+  nota: string | null;
+  adjuntos: { n: number; mime: string; bytes: number }[];
+  creada_en: string;
+};
+
+export type ConfirmacionEvacuado = {
+  respuesta: "si" | "no" | "problema";
+  canal: string;
+  comentario: string | null;
+  solicitada_en: string;
+  respondida_en: string | null;
+};
+
+export type Evacuacion = {
+  tarea_id: number;
+  tarea_estado: string;
+  estado: EstadoEvacuacion;
+  titulo: string;
+  sector_id: string | null;
+  cuadrilla_id: number | null;
+  cuadrilla_nombre: string | null;
+  solicitud_id: number | null;
+  orden_id: number | null;
+  origen: { lat: number; lon: number; tipo: "solicitud" | "sector" } | null;
+  constancia: Constancia | null;
+  confirmacion: ConfirmacionEvacuado | null;
+  discrepancia: { motivos: MotivoDiscrepancia[] } | null;
+  actualizado_en: string;
+  categoria: Categoria;
+  fuente: string;
+};
+
+export type ListaEvacuaciones = { evacuaciones: Evacuacion[]; total: number; limite: number; offset: number; categoria: Categoria; fuente: string; fecha_dato: string };
+
+export type CierreEvacuacion = {
+  lat: number;
+  lon: number;
+  centro_id?: number;
+  personas_trasladadas: number;
+  animales_trasladados: Record<string, number>;
+  nota?: string;
+};
+
+export type ConsultaConfirmacion = {
+  id: number;
+  tarea_id: number;
+  solicitud_id: number | null;
+  codigo: string;
+  centro_nombre: string | null;
+  respondida: boolean;
+  respuesta: "si" | "no" | "problema" | null;
+  comentario: string | null;
+  solicitada_en: string;
+  respondida_en: string | null;
 };
