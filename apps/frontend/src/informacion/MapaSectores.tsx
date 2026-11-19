@@ -86,7 +86,7 @@ export function MapaSectores({ altura, marcador, onElegir, etiquetar = true, rel
       viewBox={`0 0 ${ANCHO.toFixed(0)} ${ALTO.toFixed(0)}`}
       role="img"
       aria-label="Mapa esquemático de los cuatro sectores simulados K10 (S1 Norte, S2 Centro, S3 Sur, S4 Rural Este)"
-      style={{ width: "100%", height: "auto", background: hexDe("superficie"), border: `1px solid ${hexDe("borde")}`, cursor: onElegir ? "crosshair" : "default" }}
+      style={{ width: "100%", height: "auto", background: hexDe("superficie"), border: `1px solid ${hexDe("borde")}`, borderRadius: 16, cursor: onElegir ? "crosshair" : "default" }}
       onClick={alClic}
     >
       <defs>
@@ -96,16 +96,9 @@ export function MapaSectores({ altura, marcador, onElegir, etiquetar = true, rel
       </defs>
       {rel && (
         <g data-capa="relieve-local" aria-hidden="true" fill="none">
-          <path d={dMenores} stroke={hexDe("alerta.800")} strokeOpacity={0.35} strokeWidth={1} />
-          <path d={dMayores} stroke={hexDe("alerta.800")} strokeOpacity={0.7} strokeWidth={2} />
-          <path d={dDepartamentos} stroke={hexDe("pizarra.700")} strokeOpacity={0.8} strokeWidth={2.5} strokeDasharray="14 8" />
-        </g>
-      )}
-      {rel && (
-        <g data-capa="relieve-local" aria-hidden="true" fill="none">
-          <path d={dMenores} stroke={hexDe("alerta.800")} strokeOpacity={0.35} strokeWidth={1} />
-          <path d={dMayores} stroke={hexDe("alerta.800")} strokeOpacity={0.7} strokeWidth={2} />
-          <path d={dDepartamentos} stroke={hexDe("pizarra.700")} strokeOpacity={0.8} strokeWidth={2.5} strokeDasharray="14 8" />
+          <path d={dMenores} stroke={hexDe("pizarra.400")} strokeOpacity={0.45} strokeWidth={1} />
+          <path d={dMayores} stroke={hexDe("pizarra.500")} strokeOpacity={0.6} strokeWidth={1.5} />
+          <path d={dDepartamentos} stroke={hexDe("pizarra.600")} strokeOpacity={0.6} strokeWidth={2} strokeDasharray="14 8" />
         </g>
       )}
       {SECTORES_K10.map((s) => {
@@ -116,7 +109,7 @@ export function MapaSectores({ altura, marcador, onElegir, etiquetar = true, rel
         const cy = (Math.min(...s.anillo.map((p) => aY(p[1]))) + Math.max(...s.anillo.map((p) => aY(p[1])))) / 2;
         return (
           <g key={s.id}>
-            <polygon points={pts} fill={st.fill} stroke={st.stroke} strokeWidth={3} strokeDasharray={est === "en_riesgo" ? "10 6" : undefined} />
+            <polygon points={pts} fill={st.fill} stroke={st.stroke} strokeWidth={2} strokeLinejoin="round" strokeDasharray={est === "en_riesgo" ? "10 6" : undefined} />
             {est === "comprometido" && <polygon points={pts} fill="url(#rayado-comprometido)" opacity={0.45} />}
             {etiquetar && (
               <>
@@ -138,7 +131,7 @@ export function MapaSectores({ altura, marcador, onElegir, etiquetar = true, rel
           <circle cx={aX(marcador.lon)} cy={aY(marcador.lat)} r="14" fill={hexDe("mapa.marcador")} stroke={hexDe("superficie")} strokeWidth="4" />
         </g>
       )}
-      <text x={ANCHO - 10} y={ALTO - 10} textAnchor="end" fontSize="18" fill={TINTA_SUAVE}>
+      <text x={ANCHO - 14} y={30} textAnchor="end" fontSize="18" fontWeight="600" fill={TINTA_SUAVE}>
         SIMULADO · K10 v1.0
       </text>
       {rel && (

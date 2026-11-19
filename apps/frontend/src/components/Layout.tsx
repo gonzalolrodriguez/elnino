@@ -4,20 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink, NavLink, useLocation } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
-
-/** Marca: una escala limnimétrica con el nivel del agua. */
-function Marca() {
-  return (
-    <svg width="22" height="26" viewBox="0 0 22 26" aria-hidden="true" focusable="false">
-      <rect x="6" y="1.5" width="10" height="23" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      {[6.5, 11, 15.5].map((y) => (
-        <line key={y} x1="6" x2="11" y1={y} y2={y} stroke="currentColor" strokeWidth="1.4" />
-      ))}
-      <rect x="6.8" y="16.5" width="8.4" height="7.2" style={{ fill: "var(--chakra-colors-agua-400)" }} />
-      <line x1="2" x2="20" y1="9" y2="9" strokeWidth="1.6" style={{ stroke: "var(--chakra-colors-escala-alerta)" }} />
-    </svg>
-  );
-}
+import { Marca } from "./Marca";
 
 function Enlace({ to, children }: { to: string; children: ReactNode }) {
   return (
@@ -27,17 +14,15 @@ function Enlace({ to, children }: { to: string; children: ReactNode }) {
       end={to === "/"}
       display="flex"
       alignItems="center"
-      minH="2.75rem"
-      px={{ base: 2, md: 1 }}
-      color="nav.fg"
+      minH="2.5rem"
+      px={3.5}
+      borderRadius="full"
+      color="texto"
       fontWeight={600}
       textDecoration="none"
-      borderStyle="solid"
-      borderBottomWidth={{ base: 0, md: "3px" }}
-      borderLeftWidth={{ base: "4px", md: 0 }}
-      borderColor="transparent"
-      _hover={{ color: "nav.fg", textDecoration: "none", borderColor: "pizarra.400" }}
-      _activeLink={{ borderColor: "nav.activo" }}
+      transition="background-color 160ms var(--ease-out), color 160ms var(--ease-out)"
+      _hover={{ color: "primarioHover", textDecoration: "none", bg: "pizarra.100" }}
+      _activeLink={{ color: "primarioHover", bg: "suave" }}
     >
       {children}
     </Link>
@@ -51,7 +36,7 @@ function etiquetaPrivada(rol: string) {
 
 function IconoMenu({ abierto }: { abierto: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg width="20" height="20" viewBox="0 0 22 22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       {abierto ? <path d="M5 5l12 12M17 5L5 17" /> : <path d="M3 6h16M3 11h16M3 16h16" />}
     </svg>
   );
@@ -82,14 +67,14 @@ function Navegacion() {
   }, [abierto]);
 
   return (
-    <Box as="header" role="banner" bg="nav.bg" color="nav.fg" className="sobre-oscuro">
+    <Box as="header" role="banner" bg="nav.bg" color="nav.fg" borderBottom="1px solid" borderColor="borde">
       <Flex
         as="nav"
         aria-label="Navegación principal"
         maxW="90rem"
         mx="auto"
         px={{ base: 4, md: 8 }}
-        pt={2}
+        py={2}
         align="center"
         justify="space-between"
         wrap="wrap"
@@ -102,16 +87,16 @@ function Navegacion() {
           display="inline-flex"
           alignItems="center"
           minH="2.75rem"
-          color="nav.fg"
+          color="texto"
           textDecoration="none"
-          _hover={{ color: "nav.fg", textDecoration: "none" }}
+          _hover={{ color: "texto", textDecoration: "none" }}
         >
-          <Box as="span" mr={2} display="inline-flex">
+          <Box as="span" mr={2.5} display="inline-flex" color="primario">
             <Marca />
           </Box>
-          <Text as="span" fontFamily="heading" fontSize="lg" fontWeight={600} lineHeight={1.1} letterSpacing="-0.01em">
+          <Text as="span" fontSize="lg" fontWeight={700} lineHeight={1.1} letterSpacing="-0.02em">
             Operación Agua
-            <Text as="span" display="block" fontFamily="body" fontSize="xs" fontWeight={500} color="pizarra.300" letterSpacing="0.01em">
+            <Text as="span" display="block" fontSize="xs" fontWeight={400} color="textoSuave" letterSpacing="0">
               Gestión de evacuaciones
             </Text>
           </Text>
@@ -119,7 +104,7 @@ function Navegacion() {
         <Button
           ref={boton}
           type="button"
-          variant="sobreOscuro"
+          variant="outline"
           size="sm"
           display={{ base: "inline-flex", md: "none" }}
           aria-expanded={abierto}
@@ -144,8 +129,8 @@ function Navegacion() {
           alignItems={{ base: "stretch", md: "center" }}
           flexWrap="wrap"
           w={{ base: "100%", md: "auto" }}
-          pb={{ base: 2, md: 0 }}
-          sx={{ "& > li": { marginLeft: 0 }, "@media (min-width: 48em)": { "& > li + li": { marginLeft: "1.25rem" } } }}
+          pt={{ base: 2, md: 0 }}
+          sx={{ "& > li": { marginLeft: 0 }, "@media (min-width: 48em)": { "& > li + li": { marginLeft: "0.25rem" } } }}
         >
           <li><Enlace to="/">Inicio</Enlace></li>
           <li><Enlace to="/informacion">Información</Enlace></li>
@@ -155,26 +140,135 @@ function Navegacion() {
               <li><Enlace to={rutaInicio(usuario.rol)}>{etiquetaPrivada(usuario.rol)}</Enlace></li>
               {usuario.rol === "admin" && <li><Enlace to="/cuadrilla">Cuadrilla</Enlace></li>}
               <li>
-                <Button size="sm" variant="sobreOscuro" onClick={() => void cerrarSesion()} my={{ base: 1, md: 0 }}>
+                <Button size="sm" variant="outline" onClick={() => void cerrarSesion()} my={{ base: 1, md: 0 }} ml={{ md: 2 }}>
                   Cerrar sesión
                 </Button>
               </li>
             </>
           ) : (
-            <li><Enlace to="/login">Ingresar</Enlace></li>
+            <li>
+              <Button as={RouterLink} to="/login" size="sm" ml={{ md: 2 }} my={{ base: 1, md: 0 }}>
+                Ingresar
+              </Button>
+            </li>
           )}
         </Box>
       </Flex>
-      <Box className="regla-escala" aria-hidden="true" mt={1} />
     </Box>
   );
 }
 
-/** Diseño base: la leyenda obligatoria queda fija en toda pantalla. */
+function ColumnaPie({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <Box as="nav" aria-label={titulo} minW={0}>
+      <Text fontWeight={700} color="oscuro.fg" mb={3}>
+        {titulo}
+      </Text>
+      <Box as="ul" listStyleType="none" m={0} p={0} sx={{ "& > li + li": { marginTop: "0.5rem" } }}>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+function EnlacePie({ to, href, children }: { to?: string; href?: string; children: ReactNode }) {
+  const comun = { color: "oscuro.suave", textDecoration: "none", _hover: { color: "oscuro.fg", textDecoration: "underline" } } as const;
+  return (
+    <li>
+      {to ? (
+        <Link as={RouterLink} to={to} {...comun}>
+          {children}
+        </Link>
+      ) : (
+        <Link href={href} isExternal {...comun}>
+          {children}
+        </Link>
+      )}
+    </li>
+  );
+}
+
+const REPOSITORIO = "https://github.com/gonzalolrodriguez/elnino";
+
+/** Pie profesional: identidad, navegación, datos y fuentes, ayuda y privacidad, y la leyenda obligatoria. */
+function Pie() {
+  return (
+    <Box as="footer" role="contentinfo" bg="oscuro.bg" color="oscuro.suave" className="sobre-oscuro" fontSize="sm">
+      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 10, md: 14 }} pb={6}>
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "1.5fr 1fr 1.2fr 1.5fr" }} gap={{ base: 8, lg: 10 }}>
+          <Box minW={0}>
+            <Flex align="center" color="oscuro.fg" mb={3}>
+              <Box as="span" mr={2.5} display="inline-flex" color="agua.300">
+                <Marca />
+              </Box>
+              <Text as="span" fontSize="lg" fontWeight={700} letterSpacing="-0.02em">
+                Operación Agua
+              </Text>
+            </Flex>
+            <Text color="oscuro.fg" fontWeight={600}>
+              Gestión de evacuaciones
+            </Text>
+            <Text mt={1}>Equipo 3 · Instituto Politécnico Formosa</Text>
+            <Text>AI LAB Misión: Código Formosa</Text>
+          </Box>
+
+          <ColumnaPie titulo="Navegación">
+            <EnlacePie to="/">Inicio</EnlacePie>
+            <EnlacePie to="/informacion">Información</EnlacePie>
+            <EnlacePie to="/app">App móvil</EnlacePie>
+            <EnlacePie to="/login">Ingresar</EnlacePie>
+          </ColumnaPie>
+
+          <ColumnaPie titulo="Datos y fuentes">
+            <li>Datos con corte al 31/10/2026.</li>
+            <EnlacePie to="/informacion#fuentes">Ficha de fuentes y supuestos</EnlacePie>
+            <EnlacePie to="/#limites">Límites de la plataforma</EnlacePie>
+          </ColumnaPie>
+
+          <Box minW={0}>
+            <Text fontWeight={700} color="oscuro.fg" mb={3}>
+              Ayuda y privacidad
+            </Text>
+            <Text>Esta plataforma no reemplaza al 103 ni a Defensa Civil. Ante una emergencia, llame al 103.</Text>
+            <Text mt={2}>
+              Tus datos se usan solo para la gestión de emergencias, según la Ley 25.326. Podés pedir el acceso, la rectificación o la supresión.
+            </Text>
+          </Box>
+        </Box>
+
+        <Flex
+          mt={{ base: 8, md: 10 }}
+          pt={5}
+          borderTop="1px solid"
+          borderColor="oscuro.linea"
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          align={{ md: "center" }}
+          gap={3}
+          fontSize="xs"
+        >
+          <Text role="note" aria-label="Aviso de prototipo (pie)">
+            {LEYENDA}
+          </Text>
+          <Link href={REPOSITORIO} isExternal color="oscuro.suave" textDecoration="none" _hover={{ color: "oscuro.fg", textDecoration: "underline" }}>
+            Código fuente en GitHub
+          </Link>
+        </Flex>
+      </Box>
+    </Box>
+  );
+}
+
+/** Diseño base: la leyenda obligatoria queda fija arriba en toda pantalla y se repite en el pie. */
 export function Layout({ children, contenedor = true, titulo }: { children: ReactNode; contenedor?: boolean; titulo?: string }) {
+  const { hash } = useLocation();
   useEffect(() => {
     document.title = titulo ? `${titulo} · Operación Agua` : "Operación Agua · Gestión de evacuaciones";
   }, [titulo]);
+  // Los enlaces con ancla (p. ej. el pie) llevan a la sección aunque cambie de ruta.
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView?.();
+  }, [hash]);
   return (
     <Box minH="100vh" className="alto-pantalla" display="flex" flexDirection="column">
       <Link
@@ -188,9 +282,7 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
         bg="superficie"
         color="texto"
         fontWeight={700}
-        borderRadius="sm"
-        border="2px solid"
-        borderColor="texto"
+        borderRadius="lg"
         transform="translateY(-200%)"
         _focus={{ transform: "translateY(0)" }}
         transition="transform 140ms var(--ease-out)"
@@ -207,7 +299,7 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
         color="leyenda.fg"
         py={1.5}
         px={4}
-        fontSize="0.8125rem"
+        fontSize="0.75rem"
         fontWeight={600}
         lineHeight={1.35}
         textAlign="center"
@@ -225,16 +317,7 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
       >
         {children}
       </Box>
-      <Box as="footer" bg="nav.bg" color="pizarra.200" className="sobre-oscuro" py={6} fontSize="sm">
-        <Flex maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} direction={{ base: "column", md: "row" }} justify="space-between" sx={{ "& > * + *": { marginTop: "0.75rem" }, "@media (min-width: 48em)": { "& > * + *": { marginTop: 0, marginLeft: "2.5rem" } } }}>
-          <Text maxW="44rem">
-            Datos con corte al 31/10/2026. Cada cifra indica su categoría y su fuente; lo que no está en la ficha de fuentes no se muestra.
-          </Text>
-          <Link as={RouterLink} to="/informacion#fuentes" color="pizarra.100" fontWeight={600} whiteSpace="nowrap" _hover={{ color: "papel" }}>
-            Fuentes y supuestos
-          </Link>
-        </Flex>
-      </Box>
+      <Pie />
     </Box>
   );
 }

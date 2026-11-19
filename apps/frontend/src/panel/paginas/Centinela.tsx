@@ -76,7 +76,7 @@ export default function Centinela() {
             </Text>
             <Flex direction="column" gap={3}>
               {d.afirmaciones.map((a) => (
-                <Box key={a.id} borderLeft="4px solid" borderColor={a.veredicto.startsWith("REFUTADA") ? "red.500" : "pizarra.200"} pl={3} data-testid={`k6-${a.id}`}>
+                <Box key={a.id} borderLeft="3px solid" borderColor={a.veredicto.startsWith("REFUTADA") ? "red.500" : "pizarra.200"} pl={3} data-testid={`k6-${a.id}`}>
                   <Flex gap={2} align="center" wrap="wrap" mb={1}>
                     <strong>{a.id}</strong>
                     <Veredicto v={a.veredicto} />

@@ -75,7 +75,7 @@ describe("guardas por rol", () => {
   it("sin marca de sesión no intenta renovar el token", async () => {
     const f = simularFetch();
     renderRuta("/");
-    await screen.findByText(/Estado del backend/);
+    await screen.findByRole("heading", { name: /Información para|Del Pantanal/ });
     expect(llamadas(f, "POST /auth/refresh")).toHaveLength(0);
   });
 });

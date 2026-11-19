@@ -62,7 +62,7 @@ function Indice() {
       position={{ lg: "sticky" }}
       top={{ lg: "calc(var(--altura-leyenda) + 1.5rem)" }}
       alignSelf="start"
-      borderLeft={{ lg: "2px solid" }}
+      borderLeft={{ lg: "1px solid" }}
       borderColor="borde"
       pl={{ lg: 4 }}
       mb={{ base: 6, lg: 0 }}
@@ -128,13 +128,13 @@ export default function Informacion() {
 
       <Seccion id="amenazas" titulo="Dos amenazas distintas">
         <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8} maxW="48rem">
-          <Box borderLeft="4px solid" borderColor="primario" pl={4}>
+          <Box layerStyle="suave" p={5}>
             <Heading as="h3" size="sm" mb={2}>
               Exógena: los ríos
             </Heading>
             <Text>El agua viene de afuera, por el cauce. Se sigue con las escalas del INA, que no publica pronósticos a más de 15 días (K9).</Text>
           </Box>
-          <Box borderLeft="4px solid" borderColor="acento" pl={4}>
+          <Box layerStyle="suave" p={5}>
             <Heading as="h3" size="sm" mb={2}>
               Endógena: la lluvia local
             </Heading>

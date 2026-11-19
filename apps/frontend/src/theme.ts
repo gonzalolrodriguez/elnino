@@ -3,18 +3,19 @@ import { extendTheme } from "@chakra-ui/react";
 import { PAL, PAPEL, semanticosChakra } from "./estilo/paleta";
 
 /**
- * Sistema visual de la plataforma (Chakra v2).
+ * Sistema visual de la plataforma (Chakra v2): "Río y cielo".
  *
- * Dirección: escala limnimétrica sobre agua turbia del río Paraguay. Herramienta cívica de emergencia:
- * papel verdoso y tinta oscura para leer bajo estrés, un solo color de acción (agua) y los ámbar y rojo
- * reservados para los umbrales de la escala (alerta 7,80 m, evacuación 8,30 m).
- * Colores en OKLCH (src/estilo/paleta.ts) compilados a hex; los componentes usan tokens semánticos.
+ * Dirección: pública, sobria y amable. Tinta azul marino para el texto, azul río para la acción principal,
+ * cielo claro para superficies suaves y botones secundarios, línea de 1 px en lugar de contornos gruesos.
+ * El ámbar y el rojo quedan reservados para los umbrales de la escala (alerta 7,80 m, evacuación 8,30 m).
+ * Las rampas viven en src/estilo/paleta.ts; los componentes usan tokens semánticos.
  *
- * Tipografía: Source Serif 4 (títulos y cifras) y Public Sans (texto), ambas variables y autoalojadas
- * con @fontsource-variable; la pila de respaldo mantiene la app legible sin conexión.
+ * Tipografía: una sola familia, Atkinson Hyperlegible Next (diseñada para baja visión), variable y
+ * autoalojada con @fontsource-variable. La jerarquía sale del peso (400/600/700) y del tamaño; las cifras
+ * usan numerales tabulares. La pila de respaldo mantiene la app legible sin conexión.
+ * Forma: botones 12 px, campos 10 px, tarjetas 16 px, sombras mínimas.
  */
-const FUENTE_TITULOS = "'Source Serif 4 Variable', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif";
-const FUENTE_TEXTO = "'Public Sans Variable', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
+const FUENTE = "'Atkinson Hyperlegible Next Variable', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
 
 const TAMANOS_TITULO = {
   sm: { fontSize: "1.0625rem", lineHeight: 1.3 },
@@ -32,8 +33,8 @@ const TRANSICION_CONTROL =
 
 export const theme = extendTheme({
   config: { initialColorMode: "light", useSystemColorMode: false },
-  fonts: { heading: FUENTE_TITULOS, body: FUENTE_TEXTO, mono: "ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" },
-  radii: { none: "0", sm: "2px", base: "2px", md: "3px", lg: "4px", xl: "6px", "2xl": "8px", full: "9999px" },
+  fonts: { heading: FUENTE, body: FUENTE, mono: "ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" },
+  radii: { none: "0", sm: "6px", base: "8px", md: "10px", lg: "12px", xl: "16px", "2xl": "20px", full: "9999px" },
   colors: {
     ...PAL,
     papel: PAPEL,
@@ -43,12 +44,18 @@ export const theme = extendTheme({
     red: PAL.evacuacion,
     orange: PAL.alerta,
     yellow: PAL.alerta,
-    blue: PAL.rio,
+    blue: PAL.agua,
     gray: PAL.pizarra,
   },
   semanticTokens: { colors: semanticosChakra() },
+  layerStyles: {
+    // Tarjeta: superficie blanca, línea de 1 px y radio de 16 px; sin sombra.
+    tarjeta: { bg: "superficie", border: "1px solid", borderColor: "borde", borderRadius: "xl" },
+    // Superficie suave sin borde para agrupar contenido sin marcar contornos.
+    suave: { bg: "suave", borderRadius: "xl" },
+  },
   textStyles: {
-    cifra: { fontFamily: "heading", fontWeight: 600, fontVariantNumeric: "tabular-nums lining-nums", lineHeight: 1.1 },
+    cifra: { fontFamily: "heading", fontWeight: 700, fontVariantNumeric: "tabular-nums lining-nums", lineHeight: 1.1, letterSpacing: "-0.02em" },
     nota: { fontSize: "sm", color: "textoSuave" },
   },
   styles: {
@@ -57,8 +64,8 @@ export const theme = extendTheme({
         "--ease-out": "cubic-bezier(0.23, 1, 0.32, 1)",
         "--ease-in-out": "cubic-bezier(0.77, 0, 0.175, 1)",
         // Alto de la leyenda fija (hasta 3 líneas en pantallas angostas): el foco y los anclajes no deben quedar debajo.
-        "--altura-leyenda": "4.5rem",
-        "@media (min-width: 48em)": { "--altura-leyenda": "2.75rem" },
+        "--altura-leyenda": "3.25rem",
+        "@media (min-width: 48em)": { "--altura-leyenda": "2.25rem" },
       },
       "input, select, textarea, button, [tabindex], [id]": { scrollMarginTop: "calc(var(--altura-leyenda) + 1rem)" },
       html: { scrollPaddingTop: "calc(var(--altura-leyenda) + 1rem)", overflowX: "clip", colorScheme: "light" },
@@ -75,23 +82,13 @@ export const theme = extendTheme({
       "::selection": { bg: "agua.200", color: "texto" },
       "h1, h2, h3": { textWrap: "balance" },
       "p, li": { textWrap: "pretty" },
-      // Foco visible de dos tonos según el fondo: tinta sobre claro, ámbar claro sobre oscuro.
+      // Foco visible de dos tonos según el fondo: azul oscuro sobre claro, ámbar claro sobre oscuro.
       "a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible":
         { outline: "3px solid", outlineColor: "foco", outlineOffset: "2px" },
       ".sobre-oscuro a:focus-visible, .sobre-oscuro button:focus-visible, .sobre-oscuro [tabindex]:focus-visible, a.sobre-oscuro:focus-visible":
         { outlineColor: "focoClaro" },
       "input[type='range']": { accentColor: "var(--chakra-colors-primario)", width: "100%" },
       table: { fontVariantNumeric: "tabular-nums" },
-      // Regla de graduación de escala limnimétrica: marca fina cada 8 px y marca gruesa cada 40 px.
-      ".regla-escala": {
-        height: "10px",
-        backgroundRepeat: "repeat-x",
-        backgroundImage:
-          "linear-gradient(90deg, var(--chakra-colors-nav-activo) 0 1px, transparent 1px), linear-gradient(90deg, var(--chakra-colors-nav-activo) 0 1px, transparent 1px)",
-        backgroundSize: "8px 4px, 40px 10px",
-        backgroundPosition: "0 0, 0 0",
-        opacity: 0.7,
-      },
       "@media (prefers-reduced-motion: reduce)": {
         "*, *::before, *::after": {
           animationDuration: "0.01ms !important",
@@ -104,7 +101,7 @@ export const theme = extendTheme({
   },
   components: {
     Heading: {
-      baseStyle: { fontWeight: 600, letterSpacing: "-0.015em", fontOpticalSizing: "auto" },
+      baseStyle: { fontWeight: 700, letterSpacing: "-0.02em" },
       sizes: TAMANOS_TITULO,
     },
     Link: {
@@ -120,8 +117,7 @@ export const theme = extendTheme({
     Button: {
       baseStyle: {
         fontWeight: 600,
-        borderRadius: "sm",
-        letterSpacing: "0.005em",
+        borderRadius: "lg",
         transition: TRANSICION_CONTROL,
         _active: { transform: "scale(0.97)" },
         _focusVisible: { boxShadow: "none" },
@@ -131,31 +127,31 @@ export const theme = extendTheme({
         xs: { h: "1.875rem", minW: "1.875rem", fontSize: "sm", px: 3 },
         sm: { h: "2.5rem", minW: "2.5rem", fontSize: "sm", px: 4 },
         md: { h: "2.75rem", minW: "2.75rem", fontSize: "md", px: 5 },
-        lg: { h: "3rem", minW: "3rem", fontSize: "md", px: 6 },
+        lg: { h: "3.25rem", minW: "3.25rem", fontSize: "md", px: 7 },
       },
       variants: {
+        // Principal: azul río relleno.
         solid: {
           bg: "primario",
           color: "papel",
           _hover: { bg: "primarioHover", _disabled: { bg: "primario" } },
         },
+        // Secundario: relleno cielo, sin contorno.
         outline: {
-          bg: "transparent",
-          color: "texto",
-          border: "1.5px solid",
-          borderColor: "pizarra.700",
-          _hover: { bg: "pizarra.100", _disabled: { bg: "transparent" } },
+          bg: "suave",
+          color: "primarioHover",
+          border: "none",
+          _hover: { bg: "agua.200", _disabled: { bg: "suave" } },
         },
         ghost: { bg: "transparent", color: "texto", _hover: { bg: "pizarra.100" } },
+        // Sobre fondo oscuro: secundario translúcido y principal blanco (variante acento).
         sobreOscuro: {
-          bg: "limo.950",
-          color: "nav.fg",
-          border: "1.5px solid",
-          borderColor: "pizarra.300",
-          _hover: { bg: "nav.hover" },
+          bg: "rgba(255,255,255,0.12)",
+          color: "oscuro.fg",
+          _hover: { bg: "rgba(255,255,255,0.2)" },
         },
-        acento: { bg: "acento", color: "limo.950", _hover: { bg: "alerta.400" } },
-        peligro: { bg: "escala.evacuacion", color: "papel", _hover: { bg: "evacuacion.700" } },
+        acento: { bg: "papel", color: "limo.900", _hover: { bg: "agua.100" } },
+        peligro: { bg: "escala.evacuacion", color: "papel", _hover: { bg: "evacuacion.800" } },
       },
       defaultProps: { variant: "solid", size: "md" },
     },
@@ -164,19 +160,19 @@ export const theme = extendTheme({
         outline: {
           field: {
             bg: "superficie",
-            border: "1.5px solid",
-            borderColor: "bordeFuerte",
-            borderRadius: "sm",
+            border: "1px solid",
+            borderColor: "bordeControl",
+            borderRadius: "md",
             transition: TRANSICION_CONTROL,
             _hover: { borderColor: "pizarra.700" },
-            _focusVisible: { borderColor: "texto", boxShadow: "none", zIndex: 1 },
-            _invalid: { borderColor: "escala.evacuacion", boxShadow: "inset 0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
+            _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)", zIndex: 1 },
+            _invalid: { borderColor: "escala.evacuacion", boxShadow: "0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
             _placeholder: { color: "pizarra.500" },
           },
         },
       },
       sizes: {
-        md: { field: { h: "2.75rem", fontSize: "md", px: 3 } },
+        md: { field: { h: "2.75rem", fontSize: "md", px: 3.5 } },
         sm: { field: { h: "2.5rem", fontSize: "sm", px: 3 } },
         xs: { field: { h: "2rem", fontSize: "sm", px: 2 } },
       },
@@ -186,11 +182,11 @@ export const theme = extendTheme({
         outline: {
           field: {
             bg: "superficie",
-            border: "1.5px solid",
-            borderColor: "bordeFuerte",
-            borderRadius: "sm",
+            border: "1px solid",
+            borderColor: "bordeControl",
+            borderRadius: "md",
             _hover: { borderColor: "pizarra.700" },
-            _focusVisible: { borderColor: "texto", boxShadow: "none" },
+            _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)" },
             _invalid: { borderColor: "escala.evacuacion" },
           },
         },
@@ -200,12 +196,12 @@ export const theme = extendTheme({
       variants: {
         outline: {
           bg: "superficie",
-          border: "1.5px solid",
-          borderColor: "bordeFuerte",
-          borderRadius: "sm",
+          border: "1px solid",
+          borderColor: "bordeControl",
+          borderRadius: "md",
           _hover: { borderColor: "pizarra.700" },
-          _focusVisible: { borderColor: "texto", boxShadow: "none" },
-          _invalid: { borderColor: "escala.evacuacion", boxShadow: "inset 0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
+          _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)" },
+          _invalid: { borderColor: "escala.evacuacion", boxShadow: "0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
         },
       },
     },
@@ -216,13 +212,13 @@ export const theme = extendTheme({
     },
     FormLabel: { baseStyle: { fontWeight: 600, fontSize: "sm", mb: 1, color: "texto" } },
     FormError: {
-      baseStyle: { text: { color: "evacuacion.700", fontSize: "sm", fontWeight: 500 } },
+      baseStyle: { text: { color: "evacuacion.700", fontSize: "sm", fontWeight: 600 } },
     },
     Checkbox: {
       baseStyle: {
         control: {
-          borderColor: "bordeFuerte",
-          borderWidth: "1.5px",
+          borderColor: "bordeControl",
+          borderWidth: "1px",
           borderRadius: "sm",
           bg: "superficie",
           _checked: { bg: "primario", borderColor: "primario", color: "papel", _hover: { bg: "primarioHover", borderColor: "primarioHover" } },
@@ -231,19 +227,19 @@ export const theme = extendTheme({
       },
     },
     Badge: {
-      baseStyle: { textTransform: "none", fontWeight: 600, fontSize: "xs", letterSpacing: "0.01em", borderRadius: "sm", px: 2, py: "1px" },
+      baseStyle: { textTransform: "none", fontWeight: 600, fontSize: "xs", letterSpacing: "0.01em", borderRadius: "full", px: 2.5, py: "2px" },
     },
     Alert: {
-      baseStyle: { container: { borderRadius: "sm" } },
+      baseStyle: { container: { borderRadius: "lg" } },
     },
     Table: {
       baseStyle: {
-        th: { textTransform: "none", letterSpacing: "normal", fontFamily: "body", fontWeight: 600, color: "pizarra.700" },
+        th: { textTransform: "none", letterSpacing: "normal", fontFamily: "body", fontWeight: 600, color: "textoSuave" },
       },
       variants: {
         simple: {
-          th: { borderBottom: "2px solid", borderColor: "pizarra.700", fontSize: "sm" },
-          td: { borderBottom: "1px solid", borderColor: "borde" },
+          th: { borderBottom: "1px solid", borderColor: "borde", fontSize: "sm" },
+          td: { borderBottom: "1px solid", borderColor: "pizarra.100" },
         },
       },
     },

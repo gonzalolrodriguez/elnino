@@ -28,7 +28,7 @@ export function fmtDias(min: number | null, max: number | null): string {
   return min === max || r(min) === r(max) ? `${r(min)} días` : `${r(min)} a ${r(max)} días`;
 }
 
-/** Bloque con título; el panel lo usa en lugar de tarjetas idénticas: borde fino a la izquierda según el contexto. */
+/** Bloque con título del panel: tarjeta blanca de línea fina (16 px de radio), sin sombras ni contornos gruesos. */
 export function Seccion({
   titulo,
   children,
@@ -46,13 +46,8 @@ export function Seccion({
     <Box
       as="section"
       aria-labelledby={id ?? undefined}
-      bg="superficie"
-      border="1px solid"
-      borderColor="borde"
-      borderTop="3px solid"
-      borderTopColor="pizarra.700"
-      borderRadius="sm"
-      p={{ base: 4, md: 5 }}
+      layerStyle="tarjeta"
+      p={{ base: 4, md: 6 }}
       mb={5}
     >
       <Flex align="center" gap={3} mb={3} wrap="wrap">
@@ -143,7 +138,7 @@ export function Cargando<T>({
 
 export function AvisoSimulado({ children }: { children: ReactNode }) {
   return (
-    <Alert status="warning" variant="left-accent" fontSize="sm" mb={3}>
+    <Alert status="warning" variant="subtle" fontSize="sm" mb={3}>
       <AlertIcon />
       <Box>
         <AlertTitle fontSize="sm">SIMULADO</AlertTitle>

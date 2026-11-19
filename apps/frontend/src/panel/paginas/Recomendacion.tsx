@@ -29,7 +29,7 @@ export function fmtValor(v: unknown): string {
 function TarjetaSector({ s }: { s: PlanSector }) {
   const c = COLOR_ESTADO[s.estado];
   return (
-    <Box border="1px solid" borderColor="borde" borderLeft={`6px solid ${c.stroke}`} p={3} bg="superficie" data-testid={`plan-${s.id}`}>
+    <Box layerStyle="tarjeta" borderLeft={`5px solid ${c.stroke}`} p={4} data-testid={`plan-${s.id}`}>
       <Flex align="center" gap={2} mb={2} wrap="wrap">
         <Heading as="h3" size="sm">
           {s.prioridad}.º · {s.id} {s.nombre}

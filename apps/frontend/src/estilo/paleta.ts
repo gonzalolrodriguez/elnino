@@ -1,48 +1,119 @@
-import { oklchAHex, type Oklch } from "./oklch";
+import type { Oklch } from "./oklch";
 
 /**
- * Sistema de color. Cada rampa se escribe en OKLCH (luminosidad, croma, matiz) y se compila a hex.
+ * Sistema de color "Río y cielo". Las rampas se escriben en hex (los anclajes salen de la paleta decidida
+ * por el equipo) y los componentes usan tokens semánticos.
  *
- * Idea visual: escala limnimétrica sobre agua turbia del río Paraguay.
- *  - limo: fondo oscuro de la cabecera, el hero y el pie (matiz 205, agua profunda y barrosa)
- *  - pizarra: neutros con un toque verdoso del mismo matiz, para papel y texto
- *  - agua: verde azulado del cauce; es el color de las acciones y de los datos observados
- *  - alerta / evacuacion: repiten los colores de los umbrales de la escala (7,80 m y 8,30 m)
- *  - rio: azul, solo para "anegado" y las estaciones de la policía en el mapa
+ * Idea visual: los colores del río Paraguay y del cielo del Chaco, con la celeste institucional como guiño,
+ * sin imitar marcas oficiales.
+ *  - limo: tinta azul marino (texto, fondos oscuros del hero y del pie); el paso 900 es la tinta #0E1B2C
+ *  - pizarra: neutros fríos; 50 = fondo, 200 = línea de 1 px, 600 = texto secundario
+ *  - agua: azul río; 700 = acción primaria (#1E5AA0), 800 = hover (#174A86), 100 = cielo (#E6F0FA)
+ *  - verde: albardón, confirmación (#2F7D5B en el paso 600)
+ *  - alerta / evacuacion: reservados para los umbrales de la escala (7,80 m y 8,30 m)
+ *  - rio: celeste verdoso, solo para "anegado" y las estaciones de la policía en el mapa
  */
 
 export const PASOS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 type Rampa = Record<(typeof PASOS)[number], string> & { 950?: string };
 
-const FACTOR_CROMA = [0.15, 0.3, 0.5, 0.7, 0.9, 1, 1, 0.95, 0.85, 0.7];
-const L_BASE = [0.975, 0.945, 0.89, 0.83, 0.72, 0.6, 0.5, 0.42, 0.34, 0.26];
-
-function rampa(h: number, c: number, l: readonly number[] = L_BASE): Rampa {
-  const r = {} as Rampa;
-  PASOS.forEach((p, i) => {
-    r[p] = oklchAHex([l[i], c * FACTOR_CROMA[i], h]);
-  });
-  return r;
-}
-
-const limo = {
-  ...rampa(205, 0.045, [0.95, 0.9, 0.82, 0.72, 0.6, 0.5, 0.42, 0.34, 0.28, 0.22]),
-  950: oklchAHex([0.17, 0.03, 205]),
+const limo: Rampa = {
+  50: "#EAF0F7",
+  100: "#D6E0EC",
+  200: "#B5C4D8",
+  300: "#8A9FBB",
+  400: "#62799A",
+  500: "#46607F",
+  600: "#324A68",
+  700: "#223853",
+  800: "#162A41",
+  900: "#0E1B2C",
+  950: "#09131F",
 };
-const pizarra = rampa(180, 0.02, [0.975, 0.955, 0.9, 0.82, 0.7, 0.52, 0.44, 0.36, 0.28, 0.21]);
-const agua = rampa(188, 0.1);
-// El paso 500 es el ámbar del umbral de alerta; 700 es el tono de texto sobre fondos claros (contraste AA).
-const alerta = rampa(78, 0.15, [0.97, 0.94, 0.9, 0.86, 0.8, 0.75, 0.64, 0.52, 0.42, 0.34]);
-const evacuacion = rampa(29, 0.19);
-const rio = rampa(255, 0.12);
-const verde = rampa(150, 0.13);
+const pizarra: Rampa = {
+  50: "#F6F8FB",
+  100: "#EDF1F6",
+  200: "#E2E8F0",
+  300: "#CBD5E1",
+  400: "#94A3B8",
+  500: "#66768A",
+  600: "#526072",
+  700: "#3E4B5C",
+  800: "#263446",
+  900: "#0E1B2C",
+};
+const agua: Rampa = {
+  50: "#F3F8FD",
+  100: "#E6F0FA",
+  200: "#CFE0F3",
+  300: "#A8C8E8",
+  400: "#78A6D6",
+  500: "#4A86C5",
+  600: "#2A6BB4",
+  700: "#1E5AA0",
+  800: "#174A86",
+  900: "#123B6C",
+};
+// El paso 600 es el ámbar del umbral de alerta; 800 es el tono de texto sobre fondos claros (contraste AA).
+const alerta: Rampa = {
+  50: "#FDF6E8",
+  100: "#FAEBCB",
+  200: "#F4D79B",
+  300: "#EBBE66",
+  400: "#D9A23C",
+  500: "#C98B2B",
+  600: "#B7791F",
+  700: "#9A6416",
+  800: "#7A4F10",
+  900: "#5C3B0B",
+};
+// El paso 700 es el rojo del umbral de evacuación.
+const evacuacion: Rampa = {
+  50: "#FDEEEC",
+  100: "#FBD9D5",
+  200: "#F5B3AC",
+  300: "#EC857A",
+  400: "#DC5A4D",
+  500: "#C93C2E",
+  600: "#BC2E21",
+  700: "#B42318",
+  800: "#8E1B13",
+  900: "#6A140E",
+};
+const rio: Rampa = {
+  50: "#EDF8FC",
+  100: "#D8EFF7",
+  200: "#B2DEEE",
+  300: "#85C8E0",
+  400: "#55B0D0",
+  500: "#2F96BC",
+  600: "#1D7B9F",
+  700: "#176283",
+  800: "#134D68",
+  900: "#0F3B50",
+};
+const verde: Rampa = {
+  50: "#EEF7F2",
+  100: "#D6EBE0",
+  200: "#AED7C1",
+  300: "#82BEA0",
+  400: "#58A180",
+  500: "#3D8C6A",
+  600: "#2F7D5B",
+  700: "#256449",
+  800: "#1C4D38",
+  900: "#143828",
+};
 
-const papel = oklchAHex([0.995, 0.003, 165]);
+const papel = "#FFFFFF";
 
 const escala = {
-  alerta: oklchAHex([0.75, 0.15, 78]),
-  evacuacion: oklchAHex([0.54, 0.19, 29]),
-  pico: oklchAHex([0.7, 0.02, 185]),
+  alerta: alerta[600],
+  evacuacion: evacuacion[700],
+  // Sobre fondo oscuro (hero y pie) las marcas de umbral usan un tono más claro del mismo matiz.
+  alertaClaro: alerta[300],
+  evacuacionClaro: evacuacion[300],
+  pico: "#8A9FBB",
 };
 
 export const PAL = { limo, pizarra, agua, alerta, evacuacion, rio, verde, escala } as const;
@@ -63,23 +134,29 @@ export const ORIGEN_OKLCH: Record<string, Oklch> = {
 export const SEMANTICOS = {
   fondo: "pizarra.50",
   superficie: "papel",
+  suave: "agua.100",
   borde: "pizarra.200",
+  bordeControl: "pizarra.500",
   bordeFuerte: "pizarra.500",
   texto: "pizarra.900",
-  textoSuave: "pizarra.500",
+  textoSuave: "pizarra.600",
   primario: "agua.700",
-  primarioHover: "agua.600",
-  foco: "limo.900",
+  primarioHover: "agua.800",
+  confirmacion: "verde.600",
+  foco: "agua.800",
   focoClaro: "alerta.300",
-  acento: "alerta.500",
-  leyenda: { bg: "alerta.800", fg: "papel" },
-  nav: { bg: "limo.900", fg: "pizarra.100", activo: "alerta.500", hover: "limo.700" },
+  acento: "alerta.600",
+  // Cinta fija con la leyenda obligatoria: tinta oscura, texto claro y sin color de alarma.
+  leyenda: { bg: "limo.900", fg: "limo.100" },
+  // Cabecera clara; el pie y el hero usan `oscuro`.
+  nav: { bg: "papel", fg: "pizarra.900", activo: "agua.700", hover: "agua.100" },
+  oscuro: { bg: "limo.900", fg: "limo.50", suave: "limo.200", linea: "limo.700", panel: "limo.800" },
   cat: {
-    observado: { bg: "agua.700", fg: "papel", borde: "agua.700" },
-    referencia: { bg: "papel", fg: "pizarra.700", borde: "pizarra.700" },
-    simulado: { bg: "alerta.50", fg: "alerta.800", borde: "alerta.700" },
+    observado: { bg: "agua.100", fg: "agua.800", borde: "agua.700" },
+    referencia: { bg: "papel", fg: "pizarra.700", borde: "pizarra.500" },
+    simulado: { bg: "alerta.50", fg: "alerta.800", borde: "alerta.600" },
     observadoOscuro: { bg: "agua.700", fg: "papel", borde: "agua.300" },
-    referenciaOscuro: { bg: "limo.800", fg: "pizarra.100", borde: "pizarra.100" },
+    referenciaOscuro: { bg: "limo.800", fg: "limo.100", borde: "limo.200" },
   },
   estado: {
     normal: { fill: "pizarra.100", borde: "pizarra.500" },
@@ -87,9 +164,17 @@ export const SEMANTICOS = {
     comprometido: { fill: "evacuacion.400", borde: "evacuacion.700" },
     aislado: { borde: "limo.950" },
   },
-  umbral: { alerta: "escala.alerta", evacuacion: "escala.evacuacion", pico: "escala.pico", textoAlerta: "alerta.700", textoEvacuacion: "evacuacion.700" },
-  serie: { linea: "agua.700", cursor: "pizarra.900", grilla: "pizarra.100", eje: "pizarra.500" },
-  acceso: { transitable: "agua.700", cerrado: "evacuacion.600", lluvia: "alerta.500", anegado: "rio.500", ruta: "limo.900" },
+  umbral: {
+    alerta: "escala.alerta",
+    evacuacion: "escala.evacuacion",
+    alertaClaro: "escala.alertaClaro",
+    evacuacionClaro: "escala.evacuacionClaro",
+    pico: "escala.pico",
+    textoAlerta: "alerta.800",
+    textoEvacuacion: "evacuacion.700",
+  },
+  serie: { linea: "agua.700", cursor: "pizarra.900", grilla: "pizarra.100", eje: "pizarra.600" },
+  acceso: { transitable: "agua.700", cerrado: "evacuacion.600", lluvia: "alerta.600", anegado: "rio.500", ruta: "limo.900" },
   mapa: {
     fondo: "pizarra.100",
     vial: "pizarra.400",
@@ -104,7 +189,7 @@ export const SEMANTICOS = {
     rioPrincipal: "agua.300",
     afluente: "agua.400",
     hito: "pizarra.100",
-    hitoPrincipal: "alerta.500",
+    hitoPrincipal: "alerta.300",
     hitoTexto: "alerta.300",
     grillaFina: "limo.800",
     grillaGruesa: "limo.700",

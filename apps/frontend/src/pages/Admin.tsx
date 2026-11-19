@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { useState } from "react";
 
+import { EstadoBackend } from "../components/EstadoBackend";
 import { AlertaError } from "../components/Formulario";
 import { Layout } from "../components/Layout";
 import { useCarga } from "../lib/useCarga";
@@ -168,6 +169,9 @@ export default function Admin() {
       </Text>
       <Seccion titulo="Nuevo usuario institucional" id="sec-alta">
         <FormAlta roles={catalogo} alCrear={usuarios.recargar} />
+      </Seccion>
+      <Seccion titulo="Estado del servicio" id="sec-servicio">
+        <EstadoBackend />
       </Seccion>
       <Seccion titulo="Usuarios" id="sec-usuarios">
         <Cargando carga={usuarios} esVacio={(d) => d.length === 0} vacio="No hay usuarios." hijos={(d) => (

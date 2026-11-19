@@ -1,10 +1,11 @@
-import { Box, Button, Link, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, Heading, Link, Text, VStack } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 import { AlertaError, Campo } from "../components/Formulario";
 import { Layout } from "../components/Layout";
+import { Plegable } from "../components/Plegable";
 import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 
@@ -58,12 +59,14 @@ export default function Login() {
                 <Text as="dd" m={0}>Panel operativo o tareas de cuadrilla. Las crea el administrador: no hay autorregistro.</Text>
               </Box>
             </BloqueApoyo>
-            <BloqueApoyo titulo="Si no podés ingresar">
-              <Text fontSize="sm">
-                Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
-                más tarde.
-              </Text>
-            </BloqueApoyo>
+            <Box borderTop="1px solid" borderColor="borde" pt={1}>
+              <Plegable titulo={<Heading as="h2" size="sm">Si no puede ingresar</Heading>}>
+                <Text fontSize="sm" pb={2}>
+                  Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
+                  más tarde.
+                </Text>
+              </Plegable>
+            </Box>
           </>
         }
       >
