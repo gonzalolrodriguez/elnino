@@ -153,7 +153,7 @@ export default function Bitacora() {
   return (
     <>
       <Heading as="h1" size="lg" mb={1}>
-        Bitácora de decisiones K8
+        Bitácora de decisiones
       </Heading>
       <Flex gap={2} align="center" mb={4}>
         <Insignia categoria="SIMULADO" />

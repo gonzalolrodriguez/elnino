@@ -2,15 +2,15 @@ import { Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Hea
 import { useState } from "react";
 
 import { useAuth } from "../auth/AuthContext";
-import { EstadoBackend } from "../components/EstadoBackend";
 import { AlertaError } from "../components/Formulario";
 import { Layout } from "../components/Layout";
-import { etiquetaEstadoUsuario, etiquetaRol } from "../lib/etiquetas";
+import { etiquetaEstadoUsuario, etiquetaRol, fechaHora } from "../lib/etiquetas";
 import { useCarga } from "../lib/useCarga";
 import { api } from "../panel/api";
 import type { UsuarioAdmin } from "../panel/tipos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
 import { TablaDesplazable } from "../components/TablaDesplazable";
+import { TableroAdmin } from "./admin/TableroAdmin";
 
 const ROLES_ALTA = ["cuadrilla", "operador", "decisor", "admin"] as const;
 
@@ -52,6 +52,11 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: { codigo
       </Td>
       <Td>
         <Badge colorScheme={u.estado === "activo" ? "green" : "gray"}>{etiquetaEstadoUsuario(u.estado)}</Badge>
+        {u.bloqueado_hasta && new Date(u.bloqueado_hasta).getTime() > Date.now() && (
+          <Badge ml={1} colorScheme="red" textTransform="none">
+            Bloqueada hasta {fechaHora(u.bloqueado_hasta)}
+          </Badge>
+        )}
       </Td>
       <Td>{u.ultimo_login ? fmtFecha(u.ultimo_login) : "nunca"}</Td>
       <Td>
@@ -165,7 +170,105 @@ function FormAlta({ roles, alCrear }: { roles: { codigo: string; nombre: string 
   );
 }
 
-/** Administración de usuarios institucionales (solo admin). Ciudadanía y productores se autorregistran. */
+const POR_PAGINA = 15;
+const ROLES_FILTRO = ["ciudadano", "productor", "cuadrilla", "operador", "decisor", "admin"] as const;
+
+/** Filtra por rol, estado y texto (nombre o correo). Se aplica sobre los usuarios ya cargados. */
+export function filtrarUsuarios(lista: UsuarioAdmin[], f: { rol: string; estado: string; texto: string }): UsuarioAdmin[] {
+  const t = f.texto.trim().toLowerCase();
+  return lista.filter((u) => (!f.rol || u.rol === f.rol) && (!f.estado || u.estado === f.estado) && (!t || u.nombre_visible.toLowerCase().includes(t) || u.email.toLowerCase().includes(t)));
+}
+
+function ListaUsuarios({ usuarios, roles, alCambiar }: { usuarios: UsuarioAdmin[]; roles: { codigo: string; nombre: string }[]; alCambiar: () => void }) {
+  const [rol, setRol] = useState("");
+  const [estado, setEstado] = useState("");
+  const [texto, setTexto] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const filtrados = filtrarUsuarios(usuarios, { rol, estado, texto });
+  const paginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const actual = Math.min(pagina, paginas - 1);
+  const visibles = filtrados.slice(actual * POR_PAGINA, (actual + 1) * POR_PAGINA);
+  const cambiar = (f: () => void) => {
+    f();
+    setPagina(0);
+  };
+  return (
+    <>
+      <Flex gap={3} wrap="wrap" mb={3} align="flex-end">
+        <FormControl w="11rem">
+          <FormLabel htmlFor="filtro-rol" fontSize="sm" mb={0}>
+            Rol
+          </FormLabel>
+          <Select id="filtro-rol" size="sm" bg="superficie" value={rol} onChange={(e) => cambiar(() => setRol(e.target.value))}>
+            <option value="">Todos</option>
+            {ROLES_FILTRO.map((r) => (
+              <option key={r} value={r}>
+                {etiquetaRol(r)}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl w="10rem">
+          <FormLabel htmlFor="filtro-estado" fontSize="sm" mb={0}>
+            Estado
+          </FormLabel>
+          <Select id="filtro-estado" size="sm" bg="superficie" value={estado} onChange={(e) => cambiar(() => setEstado(e.target.value))}>
+            <option value="">Todos</option>
+            <option value="activo">{etiquetaEstadoUsuario("activo")}</option>
+            <option value="inactivo">{etiquetaEstadoUsuario("inactivo")}</option>
+          </Select>
+        </FormControl>
+        <FormControl w="16rem">
+          <FormLabel htmlFor="filtro-texto" fontSize="sm" mb={0}>
+            Buscar por nombre o correo
+          </FormLabel>
+          <Input id="filtro-texto" size="sm" bg="superficie" value={texto} onChange={(e) => cambiar(() => setTexto(e.target.value))} />
+        </FormControl>
+      </Flex>
+      {filtrados.length === 0 ? (
+        <Text fontSize="sm" data-testid="usuarios-sin-resultados">
+          Ningún usuario coincide con esos filtros.
+        </Text>
+      ) : (
+        <TablaDesplazable etiqueta="Usuarios">
+          <Table size="sm" aria-label="Usuarios">
+            <Thead>
+              <Tr>
+                <Th>Nombre</Th>
+                <Th>Correo</Th>
+                <Th>Rol</Th>
+                <Th>Rol operativo</Th>
+                <Th>Estado</Th>
+                <Th>Último ingreso</Th>
+                <Th>Acción</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {visibles.map((u) => (
+                <FilaUsuario key={u.id} u={u} roles={roles} alCambiar={alCambiar} />
+              ))}
+            </Tbody>
+          </Table>
+        </TablaDesplazable>
+      )}
+      <Flex align="center" justify="space-between" gap={3} wrap="wrap" mt={3} fontSize="sm">
+        <Text data-testid="usuarios-rango">
+          {filtrados.length === 0 ? "0 usuarios" : `Mostrando ${actual * POR_PAGINA + 1} a ${actual * POR_PAGINA + visibles.length} de ${filtrados.length}`}
+        </Text>
+        <Flex gap={2}>
+          <Button size="sm" variant="outline" onClick={() => setPagina(actual - 1)} isDisabled={actual === 0}>
+            Anterior
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setPagina(actual + 1)} isDisabled={actual >= paginas - 1}>
+            Siguiente
+          </Button>
+        </Flex>
+      </Flex>
+    </>
+  );
+}
+
+/** Administración (solo admin): tablero de estado y gestión de usuarios institucionales. Ciudadanía y productores se autorregistran. */
 export default function Admin() {
   const usuarios = useCarga(() => api.usuarios());
   const roles = useCarga(() => api.rolesOperativos());
@@ -173,40 +276,17 @@ export default function Admin() {
   return (
     <Layout titulo="Administración">
       <Heading as="h1" size="xl" mb={2}>
-        Administración de usuarios
+        Administración
       </Heading>
       <Text mb={4} maxW="42rem">
-        Alta y baja de usuarios institucionales (cuadrilla, operador, decisor y admin). Cada uno firma sus tareas y decisiones con un rol operativo, sin nombres de funcionarios reales. Las cuentas de demostración son ficticias.
+        Estado de la plataforma y alta y baja de usuarios institucionales (cuadrilla, operador, decisor y admin). Cada uno firma sus tareas y decisiones con un rol operativo, sin nombres de funcionarios reales. Las cuentas de demostración son ficticias.
       </Text>
+      <TableroAdmin usuarios={usuarios.datos ?? []} />
       <Seccion titulo="Nuevo usuario institucional" id="sec-alta">
         <FormAlta roles={catalogo} alCrear={usuarios.recargar} />
       </Seccion>
-      <Seccion titulo="Estado del servicio" id="sec-servicio">
-        <EstadoBackend />
-      </Seccion>
       <Seccion titulo="Usuarios" id="sec-usuarios">
-        <Cargando carga={usuarios} esVacio={(d) => d.length === 0} vacio="No hay usuarios." hijos={(d) => (
-          <TablaDesplazable etiqueta="Usuarios">
-            <Table size="sm" aria-label="Usuarios">
-              <Thead>
-                <Tr>
-                  <Th>Nombre</Th>
-                  <Th>Correo</Th>
-                  <Th>Rol</Th>
-                  <Th>Rol operativo</Th>
-                  <Th>Estado</Th>
-                  <Th>Último ingreso</Th>
-                  <Th>Acción</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {d.map((u) => (
-                  <FilaUsuario key={u.id} u={u} roles={catalogo} alCambiar={usuarios.recargar} />
-                ))}
-              </Tbody>
-            </Table>
-          </TablaDesplazable>
-        )} />
+        <Cargando carga={usuarios} esVacio={(d) => d.length === 0} vacio="No hay usuarios." hijos={(d) => <ListaUsuarios usuarios={d} roles={catalogo} alCambiar={usuarios.recargar} />} />
       </Seccion>
     </Layout>
   );

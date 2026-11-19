@@ -113,9 +113,9 @@ describe("acceso por rol", () => {
   });
 
   it("solo el admin entra a /admin: un operador es redirigido al panel", async () => {
-    conSesion("operador", { "GET /serie/formosa": ok({ umbrales: {}, picos: [], puntos: [], notas: [], n: 0 }) });
+    conSesion("operador");
     renderRuta("/admin");
-    expect(await screen.findByRole("heading", { name: /Monitor hidrométrico/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Tablero" })).toBeInTheDocument();
   });
 });
 
@@ -336,7 +336,7 @@ describe("monitor y Centinela", () => {
       }),
       "GET /lluvia": ok({ lecturas: [], n: 0, sin_dato_observado: true, nota: "" }),
     });
-    renderRuta("/comando");
+    renderRuta("/comando/rio");
     const ultima = await screen.findByTestId("monitor-ultima");
     expect(ultima).toHaveTextContent("5,60 m");
     expect(within(ultima.parentElement as HTMLElement).getByText("DATO OBSERVADO")).toBeInTheDocument();

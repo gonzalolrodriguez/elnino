@@ -11,13 +11,15 @@ import Operacion from "./paginas/Operacion";
 import Ordenes from "./paginas/Ordenes";
 import Produccion from "./paginas/Produccion";
 import Recomendacion from "./paginas/Recomendacion";
+import Tablero from "./paginas/Tablero";
 
 /** Rutas internas de `/comando/*` (el acceso por rol lo exige `RutaProtegida` en `App`). */
 export default function Panel() {
   return (
     <Routes>
       <Route element={<PanelLayout />}>
-        <Route index element={<Monitor />} />
+        <Route index element={<Tablero />} />
+        <Route path="rio" element={<Monitor />} />
         <Route path="mapa" element={<MapaOperativo />} />
         <Route path="recomendacion" element={<Recomendacion />} />
         <Route path="produccion" element={<Produccion />} />

@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
@@ -167,10 +168,20 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
 }
 
 function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
-  const carga = useCarga(() => api.solicitudes());
+  // Los filtros viven en la URL: el tablero enlaza acá con `?estado=recibida` o `?sector=S4`.
+  const [params, setParams] = useSearchParams();
+  const estadoFiltro = params.get("estado") ?? "";
+  const sectorFiltro = params.get("sector") ?? "";
+  const carga = useCarga(() => api.solicitudes({ estado: estadoFiltro || undefined, sector_id: sectorFiltro || undefined, limite: 200 }), [estadoFiltro, sectorFiltro]);
   const toast = useToast();
   const [error, setError] = useState<unknown>(null);
   const [cuadrilla, setCuadrilla] = useState("");
+  const cambiarFiltro = (clave: "estado" | "sector", valor: string) => {
+    const nuevo = new URLSearchParams(params);
+    if (valor) nuevo.set(clave, valor);
+    else nuevo.delete(clave);
+    setParams(nuevo, { replace: true });
+  };
 
   async function avanzar(s: Solicitud, estado: string) {
     setError(null);
@@ -194,7 +205,35 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
         ))}
       </Select>
     }>
-      <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio="No hay solicitudes en la cola." hijos={(d) => (
+      <Flex gap={3} wrap="wrap" mb={3}>
+        <FormControl w="12rem">
+          <FormLabel htmlFor="op-filtro-estado" fontSize="sm" mb={0}>
+            Estado
+          </FormLabel>
+          <Select id="op-filtro-estado" size="sm" bg="superficie" value={estadoFiltro} onChange={(e) => cambiarFiltro("estado", e.target.value)}>
+            <option value="">Todos</option>
+            {ESTADOS_SOLICITUD.map((e) => (
+              <option key={e} value={e}>
+                {etiquetaEstadoSolicitud(e)}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl w="10rem">
+          <FormLabel htmlFor="op-filtro-sector" fontSize="sm" mb={0}>
+            Sector
+          </FormLabel>
+          <Select id="op-filtro-sector" size="sm" bg="superficie" value={sectorFiltro} onChange={(e) => cambiarFiltro("sector", e.target.value)}>
+            <option value="">Todos</option>
+            {["S1", "S2", "S3", "S4"].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+      </Flex>
+      <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio={estadoFiltro || sectorFiltro ? "No hay solicitudes con esos filtros." : "No hay solicitudes en la cola."} hijos={(d) => (
         <TablaDesplazable etiqueta="Solicitudes">
           <Table size="sm" aria-label="Solicitudes">
             <Thead>
@@ -252,7 +291,7 @@ export default function Operacion() {
   return (
     <>
       <Heading as="h1" size="lg" mb={1}>
-        Operación
+        Solicitudes y cuadrillas
       </Heading>
       <Flex align="center" gap={2} mb={4}>
         <Insignia categoria="SIMULADO" />

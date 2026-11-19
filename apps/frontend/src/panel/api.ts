@@ -18,6 +18,8 @@ import type {
   Orden,
   Puesto,
   Recomendacion,
+  ResumenAdmin,
+  ResumenPanel,
   RelacionK7,
   Ruta,
   SerieFormosa,
@@ -67,7 +69,16 @@ export const api = {
   actualizarTarea: (id: number, c: { estado?: string; cuadrilla_id?: number; checklist?: { item: string; hecho: boolean }[] }) => solicitar<Tarea>(`/tareas/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
   notificaciones: () => solicitar<{ notificaciones: Notificacion[]; no_leidas: number }>("/mi/notificaciones", a),
   marcarLeida: (id: number) => solicitar<Notificacion>(`/mi/notificaciones/${id}/leida`, { ...a, metodo: "PATCH", cuerpo: {} }),
-  solicitudes: () => solicitar<{ solicitudes: Solicitud[] }>("/solicitudes", a),
+  solicitudes: (f: { estado?: string; sector_id?: string; limite?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (f.estado) q.set("estado", f.estado);
+    if (f.sector_id) q.set("sector_id", f.sector_id);
+    if (f.limite) q.set("limite", String(f.limite));
+    const s = q.toString();
+    return solicitar<{ solicitudes: Solicitud[]; total?: number }>(`/solicitudes${s ? `?${s}` : ""}`, a);
+  },
+  resumenPanel: () => solicitar<ResumenPanel>("/panel/resumen", a),
+  resumenAdmin: () => solicitar<ResumenAdmin>("/admin/resumen", a),
   avanzarSolicitud: (id: number, estado: string, cuadrilla_id?: number) =>
     solicitar<Solicitud>(`/solicitudes/${id}`, { ...a, metodo: "PATCH", cuerpo: { estado, ...(cuadrilla_id ? { cuadrilla_id } : {}) } }),
   ordenes: () => solicitar<{ ordenes: Orden[] }>("/ordenes", a),

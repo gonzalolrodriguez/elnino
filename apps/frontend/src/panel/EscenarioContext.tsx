@@ -16,6 +16,13 @@ type Contexto = {
   calculando: boolean;
   error: unknown;
   simular: () => Promise<Escenario | null>;
+  /** Altura observada (DATO OBSERVADO) con la que se compara el escenario activo. */
+  alturaObservada: number;
+  fijarAlturaObservada: (m: number) => void;
+  /** true si la altura elegida difiere de la observada: lo que se ve en el panel es una simulación. */
+  escenarioSimulado: boolean;
+  /** Vuelve a la altura observada y deja la lluvia simulada en cero. */
+  volverAObservado: () => void;
 };
 
 function mismaEntrada(a: EntradaEscenario, b: EntradaEscenario): boolean {
@@ -45,6 +52,7 @@ export function EscenarioProvider({ children }: { children: ReactNode }) {
   const [entradaCalculada, setEntradaCalculada] = useState<EntradaEscenario | null>(null);
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [alturaObservada, setAlturaObservada] = useState(ALTURA_CORTE_M);
 
   const fijarAltura = useCallback((m: number) => setEntrada((e) => ({ ...e, altura_formosa_m: m })), []);
   const fijarLluvia = useCallback((mm: number, origen?: OrigenLluvia) => setEntrada((e) => ({ ...e, lluvia_mm: mm, lluvia_origen: origen ?? e.lluvia_origen })), []);
@@ -73,10 +81,14 @@ export function EscenarioProvider({ children }: { children: ReactNode }) {
     }
   }, [entrada]);
 
+  const fijarAlturaObservada = useCallback((m: number) => setAlturaObservada(m), []);
+  const volverAObservado = useCallback(() => setEntrada((e) => ({ ...e, altura_formosa_m: alturaObservada, lluvia_mm: 0 })), [alturaObservada]);
+  const escenarioSimulado = Math.abs(entrada.altura_formosa_m - alturaObservada) >= 0.005;
+
   const desactualizado = escenario !== null && entradaCalculada !== null && !mismaEntrada(entrada, entradaCalculada);
   const valor = useMemo(
-    () => ({ entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular }),
-    [entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular],
+    () => ({ entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular, alturaObservada, fijarAlturaObservada, escenarioSimulado, volverAObservado }),
+    [entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular, alturaObservada, fijarAlturaObservada, escenarioSimulado, volverAObservado],
   );
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }
