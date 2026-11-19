@@ -21,7 +21,7 @@ jest.mock("@/lib/SesionContext", () => ({
 
 const mockEnviar = jest.fn();
 jest.mock("@/lib/ColaContext", () => ({
-  useCola: () => ({ enviar: mockEnviar, sinRed: false, pendientes: 0 }),
+  useCola: () => ({ enviar: mockEnviar, sinRed: false, pendientes: 0, items: [], otroServidor: [], reintentar: jest.fn(), descartar: jest.fn() }),
 }));
 
 jest.mock("@/lib/AlertasContext", () => ({
@@ -43,7 +43,10 @@ jest.mock("@/lib/dispositivo", () => ({
 jest.mock("@/lib/cacheLocal", () => ({ leerCache: jest.fn(async () => null), guardarCache: jest.fn(), borrarCache: jest.fn() }));
 
 const mockGrupo = jest.fn();
-jest.mock("@/lib/servicios", () => ({ api: { grupo: (...a: unknown[]) => mockGrupo(...a), guardarGrupo: jest.fn() } }));
+const mockSolicitudes = jest.fn();
+jest.mock("@/lib/servicios", () => ({
+  api: { grupo: (...a: unknown[]) => mockGrupo(...a), guardarGrupo: jest.fn(), solicitudes: (...a: unknown[]) => mockSolicitudes(...a) },
+}));
 
 const metricas = {
   frame: { x: 0, y: 0, width: 360, height: 640 },
@@ -92,14 +95,14 @@ describe("aviso a los mandos operativos", () => {
     mockEstado = usuario("decisor");
     const Alertas = require("@/app/(app)/alertas").default;
     await render(conSafe(<Alertas />));
-    expect(screen.getByText("Tu panel de trabajo está en la web")).toBeTruthy();
+    expect(screen.getByText("Tu panel completo está en la web")).toBeTruthy();
   });
 
   it("un ciudadano no ve el aviso", async () => {
     mockEstado = usuario("ciudadano");
     const Alertas = require("@/app/(app)/alertas").default;
     await render(conSafe(<Alertas />));
-    expect(screen.queryByText("Tu panel de trabajo está en la web")).toBeNull();
+    expect(screen.queryByText("Tu panel completo está en la web")).toBeNull();
   });
 });
 
@@ -118,7 +121,7 @@ describe("asistencia", () => {
     expect(screen.getByLabelText("Personas a asistir").props.value).toBe("");
   });
 
-  it("la referencia de ubicación viaja dentro del texto libre", async () => {
+  it("la referencia de ubicación viaja como campo propio, no dentro del texto", async () => {
     mockEstado = usuario("ciudadano");
     mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
     const Asistencia = require("@/app/(app)/asistencia").default;
@@ -129,7 +132,39 @@ describe("asistencia", () => {
     await screen.findByText("Actualizar ubicación");
     await fireEvent.press(screen.getByText("Enviar solicitud"));
     await waitFor(() => expect(mockEnviar).toHaveBeenCalledTimes(1));
-    expect(mockEnviar.mock.calls[0][0].texto).toBe("Referencia: Paraje El Colorado");
+    const enviado = mockEnviar.mock.calls[0][0];
+    expect(enviado.referencia_ubicacion).toBe("Paraje El Colorado");
+    expect(enviado.texto).toBeNull();
+  });
+
+  it("sin referencia no manda el campo", async () => {
+    mockEstado = usuario("ciudadano");
+    mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
+    const Asistencia = require("@/app/(app)/asistencia").default;
+    await render(conSafe(<Asistencia />));
+    await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
+    await fireEvent.press(screen.getByText("Tomar mi ubicación"));
+    await screen.findByText("Actualizar ubicación");
+    await fireEvent.press(screen.getByText("Enviar solicitud"));
+    await waitFor(() => expect(mockEnviar).toHaveBeenCalledTimes(1));
+    expect("referencia_ubicacion" in mockEnviar.mock.calls[0][0]).toBe(false);
+  });
+
+  it("Mis solicitudes muestra la referencia y la ubicación aproximada", async () => {
+    mockEstado = usuario("ciudadano");
+    mockSolicitudes.mockResolvedValue({
+      solicitudes: [
+        {
+          id: 9, origen: "sms_sim", tipo: "otro", personas: 3, animales: 0, texto: null, estado: "recibida",
+          sector_id: null, creado_en: "2026-11-19T10:00:00Z", actualizado_en: "2026-11-19T10:00:00Z", categoria: "SIMULADO",
+          ubicacion_aproximada: true, referencia_ubicacion: "Paraje El Colorado", requiere_verificacion: true,
+        },
+      ],
+    });
+    const Solicitudes = require("@/app/(app)/solicitudes").default;
+    await render(conSafe(<Solicitudes />));
+    await screen.findByText("Ubicación aproximada: un operador la va a verificar");
+    expect(screen.getByText("Referencia: Paraje El Colorado")).toBeTruthy();
   });
 
   it("rechaza más de 500 personas antes de encolar", async () => {
@@ -150,6 +185,14 @@ describe("asistencia", () => {
     await render(conSafe(<Asistencia />));
     expect(screen.getByText("¿Sin datos? Enviar por SMS")).toBeTruthy();
     expect(screen.getAllByText(/SIMULADO/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("ayuda por SMS", () => {
+  it("explica que también se puede mandar AYUDA o INFO (canal SIMULADO)", async () => {
+    const AyudaSms = require("@/app/ayuda-sms").default;
+    await render(conSafe(<AyudaSms />));
+    expect(screen.getByText(/AYUDA o INFO/)).toBeTruthy();
   });
 });
 

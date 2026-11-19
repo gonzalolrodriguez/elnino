@@ -65,6 +65,7 @@ export default function Solicitudes() {
               <Texto>
                 {etiquetaTipoSolicitud(i.datos.tipo)} · {i.datos.personas} personas · {i.datos.animales} animales
               </Texto>
+              {i.datos.referencia_ubicacion ? <Texto suave>Referencia: {i.datos.referencia_ubicacion}</Texto> : null}
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
                 <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text>
@@ -128,6 +129,13 @@ export default function Solicitudes() {
                 {s.sector_id ? ` · sector ${s.sector_id}` : ""}
               </Texto>
               {s.texto ? <Texto suave>{s.texto}</Texto> : null}
+              {s.referencia_ubicacion ? <Texto suave>Referencia: {s.referencia_ubicacion}</Texto> : null}
+              {s.ubicacion_aproximada ? (
+                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+              ) : null}
+              {s.requiere_verificacion && !s.ubicacion_aproximada ? (
+                <Texto>Un operador va a verificar este pedido</Texto>
+              ) : null}
               <Texto suave>
                 {etiquetaOrigen(s.origen)} · actualizada el {formatearFechaHora(s.actualizado_en)}
               </Texto>

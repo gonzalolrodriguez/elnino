@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -53,10 +54,15 @@ export function Pantalla({
   children,
   scroll = true,
   dosColumnas = false,
+  alRefrescar,
+  refrescando = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
   dosColumnas?: boolean;
+  /** Si se indica, la pantalla admite «tirar para actualizar». */
+  alRefrescar?: () => void;
+  refrescando?: boolean;
 }) {
   const d = useDiseno();
   const enPestanas = useContext(EnPestanasContext);
@@ -82,6 +88,9 @@ export function Pantalla({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
+        refreshControl={
+          alRefrescar ? <RefreshControl refreshing={refrescando} onRefresh={alRefrescar} /> : undefined
+        }
       >
         {children}
       </ScrollView>

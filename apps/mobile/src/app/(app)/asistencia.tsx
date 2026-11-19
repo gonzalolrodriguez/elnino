@@ -58,12 +58,6 @@ export default function Asistencia() {
 
   const hayContenido = entero(personas) > 0 || entero(animales) > 0 || texto.trim().length > 0 || referencia.trim().length > 0;
 
-  // TODO: el backend todavía no tiene `referencia_ubicacion`: se manda dentro del texto libre.
-  const textoCompleto = [referencia.trim() ? `Referencia: ${referencia.trim()}` : "", texto.trim()]
-    .filter(Boolean)
-    .join(". ")
-    .slice(0, MAX_TEXTO);
-
   const datos = (): DatosSolicitud | null =>
     ubicacion
       ? {
@@ -72,7 +66,9 @@ export default function Asistencia() {
           animales: entero(animales),
           lon: ubicacion.lon,
           lat: ubicacion.lat,
-          texto: textoCompleto || null,
+          texto: texto.trim().slice(0, MAX_TEXTO) || null,
+          // Campo propio del backend; se omite si está vacío.
+          ...(referencia.trim() ? { referencia_ubicacion: referencia.trim() } : {}),
           origen: "app",
         }
       : null;
@@ -179,8 +175,8 @@ export default function Asistencia() {
         maxLength={60}
       />
       <Texto suave pequeno>
-        Sirve si el GPS no anda: por SMS la referencia viaja como «cómo se llega». Para el envío por
-        internet hace falta además la ubicación.
+        Ayuda a los operadores a encontrarte y por SMS viaja como «cómo se llega». Para el envío por
+        internet hace falta además tomar la ubicación con el GPS.
       </Texto>
 
       <Tarjeta>

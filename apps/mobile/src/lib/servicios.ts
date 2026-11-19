@@ -18,6 +18,10 @@ export type Solicitud = {
   creado_en: string;
   actualizado_en: string;
   categoria: Categoria;
+  /** Ausentes en backends anteriores: se tratan como `false` / `null`. */
+  ubicacion_aproximada?: boolean;
+  referencia_ubicacion?: string | null;
+  requiere_verificacion?: boolean;
 };
 
 export type Notificacion = {
@@ -116,6 +120,83 @@ export type Tarea = {
   actualizado_en: string;
 };
 
+/** Bloque común del resumen del panel: cada bloque trae su categoría, fuente y fecha. */
+type BloquePanel = { categoria: Categoria; fuente: string; fecha_dato: string | null };
+
+export type TiempoAUmbral = {
+  objetivo: string;
+  valor_m: number;
+  ya_alcanzado: boolean;
+  dias_minimo: number | null;
+  dias_maximo: number | null;
+};
+
+export type RioPanel = BloquePanel & {
+  disponible: boolean;
+  altura_m?: number;
+  fecha_lectura?: string;
+  umbral_alerta_m?: number;
+  umbral_evacuacion_m?: number;
+  distancia_a_alerta_m?: number;
+  distancia_a_evacuacion_m?: number;
+  tendencia_7d_m?: number | null;
+  tendencia_7d_m_por_dia?: number | null;
+  tiempo_a_umbrales?: TiempoAUmbral[];
+  supuesto_proyeccion?: string;
+  categoria_proyeccion?: Categoria;
+};
+
+export type SectorPanel = {
+  id: string;
+  nombre: string;
+  estado: "normal" | "en_riesgo" | "comprometido";
+  aislado: boolean;
+  margen_a_compromiso_m: number;
+  personas_k10?: number;
+  personas_registradas?: number;
+  animales_expuestos?: number;
+  accesos: AccesoSector[];
+};
+
+export type CentroPanel = {
+  nombre: string;
+  capacidad_personas: number | null;
+  ocupacion: number | null;
+  ocupacion_pct: number | null;
+};
+
+export type CuadrillaPanel = {
+  nombre: string;
+  estado: string;
+  tareas: Partial<Record<"pendiente" | "en_curso" | "completada" | "cancelada", number>>;
+};
+
+/** `GET /panel/resumen` (mandos). Todo lo que no es el río ni los sectores puede faltar. */
+export type PanelResumen = {
+  generado_en?: string;
+  rio: RioPanel;
+  sectores: BloquePanel & { items: SectorPanel[] };
+  solicitudes: BloquePanel & {
+    total: number;
+    por_estado: Record<string, number>;
+    a_verificar?: number;
+    recibidas_mas_antigua_min?: number | null;
+  };
+  centros: BloquePanel & { items: CentroPanel[] };
+  cuadrillas?: BloquePanel & { items: CuadrillaPanel[] };
+  frescura?: {
+    rio_ultima_lectura?: string | null;
+    k10_sectores?: string | null;
+    lluvia_ultima_lectura?: string | null;
+    fecha_corte?: string | null;
+  };
+  /** Bloque de evacuaciones (constancias): se muestra solo si el backend lo envía. */
+  evacuaciones?: (BloquePanel & Record<string, unknown>) | null;
+  categoria: Categoria;
+  fuente: string;
+  fecha_dato: string | null;
+};
+
 export type GeoSectores = {
   features: {
     geometry: { type: string; coordinates: number[][][] };
@@ -208,6 +289,7 @@ export const api = {
   guardarStock: (id: number, stock: ItemStock[]) =>
     peticion<unknown>(`/mi/establecimientos/${id}/stock`, { metodo: "PUT", cuerpo: { stock } }),
   miSector: () => peticion<MiSector>("/mi/sector"),
+  panelResumen: () => peticion<PanelResumen>("/panel/resumen"),
   centros: () => peticion<{ centros: Centro[] }>("/centros"),
   sectoresGeo: () => peticion<GeoSectores>("/sectores", { auth: false }),
   tareas: () => peticion<{ tareas: Tarea[] }>("/tareas"),

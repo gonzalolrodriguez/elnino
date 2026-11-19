@@ -113,6 +113,10 @@ export default function AyudaSms() {
       </Tarjeta>
 
       <Texto suave>{textoDestinoSMS()}</Texto>
+      <Texto suave>
+        También podés mandar un SMS con la palabra AYUDA o INFO para recibir las instrucciones (canal
+        SIMULADO).
+      </Texto>
       {error ? <ErrorCaja mensaje={error} /> : null}
       <Boton titulo="Armar el mensaje" onPress={() => void armar()} cargando={trabajando} />
       <Texto suave pequeno>

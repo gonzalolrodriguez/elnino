@@ -11,6 +11,8 @@ export type DatosSolicitud = {
   lon: number;
   lat: number;
   texto: string | null;
+  /** Campo propio del backend; se omite cuando está vacío (no se manda `null`). */
+  referencia_ubicacion?: string;
   origen: "app";
 };
 
