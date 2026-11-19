@@ -40,6 +40,8 @@ jest.mock("@/lib/dispositivo", () => ({
   tomarFotoComprimida: jest.fn(async () => null),
 }));
 
+jest.mock("@/lib/cacheLocal", () => ({ leerCache: jest.fn(async () => null), guardarCache: jest.fn(), borrarCache: jest.fn() }));
+
 const mockGrupo = jest.fn();
 jest.mock("@/lib/servicios", () => ({ api: { grupo: (...a: unknown[]) => mockGrupo(...a), guardarGrupo: jest.fn() } }));
 
@@ -114,6 +116,20 @@ describe("asistencia", () => {
     await waitFor(() => expect(mockEnviar).toHaveBeenCalledTimes(1));
     await screen.findByText("Guardada en el teléfono");
     expect(screen.getByLabelText("Personas a asistir").props.value).toBe("");
+  });
+
+  it("la referencia de ubicación viaja dentro del texto libre", async () => {
+    mockEstado = usuario("ciudadano");
+    mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
+    const Asistencia = require("@/app/(app)/asistencia").default;
+    await render(conSafe(<Asistencia />));
+    await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
+    await fireEvent.changeText(screen.getByLabelText("Referencia de ubicación (paraje, camino, escuela cercana)"), "Paraje El Colorado");
+    await fireEvent.press(screen.getByText("Tomar mi ubicación"));
+    await screen.findByText("Actualizar ubicación");
+    await fireEvent.press(screen.getByText("Enviar solicitud"));
+    await waitFor(() => expect(mockEnviar).toHaveBeenCalledTimes(1));
+    expect(mockEnviar.mock.calls[0][0].texto).toBe("Referencia: Paraje El Colorado");
   });
 
   it("rechaza más de 500 personas antes de encolar", async () => {

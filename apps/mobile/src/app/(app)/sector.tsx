@@ -5,6 +5,7 @@ import { MapaConRespaldo } from "@/components/MapaSector";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
+import { etiquetaEstadoSector, etiquetaTipoOrden } from "@/lib/etiquetas";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
 
 type Carga =
@@ -12,7 +13,6 @@ type Carga =
   | { tipo: "ok"; sector: MiSector; geo: GeoSectores | null; centros: Centro[] }
   | { tipo: "error"; mensaje: string };
 
-const ESTADO_TEXTO = { normal: "Normal", en_riesgo: "En riesgo", comprometido: "Comprometido" } as const;
 
 export default function Sector() {
   const d = useDiseno();
@@ -108,7 +108,7 @@ export default function Sector() {
                 color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.avisoTexto : COLOR.ok,
               }}
             >
-              {ESTADO_TEXTO[s.estado]}
+              {etiquetaEstadoSector(s.estado)}
               {s.aislado ? " · aislado (sin accesos transitables)" : ""}
             </Text>
             <Texto>Altura de compromiso: {s.altura_compromiso_m.toFixed(2)} m</Texto>
@@ -120,7 +120,7 @@ export default function Sector() {
             ))}
             {s.alertas.map((a) => (
               <Texto key={a.orden_id}>
-                Orden #{a.orden_id} ({a.tipo}): {a.fundamento}
+                Orden #{a.orden_id} ({etiquetaTipoOrden(a.tipo)}): {a.fundamento}
               </Texto>
             ))}
             <Insignia categoria={s.categoria} />

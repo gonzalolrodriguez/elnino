@@ -18,14 +18,8 @@ import {
   Vacio,
 } from "@/components/ui";
 import { mensajeError } from "@/lib/errores";
+import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { api, type Tarea } from "@/lib/servicios";
-
-const ETIQUETA: Record<Tarea["estado"], string> = {
-  pendiente: "Pendiente",
-  en_curso: "En curso",
-  completada: "Completada",
-  cancelada: "Cancelada",
-};
 
 function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea) => void }) {
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +49,7 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
     <Tarjeta>
       <Text style={{ fontWeight: "700", fontSize: 16 }}>{tarea.titulo}</Text>
       <Text style={{ fontWeight: "600", color: tarea.estado === "completada" ? COLOR.ok : COLOR.primario }}>
-        {ETIQUETA[tarea.estado]}
+        {etiquetaEstadoTarea(tarea.estado)}
         {tarea.sector_id ? ` · sector ${tarea.sector_id}` : ""}
       </Text>
       {tarea.descripcion ? <Texto>{tarea.descripcion}</Texto> : null}

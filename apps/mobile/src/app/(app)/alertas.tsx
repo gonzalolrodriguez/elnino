@@ -4,6 +4,7 @@ import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useAlertas } from "@/lib/AlertasContext";
+import { formatearFechaHora } from "@/lib/etiquetas";
 import { useUsuario } from "@/lib/SesionContext";
 
 const CANAL: Record<string, string> = {
@@ -36,7 +37,7 @@ export default function Alertas() {
             <Text style={{ fontWeight: "700", color: n.leida ? COLOR.suave : COLOR.primario }}>
               {n.leida ? "Leída" : "Nueva"}
             </Text>
-            <Texto suave>{new Date(n.creada_en).toLocaleString("es-AR")}</Texto>
+            <Texto suave>{formatearFechaHora(n.creada_en)}</Texto>
           </View>
           <Texto>{n.mensaje}</Texto>
           <Insignia categoria="SIMULADO" />

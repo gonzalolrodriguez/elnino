@@ -20,15 +20,8 @@ import {
 import { hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
+import { etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
 import { api, type Solicitud } from "@/lib/servicios";
-
-const ETIQUETA_ESTADO: Record<Solicitud["estado"], string> = {
-  recibida: "Recibida",
-  verificada: "Verificada",
-  asignada: "Asignada a una cuadrilla",
-  en_curso: "En curso",
-  resuelta: "Resuelta",
-};
 
 type Carga =
   | { tipo: "cargando" }
@@ -70,7 +63,7 @@ export default function Solicitudes() {
                 {i.estado === "pendiente" ? "Pendiente de envío" : "Rechazada por el servidor"}
               </Text>
               <Texto>
-                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
+                {etiquetaTipoSolicitud(i.datos.tipo)} · {i.datos.personas} personas · {i.datos.animales} animales
               </Texto>
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
@@ -105,7 +98,7 @@ export default function Solicitudes() {
                 Pendientes para otro servidor ({hostDeUrl(i.servidorUrl)})
               </Text>
               <Texto>
-                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
+                {etiquetaTipoSolicitud(i.datos.tipo)} · {i.datos.personas} personas · {i.datos.animales} animales
               </Texto>
               <Texto suave>
                 No se envía a este servidor. Se enviará si volvés a ese servidor con esta cuenta.
@@ -128,14 +121,16 @@ export default function Solicitudes() {
           {carga.filas.map((s) => (
             <Tarjeta key={s.id}>
               <Text style={{ fontWeight: "700" }}>
-                #{s.id} · {ETIQUETA_ESTADO[s.estado]}
+                #{s.id} · {etiquetaEstadoSolicitud(s.estado)}
               </Text>
               <Texto>
-                {s.tipo} · {s.personas} personas · {s.animales} animales
+                {etiquetaTipoSolicitud(s.tipo)} · {s.personas} personas · {s.animales} animales
                 {s.sector_id ? ` · sector ${s.sector_id}` : ""}
               </Texto>
               {s.texto ? <Texto suave>{s.texto}</Texto> : null}
-              <Texto suave>{new Date(s.actualizado_en).toLocaleString("es-AR")}</Texto>
+              <Texto suave>
+                {etiquetaOrigen(s.origen)} · actualizada el {formatearFechaHora(s.actualizado_en)}
+              </Texto>
               <Insignia categoria={s.categoria} />
             </Tarjeta>
           ))}

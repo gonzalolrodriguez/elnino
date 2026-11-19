@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Image, Text } from "react-native";
 
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
+import { EstadoSector } from "@/components/EstadoSector";
 import { SelectorEspecie } from "@/components/SelectorEspecie";
 import { Boton, Campo, COLOR, ErrorCaja, Insignia, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import type { DatosSolicitud } from "@/lib/cola";
+import { etiquetaTipoSolicitud } from "@/lib/etiquetas";
 import { obtenerUbicacion, tomarFotoComprimida, type Coordenadas } from "@/lib/dispositivo";
 import { abrirSMS, leerEntero, textoDestinoSMS, validarCantidades } from "@/lib/ayudaSms";
 import { ErrorSOS, type EspecieSOS } from "@/lib/sos";
@@ -19,13 +21,8 @@ const TIPOS: { valor: DatosSolicitud["tipo"]; etiqueta: string }[] = [
   { valor: "otro", etiqueta: "Otro" },
 ];
 
-const TEXTO_TIPO: Record<DatosSolicitud["tipo"], string> = {
-  asistencia: "asistencia",
-  evacuacion: "evacuación",
-  ganado: "ganado",
-  logistica: "logística",
-  otro: "otro",
-};
+/** Tope del texto libre del backend (SolicitudIn.texto). */
+const MAX_TEXTO = 500;
 
 const entero = (v: string): number => leerEntero(v) ?? 0;
 
@@ -37,6 +34,7 @@ export default function Asistencia() {
   const [animales, setAnimales] = useState("");
   const [especie, setEspecie] = useState<EspecieSOS>("bovinos");
   const [texto, setTexto] = useState("");
+  const [referencia, setReferencia] = useState("");
   const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -58,7 +56,13 @@ export default function Asistencia() {
     }
   };
 
-  const hayContenido = entero(personas) > 0 || entero(animales) > 0 || texto.trim().length > 0;
+  const hayContenido = entero(personas) > 0 || entero(animales) > 0 || texto.trim().length > 0 || referencia.trim().length > 0;
+
+  // TODO: el backend todavía no tiene `referencia_ubicacion`: se manda dentro del texto libre.
+  const textoCompleto = [referencia.trim() ? `Referencia: ${referencia.trim()}` : "", texto.trim()]
+    .filter(Boolean)
+    .join(". ")
+    .slice(0, MAX_TEXTO);
 
   const datos = (): DatosSolicitud | null =>
     ubicacion
@@ -68,7 +72,7 @@ export default function Asistencia() {
           animales: entero(animales),
           lon: ubicacion.lon,
           lat: ubicacion.lat,
-          texto: texto.trim() || null,
+          texto: textoCompleto || null,
           origen: "app",
         }
       : null;
@@ -91,6 +95,7 @@ export default function Asistencia() {
       setPersonas("");
       setAnimales("");
       setTexto("");
+      setReferencia("");
       setFoto(null);
     } catch {
       setError("No se pudo guardar la solicitud en el teléfono.");
@@ -130,7 +135,8 @@ export default function Asistencia() {
         familiares: entero(personas),
         bovinos: entero(animales),
         especie: entero(animales) > 0 ? especie : null,
-        tipoPedido: TEXTO_TIPO[tipo],
+        tipoPedido: etiquetaTipoSolicitud(tipo).toLowerCase(),
+        acceso: referencia,
         texto,
       });
     } catch (e) {
@@ -140,6 +146,7 @@ export default function Asistencia() {
 
   return (
     <Pantalla>
+      <EstadoSector />
       <Titulo>Pedir asistencia</Titulo>
       <Texto suave>
         Tu pedido llega al panel operativo. No es una orden de evacuación ni reemplaza una llamada de
@@ -164,6 +171,17 @@ export default function Asistencia() {
         maxLength={500}
         style={{ minHeight: 96, textAlignVertical: "top" }}
       />
+
+      <Campo
+        etiqueta="Referencia de ubicación (paraje, camino, escuela cercana)"
+        value={referencia}
+        onChangeText={setReferencia}
+        maxLength={60}
+      />
+      <Texto suave pequeno>
+        Sirve si el GPS no anda: por SMS la referencia viaja como «cómo se llega». Para el envío por
+        internet hace falta además la ubicación.
+      </Texto>
 
       <Tarjeta>
         <Subtitulo>Ubicación</Subtitulo>
