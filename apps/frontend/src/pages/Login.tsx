@@ -6,6 +6,7 @@ import { rutaInicio, useAuth } from "../auth/AuthContext";
 import { AlertaError, Campo } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 
 const CUENTAS_DEMO = [
@@ -75,15 +76,90 @@ export default function Login() {
 
   return (
     <Layout titulo="Ingresar">
-      <Heading as="h1" size="xl" mb={2}>
-        Ingresar
-      </Heading>
-      <Text mb={6} maxW="42rem">
-        Para ciudadanía, productores y cuentas institucionales. Durante la demostración podés autocompletar cualquiera de los perfiles de prueba con un clic.
-      </Text>
+      <PaginaFormulario
+        titulo="Ingresar"
+        intro="Para ciudadanía, productores y cuentas institucionales. Durante la demostración podés autocompletar cualquiera de los perfiles de prueba con un clic."
+        anchoFormulario="28rem"
+        anchoAside="30rem"
+        aside={
+          <>
+            <Box bg="superficie" border="1px solid" borderColor="borde" borderTop="3px solid" borderTopColor="pizarra.700" borderRadius="sm" p={{ base: 4, md: 5 }} mb={4}>
+              <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={2}>
+                <Heading as="h2" size="sm">
+                  Perfiles de demostración (guion de 3 minutos)
+                </Heading>
+                <Insignia categoria="SIMULADO" />
+              </Flex>
+              <Text fontSize="xs" color="textoSuave" mb={3}>
+                Pulsá un perfil para cargar su correo ficticio (<code>@demo.evacuaciones.invalid</code>).
+              </Text>
+              <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2.5}>
+                {CUENTAS_DEMO.map((c) => {
+                  const seleccionado = email === c.email;
+                  return (
+                    <Box
+                      key={c.email}
+                      border="1px solid"
+                      borderColor={seleccionado ? "primario" : "borde"}
+                      bg={seleccionado ? "pizarra.100" : "superficie"}
+                      borderRadius="sm"
+                      p={2.5}
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="space-between"
+                      gap={1.5}
+                    >
+                      <Box>
+                        <Flex justify="space-between" align="center" gap={1} mb={0.5}>
+                          <Text fontWeight={700} fontSize="xs">
+                            {c.rol}
+                          </Text>
+                          {seleccionado && <Badge colorScheme="teal" fontSize="2xs">Activo</Badge>}
+                        </Flex>
+                        <Text fontSize="2xs" fontFamily="mono" color="pizarra.700" mb={0.5}>
+                          {c.email}
+                        </Text>
+                        <Text fontSize="2xs" color="textoSuave">
+                          {c.alcance}
+                        </Text>
+                      </Box>
+                      <Button
+                        size="xs"
+                        variant={seleccionado ? "solid" : "outline"}
+                        type="button"
+                        onClick={() => {
+                          setEmail(c.email);
+                          setErrores({});
+                        }}
+                      >
+                        Cargar {c.rol.split(" ")[0]}
+                      </Button>
+                    </Box>
+                  );
+                })}
+              </SimpleGrid>
+            </Box>
 
-      <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 28rem) minmax(0, 1fr)" }} gap={8} alignItems="start">
-        <TarjetaFormulario maxW="28rem">
+            <BloqueApoyo titulo="Qué encontrás adentro">
+              <Box as="dl" m={0} fontSize="sm">
+                <Text as="dt" fontWeight={700}>Ciudadanía</Text>
+                <Text as="dd" m={0} mb={2}>Tu sector, tus alertas y el centro de recepción que te corresponde.</Text>
+                <Text as="dt" fontWeight={700}>Productores</Text>
+                <Text as="dd" m={0} mb={2}>Tu establecimiento y tu hacienda declarada, para planificar el traslado.</Text>
+                <Text as="dt" fontWeight={700}>Cuentas institucionales</Text>
+                <Text as="dd" m={0}>Panel operativo o tareas de cuadrilla. Las crea el administrador: no hay autorregistro.</Text>
+              </Box>
+            </BloqueApoyo>
+            <BloqueApoyo titulo="Si no podés ingresar">
+              <Text fontSize="sm">
+                Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
+                más tarde.
+              </Text>
+            </BloqueApoyo>
+          </>
+        }
+      >
+        <TarjetaFormulario maxW="none">
           <form onSubmit={enviar} noValidate aria-label="Ingreso">
             <VStack spacing={4} align="stretch">
               <AlertaError error={error} />
@@ -106,64 +182,7 @@ export default function Login() {
             </VStack>
           </form>
         </TarjetaFormulario>
-
-        <Box bg="superficie" border="1px solid" borderColor="borde" borderTop="3px solid" borderTopColor="pizarra.700" borderRadius="sm" p={{ base: 4, md: 6 }}>
-          <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={3}>
-            <Heading as="h2" size="sm">
-              Perfiles de demostración (guion de 3 minutos)
-            </Heading>
-            <Insignia categoria="SIMULADO" />
-          </Flex>
-          <Text fontSize="sm" color="textoSuave" mb={4}>
-            Pulsá un perfil para cargar su correo ficticio (<code>@demo.evacuaciones.invalid</code>). La contraseña de demostración se define en <code>DEMO_PASSWORD</code> del archivo <code>.env</code>.
-          </Text>
-          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-            {CUENTAS_DEMO.map((c) => {
-              const seleccionado = email === c.email;
-              return (
-                <Box
-                  key={c.email}
-                  border="1px solid"
-                  borderColor={seleccionado ? "primario" : "borde"}
-                  bg={seleccionado ? "pizarra.100" : "superficie"}
-                  borderRadius="sm"
-                  p={3}
-                  display="flex"
-                  flexDirection="column"
-                  justifyContent="space-between"
-                  gap={2}
-                >
-                  <Box>
-                    <Flex justify="space-between" align="center" gap={2} mb={1}>
-                      <Text fontWeight={700} fontSize="sm">
-                        {c.rol}
-                      </Text>
-                      {seleccionado && <Badge colorScheme="teal">Seleccionado</Badge>}
-                    </Flex>
-                    <Text fontSize="xs" fontFamily="mono" color="pizarra.700" mb={1}>
-                      {c.email}
-                    </Text>
-                    <Text fontSize="xs" color="textoSuave">
-                      {c.alcance}
-                    </Text>
-                  </Box>
-                  <Button
-                    size="xs"
-                    variant={seleccionado ? "solid" : "outline"}
-                    type="button"
-                    onClick={() => {
-                      setEmail(c.email);
-                      setErrores({});
-                    }}
-                  >
-                    Usar correo de {c.rol.split(" ")[0]}
-                  </Button>
-                </Box>
-              );
-            })}
-          </SimpleGrid>
-        </Box>
-      </Box>
+      </PaginaFormulario>
     </Layout>
   );
 }

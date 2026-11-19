@@ -4,6 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 
 /** URL pública de la APK generada con EAS Build (perfil preview). Vacía = descarga no disponible. */
 const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || "";
@@ -19,120 +20,126 @@ export function AppMovil() {
 
   return (
     <Layout titulo="App móvil">
-      <Heading as="h1" size="xl" mb={3}>
-        App móvil
-      </Heading>
-      <Text maxW="44rem" mb={4}>
-        La app (Android · Expo React Native) permite pedir asistencia aunque no haya conexión: el pedido queda guardado en la cola local
-        (<code>expo-sqlite</code>) con clave de idempotencia y se sincroniza en dos tiempos (JSON primero, foto comprimida después) cuando
-        vuelve la señal. También recibe las alertas y las órdenes de tu sector.
-      </Text>
-      {APK_URL ? (
-        <Box mb={6} p={4} bg="superficie" border="1px solid" borderColor="borde" borderRadius="sm">
-          <Button as="a" href={APK_URL} rel="noopener" download>
-            Descargar la app para Android (APK)
-          </Button>
-          <Text fontSize="sm" mt={2}>
-            Al instalarla, Android puede pedirte que permitas instalar apps de origen desconocido. Es un prototipo: no es una
-            herramienta oficial.
-          </Text>
-        </Box>
-      ) : (
-        <Alert status="warning" maxW="44rem" mb={6}>
-          <AlertIcon />
-          El archivo de instalación (APK) todavía no está publicado. Se genera con EAS Build. Mientras tanto, podés registrarte y pedir asistencia desde la web.
-        </Alert>
-      )}
+      <PaginaFormulario
+        titulo="App móvil"
+        intro="La app (Android · Expo React Native) permite pedir asistencia aunque no haya conexión: el pedido queda guardado en la cola local (expo-sqlite) con clave de idempotencia y se sincroniza en dos tiempos cuando vuelve la señal. También recibe las alertas y las órdenes de tu sector."
+        anchoFormulario="36rem"
+        anchoAside="30rem"
+        aside={
+          <>
+            <BloqueApoyo titulo="Qué pasa si no hay señal">
+              <Box as="ol" m={0} pl={5} fontSize="sm">
+                <li>Armás el pedido de asistencia: ubicación, personas, animales y una foto.</li>
+                <li>Queda guardado en el teléfono y la app muestra cuántos pedidos esperan.</li>
+                <li>Cuando vuelve la señal, la app los envía sola, primero los datos mínimos y después la foto.</li>
+                <li>Si no hay datos móviles, podés abrir un mensaje de texto ya redactado y enviarlo por SMS.</li>
+              </Box>
+            </BloqueApoyo>
 
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} alignItems="start">
-        <Box>
-          <Heading as="h2" size="md" mb={2}>
-            Qué vas a poder hacer
-          </Heading>
-          <List spacing={2} styleType="disc" ml={5}>
-            <ListItem>Registrarte e ingresar con la misma cuenta que usás en la web (tokens resguardados en <code>expo-secure-store</code>).</ListItem>
-            <ListItem>Enviar una solicitud de asistencia con tu ubicación GPS, la cantidad de personas y animales, y una foto comprimida.</ListItem>
-            <ListItem>Si no hay datos móviles, abrir un mensaje de texto ya redactado (protocolo <code>SOS-FSA</code>) para enviarlo por SMS.</ListItem>
-            <ListItem>Ver el mapa de tu sector y el centro de recepción asignado (SIMULADO), o cambiar al modo Cuadrilla para completar checklists en terreno.</ListItem>
-          </List>
-          <Flex gap={3} wrap="wrap" mt={6}>
-            <Button as={RouterLink} to="/registro/ciudadania" variant="outline" size="sm">
-              Registrarme desde la web
-            </Button>
-            <Button as={RouterLink} to="/registro/productor" variant="solid" size="sm">
-              Registrar establecimiento (Tranquera Digital)
-            </Button>
-          </Flex>
-        </Box>
-
-        {/* Simulador interactivo de la trama compacta SMS SOS-FSA (<= 160 caracteres) */}
-        <Box bg="superficie" border="1px solid" borderColor="borde" borderTop="3px solid" borderTopColor="pizarra.700" borderRadius="sm" p={{ base: 4, md: 6 }}>
-          <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={2}>
-            <Heading as="h2" size="sm">
-              Simulador de trama SMS sin cobertura (Protocolo SOS-FSA)
-            </Heading>
-            <Insignia categoria="SIMULADO" />
-          </Flex>
-          <Text fontSize="xs" color="textoSuave" mb={4}>
-            Cuando un productor rural en el Sector S4 o Banco Payaguá pierde datos móviles por tormenta, la app codifica los datos críticos en un único SMS estándar de hasta 160 caracteres que el parser del backend (<code>parser_mensajes.py</code>) interpreta automáticamente.
-          </Text>
-
-          <SimpleGrid columns={{ base: 2, sm: 4 }} spacing={3} mb={3}>
-            <FormControl>
-              <FormLabel htmlFor="sos-perfil" fontSize="xs" mb={0}>
-                Perfil
-              </FormLabel>
-              <Select id="sos-perfil" size="sm" bg="superficie" value={perfil} onChange={(e) => setPerfil(e.target.value as "PRODUCTOR" | "CIUDADANO")}>
-                <option value="PRODUCTOR">PRODUCTOR</option>
-                <option value="CIUDADANO">CIUDADANO</option>
-              </Select>
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="sos-fam" fontSize="xs" mb={0}>
-                Personas
-              </FormLabel>
-              <Input id="sos-fam" size="sm" bg="superficie" inputMode="numeric" value={personas} onChange={(e) => setPersonas(e.target.value)} />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="sos-bov" fontSize="xs" mb={0}>
-                Bovinos
-              </FormLabel>
-              <Input id="sos-bov" size="sm" bg="superficie" inputMode="numeric" value={bovinos} onChange={(e) => setBovinos(e.target.value)} />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="sos-acc" fontSize="xs" mb={0}>
-                Acceso
-              </FormLabel>
-              <Select id="sos-acc" size="sm" bg="superficie" value={acceso} onChange={(e) => setAcceso(e.target.value as "BARRO" | "INUNDADO" | "TRANSITABLE")}>
-                <option value="BARRO">BARRO</option>
-                <option value="INUNDADO">INUNDADO</option>
-                <option value="TRANSITABLE">TRANSITABLE</option>
-              </Select>
-            </FormControl>
-          </SimpleGrid>
-
-          <FormControl mb={3}>
-            <FormLabel htmlFor="sos-detalle" fontSize="xs" mb={0}>
-              Observación breve de campo
-            </FormLabel>
-            <Input id="sos-detalle" size="sm" bg="superficie" maxLength={52} value={detalle} onChange={(e) => setDetalle(e.target.value)} />
-          </FormControl>
-
-          <Box bg="limo.950" color="pizarra.50" p={3} borderRadius="sm">
-            <Flex justify="space-between" align="center" mb={1}>
-              <Text fontSize="xs" color="pizarra.300" fontWeight={600}>
-                Trama generada para SMS / Webhook simulado
+            {/* Simulador interactivo de la trama compacta SMS SOS-FSA (<= 160 caracteres) */}
+            <Box bg="superficie" border="1px solid" borderColor="borde" borderTop="3px solid" borderTopColor="pizarra.700" borderRadius="sm" p={{ base: 4, md: 5 }} mt={4}>
+              <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={2}>
+                <Heading as="h2" size="sm">
+                  Simulador de trama SMS (Protocolo SOS-FSA)
+                </Heading>
+                <Insignia categoria="SIMULADO" />
+              </Flex>
+              <Text fontSize="xs" color="textoSuave" mb={3}>
+                Cuando se pierde la conectividad de datos móviles, la app genera un SMS compacto de hasta 160 caracteres que el backend decodifica automáticamente.
               </Text>
-              <Badge colorScheme={tramaSos.length <= 160 ? "green" : "red"}>
-                {tramaSos.length} / 160 caracteres
-              </Badge>
-            </Flex>
-            <Text fontFamily="mono" fontSize="xs" wordBreak="break-all" data-testid="trama-sos-preview">
-              {tramaSos}
+
+              <SimpleGrid columns={{ base: 2, sm: 4 }} spacing={2} mb={3}>
+                <FormControl>
+                  <FormLabel htmlFor="sos-perfil" fontSize="xs" mb={0}>
+                    Perfil
+                  </FormLabel>
+                  <Select id="sos-perfil" size="xs" bg="superficie" value={perfil} onChange={(e) => setPerfil(e.target.value as "PRODUCTOR" | "CIUDADANO")}>
+                    <option value="PRODUCTOR">PRODUCTOR</option>
+                    <option value="CIUDADANO">CIUDADANO</option>
+                  </Select>
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="sos-fam" fontSize="xs" mb={0}>
+                    Personas
+                  </FormLabel>
+                  <Input id="sos-fam" size="xs" bg="superficie" inputMode="numeric" value={personas} onChange={(e) => setPersonas(e.target.value)} />
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="sos-bov" fontSize="xs" mb={0}>
+                    Bovinos
+                  </FormLabel>
+                  <Input id="sos-bov" size="xs" bg="superficie" inputMode="numeric" value={bovinos} onChange={(e) => setBovinos(e.target.value)} />
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="sos-acc" fontSize="xs" mb={0}>
+                    Acceso
+                  </FormLabel>
+                  <Select id="sos-acc" size="xs" bg="superficie" value={acceso} onChange={(e) => setAcceso(e.target.value as "BARRO" | "INUNDADO" | "TRANSITABLE")}>
+                    <option value="BARRO">BARRO</option>
+                    <option value="INUNDADO">INUNDADO</option>
+                    <option value="TRANSITABLE">TRANSITABLE</option>
+                  </Select>
+                </FormControl>
+              </SimpleGrid>
+
+              <FormControl mb={3}>
+                <FormLabel htmlFor="sos-detalle" fontSize="xs" mb={0}>
+                  Observación breve de campo
+                </FormLabel>
+                <Input id="sos-detalle" size="xs" bg="superficie" maxLength={52} value={detalle} onChange={(e) => setDetalle(e.target.value)} />
+              </FormControl>
+
+              <Box bg="limo.950" color="pizarra.50" p={2.5} borderRadius="sm">
+                <Flex justify="space-between" align="center" mb={1}>
+                  <Text fontSize="2xs" color="pizarra.300" fontWeight={600}>
+                    Trama SOS-FSA
+                  </Text>
+                  <Badge colorScheme={tramaSos.length <= 160 ? "green" : "red"} fontSize="2xs">
+                    {tramaSos.length} / 160 car.
+                  </Badge>
+                </Flex>
+                <Text fontFamily="mono" fontSize="xs" wordBreak="break-all" data-testid="trama-sos-preview">
+                  {tramaSos}
+                </Text>
+              </Box>
+            </Box>
+          </>
+        }
+      >
+        {APK_URL ? (
+          <Box mb={6} p={4} bg="superficie" border="1px solid" borderColor="borde" borderRadius="sm">
+            <Button as="a" href={APK_URL} rel="noopener" download>
+              Descargar la app para Android (APK)
+            </Button>
+            <Text fontSize="sm" mt={2}>
+              Al instalarla, Android puede pedirte que permitas instalar apps de origen desconocido. Es un prototipo: no es una
+              herramienta oficial.
             </Text>
           </Box>
-        </Box>
-      </SimpleGrid>
+        ) : (
+          <Alert status="info" mb={6}>
+            <AlertIcon />
+            La descarga de la app todavía no está disponible. Mientras tanto, podés registrarte y pedir asistencia desde la web.
+          </Alert>
+        )}
+        <Heading as="h2" size="md" mb={2}>
+          Qué vas a poder hacer
+        </Heading>
+        <List spacing={2} styleType="disc" ml={5}>
+          <ListItem>Registrarte e ingresar con la misma cuenta que usás en la web (tokens resguardados en <code>expo-secure-store</code>).</ListItem>
+          <ListItem>Enviar una solicitud de asistencia con tu ubicación GPS, la cantidad de personas y animales, y una foto comprimida.</ListItem>
+          <ListItem>Si no hay datos móviles, abrir un mensaje de texto ya redactado (protocolo <code>SOS-FSA</code>) para enviarlo por SMS.</ListItem>
+          <ListItem>Ver el mapa de tu sector y el centro de recepción asignado (SIMULADO), o cambiar al modo Cuadrilla para completar checklists en terreno.</ListItem>
+        </List>
+        <Flex gap={3} wrap="wrap" mt={6}>
+          <Button as={RouterLink} to="/registro/ciudadania" variant="outline" size="sm">
+            Registrarme desde la web
+          </Button>
+          <Button as={RouterLink} to="/registro/productor" variant="solid" size="sm">
+            Registrar establecimiento (Tranquera Digital)
+          </Button>
+        </Flex>
+      </PaginaFormulario>
     </Layout>
   );
 }
