@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from "expo-router";
 
+import { COLOR } from "@/components/tema";
 import { Cargando, EnPestanasContext } from "@/components/ui";
 import { AlertasProvider, useAlertas } from "@/lib/AlertasContext";
 import { ColaProvider, useCola } from "@/lib/ColaContext";
@@ -25,8 +26,9 @@ function Pestanas({ visibles }: { visibles: Pestana[] }) {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#7c2d12",
-        tabBarInactiveTintColor: "#52525b",
+        tabBarActiveTintColor: COLOR.primario,
+        tabBarInactiveTintColor: COLOR.suave,
+        tabBarStyle: { backgroundColor: COLOR.superficie, borderTopColor: COLOR.borde, elevation: 0 },
         // La barra tiene alto fijo: su etiqueta sigue la fuente del sistema solo hasta 1,3x para no
         // recortarse; el resto de la app escala sin tope.
         tabBarAllowFontScaling: false,

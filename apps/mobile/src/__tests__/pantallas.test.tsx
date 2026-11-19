@@ -21,6 +21,8 @@ jest.mock("@/lib/SesionContext", () => ({
   useSesion: () => ({ ...mockSesion, entrar: jest.fn(), salir: jest.fn() }),
 }));
 
+jest.mock("@/lib/dispositivo", () => ({ obtenerUbicacion: jest.fn(), tomarFotoComprimida: jest.fn() }));
+
 const metricas = {
   frame: { x: 0, y: 0, width: 360, height: 640 },
   insets: { top: 0, left: 0, right: 0, bottom: 0 },

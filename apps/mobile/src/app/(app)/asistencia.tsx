@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Image, Linking, Text } from "react-native";
 
-import { Boton, Campo, COLOR, ErrorCaja, FilaBotones, Insignia, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Boton, Campo, COLOR, ErrorCaja, Insignia, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import type { DatosSolicitud } from "@/lib/cola";
 import { obtenerUbicacion, tomarFotoComprimida, type Coordenadas } from "@/lib/dispositivo";
@@ -115,16 +115,11 @@ export default function Asistencia() {
       </Texto>
 
       <Subtitulo>Tipo de pedido</Subtitulo>
-      <FilaBotones>
+      <Opciones>
         {TIPOS.map((t) => (
-          <Boton
-            key={t.valor}
-            titulo={t.etiqueta}
-            variante={tipo === t.valor ? "primario" : "secundario"}
-            onPress={() => setTipo(t.valor)}
-          />
+          <Opcion key={t.valor} titulo={t.etiqueta} elegida={tipo === t.valor} onPress={() => setTipo(t.valor)} />
         ))}
-      </FilaBotones>
+      </Opciones>
 
       <Campo etiqueta="Personas a asistir" value={personas} onChangeText={setPersonas} keyboardType="number-pad" />
       <Campo etiqueta="Animales" value={animales} onChangeText={setAnimales} keyboardType="number-pad" />
@@ -138,7 +133,7 @@ export default function Asistencia() {
       />
 
       <Tarjeta>
-        <Text style={{ fontWeight: "600" }}>Ubicación</Text>
+        <Subtitulo>Ubicación</Subtitulo>
         {ubicacion ? (
           <Texto>
             {ubicacion.lat.toFixed(5)}, {ubicacion.lon.toFixed(5)}
@@ -155,10 +150,10 @@ export default function Asistencia() {
       </Tarjeta>
 
       <Tarjeta>
-        <Text style={{ fontWeight: "600" }}>Foto (opcional)</Text>
+        <Subtitulo>Foto (opcional)</Subtitulo>
         {foto ? <Image
             source={{ uri: foto }}
-            style={{ width: "100%", aspectRatio: 4 / 3, maxHeight: 280, borderRadius: 6 }}
+            style={{ width: "100%", aspectRatio: 4 / 3, maxHeight: 280, borderRadius: 12 }}
             resizeMode="cover"
             accessibilityLabel="Foto adjunta"
           /> : null}
@@ -186,13 +181,13 @@ export default function Asistencia() {
       ) : null}
       {resultado === "foto_pendiente" ? (
         <Tarjeta>
-          <Text style={{ color: COLOR.aviso, fontWeight: "700" }}>Solicitud enviada</Text>
+          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>Solicitud enviada</Text>
           <Texto suave>La foto todavía no se pudo subir; se reintentará sola cuando haya conexión.</Texto>
         </Tarjeta>
       ) : null}
       {resultado === "encolada" ? (
         <Tarjeta>
-          <Text style={{ color: COLOR.aviso, fontWeight: "700" }}>Guardada en el teléfono</Text>
+          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>Guardada en el teléfono</Text>
           <Texto suave>
             {sinRed
               ? "No hay conexión. Se enviará sola cuando vuelva la red."

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { AvisoHttp } from "@/components/ServidorEnUso";
-import { Boton, COLOR, Campo, Tarjeta, Texto } from "@/components/ui";
+import { Boton, COLOR, Campo, RADIO, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import {
   cargarServidor,
   direccionServidor,
@@ -123,7 +123,7 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
 
   return (
     <Tarjeta>
-      <Text style={{ fontSize: 16, fontWeight: "700", color: COLOR.texto }}>Servidor</Text>
+      <Subtitulo>Servidor</Subtitulo>
       <Texto suave>
         Actual: {actual || "sin configurar"}
         {hayServidorPersonalizado() ? " (personalizado)" : actual ? " (valor por defecto)" : ""}
@@ -146,13 +146,13 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
         const r = normalizarUrlServidor(texto);
         return r.ok && esUrlHttp(r.url) ? <AvisoHttp /> : null;
       })()}
-      <Text style={{ fontSize: 12, color: COLOR.suave }}>
+      <Text style={{ fontSize: 13, lineHeight: 18, color: COLOR.suave }}>
         Ej.: http://192.168.1.50:8000 — la IP de la computadora que corre el backend, en la misma red Wi-Fi.
       </Text>
 
       {prueba.tipo === "probando" ? <Texto suave>Probando conexión…</Texto> : null}
       {prueba.tipo !== "resultado" ? null : prueba.r.ok ? (
-        <Text style={{ color: prueba.r.baseDeDatos === "ok" ? COLOR.ok : COLOR.aviso, fontWeight: "700" }}>
+        <Text style={{ color: prueba.r.baseDeDatos === "ok" ? COLOR.ok : COLOR.avisoTexto, fontWeight: "700" }}>
           {prueba.r.baseDeDatos === "ok"
             ? "Conexión correcta · base de datos: ok"
             : "El servidor responde, pero la base de datos no está disponible"}
@@ -164,7 +164,7 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
       )}
 
       {riesgo ? (
-        <View style={{ gap: 8, borderWidth: 1, borderColor: COLOR.error, borderRadius: 8, padding: 10 }}>
+        <View style={{ gap: 10, backgroundColor: COLOR.errorFondo, borderRadius: RADIO.boton, padding: 14 }}>
           <Text style={{ fontWeight: "700", color: COLOR.error }} accessibilityRole="alert">
             Servidor público sin cifrar
           </Text>
@@ -183,8 +183,8 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
           <Boton titulo="Cancelar" variante="secundario" onPress={() => setRiesgo(null)} />
         </View>
       ) : pendienteCambio ? (
-        <View style={{ gap: 8, borderWidth: 1, borderColor: COLOR.aviso, borderRadius: 8, padding: 10 }}>
-          <Text style={{ fontWeight: "700", color: COLOR.aviso }}>Se cerrará tu sesión</Text>
+        <View style={{ gap: 10, backgroundColor: COLOR.avisoFondo, borderRadius: RADIO.boton, padding: 14 }}>
+          <Text style={{ fontWeight: "700", color: COLOR.avisoTexto }}>Se cerrará tu sesión</Text>
           <Texto>
             La sesión actual pertenece al servidor anterior. Al cambiar de servidor se cierra aquí y vas a
             tener que ingresar de nuevo.

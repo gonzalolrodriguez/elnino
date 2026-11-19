@@ -1,4 +1,4 @@
-import { Children, createContext, useContext, type ReactNode } from "react";
+import { Children, createContext, useContext, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,8 +12,11 @@ import {
   type TextInputProps,
 } from "react-native";
 
+import { CIFRAS, COLOR, RADIO, TIPO } from "@/components/tema";
 import { ANCHO_MAX, TOQUE_MIN, useDiseno } from "@/lib/responsive";
 import type { Categoria } from "@/lib/servicios";
+
+export { COLOR, RADIO, TIPO } from "@/components/tema";
 
 /**
  * `true` dentro de la barra de pestañas: ella ya reserva la zona segura inferior (gestos / botones
@@ -21,32 +24,19 @@ import type { Categoria } from "@/lib/servicios";
  */
 export const EnPestanasContext = createContext(false);
 
-export const COLOR = {
-  primario: "#7c2d12",
-  texto: "#18181b",
-  suave: "#52525b",
-  placeholder: "#71717a",
-  borde: "#d4d4d8",
-  fondo: "#ffffff",
-  error: "#b91c1c",
-  ok: "#15803d",
-  aviso: "#a16207",
-};
-
-const COLOR_CATEGORIA: Record<Categoria, string> = {
-  "DATO OBSERVADO": "#1d4ed8",
-  "DOCUMENTO DE REFERENCIA": "#0f766e",
-  SIMULADO: "#a16207",
+/** Cada categoría tiene su tono propio (texto sobre fondo suave) para distinguirse sin gritar. */
+const ESTILO_CATEGORIA: Record<Categoria, { color: string; fondo: string }> = {
+  "DATO OBSERVADO": { color: "#174A86", fondo: COLOR.cielo },
+  "DOCUMENTO DE REFERENCIA": { color: "#0B5D55", fondo: "#E3F3F0" },
+  SIMULADO: { color: COLOR.avisoTexto, fondo: COLOR.avisoFondo },
 };
 
 /** Categoría visible en cada cifra o capa (regla 2 de la mesa). */
 export function Insignia({ categoria }: { categoria: Categoria }) {
+  const e = ESTILO_CATEGORIA[categoria];
   return (
-    <View style={[estilos.insignia, { borderColor: COLOR_CATEGORIA[categoria] }]}>
-      <Text
-        maxFontSizeMultiplier={1.5}
-        style={[estilos.insigniaTexto, { color: COLOR_CATEGORIA[categoria] }]}
-      >
+    <View style={[estilos.insignia, { backgroundColor: e.fondo }]}>
+      <Text maxFontSizeMultiplier={1.5} style={[estilos.insigniaTexto, { color: e.color }]}>
         {categoria}
       </Text>
     </View>
@@ -158,9 +148,13 @@ export function Subtitulo({ children }: { children: ReactNode }) {
   return <Text style={estilos.subtitulo}>{children}</Text>;
 }
 
+/** Superficie blanca con línea de 1 px; sin sombra. Agrupa un tema, no cada dato. */
 export function Tarjeta({ children }: { children: ReactNode }) {
   return <View style={estilos.tarjeta}>{children}</View>;
 }
+
+/** Retroalimentación de pulsación: leve reducción de escala (160 ms) y tono más oscuro. */
+const PULSADO = { transform: [{ scale: 0.97 }] };
 
 export function Boton({
   titulo,
@@ -176,6 +170,7 @@ export function Boton({
   cargando?: boolean;
 }) {
   const apagado = deshabilitado || cargando;
+  const secundario = variante === "secundario";
   return (
     <Pressable
       accessibilityRole="button"
@@ -185,19 +180,75 @@ export function Boton({
       onPress={onPress}
       style={({ pressed }) => [
         estilos.boton,
-        variante === "secundario" && estilos.botonSecundario,
+        secundario && estilos.botonSecundario,
         variante === "peligro" && { backgroundColor: COLOR.error },
-        pressed && !apagado && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+        pressed && !apagado && PULSADO,
+        pressed && !apagado && !secundario && variante === "primario" && { backgroundColor: COLOR.primarioPresionado },
+        pressed && !apagado && secundario && { backgroundColor: "#D5E5F6" },
         apagado && { opacity: 0.5 },
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color={variante === "secundario" ? COLOR.primario : "#fff"} />
+        <ActivityIndicator color={secundario ? COLOR.primario : "#fff"} />
       ) : (
-        <Text style={[estilos.botonTexto, variante === "secundario" && { color: COLOR.primario }]}>
-          {titulo}
-        </Text>
+        <Text style={[estilos.botonTexto, secundario && { color: COLOR.primario }]}>{titulo}</Text>
       )}
+    </Pressable>
+  );
+}
+
+/** Acción de baja jerarquía: texto en color primario, sin relleno ni borde (≥ 48 dp de toque). */
+export function Enlace({
+  titulo,
+  onPress,
+  deshabilitado,
+}: {
+  titulo: string;
+  onPress: () => void;
+  deshabilitado?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={titulo}
+      accessibilityState={{ disabled: !!deshabilitado }}
+      disabled={deshabilitado}
+      onPress={onPress}
+      style={({ pressed }) => [estilos.enlace, pressed && { opacity: 0.6 }, deshabilitado && { opacity: 0.5 }]}
+    >
+      <Text style={estilos.enlaceTexto}>{titulo}</Text>
+    </Pressable>
+  );
+}
+
+/** Grupo de opciones excluyentes (tipo de pedido, tipo de cuenta). */
+export function Opciones({ children }: { children: ReactNode }) {
+  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>;
+}
+
+/** Una opción del grupo: pastilla rellena en río si está elegida, en cielo si no. */
+export function Opcion({
+  titulo,
+  elegida,
+  onPress,
+}: {
+  titulo: string;
+  elegida: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityState={{ selected: elegida }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        estilos.opcion,
+        elegida && { backgroundColor: COLOR.primario },
+        pressed && PULSADO,
+      ]}
+    >
+      <Text style={[estilos.opcionTexto, elegida && { color: "#fff" }]}>{titulo}</Text>
     </Pressable>
   );
 }
@@ -205,16 +256,32 @@ export function Boton({
 export function Campo({
   etiqueta,
   error,
+  onFocus,
+  onBlur,
   ...props
 }: TextInputProps & { etiqueta: string; error?: string | null }) {
+  const [enfocado, setEnfocado] = useState(false);
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: 6 }}>
       <Text style={estilos.etiqueta}>{etiqueta}</Text>
       <TextInput
         accessibilityLabel={etiqueta}
         placeholderTextColor={COLOR.placeholder}
         {...props}
-        style={[estilos.campo, error ? { borderColor: COLOR.error } : null, props.style]}
+        onFocus={(e) => {
+          setEnfocado(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setEnfocado(false);
+          onBlur?.(e);
+        }}
+        style={[
+          estilos.campo,
+          enfocado && { borderColor: COLOR.primario },
+          error ? { borderColor: COLOR.error } : null,
+          props.style,
+        ]}
       />
       {error ? <Text style={estilos.error}>{error}</Text> : null}
     </View>
@@ -224,8 +291,8 @@ export function Campo({
 export function Cargando({ texto = "Cargando…" }: { texto?: string }) {
   return (
     <View style={estilos.centro} accessibilityLabel={texto}>
-      <ActivityIndicator />
-      <Text style={estilos.texto}>{texto}</Text>
+      <ActivityIndicator color={COLOR.primario} />
+      <Text style={[estilos.texto, { color: COLOR.suave }]}>{texto}</Text>
     </View>
   );
 }
@@ -233,64 +300,90 @@ export function Cargando({ texto = "Cargando…" }: { texto?: string }) {
 export function Vacio({ texto }: { texto: string }) {
   return (
     <View style={estilos.centro}>
-      <Text style={[estilos.texto, { color: COLOR.suave }]}>{texto}</Text>
+      <Text style={[estilos.texto, { color: COLOR.suave, textAlign: "center" }]}>{texto}</Text>
     </View>
   );
 }
 
-export function ErrorCaja({ mensaje, onReintentar }: { mensaje: string; onReintentar?: () => void }) {
+export function ErrorCaja({
+  mensaje,
+  onReintentar,
+  children,
+}: {
+  mensaje: string;
+  onReintentar?: () => void;
+  children?: ReactNode;
+}) {
   return (
-    <View style={[estilos.centro, { gap: 12 }]} accessibilityRole="alert">
-      <Text style={estilos.error}>{mensaje}</Text>
+    <View style={estilos.errorCaja} accessibilityRole="alert">
+      <Text style={estilos.errorTexto}>{mensaje}</Text>
       {onReintentar ? <Boton titulo="Reintentar" variante="secundario" onPress={onReintentar} /> : null}
+      {children}
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
-    titulo: { fontSize: 22, fontWeight: "700", color: COLOR.texto },
-  texto: { fontSize: 16, color: COLOR.texto },
-  pequeno: { fontSize: 13 },
-  subtitulo: { fontSize: 16, fontWeight: "700", color: COLOR.texto },
+  titulo: { ...TIPO.titulo, color: COLOR.texto },
+  texto: { ...TIPO.cuerpo, ...CIFRAS, color: COLOR.texto },
+  pequeno: { ...TIPO.pequeno },
+  subtitulo: { ...TIPO.subtitulo, color: COLOR.texto },
   tarjeta: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLOR.borde,
-    borderRadius: 8,
-    padding: 12,
-    gap: 6,
-    backgroundColor: COLOR.fondo,
+    borderRadius: RADIO.tarjeta,
+    padding: 16,
+    gap: 8,
+    backgroundColor: COLOR.superficie,
   },
   boton: {
     backgroundColor: COLOR.primario,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    borderRadius: RADIO.boton,
     alignItems: "center",
     minHeight: TOQUE_MIN,
     justifyContent: "center",
   },
-  botonSecundario: { backgroundColor: "#fff", borderWidth: 1, borderColor: COLOR.primario },
-  botonTexto: { color: "#fff", fontWeight: "700", fontSize: 16, textAlign: "center" },
-  etiqueta: { fontSize: 14, fontWeight: "600", color: COLOR.suave },
+  botonSecundario: { backgroundColor: COLOR.cielo },
+  botonTexto: { color: "#fff", fontWeight: "600", fontSize: 16, textAlign: "center" },
+  enlace: { minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center", paddingHorizontal: 12 },
+  enlaceTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600", textAlign: "center" },
+  opcion: {
+    backgroundColor: COLOR.cielo,
+    borderRadius: RADIO.pastilla,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    minHeight: TOQUE_MIN,
+    justifyContent: "center",
+  },
+  opcionTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600" },
+  etiqueta: { ...TIPO.etiqueta, color: COLOR.suave },
   campo: {
     borderWidth: 1,
-    borderColor: COLOR.borde,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderColor: COLOR.bordeCampo,
+    borderRadius: RADIO.campo,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     minHeight: TOQUE_MIN,
     fontSize: 16,
     color: COLOR.texto,
-    backgroundColor: "#fff",
+    backgroundColor: COLOR.superficie,
   },
   error: { color: COLOR.error, fontSize: 14 },
+  errorCaja: {
+    backgroundColor: COLOR.errorFondo,
+    borderRadius: RADIO.boton,
+    padding: 14,
+    gap: 10,
+  },
+  errorTexto: { color: COLOR.error, fontSize: 15, fontWeight: "600", lineHeight: 21 },
   centro: { padding: 24, alignItems: "center", gap: 8 },
   insignia: {
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderRadius: RADIO.pastilla,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
-  insigniaTexto: { fontSize: 11, fontWeight: "700" },
+  insigniaTexto: { fontSize: 12, fontWeight: "700" },
 });

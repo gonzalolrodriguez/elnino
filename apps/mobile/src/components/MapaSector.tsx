@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 
+import { COLOR, RADIO } from "@/components/tema";
 import { useDiseno } from "@/lib/responsive";
 import type { GeoSectores } from "@/lib/servicios";
 
 const COLOR_ESTADO: Record<string, string> = {
-  normal: "#15803d",
-  en_riesgo: "#a16207",
-  comprometido: "#b91c1c",
+  normal: COLOR.ok,
+  en_riesgo: COLOR.aviso,
+  comprometido: COLOR.error,
 };
 
 type Props = {
@@ -55,8 +56,8 @@ export function MapaSector({ geo, estados, centro, alto }: Props) {
         <Polygon
           key={f.properties.id}
           coordinates={(f.geometry.coordinates[0] ?? []).map(([lon, lat]) => ({ latitude: lat, longitude: lon }))}
-          strokeColor={COLOR_ESTADO[estados[f.properties.id]] ?? "#52525b"}
-          fillColor={`${COLOR_ESTADO[estados[f.properties.id]] ?? "#52525b"}33`}
+          strokeColor={COLOR_ESTADO[estados[f.properties.id]] ?? COLOR.suave}
+          fillColor={`${COLOR_ESTADO[estados[f.properties.id]] ?? COLOR.suave}33`}
           strokeWidth={2}
         />
       ))}
@@ -71,4 +72,4 @@ export function MapaSector({ geo, estados, centro, alto }: Props) {
   );
 }
 
-const estilos = StyleSheet.create({ mapa: { borderRadius: 8, width: "100%" } });
+const estilos = StyleSheet.create({ mapa: { borderRadius: RADIO.tarjeta, width: "100%" } });

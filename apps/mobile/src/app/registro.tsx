@@ -1,11 +1,11 @@
-import { Redirect, useRouter } from "expo-router";
+import { Redirect } from "expo-router";
 import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 
-import { ServidorEnUso, useServidorActual } from "@/components/ServidorEnUso";
-import { Boton, Campo, ErrorCaja, FilaBotones, Pantalla, Texto, Titulo } from "@/components/ui";
+import { EnlaceConexion } from "@/components/EnlaceConexion";
+import { Boton, Campo, COLOR, ErrorCaja, Opcion, Opciones, Pantalla, Subtitulo, Texto, Titulo } from "@/components/ui";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
-import { mensajeError } from "@/lib/errores";
+import { esErrorConexion, mensajeError } from "@/lib/errores";
 import { api, type ItemStock } from "@/lib/servicios";
 import { useSesion } from "@/lib/SesionContext";
 
@@ -18,8 +18,6 @@ const entero = (v: string, por: number): number => {
 
 export default function Registro() {
   const { estado, entrar } = useSesion();
-  const router = useRouter();
-  const servidor = useServidorActual();
   const [tipo, setTipo] = useState<TipoCuenta>("ciudadano");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,6 +35,7 @@ export default function Registro() {
   const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fallaConexion, setFallaConexion] = useState(false);
 
   if (estado.tipo === "autenticado") return <Redirect href="/(app)" />;
 
@@ -51,7 +50,6 @@ export default function Registro() {
   if (!email.trim()) faltantes.push("correo");
   if (password.length < 10) faltantes.push("contraseña de al menos 10 caracteres");
   if (nombre.trim().length < 2) faltantes.push("nombre");
-  if (!servidor) faltantes.push("servidor configurado");
   if (!consentimiento) faltantes.push("consentimiento");
   if (tipo === "productor" && (nombreEst.trim().length < 2 || !ubicacion)) {
     faltantes.push("establecimiento y ubicación de la tranquera");
@@ -94,6 +92,7 @@ export default function Registro() {
       }
       await entrar(email, password);
     } catch (e) {
+      setFallaConexion(esErrorConexion(e));
       setError(mensajeError(e));
     } finally {
       setCargando(false);
@@ -103,18 +102,10 @@ export default function Registro() {
   return (
     <Pantalla>
       <Titulo>Crear cuenta</Titulo>
-      <FilaBotones>
-        <Boton
-          titulo="Ciudadanía"
-          variante={tipo === "ciudadano" ? "primario" : "secundario"}
-          onPress={() => setTipo("ciudadano")}
-        />
-        <Boton
-          titulo="Productor"
-          variante={tipo === "productor" ? "primario" : "secundario"}
-          onPress={() => setTipo("productor")}
-        />
-      </FilaBotones>
+      <Opciones>
+        <Opcion titulo="Ciudadanía" elegida={tipo === "ciudadano"} onPress={() => setTipo("ciudadano")} />
+        <Opcion titulo="Productor" elegida={tipo === "productor"} onPress={() => setTipo("productor")} />
+      </Opciones>
 
       <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} autoComplete="name" />
       <Campo
@@ -136,7 +127,8 @@ export default function Registro() {
 
       {tipo === "ciudadano" ? (
         <>
-          <Texto suave>Grupo familiar (podés completarlo o cambiarlo después en tu perfil).</Texto>
+          <Subtitulo>Grupo familiar</Subtitulo>
+          <Texto suave>Podés completarlo o cambiarlo después en tu perfil.</Texto>
           <Campo etiqueta="Integrantes" value={integrantes} onChangeText={setIntegrantes} keyboardType="number-pad" />
           <Campo etiqueta="Menores" value={menores} onChangeText={setMenores} keyboardType="number-pad" />
           <Campo etiqueta="Mayores" value={mayores} onChangeText={setMayores} keyboardType="number-pad" />
@@ -146,7 +138,8 @@ export default function Registro() {
       ) : (
         <>
           <Campo etiqueta="Nombre del establecimiento" value={nombreEst} onChangeText={setNombreEst} />
-          <Texto suave>Stock inicial (opcional; podés editarlo después).</Texto>
+          <Subtitulo>Stock inicial</Subtitulo>
+          <Texto suave>Opcional; podés editarlo después.</Texto>
           <Campo etiqueta="Especie" value={especie} onChangeText={setEspecie} />
           <Campo etiqueta="Categoría" value={categoriaAnimal} onChangeText={setCategoriaAnimal} />
           <Campo etiqueta="Cantidad" value={cantidad} onChangeText={setCantidad} keyboardType="number-pad" />
@@ -167,18 +160,18 @@ export default function Registro() {
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48 }}>
         <Switch
+          trackColor={{ true: COLOR.primario }}
           value={consentimiento}
           onValueChange={setConsentimiento}
           accessibilityLabel="Consentimiento informado"
         />
-        <Text style={{ flex: 1, fontSize: 14 }}>
+        <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: COLOR.suave }}>
           Acepto el tratamiento de mis datos personales con finalidad exclusiva de gestión de
           emergencias, con derecho de acceso, rectificación y supresión (Ley 25.326).
         </Text>
       </View>
 
-      {error ? <ErrorCaja mensaje={error} /> : null}
-      <ServidorEnUso url={servidor} onCambiar={() => router.push("/")} />
+      {error ? <ErrorCaja mensaje={error}>{fallaConexion ? <EnlaceConexion /> : null}</ErrorCaja> : null}
       {faltantes.length > 0 ? <Texto suave>Falta: {faltantes.join(", ")}.</Texto> : null}
       <Boton
         titulo="Crear cuenta"

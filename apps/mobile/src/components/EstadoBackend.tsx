@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
+import { COLOR, RADIO } from "@/components/tema";
 import { obtenerSalud } from "@/lib/api";
 import { escucharServidor } from "@/lib/servidor";
 
 type Estado = { tipo: "cargando" } | { tipo: "ok" } | { tipo: "error"; mensaje: string };
 
+/** Estado de la conexión con el backend. Solo se muestra en la pantalla «Conexión». */
 export function EstadoBackend() {
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
 
@@ -30,7 +32,7 @@ export function EstadoBackend() {
   return (
     <View style={styles.caja}>
       <Text style={styles.titulo}>Estado del backend</Text>
-      {estado.tipo === "cargando" && <ActivityIndicator />}
+      {estado.tipo === "cargando" && <ActivityIndicator color={COLOR.primario} />}
       {estado.tipo === "ok" && <Text style={styles.ok}>backend OK</Text>}
       {estado.tipo === "error" && (
         <Text style={styles.error}>No se pudo conectar con el backend ({estado.mensaje})</Text>
@@ -40,8 +42,8 @@ export function EstadoBackend() {
 }
 
 const styles = StyleSheet.create({
-  caja: { padding: 16, borderWidth: 1, borderColor: "#d4d4d8", borderRadius: 8, gap: 8 },
-  titulo: { fontSize: 16, fontWeight: "600" },
-  ok: { color: "#15803d", fontWeight: "700" },
-  error: { color: "#b91c1c" },
+  caja: { padding: 16, backgroundColor: COLOR.cielo, borderRadius: RADIO.tarjeta, gap: 6 },
+  titulo: { fontSize: 15, fontWeight: "600", color: COLOR.texto },
+  ok: { color: COLOR.ok, fontWeight: "700", fontSize: 16 },
+  error: { color: COLOR.error, fontSize: 15 },
 });
