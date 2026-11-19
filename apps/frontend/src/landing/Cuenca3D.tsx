@@ -1,6 +1,6 @@
-import { Html, Line, PerformanceMonitor } from "@react-three/drei";
+import { Html, Line, MapControls, PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { hexDe } from "../estilo/paleta";
@@ -18,6 +18,7 @@ import {
   type Malla,
 } from "../relieve/datos";
 import { HITOS_RELIEVE, limitesDeBbox, proyectar } from "./geometria";
+import { avanceDeHito, CHIPS_RECORRIDO, type ControlCuenca, type EstadoRecorrido, type HitoRecorrido, type ModoCuenca } from "./recorrido";
 
 /**
  * Escena 3D de la cuenca: el agua baja desde Mato Grosso y el Pantanal por el río Paraguay hasta Puerto Formosa y
@@ -46,6 +47,7 @@ const FUENTE_HTML = "'Atkinson Hyperlegible Next Variable', 'Segoe UI', system-u
 const ESCALA = 0.01; // 1 unidad = 100 km en horizontal
 const K_VERT = EXAGERACION_VERTICAL * 1e-5; // unidades por metro de elevación, con la exageración vertical
 const DURACION_S = 13;
+const DURACION_RECORRIDO_S = 36; // al pulsar «reproducir»: de las nacientes a la confluencia
 const ANCHO_LG = 992; // px: desde aquí el hero pone el texto a la izquierda
 const SUBMUESTREO = 2; // la malla del DEM se interpola (bicúbica) al doble para sombrear sin facetas
 
@@ -499,9 +501,18 @@ function AvisoContexto({ alPerder }: { alPerder: () => void }) {
   return null;
 }
 
-function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; malla: Malla; alListo: () => void; alTerminar: () => void }) {
+type PropsEscena = {
+  datos: DatosRelieve;
+  malla: Malla;
+  alListo: () => void;
+  alTerminar: () => void;
+  control: React.MutableRefObject<ControlCuenca | null>;
+  reducido: boolean;
+};
+
+function Escena({ datos, malla, alListo, alTerminar, control, reducido }: PropsEscena) {
   const proy = useMemo(() => crearProy(datos, malla.min), [datos, malla]);
-  const { camera, scene, pointer } = useThree();
+  const { camera, scene, pointer, gl } = useThree();
   const [terminado, setTerminado] = useState(false);
 
   const rios: Rio[] = useMemo(
@@ -553,18 +564,151 @@ function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; ma
   }, [paraguay, uFormosa, proy, malla]);
   const orbita = useMemo(() => new THREE.CatmullRomCurve3(ORBITA, false, "catmullrom", 0.5), []);
 
+  // Fracción del río que alcanza el agua según el avance del recorrido: llega a Formosa con la cámara y sigue hasta el Paraná.
+  const aF = trayecto.aFormosa;
+  const frenteEn = useCallback(
+    (a: number) => (a <= aF ? uFormosa * (a / aF) : lerp(uFormosa, 1.02, masSuave((a - aF) / (1 - aF), 0, 1))),
+    [aF, uFormosa],
+  );
+  const hitosRecorrido: HitoRecorrido[] = useMemo(
+    () =>
+      hitos
+        .filter((h) => h.id === "matogrosso" || CHIPS_RECORRIDO.some((c) => c.id === h.id))
+        .map((h) => ({ id: h.id, nombre: h.nombre, p: avanceDeHito(h.u, frenteEn) }))
+        .sort((x, y) => x.p - y.p),
+    [hitos, frenteEn],
+  );
+
+  // Límites de la exploración libre: la cámara no se sale del modelo ni se mete bajo el terreno.
+  const caja = useMemo(() => {
+    const l = limitesDeBbox(datos.meta.cuenca.bbox);
+    const mx = ((l.xMax - l.xMin) / 2) * ESCALA * 0.92;
+    const mz = ((l.yMax - l.yMin) / 2) * ESCALA * 0.92;
+    return new THREE.Box3(new THREE.Vector3(-mx, 0, -mz), new THREE.Vector3(mx, (malla.max - malla.min) * K_VERT + 0.3, mz));
+  }, [datos, malla]);
+
   const frente = useRef(0);
   const tiempo = useRef(0);
   const inactivo = useRef(0);
   const iniciado = useRef(false);
-  const fin = useRef(false);
   const objetivo = useRef(new THREE.Vector3());
   const posicion = useRef(new THREE.Vector3());
-  const tmp = useMemo(() => ({ t: new THREE.Vector3(), o: new THREE.Vector3(), d: new THREE.Vector3() }), []);
+  const tmp = useMemo(() => ({ t: new THREE.Vector3(), o: new THREE.Vector3(), d: new THREE.Vector3(), c: new THREE.Vector3() }), []);
+
+  // Estado del recorrido (todo en refs: nada de React por cuadro).
+  const modo = useRef<ModoCuenca>(reducido || P_FIJO !== null ? "recorrido" : "intro");
+  const s = useRef(P_FIJO ?? (reducido ? 1 : 0)); // avance actual
+  const sObj = useRef(s.current); // avance al que se va
+  const jugando = useRef(false);
+  const encajar = useRef(true); // la próxima vez la cámara salta al encuadre, sin suavizado
+  const ultimoEmitido = useRef(-1);
+  const acumulado = useRef(0);
+  const suscriptores = useRef(new Set<(e: EstadoRecorrido) => void>());
+  const controles = useRef<React.ElementRef<typeof MapControls>>(null);
+
+  const emitir = useCallback(() => {
+    const e: EstadoRecorrido = { modo: modo.current, reproduciendo: jugando.current, p: s.current };
+    ultimoEmitido.current = e.p;
+    suscriptores.current.forEach((f) => f(e));
+  }, []);
+
+  const cerrarIntro = useCallback(() => {
+    if (modo.current !== "intro") return;
+    modo.current = "recorrido";
+    setTerminado(true);
+    alTerminar();
+  }, [alTerminar]);
+
+  // Si se empieza sin la introducción (menos movimiento o ?escena=), los rótulos de departamento aparecen ya.
+  useEffect(() => {
+    if (modo.current === "recorrido" && (reducido || (P_FIJO ?? 0) >= 1)) {
+      setTerminado(true);
+      alTerminar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const salirDeLibre = () => {
+      const c = controles.current;
+      if (c) {
+        objetivo.current.copy(c.target);
+        c.enabled = false;
+      }
+      posicion.current.copy(camera.position);
+      modo.current = "recorrido";
+      if (reducido) encajar.current = true;
+    };
+    const aRecorrido = () => {
+      cerrarIntro();
+      if (modo.current === "libre") salirDeLibre();
+    };
+    const ir = (p: number, instantaneo?: boolean) => {
+      aRecorrido();
+      jugando.current = false;
+      sObj.current = Math.min(1, Math.max(0, p));
+      if (instantaneo || reducido) {
+        s.current = sObj.current;
+        encajar.current = true;
+      }
+      emitir();
+    };
+    const ctl: ControlCuenca = {
+      hitos: hitosRecorrido,
+      irA: (p, o) => ir(p, o?.instantaneo),
+      irAHito: (id, o) => {
+        const h = hitosRecorrido.find((x) => x.id === id);
+        if (h) ir(h.p, o?.instantaneo);
+      },
+      jugar: () => {
+        aRecorrido();
+        if (sObj.current >= 0.999) {
+          sObj.current = 0;
+          s.current = 0;
+          encajar.current = true;
+        }
+        jugando.current = true;
+        emitir();
+      },
+      pausar: () => {
+        jugando.current = false;
+        emitir();
+      },
+      volverInicio: () => ir(1),
+      explorar: (activo) => {
+        if (activo) {
+          if (modo.current === "libre") return;
+          cerrarIntro();
+          jugando.current = false;
+          modo.current = "libre";
+          const c = controles.current;
+          if (c) {
+            c.target.copy(objetivo.current);
+            c.enabled = true;
+            c.update();
+          }
+          emitir();
+        } else if (modo.current === "libre") {
+          salirDeLibre();
+          emitir();
+        }
+      },
+      estado: () => ({ modo: modo.current, reproduciendo: jugando.current, p: s.current }),
+      suscribir: (f) => {
+        suscriptores.current.add(f);
+        return () => void suscriptores.current.delete(f);
+      },
+    };
+    control.current = ctl;
+    return () => {
+      if (control.current === ctl) control.current = null;
+    };
+  }, [camera, control, emitir, hitosRecorrido, cerrarIntro, reducido]);
 
   useEffect(() => {
     scene.background = new THREE.Color(C.fondo);
     scene.fog = new THREE.Fog(C.fondo, 6.5, 19);
+    if (controles.current) controles.current.enabled = false;
     return () => {
       scene.fog = null;
       scene.background = null;
@@ -573,38 +717,87 @@ function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; ma
 
   useFrame((_, dtReal) => {
     const dt = Math.min(dtReal, 0.05); // un cuadro largo (pestaña en segundo plano) no hace saltar la cámara
-    if (P_FIJO === null) tiempo.current += dt;
-    const p = P_FIJO ?? Math.min(1, tiempo.current / DURACION_S);
-    const a = masSuave(p, 0, 1); // arranque y llegada suaves; velocidad máxima a mitad de recorrido
+    const m = modo.current;
+    const el = gl.domElement;
+    // En reposo el navegador conserva el desplazamiento vertical de la página con un dedo; al explorar, el dedo mueve el mapa.
+    const quiereToque = m === "libre" ? "none" : "pan-y";
+    if (el.style.touchAction !== quiereToque) el.style.touchAction = quiereToque;
 
-    // Objetivo sobre la spline y avance del frente del agua (llega a Formosa con la cámara y sigue hasta el Paraná).
+    // Avance del recorrido.
+    if (m === "intro") {
+      tiempo.current += dt;
+      sObj.current = masSuave(Math.min(1, tiempo.current / DURACION_S), 0, 1);
+      s.current = sObj.current;
+      if (tiempo.current >= DURACION_S) {
+        cerrarIntro();
+        emitir();
+      }
+    } else if (m === "recorrido") {
+      if (jugando.current) {
+        sObj.current = Math.min(1, sObj.current + dt / DURACION_RECORRIDO_S);
+        if (sObj.current >= 1) {
+          jugando.current = false;
+          emitir();
+        }
+      }
+      if (reducido || P_FIJO !== null) s.current = sObj.current;
+      else {
+        s.current += (sObj.current - s.current) * amortiguar(dt, 5);
+        if (Math.abs(sObj.current - s.current) < 1e-4) s.current = sObj.current;
+      }
+    }
+    const a = s.current;
+    frente.current = frenteEn(a);
+
+    // El avance llega a la barra a 10 Hz como máximo, y solo si cambió.
+    acumulado.current += dt;
+    if (acumulado.current >= 0.1 && Math.abs(a - ultimoEmitido.current) > 5e-4) {
+      acumulado.current = 0;
+      emitir();
+    }
+
+    if (m === "libre") {
+      // Exploración: la cámara la mueven los controles; aquí solo se acota.
+      const c = controles.current;
+      if (c) {
+        tmp.c.copy(c.target).clamp(caja.min, caja.max);
+        if (!tmp.c.equals(c.target)) {
+          camera.position.add(tmp.d.copy(tmp.c).sub(c.target));
+          c.target.copy(tmp.c);
+        }
+      }
+      return;
+    }
+
+    // Objetivo sobre la spline.
     trayecto.curva.getPointAt(a, tmp.t);
-    const aF = trayecto.aFormosa;
-    frente.current = a <= aF ? uFormosa * (a / aF) : lerp(uFormosa, 1.02, masSuave((a - aF) / (1 - aF), 0, 1));
 
-    // Órbita: ángulo, altura y distancia (con deriva muy lenta en reposo y paralaje del puntero).
+    // Órbita: ángulo, altura y distancia (con deriva muy lenta en reposo y paralaje del puntero, salvo con menos movimiento).
     orbita.getPoint(a, tmp.o);
     let [ang, alt, dist] = [tmp.o.x, tmp.o.y, tmp.o.z];
-    const reposo = p >= 1;
-    if (reposo) {
+    if (a >= 0.999 && !reducido) {
       inactivo.current += dt;
       const w = masSuave(inactivo.current / 4, 0, 1);
       ang += Math.sin(inactivo.current * 0.085) * 0.16 * w;
       alt += Math.sin(inactivo.current * 0.12 + 1) * 0.12 * w;
       dist += Math.cos(inactivo.current * 0.07) * 0.1 * w;
     }
+    const paralaje = reducido ? 0 : 1;
     const dx = Math.sin(ang) * dist;
     const dz = Math.cos(ang) * dist;
     const deseada = tmp.d.copy(tmp.t);
-    deseada.x += dx + pointer.x * 0.22;
-    deseada.y += alt + pointer.y * 0.1;
+    deseada.x += dx + pointer.x * 0.22 * paralaje;
+    deseada.y += alt + pointer.y * 0.1 * paralaje;
     deseada.z += dz;
 
-    if (!iniciado.current) {
+    if (!iniciado.current || encajar.current) {
       objetivo.current.copy(tmp.t);
       posicion.current.copy(deseada);
-      iniciado.current = true;
-      alListo();
+      encajar.current = false;
+      if (!iniciado.current) {
+        iniciado.current = true;
+        alListo();
+      }
     } else {
       const k = amortiguar(dt, 7);
       objetivo.current.lerp(tmp.t, k);
@@ -612,17 +805,23 @@ function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; ma
     }
     camera.position.copy(posicion.current);
     camera.lookAt(objetivo.current);
-
-    if (reposo && !fin.current) {
-      fin.current = true;
-      setTerminado(true);
-      alTerminar();
-    }
   });
 
   return (
     <>
       <Encuadre />
+      <MapControls
+        ref={controles}
+        enableDamping
+        dampingFactor={0.12}
+        minDistance={0.7}
+        maxDistance={9}
+        minPolarAngle={0.12}
+        maxPolarAngle={1.3}
+        screenSpacePanning={false}
+        rotateSpeed={0.6}
+        zoomSpeed={0.8}
+      />
       <hemisphereLight args={["#B7CDE8", "#1B2B40", 1.05]} />
       <directionalLight position={[-7, 4.5, -5]} intensity={2.3} color="#FFF3E0" />
       <Terreno malla={malla} proy={proy} />
@@ -638,7 +837,21 @@ function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; ma
   );
 }
 
-export default function Cuenca3D({ datos, onTerminar, onFallo }: { datos: DatosRelieve; onTerminar?: () => void; onFallo?: () => void }) {
+type PropsCuenca3D = {
+  datos: DatosRelieve;
+  onTerminar?: () => void;
+  onFallo?: () => void;
+  /** La escena ya dibujó su primer cuadro: el panel puede habilitar los controles. */
+  onListo?: () => void;
+  /** La escena publica aquí sus controles (recorrido, exploración) para el panel HTML del hero. */
+  control: React.MutableRefObject<ControlCuenca | null>;
+  /** Preferencia de menos movimiento: sin vuelo automático ni paralaje, y los saltos de cámara son instantáneos. */
+  reducido?: boolean;
+  /** Se llama cuando alguien intenta hacer zoom con la rueda sin haber activado el mapa. */
+  onPista?: () => void;
+};
+
+export default function Cuenca3D({ datos, onTerminar, onFallo, onListo, control, reducido = false, onPista }: PropsCuenca3D) {
   const [malla, setMalla] = useState<Malla | null>(null);
   const [listo, setListo] = useState(false);
   const [calidad, setCalidad] = useState(2);
@@ -646,6 +859,8 @@ export default function Cuenca3D({ datos, onTerminar, onFallo }: { datos: DatosR
   const raiz = useRef<HTMLDivElement>(null);
   const falloRef = useRef(onFallo);
   falloRef.current = onFallo;
+  const pistaRef = useRef(onPista);
+  pistaRef.current = onPista;
 
   useEffect(() => {
     let activo = true;
@@ -668,8 +883,46 @@ export default function Cuenca3D({ datos, onTerminar, onFallo }: { datos: DatosR
     return () => obs.disconnect();
   }, []);
 
+  // La escena no secuestra la página: la rueda solo hace zoom con el mapa activado o con Ctrl; el toque, solo al activarlo.
+  useEffect(() => {
+    const el = raiz.current;
+    if (!el) return;
+    const libre = () => control.current?.estado().modo === "libre";
+    const alRueda = (e: WheelEvent) => {
+      const c = control.current;
+      if (!c || libre()) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault(); // evita el zoom del navegador; la rueda hace zoom del mapa
+        c.explorar(true);
+      } else pistaRef.current?.();
+    };
+    let toque: { id: number; x: number; y: number; t: number } | null = null;
+    const alBajar = (e: PointerEvent) => {
+      const c = control.current;
+      if (!c || libre()) return;
+      if (e.pointerType === "mouse") {
+        if (e.button === 0 || e.button === 2) c.explorar(true); // arrastrar con el mouse no compite con el desplazamiento
+      } else toque = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp };
+    };
+    const alSubir = (e: PointerEvent) => {
+      const c = control.current;
+      if (!c || !toque || toque.id !== e.pointerId) return;
+      const corto = e.timeStamp - toque.t < 500 && Math.hypot(e.clientX - toque.x, e.clientY - toque.y) < 10;
+      toque = null;
+      if (corto && !libre()) c.explorar(true); // un toque activa el mapa
+    };
+    el.addEventListener("wheel", alRueda, { passive: false, capture: true });
+    el.addEventListener("pointerdown", alBajar, { capture: true });
+    el.addEventListener("pointerup", alSubir, { capture: true });
+    return () => {
+      el.removeEventListener("wheel", alRueda, { capture: true });
+      el.removeEventListener("pointerdown", alBajar, { capture: true });
+      el.removeEventListener("pointerup", alSubir, { capture: true });
+    };
+  }, [control]);
+
   return (
-    <div ref={raiz} role="img" aria-label="Escena 3D del relieve de la cuenca: el agua baja por el río Paraguay desde Mato Grosso y el Pantanal hasta Puerto Formosa y la confluencia con el Paraná" style={{ position: "absolute", inset: 0, opacity: listo ? 1 : 0, transition: "opacity 900ms cubic-bezier(0.23, 1, 0.32, 1)" }}>
+    <div ref={raiz} role="img" aria-label="Escena 3D del relieve de la cuenca: el agua baja por el río Paraguay desde Mato Grosso y el Pantanal hasta Puerto Formosa y la confluencia con el Paraná" style={{ position: "absolute", inset: 0, touchAction: "pan-y", opacity: listo ? 1 : 0, transition: "opacity 900ms cubic-bezier(0.23, 1, 0.32, 1)" }}>
       {malla && (
         <Canvas
           dpr={[1, calidad]}
@@ -679,7 +932,10 @@ export default function Cuenca3D({ datos, onTerminar, onFallo }: { datos: DatosR
         >
           <AvisoContexto alPerder={() => onFallo?.()} />
           <PerformanceMonitor onDecline={() => setCalidad(1)} flipflops={2} />
-          <Escena datos={datos} malla={malla} alListo={() => setListo(true)} alTerminar={() => onTerminar?.()} />
+          <Escena datos={datos} malla={malla} alListo={() => {
+            setListo(true);
+            onListo?.();
+          }} alTerminar={() => onTerminar?.()} control={control} reducido={reducido} />
         </Canvas>
       )}
     </div>

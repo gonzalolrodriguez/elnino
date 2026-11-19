@@ -5,18 +5,18 @@ import { CURSOS_APROXIMADOS, HITOS, HITOS_RELIEVE, limites, limitesDeBbox, proye
 const ARIA_RELIEVE =
   "Mapa de relieve de la cuenca, en vista en planta: curvas de nivel y color según la altitud desde las nacientes del río Paraguay en Mato Grosso hasta la confluencia con el Paraná, con el límite y los nueve departamentos de Formosa, el río Paraguay, Asunción, Puerto Pilcomayo y Puerto Formosa";
 
-type Props = { cursos?: Curso[]; datos?: DatosRelieve | null };
+type Props = { cursos?: Curso[]; datos?: DatosRelieve | null; /** Hito destacado desde los atajos del recorrido. */ resaltado?: string | null };
 
 /**
  * Respaldo 2D de la escena de la cuenca (sin WebGL o con preferencia de menos movimiento).
  * Con `datos` dibuja el relieve real: tinte hipsométrico, curvas de nivel, límite y departamentos de Formosa,
  * río Paraguay y hitos. Sin `datos` (cargando o sin archivos) cae al esquema ilustrativo de siempre.
  */
-export function CuencaSVG({ cursos = CURSOS_APROXIMADOS, datos = null }: Props) {
-  return datos ? <CuencaRelieveSVG datos={datos} /> : <CuencaEsquemaSVG cursos={cursos} />;
+export function CuencaSVG({ cursos = CURSOS_APROXIMADOS, datos = null, resaltado = null }: Props) {
+  return datos ? <CuencaRelieveSVG datos={datos} resaltado={resaltado} /> : <CuencaEsquemaSVG cursos={cursos} resaltado={resaltado} />;
 }
 
-function CuencaRelieveSVG({ datos }: { datos: DatosRelieve }) {
+function CuencaRelieveSVG({ datos, resaltado }: { datos: DatosRelieve; resaltado: string | null }) {
   const l = limitesDeBbox(datos.meta.cuenca.bbox);
   const ancho = l.xMax - l.xMin;
   const alto = l.yMax - l.yMin;
@@ -98,8 +98,9 @@ function CuencaRelieveSVG({ datos }: { datos: DatosRelieve }) {
       {HITOS_RELIEVE.map((h) => {
         const [x, y] = aSvg([h.lon, h.lat]);
         return (
-          <g key={h.id}>
-            <circle cx={x} cy={y} r={h.principal ? 10 : 6} fill={h.principal ? hexDe("cuenca.hitoPrincipal") : hexDe("cuenca.hito")} stroke={tinta} strokeWidth={2} />
+          <g key={h.id} data-hito={h.id} data-resaltado={resaltado === h.id ? "true" : undefined}>
+            {resaltado === h.id && <circle cx={x} cy={y} r={26} fill="none" stroke={hexDe("cuenca.hitoTexto")} strokeWidth={3} vectorEffect="non-scaling-stroke" />}
+            <circle cx={x} cy={y} r={h.principal || resaltado === h.id ? 10 : 6} fill={h.principal ? hexDe("cuenca.hitoPrincipal") : hexDe("cuenca.hito")} stroke={tinta} strokeWidth={2} />
             <text
               data-etiqueta-escena=""
               x={x + 14}
@@ -109,7 +110,7 @@ function CuencaRelieveSVG({ datos }: { datos: DatosRelieve }) {
               strokeWidth={4}
               paintOrder="stroke"
               fontSize={h.principal ? 26 : 22}
-              fontWeight={h.principal ? 700 : 500}
+              fontWeight={h.principal || resaltado === h.id ? 700 : 500}
               fontFamily="inherit"
             >
               {h.nombre}
@@ -122,7 +123,7 @@ function CuencaRelieveSVG({ datos }: { datos: DatosRelieve }) {
 }
 
 /** Esquema ilustrativo (cursos digitalizados a mano): solo si no se pudieron cargar los datos de relieve. */
-function CuencaEsquemaSVG({ cursos }: { cursos: Curso[] }) {
+function CuencaEsquemaSVG({ cursos, resaltado }: { cursos: Curso[]; resaltado: string | null }) {
   const l = limites(cursos, 60);
   const ancho = l.xMax - l.xMin;
   const alto = l.yMax - l.yMin;
@@ -158,15 +159,16 @@ function CuencaEsquemaSVG({ cursos }: { cursos: Curso[] }) {
       {HITOS.map((h) => {
         const [x, y] = aSvg(proyectar(h.lon, h.lat));
         return (
-          <g key={h.id}>
-            <circle cx={x} cy={y} r={h.principal ? 10 : 6} fill={h.principal ? hexDe("cuenca.hitoPrincipal") : hexDe("cuenca.hito")} />
+          <g key={h.id} data-hito={h.id} data-resaltado={resaltado === h.id ? "true" : undefined}>
+            {resaltado === h.id && <circle cx={x} cy={y} r={26} fill="none" stroke={hexDe("cuenca.hitoTexto")} strokeWidth={3} vectorEffect="non-scaling-stroke" />}
+            <circle cx={x} cy={y} r={h.principal || resaltado === h.id ? 10 : 6} fill={h.principal ? hexDe("cuenca.hitoPrincipal") : hexDe("cuenca.hito")} />
             <text
               data-etiqueta-escena=""
               x={x + 14}
               y={y + 5}
               fill={h.principal ? hexDe("cuenca.hitoTexto") : hexDe("cuenca.hito")}
               fontSize={h.principal ? 22 : 18}
-              fontWeight={h.principal ? 700 : 500}
+              fontWeight={h.principal || resaltado === h.id ? 700 : 500}
               fontFamily="inherit"
             >
               {h.nombre}

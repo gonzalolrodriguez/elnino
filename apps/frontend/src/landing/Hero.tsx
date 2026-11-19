@@ -8,6 +8,8 @@ import { LeyendaRelieve } from "../relieve/LeyendaRelieve";
 import { useRelieve } from "../relieve/useRelieve";
 import { CuencaSVG } from "./CuencaSVG";
 import { EscalaHidrometrica } from "./EscalaHidrometrica";
+import { RecorridoRio } from "./RecorridoRio";
+import type { ControlCuenca, IdHito } from "./recorrido";
 
 // El módulo 3D (three, R3F, drei) se descarga solo cuando hay WebGL y se admite movimiento.
 const Cuenca3D = lazy(() => import("./Cuenca3D"));
@@ -92,10 +94,24 @@ export function Hero() {
   // Si la malla no carga o el contexto WebGL se pierde, se cae al esquema 2D sin romper la página.
   const [fallo3D, setFallo3D] = useState(false);
   const alFallar3D = useCallback(() => setFallo3D(true), []);
-  const quiere3D = webgl && !menosMovimiento && !fallo && !fallo3D;
+  // Con menos movimiento también se usa el 3D (sin vuelo automático ni paralaje): el recorrido sigue disponible.
+  const quiere3D = webgl && !fallo && !fallo3D;
   const usar3D = quiere3D && !!datos;
   const heroRef = useRef<HTMLElement>(null);
-  useEvitarZonas(heroRef, usar3D);
+  useEvitarZonas(heroRef, usar3D && !menosMovimiento);
+
+  // Recorrido interactivo: la escena publica sus controles en `control`; el panel HTML los usa.
+  const control = useRef<ControlCuenca | null>(null);
+  const [listo3D, setListo3D] = useState(false);
+  const [resaltado, setResaltado] = useState<IdHito | null>(null);
+  const [pista, setPista] = useState(false);
+  const temporizadorPista = useRef<number>(0);
+  const mostrarPista = useCallback(() => {
+    setPista(true);
+    window.clearTimeout(temporizadorPista.current);
+    temporizadorPista.current = window.setTimeout(() => setPista(false), 2500);
+  }, []);
+  useEffect(() => () => window.clearTimeout(temporizadorPista.current), []);
 
   return (
     <Box as="section" ref={heroRef} aria-labelledby="titulo-hero" position="relative" bg="oscuro.bg" color="oscuro.fg" overflow="hidden" className="sobre-oscuro">
@@ -112,13 +128,13 @@ export function Hero() {
         {usar3D ? (
           <Limite3D alFallar={alFallar3D}>
             <Suspense fallback={null}>
-              <Cuenca3D datos={datos} onFallo={alFallar3D} />
+              <Cuenca3D datos={datos} onFallo={alFallar3D} control={control} reducido={menosMovimiento} onPista={mostrarPista} onListo={() => setListo3D(true)} />
             </Suspense>
           </Limite3D>
         ) : quiere3D ? null : (
           // Respaldo 2D: en pantallas anchas el mapa ocupa la franja libre entre el texto y el panel.
           <Box position={{ base: "relative", lg: "absolute" }} h="100%" top={{ lg: 0 }} bottom={{ lg: 0 }} left={{ lg: "40%" }} right={{ lg: "26%" }}>
-            <CuencaSVG datos={datos} />
+            <CuencaSVG datos={datos} resaltado={resaltado} />
           </Box>
         )}
         {/* Velos: a la izquierda dan contraste al titular y abajo funden la escena con el resto de la página. */}
@@ -141,6 +157,7 @@ export function Hero() {
           </Text>
         )}
       </Box>
+      <RecorridoRio control={control} disponible3D={usar3D && listo3D} reducido={menosMovimiento} resaltado={resaltado} alResaltar={setResaltado} pista={pista} />
       {datos && (
         <Box position={{ base: "relative", lg: "absolute" }} left={{ lg: 8 }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
           <LeyendaRelieve meta={datos.meta} vista={usar3D ? "3d" : "2d"} />
