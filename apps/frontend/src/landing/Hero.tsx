@@ -1,6 +1,6 @@
 import { Box, Button, Heading, Text } from "@chakra-ui/react";
 import { motion } from "framer-motion";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import { puedeUsar3D, useMenosMovimiento } from "../lib/entorno";
@@ -14,16 +14,31 @@ const Cuenca3D = lazy(() => import("./Cuenca3D"));
 
 const Aparece = motion(Box);
 
+/** Si el módulo 3D no se descarga o falla al dibujar, avisa para pasar al respaldo 2D. */
+class Limite3D extends Component<{ alFallar: () => void; children: ReactNode }, { fallo: boolean }> {
+  state = { fallo: false };
+  static getDerivedStateFromError() {
+    return { fallo: true };
+  }
+  componentDidCatch() {
+    this.props.alFallar();
+  }
+  render() {
+    return this.state.fallo ? null : this.props.children;
+  }
+}
+
 /**
  * Los rótulos del esquema (3D o 2D) nunca deben quedar bajo el texto, los botones o el panel, ni chocar entre sí.
  * Oculta cada rótulo `[data-etiqueta-escena]` cuyo recuadro cruce una zona `[data-evitar-etiquetas]`, y los rótulos
  * de departamento que tocan un rótulo de hito (los hitos tienen prioridad).
  * Es independiente del renderizador: sirve igual para WebGL y para el respaldo SVG, en cualquier ancho.
  */
-function useEvitarZonas(hero: React.RefObject<HTMLElement>) {
+function useEvitarZonas(hero: React.RefObject<HTMLElement>, continuo: boolean) {
   useEffect(() => {
     const raiz = hero.current;
     if (!raiz) return;
+    let visible = true;
     const MARGEN = 12;
     let id = 0;
     const cruza = (r: DOMRect, z: DOMRect, m: number) => r.right > z.left - m && r.left < z.right + m && r.bottom > z.top - m && r.top < z.bottom + m;
@@ -41,17 +56,31 @@ function useEvitarZonas(hero: React.RefObject<HTMLElement>) {
         e.style.visibility = choca ? "hidden" : "visible";
       });
     };
+    // Escena 3D: los rótulos se mueven con la cámara, así que se revisan cada 150 ms, pero solo mientras el hero se ve.
+    // Escena 2D o con menos movimiento: los rótulos están quietos; basta revisar al montar, al cargar y al redimensionar.
     const ciclo = () => {
       revisar();
-      id = window.setTimeout(ciclo, 150);
+      if (continuo && visible) id = window.setTimeout(ciclo, 150);
     };
     ciclo();
+    const tardios = continuo ? [] : [300, 1200].map((ms) => window.setTimeout(revisar, ms));
+    let obs: IntersectionObserver | null = null;
+    if (continuo && typeof IntersectionObserver !== "undefined") {
+      obs = new IntersectionObserver(([e]) => {
+        const antes = visible;
+        visible = e.isIntersecting;
+        if (visible && !antes) ciclo();
+      });
+      obs.observe(raiz);
+    }
     window.addEventListener("resize", revisar);
     return () => {
       window.clearTimeout(id);
+      tardios.forEach((t) => window.clearTimeout(t));
+      obs?.disconnect();
       window.removeEventListener("resize", revisar);
     };
-  }, [hero]);
+  }, [hero, continuo]);
 }
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -60,10 +89,13 @@ export function Hero() {
   // El 3D exige WebGL 2 y un equipo con recursos: en equipos limitados se usa el respaldo 2D.
   const [webgl] = useState(puedeUsar3D);
   const { datos, fallo } = useRelieve();
-  const quiere3D = webgl && !menosMovimiento && !fallo;
+  // Si la malla no carga o el contexto WebGL se pierde, se cae al esquema 2D sin romper la página.
+  const [fallo3D, setFallo3D] = useState(false);
+  const alFallar3D = useCallback(() => setFallo3D(true), []);
+  const quiere3D = webgl && !menosMovimiento && !fallo && !fallo3D;
   const usar3D = quiere3D && !!datos;
   const heroRef = useRef<HTMLElement>(null);
-  useEvitarZonas(heroRef);
+  useEvitarZonas(heroRef, usar3D);
 
   return (
     <Box as="section" ref={heroRef} aria-labelledby="titulo-hero" position="relative" bg="oscuro.bg" color="oscuro.fg" overflow="hidden" className="sobre-oscuro">
@@ -78,9 +110,11 @@ export function Hero() {
         h={{ base: datos ? "320px" : "240px", lg: "auto" }}
       >
         {usar3D ? (
-          <Suspense fallback={null}>
-            <Cuenca3D datos={datos} />
-          </Suspense>
+          <Limite3D alFallar={alFallar3D}>
+            <Suspense fallback={null}>
+              <Cuenca3D datos={datos} onFallo={alFallar3D} />
+            </Suspense>
+          </Limite3D>
         ) : quiere3D ? null : (
           // Respaldo 2D: en pantallas anchas el mapa ocupa la franja libre entre el texto y el panel.
           <Box position={{ base: "relative", lg: "absolute" }} h="100%" top={{ lg: 0 }} bottom={{ lg: 0 }} left={{ lg: "40%" }} right={{ lg: "26%" }}>

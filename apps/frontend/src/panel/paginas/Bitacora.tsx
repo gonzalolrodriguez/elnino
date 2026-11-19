@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Text, Textarea, useToast } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthContext";
@@ -9,6 +9,7 @@ import { useCarga } from "../../lib/useCarga";
 import { api, descargar, guardarArchivo } from "../api";
 import type { CamposBitacora, EntradaBitacora } from "../tipos";
 import { Cargando, fmtFecha, Seccion } from "../ui";
+import { etiquetaEstadoBitacora } from "../../lib/etiquetas";
 
 const CAMPOS = [
   { id: "decision", etiqueta: "Decisión", ayuda: "Qué se decide y para qué sectores." },
@@ -39,8 +40,20 @@ function Formulario({ borrador, alGuardar }: { borrador: EntradaBitacora | null;
   const [error, setError] = useState<unknown>(null);
   const [guardando, setGuardando] = useState(false);
 
+  const tuvoBorrador = useRef(false);
   useEffect(() => {
-    if (borrador) {
+    if (!borrador) {
+      // Al salir de un borrador el formulario vuelve a vacío: no arrastra los datos de la entrada anterior.
+      if (tuvoBorrador.current) {
+        setV({ ...VACIO, responsable_rol: usuario?.rol_operativo ?? "" });
+        setErrores({});
+        setError(null);
+      }
+      tuvoBorrador.current = false;
+      return;
+    }
+    tuvoBorrador.current = true;
+    {
       setV({
         decision: borrador.decision ?? "",
         evidencia: borrador.evidencia ?? "",
@@ -164,7 +177,7 @@ export default function Bitacora() {
               <Box as="li" key={b.id} borderTop="1px solid" borderColor="borde" py={3}>
                 <Flex gap={2} align="center" wrap="wrap" mb={1}>
                   <strong>Entrada {b.id}</strong>
-                  <Badge colorScheme={b.estado === "borrador" ? "orange" : "green"}>{b.estado}</Badge>
+                  <Badge colorScheme={b.estado === "borrador" ? "orange" : "green"}>{etiquetaEstadoBitacora(b.estado)}</Badge>
                   <Text fontSize="xs" color="textoSuave">
                     {b.responsable_rol ?? "sin responsable"} · {fmtFecha(b.fecha_simulada)}
                     {b.orden_id ? ` · orden ${b.orden_id}` : ""}

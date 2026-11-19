@@ -484,6 +484,21 @@ function Encuadre() {
   return null;
 }
 
+/** Si el navegador pierde el contexto WebGL (memoria, cambio de GPU), se avisa para usar el respaldo 2D. */
+function AvisoContexto({ alPerder }: { alPerder: () => void }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const el = gl.domElement;
+    const f = (e: Event) => {
+      e.preventDefault();
+      alPerder();
+    };
+    el.addEventListener("webglcontextlost", f);
+    return () => el.removeEventListener("webglcontextlost", f);
+  }, [gl, alPerder]);
+  return null;
+}
+
 function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; malla: Malla; alListo: () => void; alTerminar: () => void }) {
   const proy = useMemo(() => crearProy(datos, malla.min), [datos, malla]);
   const { camera, scene, pointer } = useThree();
@@ -623,18 +638,22 @@ function Escena({ datos, malla, alListo, alTerminar }: { datos: DatosRelieve; ma
   );
 }
 
-export default function Cuenca3D({ datos, onTerminar }: { datos: DatosRelieve; onTerminar?: () => void }) {
+export default function Cuenca3D({ datos, onTerminar, onFallo }: { datos: DatosRelieve; onTerminar?: () => void; onFallo?: () => void }) {
   const [malla, setMalla] = useState<Malla | null>(null);
   const [listo, setListo] = useState(false);
   const [calidad, setCalidad] = useState(2);
   const [visible, setVisible] = useState(true);
   const raiz = useRef<HTMLDivElement>(null);
+  const falloRef = useRef(onFallo);
+  falloRef.current = onFallo;
 
   useEffect(() => {
     let activo = true;
     cargarMalla()
       .then((m) => activo && setMalla(m))
-      .catch(() => undefined);
+      .catch(() => {
+        if (activo) falloRef.current?.();
+      });
     return () => {
       activo = false;
     };
@@ -658,6 +677,7 @@ export default function Cuenca3D({ datos, onTerminar }: { datos: DatosRelieve; o
           camera={{ fov: 38, near: 0.1, far: 60, position: [0, 4, 6] }}
           gl={{ antialias: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
         >
+          <AvisoContexto alPerder={() => onFallo?.()} />
           <PerformanceMonitor onDecline={() => setCalidad(1)} flipflops={2} />
           <Escena datos={datos} malla={malla} alListo={() => setListo(true)} alTerminar={() => onTerminar?.()} />
         </Canvas>

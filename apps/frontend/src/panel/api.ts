@@ -71,7 +71,8 @@ export const api = {
   avanzarSolicitud: (id: number, estado: string, cuadrilla_id?: number) =>
     solicitar<Solicitud>(`/solicitudes/${id}`, { ...a, metodo: "PATCH", cuerpo: { estado, ...(cuadrilla_id ? { cuadrilla_id } : {}) } }),
   ordenes: () => solicitar<{ ordenes: Orden[] }>("/ordenes", a),
-  emitirOrden: (c: { tipo: string; sectores: string[]; fundamento: string; fecha_simulada?: string }) => solicitar<Orden>("/ordenes", { ...a, cuerpo: c }),
+  emitirOrden: (c: { tipo: string; sectores: string[]; fundamento: string; fecha_simulada?: string }, claveIdempotencia?: string) =>
+    solicitar<Orden>("/ordenes", { ...a, cuerpo: c, ...(claveIdempotencia ? { cabeceras: { "Idempotency-Key": claveIdempotencia } } : {}) }),
   bitacora: () => solicitar<{ entradas: EntradaBitacora[] }>("/bitacora", a),
   crearBitacora: (c: CamposBitacora) => solicitar<EntradaBitacora>("/bitacora", { ...a, cuerpo: c }),
   completarBitacora: (id: number, c: CamposBitacora) => solicitar<EntradaBitacora>(`/bitacora/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
@@ -123,6 +124,10 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   const enlace = document.createElement("a");
   enlace.href = url;
   enlace.download = nombre;
+  enlace.style.display = "none";
+  document.body.appendChild(enlace); // Firefox exige el ancla dentro del DOM
   enlace.click();
-  URL.revokeObjectURL(url);
+  enlace.remove();
+  // Se libera tarde: revocar enseguida puede cortar la descarga en algunos navegadores.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

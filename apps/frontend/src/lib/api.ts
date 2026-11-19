@@ -139,6 +139,11 @@ export function registrarManejadorSesion(m: ManejadorSesion | null): void {
   manejadorSesion = m;
 }
 
+/** Pide al AuthProvider que renueve el token (p. ej. tras un cierre 1008 del WebSocket). false si no hay sesión o falló. */
+export async function renovarSesion(): Promise<boolean> {
+  return manejadorSesion ? manejadorSesion.renovar() : false;
+}
+
 async function solicitarCrudo<T>(ruta: string, op: Opciones = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(op.cabeceras ?? {}) };
   if (op.cuerpo !== undefined) headers["Content-Type"] = "application/json";

@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
@@ -18,7 +18,7 @@ const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
 
 /** Controles del escenario (CLAUDE.md §8.1) y resultado por sector. Todo el resultado es SIMULADO. */
 export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
-  const { entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, calculando, error, simular } = useEscenario();
+  const { entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular } = useEscenario();
   const lluviaSimulada = entrada.lluvia_origen === "simulado" || entrada.lluvia_origen === "manual";
 
   return (
@@ -95,8 +95,21 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
         </Box>
       )}
 
+      {escenario && desactualizado && (
+        <Alert status="warning" mt={4} fontSize="sm" alignItems="center" role="status" data-testid="resultado-desactualizado">
+          <AlertIcon />
+          <Box flex="1">
+            <strong>Resultado desactualizado.</strong> Cambiaste los controles después de calcular (resultado de {fmtM(entradaCalculada?.altura_formosa_m)} y{" "}
+            {fmtNum(entradaCalculada?.lluvia_mm)} mm).
+          </Box>
+          <Button size="sm" minH="2.75rem" onClick={() => void simular()} isLoading={calculando} loadingText="Calculando">
+            Recalcular
+          </Button>
+        </Alert>
+      )}
+
       {escenario && (
-        <Box mt={4} data-testid="resultado-escenario">
+        <Box mt={4} data-testid="resultado-escenario" opacity={desactualizado ? 0.55 : 1}>
           <Flex align="center" gap={2} mb={2} wrap="wrap">
             <Heading as="h3" size="xs">
               Resultado

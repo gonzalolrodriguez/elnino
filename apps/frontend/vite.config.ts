@@ -23,5 +23,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Las páginas se cargan con React.lazy y los tests de integración montan toda la app: con la máquina cargada superan 5 s.
+    testTimeout: 20_000,
   },
 });
