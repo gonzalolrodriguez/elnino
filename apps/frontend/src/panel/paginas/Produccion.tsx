@@ -1,4 +1,4 @@
-import { Alert, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, List, ListItem, NumberInput, NumberInputField, Select, SimpleGrid, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, List, ListItem, NumberInput, NumberInputField, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
@@ -6,6 +6,7 @@ import { Insignia } from "../../components/Insignia";
 import { api } from "../api";
 import type { CalculoGanadero } from "../tipos";
 import { AvisoSimulado, fmtNum, Seccion } from "../ui";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 const BOVINOS = ["vaca preñada", "vaca vacía", "vaca con cría", "ternero al pie", "vaquillona", "toro"] as const;
 const MENORES = ["caprino", "ovino", "porcino"] as const;
@@ -76,7 +77,7 @@ function Resultado({ r }: { r: CalculoGanadero }) {
       <Text fontWeight={600} fontSize="sm" mt={3}>
         Supuestos usados
       </Text>
-      <TableContainer>
+      <TablaDesplazable etiqueta="Supuestos del cálculo ganadero">
         <Table size="sm" aria-label="Supuestos del cálculo ganadero">
           <Thead>
             <Tr>
@@ -93,7 +94,7 @@ function Resultado({ r }: { r: CalculoGanadero }) {
             ))}
           </Tbody>
         </Table>
-      </TableContainer>
+      </TablaDesplazable>
       <Text fontSize="xs" color="textoSuave" mt={1}>
         {r.fuente}. Fecha del cálculo: {r.fecha_dato}.
       </Text>

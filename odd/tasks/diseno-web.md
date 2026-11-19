@@ -18,6 +18,7 @@
 - [x] D9 Landing: escena 3D de planialtimetría (malla, curvas, departamentos, río, leyenda) y respaldo 2D con los mismos datos — inline
 - [x] D10 Docs: `ficha_fuentes.md`, LEEME, README, `decisiones.md` — inline
 - [x] D11 Simulaciones: capas Relieve / Curvas de nivel / Departamentos en el mapa operativo (MapLibre) y fondo local en el mapa SVG de sectores de `/informacion` — inline
+- [x] D12 Adaptabilidad web 320 a 2560 px y equipos antiguos: menú plegable, `PaginaFormulario` con panel de apoyo (registro, login, `/app`), tablas en `TablaDesplazable`, mapa operativo primero en pantallas angostas, `@vitejs/plugin-legacy`, respaldos CSS, 2D en equipos limitados, táctil 44 px, `prefers-contrast` y `forced-colors` — inline, un solo escritor
 
 ## Evidencia
 - Ruta de ejecución: un solo escritor (inline, delegado por el orquestador). Sin commit, por pedido.
@@ -30,3 +31,11 @@
 - `pnpm -r typecheck`: ok. Frontend `lint`: ok. `test`: 104 pruebas en verde (93 previas + 11 nuevas en `relieve.test.tsx`). `build`: ok (Cuenca3D 869 kB, MapaGL 2.009 kB, ambos cargados bajo demanda; `public/relieve` 1,8 MB por `fetch`).
 - Capturas (landing 3D tras la animación, 1440x900 y 390x844) en scratchpad/capturas: `relieve-1440.png`, `relieve-390.png`. Mapa operativo verificado con una página de prueba temporal (ya eliminada): curvas, departamentos, rótulo de cota y tinte visibles. Sin verificar visualmente: `/comando/mapa` autenticado y `/informacion` (cubiertos por pruebas, MapLibre simulado).
 - Pendiente: la ruta autenticada del mapa operativo no se miró con sesión real.
+
+## Evidencia D12 (adaptabilidad)
+- Ruta: inline, un escritor. Sin commit. Dependencias: `@vitejs/plugin-legacy` 6.1.1 y `terser` 5.46.1 (devDependencies, versión exacta). `browserslist` en `apps/frontend/package.json`.
+- `pnpm -r typecheck`: ok. `pnpm exec eslint src` (frontend): sin avisos. `pnpm exec vitest run` (frontend): 130 pruebas en verde (113 previas + 17 nuevas en `responsive.test.tsx`). `pnpm build` (datos + tsc + vite build, con paquete heredado): ok en 2 min 22 s.
+- Tamaños (sin comprimir) moderno / heredado: index 587 / 590 kB, Panel 122 / 123 kB, Cuenca3D 869 / 871 kB, MapaGL 2.004 / 2.081 kB, polyfills 74 / 134 kB.
+- Capturas en `scratchpad/capturas/resp/` (prefijo `f_`): `/`, `/informacion`, `/registro/ciudadania`, `/registro/productor`, `/login`, `/app` a 320x640, 390x844, 768x1024, 1024x768, 1440x900 y 2560x1440; sin desplazamiento horizontal medido en 320 px. Se corrigió el subrayado de enlaces del menú (borde con color heredado) y el choque de la leyenda de relieve con el aviso de la landing.
+- Sin ver: rutas privadas (`/mi-cuenta`, `/cuadrilla`, `/admin`, `/comando/*`; solo pruebas y revisión de código), 844x390 y 1366x600 en rutas públicas, zoom 200 % y texto ampliado, equipos reales antiguos (Safari 12, Chrome 70, iOS 12), modo de alto contraste de Windows.
+

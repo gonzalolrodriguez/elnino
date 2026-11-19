@@ -356,7 +356,41 @@ export default function MapaOperativo() {
       <Heading as="h1" size="lg" mb={4}>
         Mapa operativo y simulador
       </Heading>
-      <Flex gap={4} direction={{ base: "column", xl: "row" }} align="flex-start">
+      <Flex direction={{ base: "column", xl: "row-reverse" }} align={{ base: "stretch", xl: "flex-start" }} sx={{ "& > * + *": { marginTop: "1rem" }, "@media (min-width: 80em)": { "& > * + *": { marginTop: 0, marginRight: "1rem" } } }}>
+        <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "calc(var(--altura-leyenda) + 1rem)" }}>
+          <Box
+            h={{ base: "60vh", xl: "75vh" }}
+            minH="18rem"
+            border="1px solid"
+            borderColor="borde"
+            bg="superficie"
+            sx={{ "@supports (height: 1dvh)": { height: "60dvh", "@media (min-width: 80em)": { height: "75dvh" } } }}
+          >
+            <Suspense fallback={<Text p={4} role="status">Cargando mapa…</Text>}>
+              <MapaGL
+                sectores={sectores.datos}
+                accesos={accesos.datos}
+                centros={centros.datos?.centros ?? []}
+                estaciones={estaciones.datos?.estaciones ?? []}
+                estadoSectores={estadoSectores}
+                estadoAccesos={estadoAccesos}
+                cerradosSimulacion={entrada.caminos_cerrados}
+                capas={capas.datos?.capas ?? []}
+                capasActivas={capasActivas}
+                fondoOsm={osm}
+                ruta={ruta}
+                modoOrigen={modoOrigen}
+                origenRuta={origenManual}
+                onAcceso={(a) => setSeleccion(a.id)}
+                onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
+              />
+            </Suspense>
+          </Box>
+          <Leyenda />
+          <Text fontSize="xs" color="textoSuave" mt={1}>
+            Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
+          </Text>
+        </Box>
         <Box w={{ base: "100%", xl: "26rem" }} flexShrink={0}>
           <Seccion titulo="Simulador de escenario" categoria="SIMULADO" id="sec-sim">
             <Simulador accesos={listaAccesos} />
@@ -405,33 +439,6 @@ export default function MapaOperativo() {
               />
             )} />
           </Seccion>
-        </Box>
-        <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "7rem" }}>
-          <Box h={{ base: "60vh", xl: "75vh" }} border="1px solid" borderColor="borde" bg="superficie">
-            <Suspense fallback={<Text p={4} role="status">Cargando mapa…</Text>}>
-              <MapaGL
-                sectores={sectores.datos}
-                accesos={accesos.datos}
-                centros={centros.datos?.centros ?? []}
-                estaciones={estaciones.datos?.estaciones ?? []}
-                estadoSectores={estadoSectores}
-                estadoAccesos={estadoAccesos}
-                cerradosSimulacion={entrada.caminos_cerrados}
-                capas={capas.datos?.capas ?? []}
-                capasActivas={capasActivas}
-                fondoOsm={osm}
-                ruta={ruta}
-                modoOrigen={modoOrigen}
-                origenRuta={origenManual}
-                onAcceso={(a) => setSeleccion(a.id)}
-                onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
-              />
-            </Suspense>
-          </Box>
-          <Leyenda />
-          <Text fontSize="xs" color="textoSuave" mt={1}>
-            Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
-          </Text>
         </Box>
       </Flex>
     </>

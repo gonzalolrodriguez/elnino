@@ -6,6 +6,7 @@ import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
+import { ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
 import { MapaSectores } from "../informacion/MapaSectores";
@@ -116,7 +117,7 @@ export default function RegistroProductor() {
         Plataforma prototipo: usá datos de prueba.
       </Text>
       <form onSubmit={enviar} noValidate aria-label="Registro de productor">
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 32rem) minmax(0, 1fr)" }} gap={10} alignItems="start">
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 34rem) minmax(0, 1fr)" }} gap={{ base: 8, lg: 10 }} alignItems="start">
           <TarjetaFormulario maxW="none">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
@@ -208,7 +209,7 @@ export default function RegistroProductor() {
           </VStack>
           </TarjetaFormulario>
 
-          <Box position={{ lg: "sticky" }} top={{ lg: "7rem" }}>
+          <Box position={{ lg: "sticky" }} top={{ lg: "calc(var(--altura-leyenda) + 1.5rem)" }}>
             <Box display="flex" gap={2} alignItems="center" mb={2}>
               <Heading as="h2" size="sm">
                 Elegir en el mapa
@@ -222,6 +223,9 @@ export default function RegistroProductor() {
             <Text fontSize="xs" mt={2}>
               Los sectores son de K10, simulados. El mapa solo sirve para elegir la ubicación de la tranquera.
             </Text>
+            <Box mt={5} display={{ base: "none", xl: "block" }}>
+              <ResumenSectores />
+            </Box>
           </Box>
         </Box>
       </form>

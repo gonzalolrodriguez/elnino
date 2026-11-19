@@ -1,0 +1,254 @@
+/*
+ * Capa de compatibilidad y accesibilidad adaptable (no depende de Chakra).
+ * Objetivo: que la plataforma funcione en navegadores antiguos (Chrome 70, Safari 12, Firefox 78),
+ * en pantallas táctiles, con alto contraste y con colores forzados de Windows.
+ */
+
+/* ---------- Respaldos para navegadores sin :focus-visible (Chrome < 86, Safari < 15.4, Firefox < 85) ---------- */
+/* Sin soporte, la segunda regla es inválida y se descarta: el foco queda visible siempre. Con soporte, solo el teclado lo muestra. */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+summary:focus,
+[tabindex]:focus {
+  outline: 3px solid var(--chakra-colors-foco, #1b1b1b);
+  outline-offset: 2px;
+}
+.sobre-oscuro a:focus,
+.sobre-oscuro button:focus,
+.sobre-oscuro [tabindex]:focus {
+  outline-color: var(--chakra-colors-focoClaro, #ffd27a);
+}
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+summary:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+#contenido:focus {
+  outline: none;
+}
+
+/* ---------- Respaldo para flex gap (Safari < 14.1, Chrome < 84): ver src/lib/compat.ts, que agrega la clase ---------- */
+.sin-gap-flex .chakra-stack > * {
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.sin-gap-flex .chakra-wrap__list > li,
+.sin-gap-flex .chakra-button__group > * {
+  margin: 0 0.25rem 0.25rem 0;
+}
+
+.sin-gap-flex .chakra-form-control {
+  margin: 0 0.75rem 0.75rem 0;
+}
+.sin-gap-flex .chakra-button + .chakra-button {
+  margin-left: 0.5rem;
+}
+
+/* ---------- Respaldo para overflow: clip (Chrome < 90, Safari < 16) ---------- */
+@supports not (overflow: clip) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* ---------- Respaldo para clamp() (Chrome < 79, Safari < 13.1, Firefox < 75): títulos con tamaño fijo ---------- */
+@supports not (font-size: clamp(1px, 1vw, 2px)) {
+  h1.chakra-heading {
+    font-size: 2rem !important;
+  }
+  h2.chakra-heading {
+    font-size: 1.5rem !important;
+  }
+  h3.chakra-heading {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* ---------- Pantallas táctiles: objetivos de al menos 44 px (WCAG 2.5.5) ---------- */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  select,
+  summary,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .chakra-button {
+    min-height: 2.75rem;
+  }
+  .chakra-button,
+  button[aria-label] {
+    min-width: 2.75rem;
+  }
+  .chakra-checkbox {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  .chakra-checkbox__control {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+  }
+  input[type="range"] {
+    min-height: 2.75rem;
+  }
+  /* Listas de enlaces y filas que se tocan: área de toque cómoda. */
+  nav a,
+  nav button {
+    min-height: 2.75rem;
+  }
+  .toque-44 {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+/* Los controles con ancho fijo en rem nunca superan el ancho disponible (pantallas de 320 px o texto ampliado). */
+.chakra-form-control {
+  max-width: 100%;
+}
+
+/* ---------- Texto ampliado y reflujo (WCAG 1.4.4 y 1.4.10) ---------- */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+p,
+li,
+td,
+th,
+dd,
+label,
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: break-word;
+}
+
+/* ---------- Contenedores con desplazamiento propio: indicio visible de que hay más contenido ---------- */
+.desplazable {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  /* Sombras laterales que aparecen solo cuando queda contenido oculto (técnica de Lea Verou). */
+  background:
+    linear-gradient(to right, var(--chakra-colors-superficie, #fff) 30%, rgba(255, 255, 255, 0)) left center / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--chakra-colors-superficie, #fff) 30%, rgba(255, 255, 255, 0)) right center / 2rem 100% no-repeat local,
+    linear-gradient(to right, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0)) left center / 0.75rem 100% no-repeat scroll,
+    linear-gradient(to left, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0)) right center / 0.75rem 100% no-repeat scroll;
+}
+.desplazable:focus-visible {
+  outline: 3px solid var(--chakra-colors-foco, #1b1b1b);
+  outline-offset: 2px;
+}
+.desplazable > .chakra-table__container,
+.desplazable > table {
+  overflow: visible;
+}
+
+/* ---------- Alto de ventana: dvh descuenta la barra de direcciones móvil ---------- */
+@supports (min-height: 100dvh) {
+  .alto-pantalla {
+    min-height: 100dvh;
+  }
+}
+
+/* ---------- Pantallas bajas (laptops 1366x600, teléfonos en horizontal) ---------- */
+@media (max-height: 520px) {
+  .regla-escala {
+    display: none;
+  }
+}
+
+/* ---------- Movimiento reducido: ya cubierto en el tema; aquí también el desplazamiento suave ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---------- Contraste más alto: bordes y separadores más fuertes ---------- */
+@media (prefers-contrast: more) {
+  html:root {
+    --chakra-colors-borde: var(--chakra-colors-pizarra-700, #3a4a4c);
+    --chakra-colors-bordeFuerte: var(--chakra-colors-texto, #111);
+    --chakra-colors-textoSuave: var(--chakra-colors-texto, #111);
+  }
+  input,
+  select,
+  textarea {
+    border-width: 2px !important;
+    border-color: var(--chakra-colors-texto, #111) !important;
+  }
+  [data-categoria] {
+    border-width: 2px !important;
+  }
+  a {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* ---------- Colores forzados (modo de alto contraste de Windows) ---------- */
+@media (forced-colors: active) {
+  /* Las categorías se distinguen por el trazo: observado = continuo, referencia = doble, simulado = punteado. */
+  [data-categoria] {
+    border: 2px solid CanvasText !important;
+    forced-color-adjust: none;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+  [data-categoria="DOCUMENTO DE REFERENCIA"] {
+    border-style: double !important;
+    border-width: 4px !important;
+  }
+  [data-categoria="SIMULADO"] {
+    border-style: dashed !important;
+  }
+  /* Estados de sector: la muestra conserva su patrón de borde. */
+  [data-estado] > span[aria-hidden="true"] {
+    forced-color-adjust: none;
+    background: Canvas !important;
+    border-color: CanvasText !important;
+  }
+  [data-estado="comprometido"] > span[aria-hidden="true"] {
+    background: repeating-linear-gradient(45deg, CanvasText 0 2px, Canvas 2px 5px) !important;
+  }
+  [data-estado="en_riesgo"] > span[aria-hidden="true"] {
+    border-style: dashed !important;
+  }
+  /* Botones y controles con borde visible aunque el relleno desaparezca. */
+  .chakra-button,
+  input,
+  select,
+  textarea {
+    border: 2px solid ButtonText !important;
+  }
+  .chakra-button[disabled] {
+    border-color: GrayText !important;
+  }
+  /* Enlace activo de navegación y leyenda fija con trazo explícito. */
+  a[aria-current="page"] {
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    border-color: Highlight !important;
+  }
+  [role="note"][aria-label="Aviso de prototipo"] {
+    border-bottom: 2px solid CanvasText;
+  }
+  .regla-escala {
+    display: none;
+  }
+  .desplazable {
+    background: none;
+    border: 1px solid CanvasText;
+  }
+}

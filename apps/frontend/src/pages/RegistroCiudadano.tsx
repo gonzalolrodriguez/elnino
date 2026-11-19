@@ -5,6 +5,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
+import { BloqueApoyo, PaginaFormulario, ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
 import { solicitar } from "../lib/api";
@@ -107,15 +108,29 @@ export default function RegistroCiudadano() {
 
   return (
     <Layout titulo="Registro de ciudadanía">
-      <Box maxW="36rem">
-        <Heading as="h1" size="xl" mb={2}>
-          Registro de ciudadanía
-        </Heading>
-        <Text mb={6}>
-          Con tu grupo familiar y tu domicilio podemos ubicarte en un sector, avisarte y organizar tu traslado. Esta es una
-          plataforma prototipo: usá datos de prueba.
-        </Text>
-        <TarjetaFormulario>
+      <PaginaFormulario
+        titulo="Registro de ciudadanía"
+        intro="Con tu grupo familiar y tu domicilio podemos ubicarte en un sector, avisarte y organizar tu traslado. Esta es una plataforma prototipo: usá datos de prueba."
+        aside={
+          <>
+            <BloqueApoyo titulo="Para qué usamos tus datos">
+              <Box as="ul" m={0} pl={5} fontSize="sm">
+                <li>Ubicarte en un sector de evaluación a partir de tu domicilio.</li>
+                <li>Avisarte cuando tu sector esté en riesgo o se emita una orden.</li>
+                <li>Organizar tu traslado y asignarte un centro de recepción.</li>
+              </Box>
+            </BloqueApoyo>
+            <BloqueApoyo titulo="Tus derechos">
+              <Text fontSize="sm">
+                Podés pedir el acceso, la rectificación y la supresión de tus datos (Ley 25.326). El teléfono se guarda cifrado y la
+                ubicación solo se usa para ubicarte en un sector.
+              </Text>
+            </BloqueApoyo>
+            <ResumenSectores />
+          </>
+        }
+      >
+        <TarjetaFormulario maxW="none">
         <form onSubmit={enviar} noValidate aria-label="Registro de ciudadanía">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
@@ -164,7 +179,7 @@ export default function RegistroCiudadano() {
           </VStack>
         </form>
         </TarjetaFormulario>
-      </Box>
+      </PaginaFormulario>
     </Layout>
   );
 }

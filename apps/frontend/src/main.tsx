@@ -5,7 +5,11 @@ import "@fontsource-variable/public-sans";
 import "@fontsource-variable/source-serif-4";
 
 import App from "./App";
+import "./estilo/base.css";
+import { aplicarRespaldos } from "./lib/compat";
 import { theme } from "./theme";
+
+aplicarRespaldos();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

@@ -1,5 +1,5 @@
 import { Box, Button, ButtonGroup, Text } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Insignia } from "../components/Insignia";
 import {
@@ -28,8 +28,7 @@ const K = {
   textoEvacuacion: hexDe("umbral.textoEvacuacion"),
 };
 
-const W = 900;
-const H = 320;
+const W0 = 900; // ancho de referencia del gráfico; en pantallas angostas se ajusta al ancho real para que el texto siga legible
 const M = { l: 44, r: 12, t: 14, b: 28 };
 const Y_MIN = -1;
 const Y_MAX = 10.5;
@@ -78,6 +77,19 @@ export function construirTrazo(
 export function SerieK1({ serie = SERIE_K1 }: { serie?: SerieDiaria }) {
   const [preset, setPreset] = useState<(typeof PRESETS)[number]["id"]>("todo");
   const [cursor, setCursor] = useState<number | null>(null);
+  const contenedor = useRef<HTMLDivElement>(null);
+  const [ancho, setAncho] = useState(W0);
+  useEffect(() => {
+    const medir = () => {
+      const w = contenedor.current?.clientWidth;
+      if (w) setAncho(Math.max(280, Math.min(1200, Math.round(w))));
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, []);
+  const W = ancho;
+  const H = ancho < 520 ? 260 : 320;
 
   const p = PRESETS.find((x) => x.id === preset) ?? PRESETS[0];
   const i0 = Math.max(0, indiceDeFecha(serie.desde, p.desde));
@@ -88,7 +100,8 @@ export function SerieK1({ serie = SERIE_K1 }: { serie?: SerieDiaria }) {
   const trazo = useMemo(() => construirTrazo(serie, i0, i1, x, y, W - M.l - M.r), [serie, i0, i1]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dias = i1 - i0;
-  const paso = dias > 3000 ? 24 : dias > 1000 ? 12 : dias > 400 ? 6 : dias > 150 ? 2 : 1;
+  const base = dias > 3000 ? 24 : dias > 1000 ? 12 : dias > 400 ? 6 : dias > 150 ? 2 : 1;
+  const paso = ancho < 520 ? base * 2 : base;
   const ticksX: { i: number; texto: string }[] = [];
   for (let i = i0; i <= i1; i++) {
     const f = fechaDeIndice(serie.desde, i);
@@ -110,7 +123,7 @@ export function SerieK1({ serie = SERIE_K1 }: { serie?: SerieDiaria }) {
   }
 
   return (
-    <Box as="figure" m={0}>
+    <Box as="figure" m={0} ref={contenedor}>
       <Box display="flex" gap={3} alignItems="center" flexWrap="wrap" mb={3}>
         <ButtonGroup size="sm" variant="outline" display="flex" flexWrap="wrap" gap={2} role="group" aria-label="Período del gráfico">
           {PRESETS.map((x) => (
@@ -128,7 +141,8 @@ export function SerieK1({ serie = SERIE_K1 }: { serie?: SerieDiaria }) {
         role="img"
         aria-label={`Altura diaria de la escala de Puerto Formosa entre ${fechaLarga(p.desde)} y ${fechaLarga(p.hasta)}, con los umbrales de alerta ${fmt(UMBRAL_ALERTA)} m y evacuación ${fmt(UMBRAL_EVACUACION)} m`}
         onPointerMove={alMover}
-        onPointerLeave={() => setCursor(null)}
+        onPointerDown={alMover}
+        onPointerLeave={(e) => e.pointerType !== "touch" && setCursor(null)}
       >
         {[0, 2, 4, 6, 8, 10].map((v) => (
           <g key={v}>

@@ -236,6 +236,8 @@ pnpm --filter @evacuaciones/frontend datos      # regenera los JSON estáticos d
 - Rutas públicas: `/` (landing), `/informacion` (antes `/el-nino`, que redirige), `/registro/ciudadania`, `/registro/productor`, `/login`, `/app`.
 - Rutas privadas: `/mi-cuenta` (ciudadano y productor), `/cuadrilla` (cuadrilla y admin: tareas asignadas, checklist, alertas y tiempo real), `/comando/*` (operador, decisor y admin; ver "Panel operativo"), `/admin` (admin). Cualquier otra ruta vuelve a `/`.
 - Pruebas y calidad: `pnpm --filter @evacuaciones/frontend test`, `lint` y `build`.
+- Navegadores admitidos (`browserslist` de `apps/frontend/package.json`): Chrome 70+, Edge 79+, Safari y iOS 12+, Firefox 78+, Samsung Internet 10+. `vite build` genera un paquete moderno y otro heredado (`@vitejs/plugin-legacy`, con polyfills de core-js) que el navegador elige solo. El 3D de la landing y el mapa operativo exigen WebGL 2: sin él (o en equipos de 2 núcleos o 2 GB de memoria o menos, solo la landing) se usa el esquema 2D, y el mapa muestra un aviso con el simulador y las listas disponibles.
+- Adaptable de 320 px a 2560 px: el menú se pliega bajo 768 px, las páginas de formulario muestran un panel de apoyo a la derecha desde 992 px, las tablas anchas se desplazan dentro de su propia región (enfocable con el teclado), y se respetan `prefers-reduced-motion`, `prefers-contrast: more`, `forced-colors` y los objetivos táctiles de 44 px (`pointer: coarse`).
 
 ## Panel operativo
 
