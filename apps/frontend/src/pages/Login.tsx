@@ -1,10 +1,11 @@
-import { Box, Button, Heading, Link, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, Link, Text, VStack } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 import { AlertaError, Campo } from "../components/Formulario";
 import { Layout } from "../components/Layout";
+import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 
 export default function Login() {
@@ -41,12 +42,32 @@ export default function Login() {
 
   return (
     <Layout titulo="Ingresar">
-      <Box maxW="28rem">
-        <Heading as="h1" size="xl" mb={2}>
-          Ingresar
-        </Heading>
-        <Text mb={6}>Para ciudadanía, productores y cuentas institucionales.</Text>
-        <TarjetaFormulario maxW="28rem">
+      <PaginaFormulario
+        titulo="Ingresar"
+        intro="Para ciudadanía, productores y cuentas institucionales."
+        anchoFormulario="28rem"
+        aside={
+          <>
+            <BloqueApoyo titulo="Qué encontrás adentro">
+              <Box as="dl" m={0} fontSize="sm">
+                <Text as="dt" fontWeight={700}>Ciudadanía</Text>
+                <Text as="dd" m={0} mb={2}>Tu sector, tus alertas y el centro de recepción que te corresponde.</Text>
+                <Text as="dt" fontWeight={700}>Productores</Text>
+                <Text as="dd" m={0} mb={2}>Tu establecimiento y tu hacienda declarada, para planificar el traslado.</Text>
+                <Text as="dt" fontWeight={700}>Cuentas institucionales</Text>
+                <Text as="dd" m={0}>Panel operativo o tareas de cuadrilla. Las crea el administrador: no hay autorregistro.</Text>
+              </Box>
+            </BloqueApoyo>
+            <BloqueApoyo titulo="Si no podés ingresar">
+              <Text fontSize="sm">
+                Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
+                más tarde.
+              </Text>
+            </BloqueApoyo>
+          </>
+        }
+      >
+        <TarjetaFormulario maxW="none">
         <form onSubmit={enviar} noValidate aria-label="Ingreso">
           <VStack spacing={4} align="stretch">
             <AlertaError error={error} />
@@ -69,7 +90,7 @@ export default function Login() {
           </VStack>
         </form>
         </TarjetaFormulario>
-      </Box>
+      </PaginaFormulario>
     </Layout>
   );
 }

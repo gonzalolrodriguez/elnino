@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
 import { useState } from "react";
 
@@ -8,6 +8,7 @@ import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
 import { Cargando, fmtNum, Seccion } from "../ui";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 const TIPO_INCIDENTE = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" } as const;
 const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
@@ -42,7 +43,7 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
   return (
     <Seccion titulo="Cuadrillas" categoria="SIMULADO" id="sec-cuadrillas">
       <Cargando carga={carga} esVacio={(d) => d.cuadrillas.length === 0} vacio="Todavía no hay cuadrillas. Creá una abajo." hijos={(d) => (
-        <TableContainer mb={3}>
+        <TablaDesplazable etiqueta="Cuadrillas" mb={3}>
           <Table size="sm" aria-label="Cuadrillas">
             <Thead>
               <Tr>
@@ -63,7 +64,7 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
               ))}
             </Tbody>
           </Table>
-        </TableContainer>
+        </TablaDesplazable>
       )} />
       <Flex gap={2} align="flex-end" wrap="wrap">
         <FormControl w="14rem">
@@ -114,7 +115,7 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
   return (
     <Seccion titulo="Tareas de cuadrillas" categoria="SIMULADO" id="sec-tareas">
       <Cargando carga={carga} esVacio={(d) => d.tareas.length === 0} vacio="No hay tareas. Se crean al emitir una orden o asignar una solicitud." hijos={(d) => (
-        <TableContainer>
+        <TablaDesplazable etiqueta="Tareas">
           <Table size="sm" aria-label="Tareas">
             <Thead>
               <Tr>
@@ -155,7 +156,7 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
               ))}
             </Tbody>
           </Table>
-        </TableContainer>
+        </TablaDesplazable>
       )} />
       <Box mt={2}>
         <AlertaError error={error} />
@@ -193,7 +194,7 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
       </Select>
     }>
       <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio="No hay solicitudes en la cola." hijos={(d) => (
-        <TableContainer>
+        <TablaDesplazable etiqueta="Solicitudes">
           <Table size="sm" aria-label="Solicitudes">
             <Thead>
               <Tr>
@@ -235,7 +236,7 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
               })}
             </Tbody>
           </Table>
-        </TableContainer>
+        </TablaDesplazable>
       )} />
       <Box mt={2}>
         <AlertaError error={error} />

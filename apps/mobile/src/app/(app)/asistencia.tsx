@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Image, Linking, Text, View } from "react-native";
+import { Image, Linking, Text } from "react-native";
 
-import { Boton, Campo, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Boton, Campo, COLOR, ErrorCaja, FilaBotones, Insignia, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import type { DatosSolicitud } from "@/lib/cola";
 import { obtenerUbicacion, tomarFotoComprimida, type Coordenadas } from "@/lib/dispositivo";
@@ -114,8 +114,8 @@ export default function Asistencia() {
         emergencia.
       </Texto>
 
-      <Text style={{ fontWeight: "600" }}>Tipo de pedido</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+      <Subtitulo>Tipo de pedido</Subtitulo>
+      <FilaBotones>
         {TIPOS.map((t) => (
           <Boton
             key={t.valor}
@@ -124,7 +124,7 @@ export default function Asistencia() {
             onPress={() => setTipo(t.valor)}
           />
         ))}
-      </View>
+      </FilaBotones>
 
       <Campo etiqueta="Personas a asistir" value={personas} onChangeText={setPersonas} keyboardType="number-pad" />
       <Campo etiqueta="Animales" value={animales} onChangeText={setAnimales} keyboardType="number-pad" />
@@ -134,7 +134,7 @@ export default function Asistencia() {
         onChangeText={setTexto}
         multiline
         maxLength={500}
-        style={{ minHeight: 70, textAlignVertical: "top" }}
+        style={{ minHeight: 96, textAlignVertical: "top" }}
       />
 
       <Tarjeta>
@@ -156,7 +156,12 @@ export default function Asistencia() {
 
       <Tarjeta>
         <Text style={{ fontWeight: "600" }}>Foto (opcional)</Text>
-        {foto ? <Image source={{ uri: foto }} style={{ height: 140, borderRadius: 6 }} /> : null}
+        {foto ? <Image
+            source={{ uri: foto }}
+            style={{ width: "100%", aspectRatio: 4 / 3, maxHeight: 280, borderRadius: 6 }}
+            resizeMode="cover"
+            accessibilityLabel="Foto adjunta"
+          /> : null}
         <Boton
           titulo={foto ? "Cambiar foto" : "Tomar foto"}
           variante="secundario"

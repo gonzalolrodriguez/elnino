@@ -45,7 +45,7 @@ export default function Landing() {
     <Layout contenedor={false} titulo="Inicio">
       <Hero avisoSinServicio={meta.estado === "error"} />
 
-      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
+      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
         <Heading as="h2" id="titulo-perfiles" size="xl" mb={{ base: 4, md: 8 }}>
           ¿Cómo querés ingresar?
         </Heading>
@@ -78,7 +78,7 @@ export default function Landing() {
       </Box>
 
       <Box bg="pizarra.100" py={{ base: 10, md: 16 }}>
-        <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
+        <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
           <Box>
             <Heading as="h2" size="lg" mb={4}>
               Por qué importa antes de que llueva
@@ -104,7 +104,7 @@ export default function Landing() {
         </Box>
       </Box>
 
-      <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={10}>
+      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={10}>
         <EstadoBackend />
         <Text mt={4} fontSize="sm">
           Fuentes y supuestos de cada cifra:{" "}

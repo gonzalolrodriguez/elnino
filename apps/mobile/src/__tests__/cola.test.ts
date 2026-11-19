@@ -2,6 +2,7 @@ import {
   ColaOffline,
   RepositorioMemoria,
   esperaBackoffMs,
+  hostDeUrl,
   type DatosSolicitud,
   type ResultadoEnvio,
   type ResultadoFoto,
@@ -209,5 +210,66 @@ describe("ColaOffline", () => {
       expect(a).toMatchObject({ estado: "enviada", fotoUri: null, fotoSubida: false });
       expect(a.ultimoError).toContain("415");
     });
+  });
+});
+
+describe("ColaOffline: servidor del ítem", () => {
+  function armarServidores() {
+    const estado = { servidor: "http://a.invalid:8000" };
+    const enviados: string[] = [];
+    const cola = new ColaOffline({
+      repo: new RepositorioMemoria(),
+      hayRed: async () => true,
+      enviar: async (d) => {
+        enviados.push(`${estado.servidor}|${d.texto}`);
+        return { ok: true, servidorId: 1 };
+      },
+      subirFoto: async () => ({ ok: true }),
+      servidorActual: () => estado.servidor,
+      ahora: () => 1_000_000,
+    });
+    return { cola, estado, enviados };
+  }
+
+  it("un ítem creado en el servidor A no se envía al B (mismo usuario) y se envía al volver a A", async () => {
+    const { cola, estado, enviados } = armarServidores();
+    const item = await cola.encolar(7, datos("uno"), null);
+    expect(item.servidorUrl).toBe("http://a.invalid:8000");
+
+    estado.servidor = "http://b.invalid:8000";
+    const enB = await cola.vaciar(7, true);
+    expect(enB).toMatchObject({ enviadas: 0, pendientes: 0 });
+    expect(enviados).toEqual([]);
+    expect(await cola.pendientesOtroServidor(7)).toHaveLength(1);
+    expect((await cola.listar(7))[0].estado).toBe("pendiente");
+
+    estado.servidor = "http://a.invalid:8000";
+    const enA = await cola.vaciar(7, true);
+    expect(enA.enviadas).toBe(1);
+    expect(enviados).toEqual(["http://a.invalid:8000|uno"]);
+  });
+
+  it("los ítems de otro servidor se pueden descartar y los del vigente siguen enviándose", async () => {
+    const { cola, estado, enviados } = armarServidores();
+    const viejo = await cola.encolar(7, datos("viejo"), null);
+    estado.servidor = "http://b.invalid:8000";
+    await cola.encolar(7, datos("nuevo"), null);
+    await cola.vaciar(7, true);
+    expect(enviados).toEqual(["http://b.invalid:8000|nuevo"]);
+    await cola.descartar(viejo.id);
+    expect(await cola.pendientesOtroServidor(7)).toHaveLength(0);
+  });
+
+  it("otro usuario nunca ve ni envía ítems ajenos aunque el servidor coincida", async () => {
+    const { cola, enviados } = armarServidores();
+    await cola.encolar(7, datos("de siete"), null);
+    const r = await cola.vaciar(8, true);
+    expect(r.enviadas).toBe(0);
+    expect(enviados).toEqual([]);
+  });
+
+  it("hostDeUrl muestra el host con puerto", () => {
+    expect(hostDeUrl("http://192.168.1.50:8000")).toBe("192.168.1.50:8000");
+    expect(hostDeUrl("https://api.invalid/prefijo")).toBe("api.invalid");
   });
 });

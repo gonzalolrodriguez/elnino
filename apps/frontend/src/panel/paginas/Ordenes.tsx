@@ -19,7 +19,6 @@ import {
   Input,
   Select,
   Table,
-  TableContainer,
   Tbody,
   Td,
   Text,
@@ -41,6 +40,7 @@ import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Orden } from "../tipos";
 import { Cargando, fmtFecha, fmtM, Seccion } from "../ui";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 const TEXTO_TIPO: Record<TipoOrden, string> = {
   alerta: "Alerta",
@@ -212,7 +212,7 @@ export default function Ordenes() {
       </Seccion>
       <Seccion titulo="Órdenes emitidas" id="sec-lista">
         <Cargando carga={ordenes} esVacio={(d) => d.ordenes.length === 0} vacio="Todavía no se emitió ninguna orden." hijos={(d) => (
-          <TableContainer>
+          <TablaDesplazable etiqueta="Órdenes emitidas">
             <Table size="sm" aria-label="Órdenes emitidas">
               <Thead>
                 <Tr>
@@ -239,7 +239,7 @@ export default function Ordenes() {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </TablaDesplazable>
         )} />
       </Seccion>
     </>

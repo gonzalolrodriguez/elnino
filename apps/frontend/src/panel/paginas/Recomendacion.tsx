@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, SimpleGrid, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
@@ -9,6 +9,7 @@ import { useEscenario } from "../EscenarioContext";
 import type { Alternativas, Plan, PlanSector, Recomendacion } from "../tipos";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import { COLOR_ESTADO, fmtDias, fmtM, fmtNum, Seccion } from "../ui";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 /** Muestra valores heterogéneos de la comparación (números, listas y diccionarios). */
 export function fmtValor(v: unknown): string {
@@ -232,7 +233,7 @@ function BloqueComparador() {
             </Heading>
             <Insignia categoria={res.categoria} />
           </Flex>
-          <TableContainer>
+          <TablaDesplazable etiqueta="Comparación de alternativas lado a lado">
             <Table size="sm" aria-label="Comparación de alternativas lado a lado">
               <Thead>
                 <Tr>
@@ -265,7 +266,7 @@ function BloqueComparador() {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </TablaDesplazable>
           <Text fontSize="xs" color="textoSuave" mt={2}>
             Tiempos con flota compartida y velocidades por superficie (SUPUESTO). Cada alternativa quedó guardada con el snapshot del escenario.
           </Text>

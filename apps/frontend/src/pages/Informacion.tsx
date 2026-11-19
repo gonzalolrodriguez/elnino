@@ -4,6 +4,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import { TablaDesplazable } from "../components/TablaDesplazable";
 import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
 import { K10_FECHA, MARGEN_RIESGO_M, SECTORES_K10, UMBRAL_ALERTA } from "../datos/kit";
@@ -59,7 +60,7 @@ function Indice() {
       as="nav"
       aria-label="En esta página"
       position={{ lg: "sticky" }}
-      top={{ lg: "5rem" }}
+      top={{ lg: "calc(var(--altura-leyenda) + 1.5rem)" }}
       alignSelf="start"
       borderLeft={{ lg: "2px solid" }}
       borderColor="borde"
@@ -93,6 +94,7 @@ export default function Informacion() {
 
   return (
     <Layout titulo="Información">
+      <Box maxW="80rem" mx="auto">
       <Heading as="h1" size="2xl" maxW="40rem">
         Información para entender la crecida
       </Heading>
@@ -166,7 +168,7 @@ export default function Informacion() {
           <Insignia categoria="SIMULADO" />
           <Text fontSize="sm">K10 v1.0 · {K10_FECHA}. No son barrios ni parajes reales.</Text>
         </Box>
-        <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "minmax(0, 22rem) 1fr" }} gap={8} alignItems="start">
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "minmax(0, 22rem) minmax(0, 1fr)" }} gap={8} alignItems="start">
           <Box>
             <MapaSectores altura={altura} />
             <Box mt={3}>
@@ -181,8 +183,9 @@ export default function Informacion() {
               </Text>
             </Box>
           </Box>
-          <Box overflowX="auto">
-            <Table size="sm" variant="simple">
+          <Box minW={0}>
+            <TablaDesplazable etiqueta="Sectores de evaluación K10">
+            <Table size="sm" variant="simple" aria-label="Sectores de evaluación K10">
               <Thead>
                 <Tr>
                   <Th>Sector</Th>
@@ -207,6 +210,7 @@ export default function Informacion() {
                 ))}
               </Tbody>
             </Table>
+            </TablaDesplazable>
             <Text fontSize="xs" color="textoSuave" mt={2}>
               S4 se compromete 0,30 m antes del nivel de alerta: a 1,90 m del valor observado al corte.
             </Text>
@@ -247,6 +251,7 @@ export default function Informacion() {
         </UnorderedList>
       </Seccion>
         </Box>
+      </Box>
       </Box>
     </Layout>
   );

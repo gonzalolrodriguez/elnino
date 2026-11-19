@@ -3,10 +3,13 @@ import { useState, type FormEvent } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
+import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
+import { BloqueApoyo, PaginaFormulario, ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
+import { sectorDe } from "../datos/kit";
 import { solicitar } from "../lib/api";
-import { decimal, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
+import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
 type Creado = { id: number; email: string; nombre_visible: string; rol: string };
 
@@ -29,6 +32,11 @@ export default function RegistroCiudadano() {
   const [errorApi, setErrorApi] = useState<unknown>(null);
   const [creado, setCreado] = useState<Creado | null>(null);
 
+  const lon = decimal(v.lon);
+  const lat = decimal(v.lat);
+  const puntoValido = lon !== null && lat !== null && !Number.isNaN(lon) && !Number.isNaN(lat);
+  const sector = puntoValido ? sectorDe(lon, lat) : null;
+
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
 
   async function enviar(e: FormEvent) {
@@ -47,7 +55,10 @@ export default function RegistroCiudadano() {
     Object.assign(err, validarCoordenadas(v.lon, v.lat, false));
     if ((v.lon.trim() === "") !== (v.lat.trim() === "")) err.lat = "Completá longitud y latitud, o dejá ambas vacías.";
     setErrores(err);
-    if (Object.keys(err).length) return;
+    if (Object.keys(err).length) {
+      enfocarPrimerError();
+      return;
+    }
 
     const cuerpo: Record<string, unknown> = {
       email: v.email.trim(),
@@ -97,15 +108,29 @@ export default function RegistroCiudadano() {
 
   return (
     <Layout titulo="Registro de ciudadanía">
-      <Box maxW="36rem">
-        <Heading as="h1" size="xl" mb={2}>
-          Registro de ciudadanía
-        </Heading>
-        <Text mb={6}>
-          Con tu grupo familiar y tu domicilio podemos ubicarte en un sector, avisarte y organizar tu traslado. Esta es una
-          plataforma prototipo: usá datos de prueba.
-        </Text>
-        <TarjetaFormulario>
+      <PaginaFormulario
+        titulo="Registro de ciudadanía"
+        intro="Con tu grupo familiar y tu domicilio podemos ubicarte en un sector, avisarte y organizar tu traslado. Esta es una plataforma prototipo: usá datos de prueba."
+        aside={
+          <>
+            <BloqueApoyo titulo="Para qué usamos tus datos">
+              <Box as="ul" m={0} pl={5} fontSize="sm">
+                <li>Ubicarte en un sector de evaluación a partir de tu domicilio.</li>
+                <li>Avisarte cuando tu sector esté en riesgo o se emita una orden.</li>
+                <li>Organizar tu traslado y asignarte un centro de recepción.</li>
+              </Box>
+            </BloqueApoyo>
+            <BloqueApoyo titulo="Tus derechos">
+              <Text fontSize="sm">
+                Podés pedir el acceso, la rectificación y la supresión de tus datos (Ley 25.326). El teléfono se guarda cifrado y la
+                ubicación solo se usa para ubicarte en un sector.
+              </Text>
+            </BloqueApoyo>
+            <ResumenSectores />
+          </>
+        }
+      >
+        <TarjetaFormulario maxW="none">
         <form onSubmit={enviar} noValidate aria-label="Registro de ciudadanía">
           <VStack spacing={4} align="stretch">
             <AlertaError error={errorApi} />
@@ -126,9 +151,16 @@ export default function RegistroCiudadano() {
               Domicilio (opcional)
             </Heading>
             <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4}>
-              <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
               <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
+              <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
             </Box>
+            <BotonUbicacion onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
+            {puntoValido && sector && (
+              <Text fontSize="sm" role="status">
+                Cae en el sector {sector.id} · {sector.nombre} (SIMULADO).
+              </Text>
+            )}
             <Consentimiento marcado={consentimiento} onChange={setConsentimiento} error={errores.consentimiento} />
             <Button type="submit" isLoading={enviando} loadingText="Registrando">
               Crear cuenta
@@ -147,7 +179,7 @@ export default function RegistroCiudadano() {
           </VStack>
         </form>
         </TarjetaFormulario>
-      </Box>
+      </PaginaFormulario>
     </Layout>
   );
 }

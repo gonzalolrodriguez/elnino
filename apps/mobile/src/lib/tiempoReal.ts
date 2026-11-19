@@ -14,8 +14,8 @@ export type Socket = {
 };
 
 type Opciones = {
-  /** URL `ws://` o `wss://` terminada en `/api/v1/ws`. NUNCA lleva el token. */
-  url: string;
+  /** URL `ws://` o `wss://` terminada en `/api/v1/ws` (o función que la entrega: se evalúa en cada conexión). NUNCA lleva el token. */
+  url: string | (() => string);
   obtenerToken: () => string | null;
   /** Llamado cuando el servidor cierra con 1008 (token vencido o inválido): debe renovar la sesión. */
   renovar: () => Promise<boolean>;
@@ -74,7 +74,8 @@ export class CanalEventos {
     }
     this.op.alEstado?.("conectando");
     const crear = this.op.crearSocket ?? ((u: string) => new WebSocket(u) as unknown as Socket);
-    const s = crear(this.op.url);
+    const url = typeof this.op.url === "function" ? this.op.url() : this.op.url;
+    const s = crear(url);
     this.socket = s;
     s.onopen = () => {
       s.send(JSON.stringify({ token }));

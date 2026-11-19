@@ -6,6 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useMemo, useRef } from "react";
 
 import { hexDe, rgbaDe } from "../estilo/paleta";
+import { hayWebGL } from "../lib/entorno";
 import type { AccesoProps, CapaOficial, Centro, Estacion, Geo, Ruta, SectorEscenario } from "./tipos";
 
 export type PropsMapa = {
@@ -147,6 +148,7 @@ function aplicarRelieve(m: maplibregl.Map, capas: CapaOficial[], activas: string
 /** Mapa operativo: MapLibre (capas oficiales, sin claves ni servicios externos) con Deck.gl para las capas operativas. */
 export default function MapaGL(props: PropsMapa) {
   const contenedor = useRef<HTMLDivElement>(null);
+  const sinWebGL = useMemo(() => !hayWebGL(), []);
   const mapa = useRef<maplibregl.Map | null>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
   const marcadores = useRef<maplibregl.Marker[]>([]);
@@ -158,9 +160,13 @@ export default function MapaGL(props: PropsMapa) {
 
   // Inicializa el mapa una sola vez.
   useEffect(() => {
-    if (!contenedor.current) return;
+    if (sinWebGL || !contenedor.current) return;
+    const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
     const m = new maplibregl.Map({
       container: contenedor.current,
+      // En pantallas táctiles el mapa no atrapa el desplazamiento de la página: se mueve con dos dedos.
+      cooperativeGestures: touch,
+      locale: { "CooperativeGesturesHandler.MobileHelpText": "Usá dos dedos para mover el mapa" },
       style: ESTILO_BASE,
       bounds: LIMITES_INICIALES,
       fitBoundsOptions: { padding: 30 },
@@ -206,7 +212,7 @@ export default function MapaGL(props: PropsMapa) {
       overlay.current = null;
       listo.current = false;
     };
-  }, []);
+  }, [sinWebGL]);
 
   // Capas de Deck.gl (operativas, con selección).
   const capasDeck = useMemo(() => {
@@ -452,5 +458,13 @@ export default function MapaGL(props: PropsMapa) {
     };
   }, [hayDepartamentos, capaDepartamentos]);
 
+  if (sinWebGL) {
+    return (
+      <div role="alert" style={{ padding: "1rem", fontSize: "0.9375rem" }}>
+        Este dispositivo no puede dibujar el mapa (necesita WebGL 2). Podés seguir usando el simulador, la lista de accesos y el ruteo: el
+        estado de cada sector y de cada acceso se muestra en las tablas y listas.
+      </div>
+    );
+  }
   return <div ref={contenedor} role="application" aria-label="Mapa operativo de Puerto Formosa" style={{ width: "100%", height: "100%", minHeight: 420, cursor: props.modoOrigen ? "crosshair" : "grab" }} />;
 }

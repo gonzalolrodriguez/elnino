@@ -1,7 +1,7 @@
-import { Box, Button, Flex, HStack, Link, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Link, Text } from "@chakra-ui/react";
 import { LEYENDA } from "@evacuaciones/shared";
-import { useEffect, type ReactNode } from "react";
-import { Link as RouterLink, NavLink } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link as RouterLink, NavLink, useLocation } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 
@@ -25,14 +25,16 @@ function Enlace({ to, children }: { to: string; children: ReactNode }) {
       as={NavLink}
       to={to}
       end={to === "/"}
-      display="inline-flex"
+      display="flex"
       alignItems="center"
       minH="2.75rem"
-      px={1}
+      px={{ base: 2, md: 1 }}
       color="nav.fg"
       fontWeight={600}
       textDecoration="none"
-      borderBottom="3px solid"
+      borderStyle="solid"
+      borderBottomWidth={{ base: 0, md: "3px" }}
+      borderLeftWidth={{ base: "4px", md: 0 }}
       borderColor="transparent"
       _hover={{ color: "nav.fg", textDecoration: "none", borderColor: "pizarra.400" }}
       _activeLink={{ borderColor: "nav.activo" }}
@@ -47,36 +49,66 @@ function etiquetaPrivada(rol: string) {
   return rol === "cuadrilla" ? "Mis tareas" : "Panel";
 }
 
+function IconoMenu({ abierto }: { abierto: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      {abierto ? <path d="M5 5l12 12M17 5L5 17" /> : <path d="M3 6h16M3 11h16M3 16h16" />}
+    </svg>
+  );
+}
+
 function Navegacion() {
   const { estado, usuario, cerrarSesion } = useAuth();
+  const [abierto, setAbierto] = useState(false);
+  const boton = useRef<HTMLButtonElement>(null);
+  const ubicacion = useLocation();
+
+  // Al navegar, el menú se pliega (en pantallas angostas cubriría el contenido nuevo).
+  useEffect(() => {
+    setAbierto(false);
+  }, [ubicacion.pathname, ubicacion.hash]);
+
+  // Escape cierra el menú y devuelve el foco al botón.
+  useEffect(() => {
+    if (!abierto) return;
+    const salir = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAbierto(false);
+        boton.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", salir);
+    return () => document.removeEventListener("keydown", salir);
+  }, [abierto]);
+
   return (
     <Box as="header" role="banner" bg="nav.bg" color="nav.fg" className="sobre-oscuro">
       <Flex
         as="nav"
         aria-label="Navegación principal"
-        maxW="7xl"
+        maxW="90rem"
         mx="auto"
         px={{ base: 4, md: 8 }}
         pt={2}
         align="center"
         justify="space-between"
         wrap="wrap"
-        columnGap={6}
-        rowGap={0}
         fontSize="sm"
+        data-testid="navegacion-principal"
       >
         <Link
           as={RouterLink}
           to="/"
           display="inline-flex"
           alignItems="center"
-          gap={2}
           minH="2.75rem"
           color="nav.fg"
           textDecoration="none"
           _hover={{ color: "nav.fg", textDecoration: "none" }}
         >
-          <Marca />
+          <Box as="span" mr={2} display="inline-flex">
+            <Marca />
+          </Box>
           <Text as="span" fontFamily="heading" fontSize="lg" fontWeight={600} lineHeight={1.1} letterSpacing="-0.01em">
             Operación Agua
             <Text as="span" display="block" fontFamily="body" fontSize="xs" fontWeight={500} color="pizarra.300" letterSpacing="0.01em">
@@ -84,7 +116,37 @@ function Navegacion() {
             </Text>
           </Text>
         </Link>
-        <HStack as="ul" listStyleType="none" m={0} p={0} spacing={{ base: 3, md: 6 }} wrap="wrap" rowGap={0}>
+        <Button
+          ref={boton}
+          type="button"
+          variant="sobreOscuro"
+          size="sm"
+          display={{ base: "inline-flex", md: "none" }}
+          aria-expanded={abierto}
+          aria-controls="menu-principal"
+          aria-label={abierto ? "Cerrar el menú" : "Abrir el menú"}
+          onClick={() => setAbierto((v) => !v)}
+          data-testid="boton-menu"
+        >
+          <IconoMenu abierto={abierto} />
+          <Text as="span" ml={2}>
+            Menú
+          </Text>
+        </Button>
+        <Box
+          as="ul"
+          id="menu-principal"
+          listStyleType="none"
+          m={0}
+          p={0}
+          display={{ base: abierto ? "flex" : "none", md: "flex" }}
+          flexDirection={{ base: "column", md: "row" }}
+          alignItems={{ base: "stretch", md: "center" }}
+          flexWrap="wrap"
+          w={{ base: "100%", md: "auto" }}
+          pb={{ base: 2, md: 0 }}
+          sx={{ "& > li": { marginLeft: 0 }, "@media (min-width: 48em)": { "& > li + li": { marginLeft: "1.25rem" } } }}
+        >
           <li><Enlace to="/">Inicio</Enlace></li>
           <li><Enlace to="/informacion">Información</Enlace></li>
           <li><Enlace to="/app">App móvil</Enlace></li>
@@ -93,7 +155,7 @@ function Navegacion() {
               <li><Enlace to={rutaInicio(usuario.rol)}>{etiquetaPrivada(usuario.rol)}</Enlace></li>
               {usuario.rol === "admin" && <li><Enlace to="/cuadrilla">Cuadrilla</Enlace></li>}
               <li>
-                <Button size="sm" variant="sobreOscuro" onClick={() => void cerrarSesion()}>
+                <Button size="sm" variant="sobreOscuro" onClick={() => void cerrarSesion()} my={{ base: 1, md: 0 }}>
                   Cerrar sesión
                 </Button>
               </li>
@@ -101,7 +163,7 @@ function Navegacion() {
           ) : (
             <li><Enlace to="/login">Ingresar</Enlace></li>
           )}
-        </HStack>
+        </Box>
       </Flex>
       <Box className="regla-escala" aria-hidden="true" mt={1} />
     </Box>
@@ -114,7 +176,7 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
     document.title = titulo ? `${titulo} · Operación Agua` : "Operación Agua · Gestión de evacuaciones";
   }, [titulo]);
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
+    <Box minH="100vh" className="alto-pantalla" display="flex" flexDirection="column">
       <Link
         href="#contenido"
         position="absolute"
@@ -159,12 +221,12 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
         tabIndex={-1}
         flex="1"
         _focus={{ outline: "none" }}
-        {...(contenedor ? { maxW: "7xl", w: "100%", mx: "auto", px: { base: 4, md: 8 }, py: { base: 8, md: 12 } } : {})}
+        {...(contenedor ? { maxW: "90rem", w: "100%", mx: "auto", px: { base: 4, md: 8 }, py: { base: 8, md: 12 } } : {})}
       >
         {children}
       </Box>
       <Box as="footer" bg="nav.bg" color="pizarra.200" className="sobre-oscuro" py={6} fontSize="sm">
-        <Flex maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} gap={{ base: 3, md: 10 }} direction={{ base: "column", md: "row" }} justify="space-between">
+        <Flex maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} direction={{ base: "column", md: "row" }} justify="space-between" sx={{ "& > * + *": { marginTop: "0.75rem" }, "@media (min-width: 48em)": { "& > * + *": { marginTop: 0, marginLeft: "2.5rem" } } }}>
           <Text maxW="44rem">
             Datos con corte al 31/10/2026. Cada cifra indica su categoría y su fuente; lo que no está en la ficha de fuentes no se muestra.
           </Text>

@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
@@ -7,6 +7,7 @@ import type { AccesoProps, OrigenLluvia } from "./tipos";
 import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
 import { fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
+import { TablaDesplazable } from "../components/TablaDesplazable";
 
 const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
   { valor: "simulado", texto: "Simulado (deslizador)" },
@@ -107,7 +108,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             {escenario.rio.distancia_a_alerta_m >= 0 ? "de la alerta" : "por encima de la alerta"} y a {fmtM(Math.abs(escenario.rio.distancia_a_evacuacion_m))}{" "}
             {escenario.rio.distancia_a_evacuacion_m >= 0 ? "de la evacuación" : "por encima de la evacuación"}.
           </Text>
-          <TableContainer>
+          <TablaDesplazable etiqueta="Estado de los sectores en el escenario">
             <Table size="sm" aria-label="Estado de los sectores en el escenario">
               <Thead>
                 <Tr>
@@ -139,7 +140,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </TablaDesplazable>
           <Text fontSize="xs" color="textoSuave" mt={1}>
             El ISAD es un índice relativo SIMULADO y no reemplaza el criterio de compromiso de K10. Margen: distancia en la escala hasta el compromiso del sector (negativa si ya lo superó).
           </Text>

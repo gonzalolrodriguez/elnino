@@ -32,7 +32,18 @@ export type ItemCola = {
   /** Segundo tiempo del envío: la foto ya fue recibida por el servidor. */
   fotoSubida: boolean;
   creadoEn: number;
+  /**
+   * URL normalizada del servidor al que pertenece el ítem. Solo se envía si coincide con el
+   * servidor vigente y con el usuario de la sesión: así una solicitud nunca llega a otro servidor
+   * ni queda registrada bajo otra cuenta.
+   */
+  servidorUrl: string;
 };
+
+/** Host (con puerto) de una URL de servidor, para mostrarlo al usuario. */
+export function hostDeUrl(url: string): string {
+  return url.replace(/^https?:\/\//i, "").replace(/\/.*$/, "") || "(sin servidor)";
+}
 
 export interface RepositorioCola {
   insertar(item: Omit<ItemCola, "id">): Promise<ItemCola>;
@@ -56,6 +67,8 @@ export type Dependencias = {
   enviar: (datos: DatosSolicitud, claveIdempotencia: string) => Promise<ResultadoEnvio>;
   /** Segundo tiempo: sube la foto comprimida a la solicitud ya creada. */
   subirFoto: (servidorId: number, fotoUri: string) => Promise<ResultadoFoto>;
+  /** URL normalizada del servidor vigente; se evalúa en cada operación. Por defecto "". */
+  servidorActual?: () => string;
   ahora?: () => number;
   /** Generador de UUID; por defecto `crypto.randomUUID` o un v4 de respaldo. */
   generarClave?: () => string;
@@ -108,7 +121,12 @@ export class ColaOffline {
       claveIdempotencia: this.clave(),
       fotoSubida: false,
       creadoEn: this.ahora(),
+      servidorUrl: this.servidor(),
     });
+  }
+
+  private servidor(): string {
+    return (this.dep.servidorActual ?? (() => ""))();
   }
 
   private clave(): string {
@@ -119,8 +137,20 @@ export class ColaOffline {
     return this.dep.repo.listar(usuarioId);
   }
 
+  /** Pendientes del usuario que corresponden al servidor vigente (los únicos que se envían). */
   async pendientes(usuarioId: number): Promise<ItemCola[]> {
-    return (await this.dep.repo.listar(usuarioId)).filter((i) => i.estado === "pendiente");
+    const actual = this.servidor();
+    return (await this.dep.repo.listar(usuarioId)).filter(
+      (i) => i.estado === "pendiente" && i.servidorUrl === actual,
+    );
+  }
+
+  /** Pendientes del usuario que pertenecen a otro servidor: se conservan sin enviarse. */
+  async pendientesOtroServidor(usuarioId: number): Promise<ItemCola[]> {
+    const actual = this.servidor();
+    return (await this.dep.repo.listar(usuarioId)).filter(
+      (i) => i.estado === "pendiente" && i.servidorUrl !== actual,
+    );
   }
 
   /**

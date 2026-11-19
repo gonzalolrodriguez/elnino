@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
+import { cargarServidor, obtenerUrlServidor } from "@/lib/servidor";
 import type { DatosSolicitud, ItemCola, RepositorioCola } from "@/lib/cola";
 
 type Fila = {
@@ -15,6 +16,7 @@ type Fila = {
   clave_idempotencia: string | null;
   foto_subida: number;
   creado_en: number;
+  servidor_url: string | null;
 };
 
 const COLUMNAS: Record<keyof Omit<ItemCola, "id">, string> = {
@@ -29,6 +31,7 @@ const COLUMNAS: Record<keyof Omit<ItemCola, "id">, string> = {
   claveIdempotencia: "clave_idempotencia",
   fotoSubida: "foto_subida",
   creadoEn: "creado_en",
+  servidorUrl: "servidor_url",
 };
 
 function aItem(f: Fila): ItemCola {
@@ -45,6 +48,7 @@ function aItem(f: Fila): ItemCola {
     claveIdempotencia: f.clave_idempotencia ?? "",
     fotoSubida: f.foto_subida === 1,
     creadoEn: f.creado_en,
+    servidorUrl: f.servidor_url ?? "",
   };
 }
 
@@ -68,7 +72,8 @@ export class RepositorioSqlite implements RepositorioCola {
           servidor_id INTEGER,
           clave_idempotencia TEXT,
           foto_subida INTEGER NOT NULL DEFAULT 0,
-          creado_en INTEGER NOT NULL
+          creado_en INTEGER NOT NULL,
+          servidor_url TEXT
         );
       `);
       // Bases creadas por versiones anteriores de la app: se agregan las columnas nuevas.
@@ -80,6 +85,15 @@ export class RepositorioSqlite implements RepositorioCola {
       if (!nombres.has("foto_subida")) {
         await db.execAsync("ALTER TABLE cola_solicitudes ADD COLUMN foto_subida INTEGER NOT NULL DEFAULT 0");
       }
+      if (!nombres.has("servidor_url")) {
+        await db.execAsync("ALTER TABLE cola_solicitudes ADD COLUMN servidor_url TEXT");
+      }
+      // Filas previas a la columna: se asignan al servidor vigente al momento de la migración.
+      await cargarServidor();
+      await db.runAsync(
+        "UPDATE cola_solicitudes SET servidor_url = ? WHERE servidor_url IS NULL",
+        obtenerUrlServidor(),
+      );
       return db;
     })();
     return this.abierta;
@@ -89,8 +103,8 @@ export class RepositorioSqlite implements RepositorioCola {
     const db = await this.db();
     const r = await db.runAsync(
       `INSERT INTO cola_solicitudes
-        (usuario_id, datos, foto_uri, estado, intentos, proximo_intento, ultimo_error, servidor_id, clave_idempotencia, foto_subida, creado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (usuario_id, datos, foto_uri, estado, intentos, proximo_intento, ultimo_error, servidor_id, clave_idempotencia, foto_subida, creado_en, servidor_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.usuarioId,
       JSON.stringify(item.datos),
       item.fotoUri,
@@ -102,6 +116,7 @@ export class RepositorioSqlite implements RepositorioCola {
       item.claveIdempotencia,
       item.fotoSubida ? 1 : 0,
       item.creadoEn,
+      item.servidorUrl,
     );
     return { ...item, id: r.lastInsertRowId };
   }

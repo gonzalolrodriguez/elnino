@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { API_URL, obtenerAccessToken, renovarSesion } from "@/lib/api";
+import { obtenerAccessToken, renovarSesion } from "@/lib/api";
+import { obtenerUrlServidor } from "@/lib/servidor";
 import { avisarLocal, prepararNotificaciones } from "@/lib/notificacionesLocales";
 import { api, type Notificacion } from "@/lib/servicios";
 import { CanalEventos, urlWebSocket, type EstadoCanal } from "@/lib/tiempoReal";
@@ -67,7 +68,7 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
     // Respaldo: sondeo periódico por si el WebSocket no está disponible.
     const sondeo = setInterval(() => void recargar(), SONDEO_MS);
     const ws = new CanalEventos({
-      url: urlWebSocket(API_URL),
+      url: () => urlWebSocket(obtenerUrlServidor()),
       obtenerToken: obtenerAccessToken,
       renovar: renovarSesion,
       alEvento: (e) => {

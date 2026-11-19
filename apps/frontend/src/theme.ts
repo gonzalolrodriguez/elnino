@@ -56,8 +56,12 @@ export const theme = extendTheme({
       ":root": {
         "--ease-out": "cubic-bezier(0.23, 1, 0.32, 1)",
         "--ease-in-out": "cubic-bezier(0.77, 0, 0.175, 1)",
+        // Alto de la leyenda fija (hasta 3 líneas en pantallas angostas): el foco y los anclajes no deben quedar debajo.
+        "--altura-leyenda": "4.5rem",
+        "@media (min-width: 48em)": { "--altura-leyenda": "2.75rem" },
       },
-      html: { scrollPaddingTop: "4rem", overflowX: "clip", colorScheme: "light" },
+      "input, select, textarea, button, [tabindex], [id]": { scrollMarginTop: "calc(var(--altura-leyenda) + 1rem)" },
+      html: { scrollPaddingTop: "calc(var(--altura-leyenda) + 1rem)", overflowX: "clip", colorScheme: "light" },
       "a, button, input, select, textarea, label, summary, [role='button']": { touchAction: "manipulation" },
       "a, button": { WebkitTapHighlightColor: "transparent" },
       body: {

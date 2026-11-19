@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 
-import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import {
+  Boton,
+  Cargando,
+  COLOR,
+  ErrorCaja,
+  FilaBotones,
+  Insignia,
+  Pantalla,
+  Rejilla,
+  Subtitulo,
+  Tarjeta,
+  Texto,
+  Titulo,
+  Vacio,
+} from "@/components/ui";
+import { hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
 import { api, type Solicitud } from "@/lib/servicios";
@@ -20,7 +35,7 @@ type Carga =
   | { tipo: "error"; mensaje: string };
 
 export default function Solicitudes() {
-  const { items, reintentar, descartar, sinRed } = useCola();
+  const { items, otroServidor, reintentar, descartar, sinRed } = useCola();
   const [carga, setCarga] = useState<Carga>({ tipo: "cargando" });
 
   const cargar = useCallback(async () => {
@@ -35,15 +50,16 @@ export default function Solicitudes() {
     void cargar();
   }, [cargar, items.length]);
 
-  const locales = items.filter((i) => i.estado !== "enviada");
+  const locales = items.filter((i) => i.estado !== "enviada" && !otroServidor.some((o) => o.id === i.id));
 
   return (
-    <Pantalla>
+    <Pantalla dosColumnas>
       <Titulo>Mis solicitudes</Titulo>
 
       {locales.length > 0 ? (
         <>
-          <Text style={{ fontWeight: "700" }}>En este teléfono ({locales.length})</Text>
+          <Subtitulo>En este teléfono ({locales.length})</Subtitulo>
+          <Rejilla>
           {locales.map((i) => (
             <Tarjeta key={i.id}>
               <Text style={{ fontWeight: "600" }}>
@@ -61,27 +77,51 @@ export default function Solicitudes() {
                   {sinRed ? "Sin conexión. " : ""}Intentos: {i.intentos}. Se reintenta con espera creciente.
                 </Texto>
               ) : null}
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <FilaBotones>
                 {i.estado === "pendiente" ? (
                   <Boton titulo="Reintentar ahora" variante="secundario" onPress={() => void reintentar()} />
                 ) : null}
                 {i.estado === "rechazada" ? (
                   <Boton titulo="Descartar" variante="peligro" onPress={() => void descartar(i.id)} />
                 ) : null}
-              </View>
+              </FilaBotones>
             </Tarjeta>
           ))}
+          </Rejilla>
         </>
       ) : null}
 
-      <Text style={{ fontWeight: "700" }}>Enviadas</Text>
+      {otroServidor.length > 0 ? (
+        <>
+          <Subtitulo>Pendientes para otro servidor ({otroServidor.length})</Subtitulo>
+          <Rejilla>
+          {otroServidor.map((i) => (
+            <Tarjeta key={i.id}>
+              <Text style={{ fontWeight: "600" }}>
+                Pendientes para otro servidor ({hostDeUrl(i.servidorUrl)})
+              </Text>
+              <Texto>
+                {i.datos.tipo} · {i.datos.personas} personas · {i.datos.animales} animales
+              </Texto>
+              <Texto suave>
+                No se envía a este servidor. Se enviará si volvés a ese servidor con esta cuenta.
+              </Texto>
+              <Boton titulo="Descartar" variante="peligro" onPress={() => void descartar(i.id)} />
+            </Tarjeta>
+          ))}
+          </Rejilla>
+        </>
+      ) : null}
+
+      <Subtitulo>Enviadas</Subtitulo>
       {carga.tipo === "cargando" ? <Cargando texto="Cargando solicitudes…" /> : null}
       {carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
       {carga.tipo === "ok" && carga.filas.length === 0 ? (
         <Vacio texto="Todavía no enviaste solicitudes." />
       ) : null}
-      {carga.tipo === "ok"
-        ? carga.filas.map((s) => (
+      {carga.tipo === "ok" ? (
+        <Rejilla>
+          {carga.filas.map((s) => (
             <Tarjeta key={s.id}>
               <Text style={{ fontWeight: "700" }}>
                 #{s.id} · {ETIQUETA_ESTADO[s.estado]}
@@ -94,8 +134,9 @@ export default function Solicitudes() {
               <Texto suave>{new Date(s.actualizado_en).toLocaleString("es-AR")}</Texto>
               <Insignia categoria={s.categoria} />
             </Tarjeta>
-          ))
-        : null}
+          ))}
+        </Rejilla>
+      ) : null}
       <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
     </Pantalla>
   );
