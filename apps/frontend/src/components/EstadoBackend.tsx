@@ -25,8 +25,8 @@ export function EstadoBackend() {
   }, []);
 
   return (
-    <Box bg="superficie" border="1px solid" borderColor="borde" borderRadius="sm" p={4}>
-      <Heading as="h2" size="sm" mb={3}>
+    <Box layerStyle="tarjeta" p={4}>
+      <Heading as="h3" size="sm" mb={3}>
         Estado del backend
       </Heading>
       {estado.tipo === "cargando" && (

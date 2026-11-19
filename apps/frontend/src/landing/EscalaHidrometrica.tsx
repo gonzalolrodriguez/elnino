@@ -1,97 +1,121 @@
-import { Box, Heading, Text } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 
 import { Insignia } from "../components/Insignia";
-import { CIFRAS_FORMOSA, type Cifra } from "../datos/kit";
+import { Plegable } from "../components/Plegable";
+import { CIFRAS_FORMOSA, UMBRAL_ALERTA, UMBRAL_EVACUACION } from "../datos/kit";
 import { fmt, useMenosMovimiento } from "../lib/entorno";
 
-const MAXIMO = 10.5; // m, alto visible de la escala
-const COLOR: Record<Cifra["tono"], string> = {
-  actual: "agua.300",
-  alerta: "escala.alerta",
-  evacuacion: "escala.evacuacion",
-  pico: "escala.pico",
-};
-
-const Nivel = motion(Box);
+const MAXIMO = 10.5; // m, largo visible de la escala
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const Nivel = motion(Box);
+
+const cifra = (id: string) => CIFRAS_FORMOSA.find((c) => c.id === id);
 
 /**
- * Escala hidrométrica de Puerto Formosa: nivel al corte, umbrales y picos históricos.
- * Es el momento orquestado de la landing: al cargar, el agua sube hasta el nivel del corte y
- * después aparecen las marcas de los umbrales. Con menos movimiento, la escala se muestra quieta.
+ * Escala hidrométrica de Puerto Formosa. Un solo valor protagonista (la altura al corte) y una barra con los dos umbrales;
+ * los picos históricos quedan plegados. Cada cifra conserva su categoría y su fuente.
+ * Al cargar, el agua de la barra sube hasta el nivel del corte; con menos movimiento la barra se muestra quieta.
  */
 export function EscalaHidrometrica() {
-  const corte = CIFRAS_FORMOSA.find((c) => c.id === "corte");
+  const corte = cifra("corte");
+  const alerta = cifra("alerta");
+  const evacuacion = cifra("evacuacion");
+  const picos = CIFRAS_FORMOSA.filter((c) => c.tono === "pico");
   const quieto = useMenosMovimiento();
+  if (!corte || !alerta || !evacuacion) return null;
+  const pos = (v: number) => `${(v / MAXIMO) * 100}%`;
   return (
-    <Box as="section" aria-labelledby="titulo-escala" color="pizarra.100">
-      <Heading as="h2" id="titulo-escala" size="md" mb={4}>
-        Escala de Puerto Formosa
+    <Box as="section" aria-labelledby="titulo-escala" color="oscuro.suave">
+      <Heading as="h2" id="titulo-escala" fontSize="sm" fontWeight={600} color="oscuro.suave" letterSpacing="0">
+        Puerto Formosa · altura del río al corte
       </Heading>
-      <Box display="flex" gap={4} alignItems="stretch">
-        <Box
-          aria-hidden="true"
-          position="relative"
-          flex="0 0 36px"
-          minH="320px"
-          border="1px solid"
-          borderColor="pizarra.400"
-          overflow="visible"
-          bgImage="repeating-linear-gradient(to top, var(--chakra-colors-limo-700) 0, var(--chakra-colors-limo-700) calc(100%/10.5), transparent calc(100%/10.5), transparent calc(200%/10.5))"
-        >
-          {corte && (
-            <Nivel
-              position="absolute"
-              left={0}
-              right={0}
-              bottom={0}
-              height={`${(corte.valor / MAXIMO) * 100}%`}
-              bg="agua.500"
-              opacity={0.85}
-              transformOrigin="bottom"
-              initial={quieto ? false : { scaleY: 0 }}
-              animate={{ scaleY: 1 }}
-              transition={{ duration: 1.1, delay: 0.35, ease: EASE_OUT }}
-            />
-          )}
-          {CIFRAS_FORMOSA.filter((c) => c.tono !== "actual").map((c, i) => (
-            <Nivel
-              key={c.id}
-              position="absolute"
-              left="-6px"
-              right="-6px"
-              height="3px"
-              bottom={`${(c.valor / MAXIMO) * 100}%`}
-              bg={COLOR[c.tono]}
-              initial={quieto ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 1.0 + i * 0.06, ease: EASE_OUT }}
-            />
-          ))}
-        </Box>
-        <Box as="ol" listStyleType="none" m={0} p={0} flex="1" display="flex" flexDirection="column" justifyContent="space-between" gap={3}>
-          {CIFRAS_FORMOSA.map((c) => (
-            <Box as="li" key={c.id} borderLeft="3px solid" borderColor={COLOR[c.tono]} pl={3}>
-              <Text as="span" textStyle="cifra" fontSize={c.tono === "actual" ? "2.25rem" : "1.375rem"} data-testid={`cifra-${c.id}`}>
-                {fmt(c.valor)} m
-              </Text>
-              <Text fontSize="sm" mt={1}>
-                {c.etiqueta} · {c.fecha}
-              </Text>
-              <Box mt={1} display="flex" gap={2} alignItems="center" flexWrap="wrap">
-                <Insignia categoria={c.categoria} onDark />
-                <Text as="span" fontSize="0.8125rem" color="pizarra.200">
-                  Fuente: {c.fuente}
-                </Text>
-              </Box>
-            </Box>
-          ))}
+
+      <Box as="ol" listStyleType="none" m={0} p={0}>
+        <Box as="li" mt={2}>
+          <Text textStyle="cifra" fontSize={{ base: "3rem", md: "3.5rem" }} color="oscuro.fg" data-testid="cifra-corte">
+            {fmt(corte.valor)} m
+          </Text>
+          <Flex mt={2} gap={2} align="center" wrap="wrap">
+            <Insignia categoria={corte.categoria} onDark />
+            <Text as="span" fontSize="xs">
+              {corte.etiqueta} · {corte.fecha} · Fuente: {corte.fuente}
+            </Text>
+          </Flex>
         </Box>
       </Box>
-      <Text mt={4} fontSize="sm" borderTop="1px solid" borderColor="limo.600" pt={3}>
-        Lluvia: sin dato observado en el kit.
-      </Text>
+
+      <Box mt={5} role="img" aria-label={`Escala de 0 a ${fmt(MAXIMO, 1)} m: ${fmt(corte.valor)} m al corte, alerta en ${fmt(UMBRAL_ALERTA)} m y evacuación en ${fmt(UMBRAL_EVACUACION)} m`}>
+        <Box position="relative" h="10px" borderRadius="full" bg="rgba(255,255,255,0.12)" overflow="visible">
+          <Nivel
+            position="absolute"
+            left={0}
+            top={0}
+            bottom={0}
+            width={pos(corte.valor)}
+            borderRadius="full"
+            bg="agua.300"
+            transformOrigin="left"
+            initial={quieto ? false : { scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1.1, delay: 0.4, ease: EASE_OUT }}
+          />
+          {[
+            { v: UMBRAL_ALERTA, c: "umbral.alertaClaro" },
+            { v: UMBRAL_EVACUACION, c: "umbral.evacuacionClaro" },
+          ].map((m) => (
+            <Box key={m.v} position="absolute" left={pos(m.v)} top="-5px" bottom="-5px" w="3px" ml="-1.5px" borderRadius="full" bg={m.c} />
+          ))}
+        </Box>
+        <Flex mt={3.5} gap={4} wrap="wrap" fontSize="sm" color="oscuro.fg">
+          <Text as="span" display="inline-flex" alignItems="center" gap={2}>
+            <Box as="span" w="8px" h="8px" borderRadius="full" bg="umbral.alertaClaro" aria-hidden="true" />
+            Alerta{" "}
+            <Text as="span" fontWeight={700} data-testid="cifra-alerta">
+              {fmt(alerta.valor)} m
+            </Text>
+          </Text>
+          <Text as="span" display="inline-flex" alignItems="center" gap={2}>
+            <Box as="span" w="8px" h="8px" borderRadius="full" bg="umbral.evacuacionClaro" aria-hidden="true" />
+            Evacuación{" "}
+            <Text as="span" fontWeight={700} data-testid="cifra-evacuacion">
+              {fmt(evacuacion.valor)} m
+            </Text>
+          </Text>
+        </Flex>
+        <Flex mt={2} gap={2} align="center" wrap="wrap">
+          <Insignia categoria={alerta.categoria} onDark />
+          <Text as="span" fontSize="xs">
+            Umbrales · {alerta.fecha} · Fuente: {alerta.fuente}
+          </Text>
+        </Flex>
+      </Box>
+
+      <Box mt={3} pt={1} borderTop="1px solid" borderColor="oscuro.linea">
+        <Plegable titulo={<span style={{ fontSize: "0.875rem" }}>Picos históricos de la serie</span>} tono="oscuro">
+          <Box as="ul" listStyleType="none" m={0} p={0} pb={1}>
+            {picos.map((c) => (
+              <Box as="li" key={c.id} py={2}>
+                <Text as="span" textStyle="cifra" fontSize="xl" color="oscuro.fg" data-testid={`cifra-${c.id}`}>
+                  {fmt(c.valor)} m
+                </Text>
+                <Text fontSize="xs">
+                  {c.etiqueta} · {c.fecha}
+                </Text>
+                <Flex mt={1} gap={2} align="center" wrap="wrap">
+                  <Insignia categoria={c.categoria} onDark />
+                  <Text as="span" fontSize="xs">
+                    Fuente: {c.fuente}
+                  </Text>
+                </Flex>
+              </Box>
+            ))}
+          </Box>
+        </Plegable>
+        <Text fontSize="xs" pt={1}>
+          Lluvia: sin dato observado en el kit.
+        </Text>
+      </Box>
     </Box>
   );
 }

@@ -1,6 +1,7 @@
 import { LEYENDA } from "@evacuaciones/shared";
 import { StyleSheet, Text, View } from "react-native";
 
+import { COLOR } from "@/components/tema";
 import { useDiseno } from "@/lib/responsive";
 
 /**
@@ -16,9 +17,9 @@ export function LeyendaFija() {
       style={[
         styles.banner,
         {
-          paddingLeft: 10 + d.insets.left,
-          paddingRight: 10 + d.insets.right,
-          paddingVertical: compacta ? 3 : 6,
+          paddingLeft: 12 + d.insets.left,
+          paddingRight: 12 + d.insets.right,
+          paddingVertical: compacta ? 3 : 5,
         },
       ]}
       accessibilityRole="header"
@@ -31,6 +32,6 @@ export function LeyendaFija() {
 }
 
 const styles = StyleSheet.create({
-  banner: { backgroundColor: "#7c2d12" },
-  texto: { color: "#ffffff", fontSize: 12, fontWeight: "600", textAlign: "center" },
+  banner: { backgroundColor: COLOR.tinta },
+  texto: { color: "#DCE8F5", fontSize: 11, lineHeight: 15, fontWeight: "600", textAlign: "center" },
 });

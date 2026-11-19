@@ -55,14 +55,14 @@ export function PanelLayout() {
             aria-label="Secciones del panel operativo"
             w={{ base: "100%", lg: "15.5rem" }}
             flexShrink={0}
-            bg="pizarra.100"
+            bg="superficie"
             borderRight={{ lg: "1px solid" }}
             borderBottom={{ base: "1px solid", lg: "none" }}
             borderColor="borde"
             px={3}
-            py={4}
+            py={5}
           >
-            <Text fontFamily="heading" fontWeight={600} fontSize="lg" mb={0.5}>
+            <Text fontWeight={700} fontSize="lg" letterSpacing="-0.02em" mb={0.5}>
               Panel operativo
             </Text>
             <Text fontSize="sm" color="textoSuave" mb={3}>
@@ -103,17 +103,16 @@ export function PanelLayout() {
                     display="flex"
                     alignItems="center"
                     minH="2.75rem"
-                    px={3}
+                    px={3.5}
                     fontSize="sm"
                     fontWeight={600}
                     whiteSpace="nowrap"
                     color="texto"
                     textDecoration="none"
-                    borderLeft="4px solid"
-                    borderColor="transparent"
-                    transition="background-color 140ms var(--ease-out)"
-                    _hover={{ bg: "pizarra.200", color: "texto", textDecoration: "none" }}
-                    _activeLink={{ bg: "superficie", borderColor: "acento", fontWeight: 700 }}
+                    borderRadius="lg"
+                    transition="background-color 140ms var(--ease-out), color 140ms var(--ease-out)"
+                    _hover={{ bg: "pizarra.100", color: "texto", textDecoration: "none" }}
+                    _activeLink={{ bg: "suave", color: "primarioHover" }}
                   >
                     {s.texto}
                   </Link>

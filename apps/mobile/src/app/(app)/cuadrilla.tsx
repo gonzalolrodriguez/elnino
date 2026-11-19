@@ -6,6 +6,7 @@ import {
   Boton,
   Cargando,
   COLOR,
+  Enlace,
   ErrorCaja,
   FilaBotones,
   Insignia,
@@ -119,7 +120,7 @@ function ListaTareas() {
         />
       ))}
       </Rejilla>
-      <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
+      <Enlace titulo="Actualizar" onPress={cargar} />
     </Pantalla>
   );
 }

@@ -252,3 +252,13 @@ h4 {
     border: 1px solid CanvasText;
   }
 }
+
+/* ---------- Rótulos de la escena 3D: aparecen con un fundido suave ---------- */
+@keyframes aparecer-rotulo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

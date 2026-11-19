@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
-import { Boton, Campo, Cargando, COLOR, ErrorCaja, Tarjeta, Texto, Vacio } from "@/components/ui";
+import { Boton, Campo, Cargando, COLOR, ErrorCaja, Subtitulo, Tarjeta, Texto, Vacio } from "@/components/ui";
 import { mensajeError } from "@/lib/errores";
 import { api, type Establecimiento, type ItemStock } from "@/lib/servicios";
 
@@ -45,15 +45,15 @@ function TarjetaEstablecimiento({ e }: { e: Establecimiento }) {
 
   return (
     <Tarjeta>
-      <Text style={{ fontWeight: "700", fontSize: 16 }}>{e.nombre}</Text>
+      <Subtitulo>{e.nombre}</Subtitulo>
       <Texto suave>
         Tranquera: {e.lat.toFixed(5)}, {e.lon.toFixed(5)}
         {e.sector_id ? ` · sector ${e.sector_id}` : ""}
       </Texto>
-      <Text style={{ fontWeight: "600" }}>Stock</Text>
+      <Texto>Stock</Texto>
       {filas.length === 0 ? <Vacio texto="Sin stock cargado." /> : null}
       {filas.map((f, i) => (
-        <View key={i} style={{ gap: 6, borderTopWidth: 1, borderTopColor: COLOR.borde, paddingTop: 6 }}>
+        <View key={i} style={{ gap: 6, borderTopWidth: 1, borderTopColor: COLOR.borde, paddingTop: 12 }}>
           <Campo etiqueta="Especie" value={f.especie} onChangeText={(v) => cambiar(i, "especie", v)} />
           <Campo etiqueta="Categoría" value={f.categoria_animal} onChangeText={(v) => cambiar(i, "categoria_animal", v)} />
           <Campo etiqueta="Cantidad" value={f.cantidad} onChangeText={(v) => cambiar(i, "cantidad", v)} keyboardType="number-pad" />

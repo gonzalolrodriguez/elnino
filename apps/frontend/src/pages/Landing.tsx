@@ -1,8 +1,8 @@
 import { Box, Button, Heading, Link, ListItem, Text, UnorderedList } from "@chakra-ui/react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 
-import { EstadoBackend } from "../components/EstadoBackend";
 import { Layout } from "../components/Layout";
+import { Plegable } from "../components/Plegable";
 import { LIMITES_ESTATICOS } from "../datos/kit";
 import { Hero } from "../landing/Hero";
 import { useMeta } from "../lib/useMeta";
@@ -11,108 +11,103 @@ const PERFILES = [
   {
     id: "ciudadania",
     nombre: "Ciudadanía",
-    texto:
-      "Registrá tu grupo familiar y tu domicilio para saber en qué sector estás, recibir alertas y pedir asistencia si el camino se corta.",
-    acciones: [
-      { a: "/registro/ciudadania", t: "Registrarme", principal: true },
-      { a: "/login", t: "Ya tengo cuenta" },
-    ],
+    texto: "Registrá tu grupo familiar y tu domicilio para saber en qué sector estás, recibir alertas y pedir asistencia si el camino se corta.",
+    principal: { a: "/registro/ciudadania", t: "Registrarme" },
+    secundaria: { a: "/login", t: "Ya tengo cuenta" },
   },
   {
     id: "productores",
     nombre: "Productores agropecuarios",
-    texto:
-      "Declará tu establecimiento, la ubicación de la tranquera y tu hacienda. Con esos datos se planifica el traslado de animales antes de que los caminos se saturen.",
-    acciones: [
-      { a: "/registro/productor", t: "Registrar mi establecimiento", principal: true },
-      { a: "/app", t: "Descargar la app" },
-    ],
+    texto: "Declará tu establecimiento, la ubicación de la tranquera y tu hacienda para planificar el traslado de animales antes de que los caminos se saturen.",
+    principal: { a: "/registro/productor", t: "Registrar mi establecimiento" },
+    secundaria: { a: "/app", t: "Descargar la app" },
   },
   {
     id: "mandos",
     nombre: "Mandos operativos y decisores",
-    texto:
-      "Monitor del río, simulador de escenarios y emisión de órdenes. Las cuentas institucionales las crea el administrador: no hay autorregistro.",
-    acciones: [{ a: "/login", t: "Ingresar con cuenta institucional", principal: true }],
+    texto: "Monitor del río, simulador de escenarios y emisión de órdenes. Las cuentas institucionales las crea el administrador: no hay autorregistro.",
+    principal: { a: "/login", t: "Ingresar con cuenta institucional" },
+    secundaria: null,
   },
 ] as const;
 
 export default function Landing() {
   const meta = useMeta();
+  const { hash } = useLocation();
   const limites = meta.estado === "ok" ? meta.meta.limites : LIMITES_ESTATICOS;
 
   return (
     <Layout contenedor={false} titulo="Inicio">
-      <Hero avisoSinServicio={meta.estado === "error"} />
+      <Hero />
 
-      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 10, md: 16 }}>
-        <Heading as="h2" id="titulo-perfiles" size="xl" mb={{ base: 4, md: 8 }}>
+      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 12, md: 20 }} pb={{ base: 10, md: 14 }}>
+        <Heading as="h2" id="titulo-perfiles" size="xl" mb={2}>
           ¿Cómo querés ingresar?
         </Heading>
-        <Box>
-          {PERFILES.map((p, i) => (
-            <Box
-              key={p.id}
-              display="grid"
-              gridTemplateColumns={{ base: "1fr", md: "minmax(0, 15rem) minmax(0, 1fr) auto" }}
-              gap={{ base: 3, md: 8 }}
-              alignItems="start"
-              py={6}
-              borderTop={i === 0 ? "2px solid" : "1px solid"}
-              borderColor="pizarra.700"
-            >
-              <Heading as="h3" size="md" pt={0.5}>
+        <Text color="textoSuave" maxW="34rem" mb={{ base: 6, md: 8 }}>
+          Elegí tu perfil. Cada uno ve la información que necesita.
+        </Text>
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" }} gap={{ base: 4, md: 5 }}>
+          {PERFILES.map((p) => (
+            <Box key={p.id} layerStyle="tarjeta" p={{ base: 5, md: 6 }} display="flex" flexDirection="column">
+              <Heading as="h3" size="md" mb={2}>
                 {p.nombre}
               </Heading>
-              <Text maxW="38rem">{p.texto}</Text>
-              <Box display="flex" gap={3} flexWrap="wrap">
-                {p.acciones.map((x) => (
-                  <Button key={x.t} as={RouterLink} to={x.a} variant={"principal" in x && x.principal ? "solid" : "outline"}>
-                    {x.t}
-                  </Button>
-                ))}
+              <Text color="textoSuave" flex="1" mb={5}>
+                {p.texto}
+              </Text>
+              <Box display="flex" alignItems="center" flexWrap="wrap" columnGap={4} rowGap={2}>
+                <Button as={RouterLink} to={p.principal.a}>
+                  {p.principal.t}
+                </Button>
+                {p.secundaria && (
+                  <Link as={RouterLink} to={p.secundaria.a} fontWeight={600}>
+                    {p.secundaria.t}
+                  </Link>
+                )}
               </Box>
             </Box>
           ))}
         </Box>
       </Box>
 
-      <Box bg="pizarra.100" py={{ base: 10, md: 16 }}>
-        <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={10}>
+      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pb={{ base: 12, md: 20 }}>
+        <Box layerStyle="suave" p={{ base: 6, md: 10 }} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }} gap={{ base: 6, md: 12 }} alignItems="start">
           <Box>
-            <Heading as="h2" size="lg" mb={4}>
+            <Heading as="h2" size="lg" mb={3}>
               Por qué importa antes de que llueva
             </Heading>
             <Text maxW="32rem">
-              La crecida del río Paraguay llega a Formosa con un rezago de semanas a meses y, además, la lluvia local cae sobre suelos
-              arcillosos de muy baja pendiente. Evacuar con el camino seco es más seguro que hacerlo con el agua encima.
+              La crecida del río Paraguay llega a Formosa con un rezago de semanas a meses y, además, la lluvia local cae sobre suelos arcillosos de muy baja pendiente. Evacuar con el
+              camino seco es más seguro que hacerlo con el agua encima.
             </Text>
-            <Button as={RouterLink} to="/informacion" mt={5} variant="outline">
+            <Button as={RouterLink} to="/informacion" mt={5} variant="solid">
               Leer cómo llega El Niño a Formosa
             </Button>
           </Box>
-          <Box as="section" aria-labelledby="titulo-limites">
-            <Heading as="h2" id="titulo-limites" size="md" mb={3}>
-              Límites de esta plataforma
-            </Heading>
-            <UnorderedList spacing={2} fontSize="sm" ml={4}>
-              {limites.map((l) => (
-                <ListItem key={l}>{l}</ListItem>
-              ))}
-            </UnorderedList>
+          <Box as="section" aria-labelledby="titulo-limites" bg="superficie" borderRadius="xl" px={{ base: 4, md: 5 }} py={1}>
+            <Plegable
+              id="limites"
+              abierto={hash === "#limites" ? true : undefined}
+              titulo={
+                <Heading as="h2" id="titulo-limites" size="sm">
+                  Límites de esta plataforma
+                </Heading>
+              }
+            >
+              <UnorderedList spacing={2} fontSize="sm" ml={4} pb={3} color="textoSuave">
+                {limites.map((l) => (
+                  <ListItem key={l}>{l}</ListItem>
+                ))}
+              </UnorderedList>
+              {meta.estado === "error" && (
+                <Text fontSize="xs" color="textoSuave" pb={3} role="status">
+                  Se muestran los valores guardados en esta página.
+                </Text>
+              )}
+            </Plegable>
           </Box>
         </Box>
-      </Box>
-
-      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={10}>
-        <EstadoBackend />
-        <Text mt={4} fontSize="sm">
-          Fuentes y supuestos de cada cifra:{" "}
-          <Link as={RouterLink} to="/informacion#fuentes">
-            sección de fuentes
-          </Link>
-          .
-        </Text>
       </Box>
     </Layout>
   );

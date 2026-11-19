@@ -338,7 +338,7 @@ export default function MapaGL(props: PropsMapa) {
       const lat = anillo.reduce((s, p) => s + p[1], 0) / anillo.length;
       const est = props.estadoSectores[id];
       const el = document.createElement("div");
-      el.style.cssText = `font:600 12px 'Public Sans Variable','Segoe UI',sans-serif;color:${hexDe("texto")};background:${hexDe("superficie")};padding:1px 5px;border:1px solid ${hexDe("bordeFuerte")};pointer-events:none;white-space:nowrap`;
+      el.style.cssText = `font:600 12px 'Atkinson Hyperlegible Next Variable','Segoe UI',sans-serif;color:${hexDe("texto")};background:${hexDe("superficie")};padding:1px 5px;border:1px solid ${hexDe("bordeFuerte")};pointer-events:none;white-space:nowrap`;
       el.textContent = est ? `${id} · ${est.estado.replace("_", " ")}${est.aislado ? " · aislado" : ""}` : id;
       marcadores.current.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m));
     }
@@ -405,7 +405,7 @@ export default function MapaGL(props: PropsMapa) {
             const [lon, lat] = ln[Math.floor(ln.length / 2)];
             const el = document.createElement("div");
             el.textContent = `${f.properties.elev_m} m`;
-            el.style.cssText = `font:600 10px 'Public Sans Variable','Segoe UI',sans-serif;color:${COLOR_CURVA};background:${hexDe("superficie")};opacity:.85;padding:0 3px;border-radius:2px;pointer-events:none;white-space:nowrap`;
+            el.style.cssText = `font:600 10px 'Atkinson Hyperlegible Next Variable','Segoe UI',sans-serif;color:${COLOR_CURVA};background:${hexDe("superficie")};opacity:.85;padding:0 3px;border-radius:2px;pointer-events:none;white-space:nowrap`;
             const marca = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m);
             rotulosCurvas.current.push({ marca, el, regimen });
           }
@@ -446,7 +446,7 @@ export default function MapaGL(props: PropsMapa) {
           const lat = anillo.reduce((s, p) => s + p[1], 0) / anillo.length;
           const el = document.createElement("div");
           el.textContent = `Dpto. ${f.properties.nombre}`;
-          el.style.cssText = `font:600 11px 'Public Sans Variable','Segoe UI',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${COLOR_DEPARTAMENTO};opacity:.75;pointer-events:none;white-space:nowrap`;
+          el.style.cssText = `font:600 11px 'Atkinson Hyperlegible Next Variable','Segoe UI',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${COLOR_DEPARTAMENTO};opacity:.75;pointer-events:none;white-space:nowrap`;
           rotulosDepartamentos.current.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(m));
         }
       })

@@ -1,8 +1,7 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "@fontsource-variable/public-sans";
-import "@fontsource-variable/source-serif-4";
+import "@fontsource-variable/atkinson-hyperlegible-next";
 
 import App from "./App";
 import "./estilo/base.css";

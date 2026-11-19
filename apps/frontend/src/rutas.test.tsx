@@ -19,7 +19,9 @@ describe("leyenda fija", () => {
     "aparece en %s",
     async (ruta) => {
       renderRuta(ruta);
-      expect(await screen.findByText(LEYENDA)).toBeInTheDocument();
+      // Cinta fija arriba (nota "Aviso de prototipo") y repetida en el pie.
+      expect(await screen.findByRole("note", { name: "Aviso de prototipo" })).toHaveTextContent(LEYENDA);
+      expect(screen.getByRole("contentinfo")).toHaveTextContent(LEYENDA);
     },
   );
 });
@@ -45,9 +47,14 @@ describe("landing", () => {
     expect(screen.getByText(/sin dato observado en el kit/i)).toBeInTheDocument();
   });
 
-  it("avisa que usa valores del kit cuando el servicio no responde", async () => {
+  it("no muestra el estado del backend ni de la conexión en la landing", async () => {
     renderRuta("/");
-    expect(await screen.findByText(/el servicio de datos no respondió/)).toBeInTheDocument();
+    expect(screen.queryByText(/Estado del backend/)).toBeNull();
+    expect(screen.queryByText(/backend/i)).toBeNull();
+    expect(screen.queryByText(/servidor/i)).toBeNull();
+    // Los límites siguen presentes (plegados) y usan la copia guardada si no hay servicio.
+    expect(await screen.findByText(/Se muestran los valores guardados/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Límites de esta plataforma" })).toBeInTheDocument();
   });
 
   it("ofrece registro para ciudadanía y productores y solo ingreso para mandos", () => {

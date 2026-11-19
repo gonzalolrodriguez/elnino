@@ -5,6 +5,7 @@ import {
   Boton,
   Cargando,
   COLOR,
+  Enlace,
   ErrorCaja,
   FilaBotones,
   Insignia,
@@ -70,7 +71,7 @@ export default function Solicitudes() {
               </Texto>
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
-                <Text style={{ color: COLOR.error, fontSize: 13 }}>{i.ultimoError}</Text>
+                <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text>
               ) : null}
               {i.estado === "pendiente" ? (
                 <Texto suave>
@@ -137,7 +138,7 @@ export default function Solicitudes() {
           ))}
         </Rejilla>
       ) : null}
-      <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
+      <Enlace titulo="Actualizar" onPress={cargar} />
     </Pantalla>
   );
 }

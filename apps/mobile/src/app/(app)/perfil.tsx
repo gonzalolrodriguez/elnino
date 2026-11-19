@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Alert } from "react-native";
 
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
-import { Boton, Pantalla, Rejilla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Boton, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import { useSesion, useUsuario } from "@/lib/SesionContext";
 
@@ -11,6 +12,7 @@ export default function Perfil() {
   const usuario = useUsuario();
   const { salir, salirLocal } = useSesion();
   const { pendientes, borrarLocal } = useCola();
+  const [verConexion, setVerConexion] = useState(false);
   const ciudadania = usuario.rol === "ciudadano" || usuario.rol === "productor";
 
   const cerrar = () => {
@@ -37,10 +39,10 @@ export default function Perfil() {
     <Pantalla dosColumnas>
       <Titulo>Perfil</Titulo>
       <Tarjeta>
-        <Texto>{usuario.nombre_visible}</Texto>
+        <Subtitulo>{usuario.nombre_visible}</Subtitulo>
         <Texto suave>{usuario.email}</Texto>
         <Texto suave>
-          Rol: {usuario.rol}
+          {usuario.rol}
           {usuario.rol_operativo ? ` · ${usuario.rol_operativo}` : ""}
         </Texto>
       </Tarjeta>
@@ -48,9 +50,13 @@ export default function Perfil() {
       <Rejilla>
         {ciudadania ? <FormGrupoFamiliar /> : null}
         {usuario.rol === "productor" ? <FormEstablecimientos /> : null}
-        <ConfigServidor
-          sesion={{ pendientes, descartarPendientes: borrarLocal, cerrarSesionLocal: salirLocal }}
-        />
+        {verConexion ? (
+          <ConfigServidor
+            sesion={{ pendientes, descartarPendientes: borrarLocal, cerrarSesionLocal: salirLocal }}
+          />
+        ) : (
+          <Boton titulo="Conexión con el servidor" variante="secundario" onPress={() => setVerConexion(true)} />
+        )}
       </Rejilla>
       {!ciudadania && usuario.rol !== "cuadrilla" ? (
         <Texto suave>

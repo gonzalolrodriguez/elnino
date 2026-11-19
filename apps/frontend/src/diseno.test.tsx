@@ -66,10 +66,17 @@ describe("sistema de color (OKLCH)", () => {
     ["umbral.textoAlerta", "superficie", 4.5],
     ["umbral.textoEvacuacion", "superficie", 4.5],
     ["foco", "fondo", 3],
-    ["focoClaro", "nav.bg", 3],
+    ["focoClaro", "oscuro.bg", 3],
     ["bordeFuerte", "superficie", 3],
-    ["umbral.evacuacion", "nav.bg", 3],
-    ["umbral.alerta", "nav.bg", 3],
+    ["umbral.evacuacion", "superficie", 3],
+    ["umbral.alerta", "superficie", 3],
+    ["umbral.evacuacionClaro", "oscuro.bg", 3],
+    ["umbral.alertaClaro", "oscuro.bg", 3],
+    ["oscuro.suave", "oscuro.bg", 4.5],
+    ["oscuro.fg", "oscuro.bg", 7],
+    ["cat.observadoOscuro.fg", "cat.observadoOscuro.bg", 4.5],
+    ["confirmacion", "superficie", 4.5],
+    ["bordeControl", "fondo", 3],
   ])("%s sobre %s cumple %s:1", (a, b, minimo) => {
     expect(contraste(hexDe(a as string), hexDe(b as string))).toBeGreaterThanOrEqual(minimo as number);
   });

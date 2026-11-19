@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
-import { Boton, Campo, Cargando, COLOR, ErrorCaja, Tarjeta, Texto } from "@/components/ui";
+import { Boton, Campo, Cargando, COLOR, ErrorCaja, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { ErrorApi } from "@/lib/api";
 import { obtenerUbicacion } from "@/lib/dispositivo";
 import { mensajeError } from "@/lib/errores";
@@ -80,7 +80,7 @@ export function FormGrupoFamiliar() {
 
   return (
     <Tarjeta>
-      <Text style={{ fontWeight: "700", fontSize: 16 }}>Grupo familiar y domicilio</Text>
+      <Subtitulo>Grupo familiar y domicilio</Subtitulo>
       <Campo etiqueta="Integrantes" value={integrantes} onChangeText={setIntegrantes} keyboardType="number-pad" />
       <Campo etiqueta="Menores" value={menores} onChangeText={setMenores} keyboardType="number-pad" />
       <Campo etiqueta="Mayores" value={mayores} onChangeText={setMayores} keyboardType="number-pad" />

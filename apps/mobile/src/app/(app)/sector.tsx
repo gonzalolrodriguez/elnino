@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 import { MapaSector } from "@/components/MapaSector";
-import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
@@ -96,7 +96,7 @@ export default function Sector() {
             <Text
               style={{
                 fontWeight: "700",
-                color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.aviso : COLOR.ok,
+                color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.avisoTexto : COLOR.ok,
               }}
             >
               {ESTADO_TEXTO[s.estado]}
@@ -135,7 +135,7 @@ export default function Sector() {
           <Texto suave>{ok.sector.centro_asignado.nota}</Texto>
         </Tarjeta>
       ) : null}
-      <Boton titulo="Actualizar" variante="secundario" onPress={cargar} />
+      <Enlace titulo="Actualizar" onPress={cargar} />
     </>
   ) : null;
 

@@ -158,7 +158,7 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
           </Tbody>
         </Table>
       </TablaDesplazable>
-      <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1.5px dashed" borderColor="cat.simulado.borde" borderRadius="sm" fontSize="sm" data-testid="supuesto-lineal">
+      <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1px dashed" borderColor="cat.simulado.borde" borderRadius="lg" fontSize="sm" data-testid="supuesto-lineal">
         <strong>Supuesto:</strong> {a.supuesto} El INA no publica pronósticos a más de {a.horizonte_pronostico_oficial_dias} días.
       </Box>
     </>
