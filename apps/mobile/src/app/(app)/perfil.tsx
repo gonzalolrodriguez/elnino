@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert } from "react-native";
 
+import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
@@ -59,9 +60,7 @@ export default function Perfil() {
         )}
       </Rejilla>
       {!ciudadania && usuario.rol !== "cuadrilla" ? (
-        <Texto suave>
-          Los mandos operativos trabajan desde el panel web. Esta app solo muestra tus alertas.
-        </Texto>
+        <AvisoPanelWeb />
       ) : null}
 
       <Boton titulo="Cerrar sesión" variante="peligro" onPress={cerrar} />

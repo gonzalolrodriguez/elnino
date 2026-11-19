@@ -43,6 +43,9 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
     }
   };
 
+  // Una tarea completada o cancelada ya no admite cambios en su checklist.
+  const cerrada = tarea.estado === "completada" || tarea.estado === "cancelada";
+
   const alternar = (i: number) => {
     const lista = (tarea.checklist ?? []).map((c, j) => (j === i ? { ...c, hecho: !c.hecho } : c));
     void aplicar({ checklist: lista });
@@ -61,8 +64,8 @@ function TarjetaTarea({ tarea, alCambiar }: { tarea: Tarea; alCambiar: (t: Tarea
         <Pressable
           key={`${tarea.id}-${i}`}
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: c.hecho, disabled: trabajando || tarea.estado === "completada" }}
-          disabled={trabajando || tarea.estado === "completada"}
+          accessibilityState={{ checked: c.hecho, disabled: trabajando || cerrada }}
+          disabled={trabajando || cerrada}
           onPress={() => alternar(i)}
           style={{ flexDirection: "row", gap: 8, paddingVertical: 10, minHeight: 48, alignItems: "center" }}
         >

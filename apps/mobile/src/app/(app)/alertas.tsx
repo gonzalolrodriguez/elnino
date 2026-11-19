@@ -1,7 +1,10 @@
 import { Text, View } from "react-native";
 
+import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
+import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useAlertas } from "@/lib/AlertasContext";
+import { useUsuario } from "@/lib/SesionContext";
 
 const CANAL: Record<string, string> = {
   conectado: "Tiempo real conectado",
@@ -11,10 +14,13 @@ const CANAL: Record<string, string> = {
 
 export default function Alertas() {
   const { estado, notificaciones, canal, recargar, marcarLeida } = useAlertas();
+  const { rol } = useUsuario();
+  const institucional = rol === "operador" || rol === "decisor" || rol === "admin";
 
   return (
     <Pantalla dosColumnas>
       <Titulo>Alertas y órdenes</Titulo>
+      {institucional ? <AvisoPanelWeb /> : null}
       <Texto suave>{CANAL[canal]}. Las órdenes las emite una persona con rol autorizado.</Texto>
 
       {estado.tipo === "cargando" ? <Cargando texto="Cargando alertas…" /> : null}
@@ -40,6 +46,7 @@ export default function Alertas() {
         </Tarjeta>
       ))}
       </Rejilla>
+      <EnlaceQueHacer />
     </Pantalla>
   );
 }

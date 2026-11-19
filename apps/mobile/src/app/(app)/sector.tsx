@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { MapaSector } from "@/components/MapaSector";
+import { MapaConRespaldo } from "@/components/MapaSector";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
@@ -70,7 +70,16 @@ export default function Sector() {
 
   const mapa =
     ok && ok.sector.sectores.length > 0 ? (
-      <MapaSector geo={geoMapa} estados={estados} centro={centroMapa} alto={d.columnas === 2 ? "lleno" : undefined} />
+      <MapaConRespaldo
+        geo={geoMapa}
+        estados={estados}
+        centro={centroMapa}
+        alto={d.columnas === 2 ? "lleno" : undefined}
+        resumen={{
+          sectores: ok.sector.sectores.map((s) => ({ id: s.id, nombre: s.nombre, estado: s.estado })),
+          centro: asignado ? { nombre: asignado.nombre } : null,
+        }}
+      />
     ) : null;
 
   const detalle = ok ? (

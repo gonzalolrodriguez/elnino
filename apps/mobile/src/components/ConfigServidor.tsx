@@ -75,12 +75,12 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
   const aplicar = async (cambio: Cambio, descartar: boolean) => {
     setAplicando(true);
     try {
-      if (sesion) {
-        if (descartar) await sesion.descartarPendientes();
-        await sesion.cerrarSesionLocal();
-      }
+      if (sesion && descartar) await sesion.descartarPendientes();
+      // Primero se guarda el servidor nuevo: si falla, la sesión sigue abierta y no se pierde nada.
+      // Recién después se cierra la sesión local (su token era del servidor anterior).
       if (cambio.destino === null) await restablecerServidor();
       else await guardarServidor(cambio.destino);
+      if (sesion) await sesion.cerrarSesionLocal();
       setTexto(obtenerUrlServidor());
       setActual(obtenerUrlServidor());
       setPrueba({ tipo: "inactiva" });

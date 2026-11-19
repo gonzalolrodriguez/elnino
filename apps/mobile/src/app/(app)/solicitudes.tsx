@@ -47,9 +47,12 @@ export default function Solicitudes() {
     }
   }, []);
 
+  // Se vuelve a consultar cuando cambia la cantidad de ítems o cuando alguno pasa a "enviada"
+  // (la longitud de la lista no cambia en esa transición).
+  const enviadasLocales = items.filter((i) => i.estado === "enviada").length;
   useEffect(() => {
     void cargar();
-  }, [cargar, items.length]);
+  }, [cargar, items.length, enviadasLocales]);
 
   const locales = items.filter((i) => i.estado !== "enviada" && !otroServidor.some((o) => o.id === i.id));
 

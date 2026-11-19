@@ -1,8 +1,9 @@
 import { Redirect, useRouter } from "expo-router";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
 
 import { EnlaceConexion } from "@/components/EnlaceConexion";
-import { Boton, Cargando, Pantalla, Texto, Titulo } from "@/components/ui";
+import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
+import { Boton, Cargando, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { useSesion } from "@/lib/SesionContext";
 
@@ -27,6 +28,15 @@ export default function Bienvenida() {
           <Boton titulo="Ingresar" onPress={() => router.push("/login")} />
           <Boton titulo="Registrarme" variante="secundario" onPress={() => router.push("/registro")} />
         </View>
+        <Tarjeta>
+          <Subtitulo>¿Necesitás ayuda ahora? No hace falta cuenta</Subtitulo>
+          <Texto suave>
+            Funciona sin internet: podés llamar o armar un mensaje de texto con tu ubicación.
+          </Texto>
+          <Boton titulo="Llamar al 103" onPress={() => void Linking.openURL("tel:103")} />
+          <Boton titulo="Pedir ayuda por SMS" variante="secundario" onPress={() => router.push("/ayuda-sms")} />
+          <EnlaceQueHacer />
+        </Tarjeta>
         <Texto suave pequeno>
           Es una herramienta de simulación y planificación. Decidir una evacuación corresponde a las
           autoridades: esta aplicación no reemplaza al 103 ni a Defensa Civil. Los mandos operativos

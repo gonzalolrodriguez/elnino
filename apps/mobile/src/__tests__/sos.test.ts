@@ -118,9 +118,43 @@ describe("codificarSOS", () => {
 });
 
 describe("enlaceSMS", () => {
-  it("codifica el cuerpo y no envía nada por sí mismo", () => {
-    const url = enlaceSMS("", "SOS-FSA|-26.18,-58.139|CIUDADANO|FAM:2");
+  const cuerpo = "SOS-FSA|-26.18,-58.139|CIUDADANO|FAM:2";
+
+  it("Android usa ?body= y no envía nada por sí mismo", () => {
+    const url = enlaceSMS("", cuerpo, "android");
     expect(url.startsWith("sms:?body=")).toBe(true);
-    expect(decodeURIComponent(url.split("body=")[1])).toBe("SOS-FSA|-26.18,-58.139|CIUDADANO|FAM:2");
+    expect(decodeURIComponent(url.split("body=")[1])).toBe(cuerpo);
+  });
+
+  it("iOS usa &body= (con y sin destinatario)", () => {
+    expect(enlaceSMS("+54 370 4000000", cuerpo, "ios").startsWith("sms:+543704000000&body=")).toBe(true);
+    expect(enlaceSMS("", cuerpo, "ios").startsWith("sms:&body=")).toBe(true);
+  });
+
+  it("Android con destinatario: sms:<número>?body=", () => {
+    expect(enlaceSMS("3704000000", cuerpo, "android").startsWith("sms:3704000000?body=")).toBe(true);
+  });
+});
+
+describe("especie y tipo en el SMS", () => {
+  it("la especie viaja en el detalle de BOV y el tipo como prefijo del texto", () => {
+    const msg = codificarSOS({
+      lat: -26.18,
+      lon: -58.139,
+      perfil: "productor",
+      bovinos: 20,
+      especie: "ovinos",
+      tipoPedido: "ganado",
+      texto: "agua en el corral",
+    });
+    const p = parsearComoBackend(msg);
+    expect(p.detalle).toBe("ovinos");
+    expect(p.texto).toBe("Pedido: ganado. agua en el corral");
+    expect(msg).toContain("BOV:20(ovinos)");
+  });
+
+  it("el tipo solo no alcanza para un mensaje válido y FAM respeta el máximo del backend (500)", () => {
+    expect(() => codificarSOS({ lat: -26.18, lon: -58.139, perfil: "ciudadano", tipoPedido: "ganado" })).toThrow(ErrorSOS);
+    expect(codificarSOS({ lat: -26.18, lon: -58.139, perfil: "ciudadano", familiares: 9999 })).toContain("FAM:500");
   });
 });

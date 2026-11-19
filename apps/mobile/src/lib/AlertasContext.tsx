@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from "react";
 
+import { AppState } from "react-native";
+
 import { obtenerAccessToken, renovarSesion } from "@/lib/api";
+import { escucharRed } from "@/lib/red";
 import { obtenerUrlServidor } from "@/lib/servidor";
 import { avisarLocal, prepararNotificaciones } from "@/lib/notificacionesLocales";
 import { api, type Notificacion } from "@/lib/servicios";
@@ -77,7 +80,19 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
       alEstado: setCanal,
     });
     ws.iniciar();
+    // Al volver la red o la app a primer plano el socket pudo haberse cortado: se reconecta ya.
+    const quitarRed = escucharRed((conectado) => {
+      if (conectado) ws.reconectarYa();
+    });
+    const quitarEstado = AppState.addEventListener("change", (e) => {
+      if (e === "active") {
+        void recargar();
+        ws.reconectarYa();
+      }
+    });
     return () => {
+      quitarRed();
+      quitarEstado.remove();
       clearInterval(sondeo);
       ws.detener();
     };
