@@ -24,7 +24,7 @@ from fastapi import (
 )
 from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -51,10 +51,26 @@ class SolicitudIn(BaseModel):
     tipo: Literal["evacuacion", "asistencia", "ganado", "logistica", "otro"]
     personas: int = Field(default=0, ge=0, le=500)
     animales: int = Field(default=0, ge=0, le=100000)
-    lon: float = Field(ge=-180, le=180)
-    lat: float = Field(ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
+    lat: float | None = Field(default=None, ge=-90, le=90)
     texto: str | None = Field(default=None, max_length=500)
+    referencia_ubicacion: str | None = Field(
+        default=None, max_length=200, description="Paraje, camino o ruta (si no hay coordenadas)"
+    )
     origen: Literal["app", "web"] = "web"
+
+    @field_validator("referencia_ubicacion")
+    @classmethod
+    def referencia_limpia(cls, v: str | None) -> str | None:
+        return (v or "").strip() or None
+
+    @model_validator(mode="after")
+    def ubicacion(self):
+        if (self.lon is None) != (self.lat is None):
+            raise ValueError("Indicar lon y lat juntas")
+        if self.lon is None and self.referencia_ubicacion is None:
+            raise ValueError("Indicar coordenadas (lon y lat) o una referencia de ubicación")
+        return self
 
 
 class SolicitudPatch(BaseModel):
@@ -153,6 +169,7 @@ def crear(
             response.status_code = 200
             return solicitud_a_dict(previa)
     _aplicar_cuota(db, usuario)
+    sin_coordenadas = datos.lon is None
     valores = {
         "solicitante_id": usuario.id,
         "origen": datos.origen,
@@ -160,8 +177,14 @@ def crear(
         "personas": datos.personas,
         "animales": datos.animales,
         "texto": datos.texto,
-        "geom": WKTElement(f"POINT({datos.lon} {datos.lat})", srid=SRID),
-        "sector_id": sector_de_punto(db, datos.lon, datos.lat),
+        "geom": None
+        if sin_coordenadas
+        else WKTElement(f"POINT({datos.lon} {datos.lat})", srid=SRID),
+        "sector_id": None if sin_coordenadas else sector_de_punto(db, datos.lon, datos.lat),
+        "referencia_ubicacion": datos.referencia_ubicacion,
+        # Sin coordenadas: ubicación por referencia, a verificar por el operador.
+        "ubicacion_aproximada": sin_coordenadas,
+        "requiere_verificacion": sin_coordenadas,
         "estado": "recibida",
         "idempotency_key": clave,
         "creado_en": ahora(),
