@@ -57,6 +57,11 @@ Un solo llamado con los indicadores de decisión. Cada bloque lleva `categoria`,
     "items": [ { "id", "nombre", "tipo_incidente", "estado", "tareas": { "pendiente": 0, "en_curso": 0, "completada": 0, "cancelada": 0 } } ] },
   "ordenes": { "categoria", "fuente", "fecha_dato", "bitacora_borradores": 0,
     "recientes": [ { "id", "tipo", "sectores", "emitida_por_rol", "creada_en" } ] },
+  "evacuaciones": { "categoria": "SIMULADO", "fuente", "fecha_dato", "total": 0,
+    "por_estado": { "pendiente": 0, "en_curso": 0, "cerrada_cuadrilla": 0, "verificada": 0, "con_discrepancia": 0 },
+    "por_sector": { "S4": { "pendiente": 0, "en_curso": 0, "cerrada_cuadrilla": 0, "verificada": 0, "con_discrepancia": 0 } },
+    "verificadas_pct": 0.0, "discrepancias_abiertas": 0, "personas_trasladadas": 0,
+    "animales_trasladados": { "bovinos": 0 }, "animales_trasladados_total": 0, "distancia_max_destino_m": 500 },
   "lluvia_7d": { "categoria", "fuente", "fecha_dato", "desde": "...", "sin_dato_observado": true,
     "por_origen": { "simulado": { "lecturas": 0, "mm_total": 0.0, "sin_medicion": 0, "categoria": "SIMULADO" } } },
   "frescura": { "rio_ultima_lectura", "k10_sectores", "lluvia_ultima_lectura", "fecha_corte": "2026-10-31" },
@@ -320,8 +325,88 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | PUT | `/mi/establecimientos/{id}/stock` | productor | Reemplaza el stock |
 | POST | `/mi/solicitudes-logistica` | productor | `{ "establecimiento_id", "texto" }`; adjunta el cálculo de Arca Productiva |
 | GET | `/mi/sector` | autenticado | Sector propio con estado a la última altura observada, alertas y centro sugerido (`SIMULADO`). Cada sector trae `geometria` (GeoJSON `Polygon`, EPSG:4326, K10 sin cambios) y cada centro sugerido (`centro_asignado.personas` y `.animales`) trae `lon` y `lat` además de la distancia en línea recta |
-| GET | `/mi/notificaciones?solo_no_leidas=` | autenticado | Notificaciones propias |
+| GET | `/mi/notificaciones?solo_no_leidas=` | autenticado | Notificaciones propias. Cada una trae `tipo` (`orden`, `confirmacion_evacuacion` o `discrepancia`) y `datos` (objeto o `null`; ver "Constancias de evacuación") |
+| GET | `/mi/confirmaciones` | ciudadanía y productores | Consultas de confirmación propias (`pendientes`; por ítem `id`, `tarea_id`, `solicitud_id`, `codigo`, `centro_nombre`, `respondida`, `respuesta`, `comentario`, `solicitada_en`, `respondida_en`); nunca ubicaciones |
+| POST | `/mi/confirmaciones` | ciudadanía y productores | Responde la consulta del traslado (ver "Constancias de evacuación") |
 | PATCH | `/mi/notificaciones/{id}/leida` | autenticado | Marca una notificación propia como leída |
+
+## Constancias de evacuación y confirmación del evacuado
+
+Una **evacuación** es una tarea de cuadrilla (de una orden o de una solicitud asignada). La cuadrilla la cierra con una **constancia** (destino GPS, centro, personas, animales, nota y fotos) y el evacuado puede confirmarla. Todo es `SIMULADO`. El estado se **deriva**, no se guarda:
+
+| Estado | Cuándo |
+|---|---|
+| `pendiente`, `en_curso` | La tarea no se cerró |
+| `cerrada_cuadrilla` | Cerrada con constancia, sin respuesta del evacuado (no bloquea) |
+| `verificada` | El evacuado respondió `si` y el destino está a menos de `distancia_max_destino_m` (SUPUESTO: 500 m, en `supuestos.yaml`) del centro elegido |
+| `con_discrepancia` | El evacuado respondió `no` o `problema`, o el destino queda a más de `distancia_max_destino_m` del centro. Es una **marca para revisar, no una acusación**; avisa a los operadores (notificación `discrepancia`) |
+
+Las tareas canceladas no cuentan como evacuaciones. Una tarea cerrada por `PATCH /tareas/{id}` con `completada` (sin constancia) figura como `cerrada_cuadrilla` con `constancia: null`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/tareas/{id}/cierre` | cuadrilla de la tarea u `operador` | Cierra con constancia. **Requiere** `Idempotency-Key: <UUID>` (falta o no es UUID: 422). 201 la primera vez; el reintento con la misma clave: 200 con `"repetida": true`; otra clave sobre una tarea ya cerrada, o la misma clave sobre otra tarea: 409. Tarea cancelada: 409. Cuadrilla ajena: 403. Tarea inexistente: 404 |
+| POST | `/tareas/{id}/cierre/adjuntos` | cuadrilla de la tarea u `operador` | `multipart/form-data`, campo `archivo` (JPEG, PNG o WebP). Mismas reglas que los adjuntos de solicitudes (firma del contenido, `ADJUNTO_MAX_BYTES`, máximo `ADJUNTOS_MAX_POR_SOLICITUD` por constancia: 409; sin constancia: 404; SHA-256 repetido: 200 con `"duplicado": true`). Se piden fotos del lugar o del transporte, **no de caras ni de menores** |
+| GET | `/tareas/{id}/cierre/adjuntos/{n}` | cuadrilla de la tarea y mandos | Bytes de la foto (`private, no-store`); auditado |
+| GET | `/tareas/{id}/constancia` | cuadrilla de la tarea y mandos | Devuelve el mismo objeto que un ítem de `GET /evacuaciones`; 404 si no hay constancia; auditado |
+| GET | `/evacuaciones?estado=&sector_id=&limite=&offset=` | mandos | Listado con estado derivado. `estado` fuera de la lista: 422. Responde `{ "evacuaciones", "total", "limite", "offset", "categoria", "fuente", "fecha_dato" }`; auditado. Ciudadanía, productores y cuadrilla: 403 |
+| POST | `/mi/confirmaciones` | ciudadanía y productores | Responde la consulta propia. Indicar `solicitud_id` **o** `codigo` (ambos o ninguno: 422). Solicitud o código ajenos o inexistentes: 404. 201 la primera vez; misma respuesta de nuevo: 200 con `"repetida": true`; otra respuesta distinta: 409 (la respuesta es una sola, para conservar la traza) |
+
+Los canales simulados (`sms-sim`, `whatsapp-sim`, `ivr-sim`) resuelven `SI <codigo>`, `NO <codigo>` y `PROBLEMA <codigo> <texto>` (mayúsculas, minúsculas y tildes indistintas) con una respuesta fija. El código tiene 6 caracteres (consonantes y dígitos 2-9, siempre con al menos un dígito) y llega en la notificación; un texto libre como `no quedan víveres` **no** se toma como confirmación. Resultado: `{ "tipo": "confirmacion", "estado": "creado" | "duplicado" | "codigo_invalido", "respuesta": "<texto fijo>" }`.
+
+`POST /tareas/{id}/cierre`, cuerpo (`extra` prohibido):
+
+```json
+{ "lat": -26.18, "lon": -58.139, "centro_id": 3, "personas_trasladadas": 3,
+  "animales_trasladados": { "bovinos": 12 }, "nota": "Llegaron por la ruta de ripio." }
+```
+
+`lat` -90 a 90 y `lon` -180 a 180 (fuera de rango: 422); `centro_id` opcional (inexistente: 422); `personas_trasladadas` 0 a 5000; `animales_trasladados` `{especie: cantidad}`; `nota` hasta 1000 caracteres, obligatoria si no se trasladaron personas ni animales. Respuesta (201):
+
+```json
+{ "constancia": { "id": 1, "tarea_id": 7, "rol_operativo": "encargado_cuadrilla",
+    "destino": { "lat": -26.18, "lon": -58.139, "centro_id": 3, "centro_nombre": "...", "distancia_a_centro_m": 0 },
+    "personas_trasladadas": 3, "animales_trasladados": { "bovinos": 12 }, "nota": "...",
+    "adjuntos": [ { "n": 1, "mime": "image/jpeg", "bytes": 1234 } ], "creada_en": "...", "categoria": "SIMULADO" },
+  "tarea": { "id": 7, "estado": "completada", "...": "..." },
+  "evacuacion": { "estado": "cerrada_cuadrilla", "motivos_discrepancia": [], "confirmacion_solicitada": true },
+  "repetida": false, "categoria": "SIMULADO" }
+```
+
+Ítem de `GET /evacuaciones` (y respuesta de `GET /tareas/{id}/constancia`):
+
+```json
+{ "tarea_id": 7, "tarea_estado": "completada", "estado": "verificada", "titulo": "...", "sector_id": "S4",
+  "cuadrilla_id": 1, "cuadrilla_nombre": "...", "solicitud_id": 12, "orden_id": null,
+  "origen": { "lat": -26.18, "lon": -58.139, "tipo": "solicitud" },
+  "constancia": { "...": "como arriba" },
+  "confirmacion": { "respuesta": "si", "canal": "app", "comentario": null, "solicitada_en": "...", "respondida_en": "..." },
+  "discrepancia": null,
+  "actualizado_en": "...", "categoria": "SIMULADO", "fuente": "..." }
+```
+
+`origen.tipo` es `solicitud` (coordenadas del pedido) o `sector` (centro del sector, para tareas de una orden o pedidos sin coordenadas). `constancia`, `confirmacion` y `origen` pueden ser `null`. `discrepancia` es `{ "motivos": ["evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro"] }` o `null`.
+
+`POST /mi/confirmaciones`, cuerpo `{ "solicitud_id": 12 | "codigo": "K7M2QX", "respuesta": "si|no|problema", "comentario"?: "hasta 500 caracteres" }`; respuesta `{ "id", "tarea_id", "solicitud_id", "respuesta", "comentario", "canal": "app", "respondida_en", "repetida", "nota" }`. No revela el estado derivado ni ubicaciones. `GET /mi/confirmaciones` lista las consultas propias.
+
+**Notificación que recibe el solicitante** al cerrarse la tarea (solo si el pedido tiene solicitante), en `GET /mi/notificaciones`:
+
+```json
+{ "id": 9, "orden_id": null, "tipo": "confirmacion_evacuacion", "leida": false, "creada_en": "...",
+  "mensaje": "¿Llegaste a <centro>? ... Respondé en la app o por SMS: SI K7M2QX, NO K7M2QX o PROBLEMA K7M2QX y el detalle. [PROTOTIPO: no es una herramienta oficial]",
+  "datos": { "tarea_id": 7, "solicitud_id": 12, "codigo": "K7M2QX", "centro_nombre": "...", "respuestas": ["si", "no", "problema"] } }
+```
+
+Los operadores reciben `tipo: "discrepancia"` con `datos: { "tarea_id", "sector_id", "motivos" }`. Eventos WebSocket `constancia` (`{ "tarea_id", "sector_id", "estado", "personas_trasladadas"?, "motivo": "cierre|confirmacion" }`) y `discrepancia` (`{ "tarea_id", "sector_id", "motivos" }`): solo para mandos y cuadrilla, sin ubicaciones.
+
+Ejemplo reproducible (con `$H_CUADRILLA` y `$H_CIUDADANO` con su `Authorization`):
+
+```bash
+curl -s -X POST $API/tareas/7/cierre -H "$H_CUADRILLA" -H "Idempotency-Key: $(uuidgen)" -H 'Content-Type: application/json' \
+  -d '{"lat":-26.18,"lon":-58.139,"centro_id":1,"personas_trasladadas":3,"nota":"Llegaron al centro."}'
+curl -s -X POST $API/mi/confirmaciones -H "$H_CIUDADANO" -H 'Content-Type: application/json' -d '{"solicitud_id":12,"respuesta":"si"}'
+# Casos inválidos: sin Idempotency-Key -> 422; "lat": 95 -> 422; ciudadano en /tareas/7/cierre -> 403; cuadrilla ajena -> 403
+```
 
 ## Lluvia
 
@@ -423,7 +508,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (53 rutas y 62 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (59 rutas y 69 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='

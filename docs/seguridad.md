@@ -155,6 +155,17 @@ Archivos: `apps/mobile/src/lib/servidor.ts` (`esHostPrivado`, `requiereConfirmar
 
 Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), A05 (tipos y tamaños de archivo acotados), A08 (nombres de archivo generados por el servidor), A02 (tráfico sin cifrar aceptado solo en el prototipo en LAN).
 
+## Constancias de evacuación (Ley 25.326)
+
+- **Finalidad exclusiva de emergencia.** El destino, el origen y las fotos de una evacuación se usan solo para verificar el traslado; la confirmación del evacuado se pide, no se impone, y la ausencia de respuesta no bloquea nada.
+- **Acceso mínimo.** `GET /evacuaciones`, `GET /tareas/{id}/constancia` y las fotos solo los leen `operador`, `decisor`, `admin` y la cuadrilla de esa tarea (otra cuadrilla: 403). La ciudadanía solo ve su propia consulta (`/mi/confirmaciones`) con el nombre del centro, nunca ubicaciones; solicitud o código ajenos dan 404 (no se revela si existen). El bloque `evacuaciones` de `/panel/resumen` y los eventos WebSocket `constancia` y `discrepancia` llevan solo agregados e ids.
+- **Bitácora de accesos.** Cada lectura de evacuaciones, constancias y fotos registra `lectura_datos_personales`; el cierre (`tarea_cerrada_con_constancia`), la subida de fotos (`adjunto_subido`) y la respuesta del evacuado (`confirmacion_evacuado`) también, con hash encadenado.
+- **Fotos.** Mismas reglas que los adjuntos de solicitudes: validación por firma del contenido (JPEG, PNG, WebP), tope por archivo y por constancia, SHA-256 para no duplicar, nombre generado por el servidor y descarga con `Cache-Control: private, no-store` y `nosniff`. La guía para la cuadrilla es fotografiar el **lugar o el transporte, no caras ni menores**; el sistema no puede verificarlo automáticamente, por lo que queda como instrucción de uso. No hay tope de almacenamiento por persona para el personal operativo (sí lo hay para ciudadanía en las solicitudes).
+- **Discrepancia = marca para revisar.** Una evacuación `con_discrepancia` (el evacuado dijo `no` o `problema`, o el destino queda lejos del centro) se notifica a los operadores con el texto "no es una acusación"; ninguna cuenta se sanciona ni se bloquea por ello.
+- **SMS con código.** El código (6 caracteres, cientos de millones de combinaciones) es la prueba de identidad del canal simulado; el webhook ya exige firma HMAC. No hay límite de intentos por código en el prototipo: queda como hoja de ruta junto con el canal real.
+- **Idempotencia.** El cierre exige `Idempotency-Key` (índice único parcial por usuario y clave): un reintento de la cola offline no duplica constancias ni consultas de confirmación.
+- Todo dato de demostración es `SIMULADO`; no hay personas reales.
+
 ## Pendiente (documentado como hoja de ruta)
 
 - MFA para usuarios institucionales y desbloqueo por OTP o correo (ver `docs/decisiones.md`).
