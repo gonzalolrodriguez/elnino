@@ -17,10 +17,11 @@
 
 | ID | Tarea | Ruta | Estado |
 |---|---|---|---|
-| A1 | Web: bugs de sesión. Doble refresh en StrictMode o con varias pestañas; logout por errores de red o 5xx; 401 sin renovar y reintentar. | escritor web | Pendiente |
-| A2 | Web: bugs del panel. Simulador desactualizado, borrador de bitácora, idempotencia de órdenes, toasts, backoff del WS, guardarArchivo, admin que se desactiva a sí mismo, fallback 2D si falla la malla, bucle del hero. | escritor web | Pendiente |
-| A3 | Web: UX. "Usted" a voseo; códigos crudos a etiquetas legibles; "Pedir ayuda" y "Mi sector" en `/mi-cuenta`; copy de `/app`; login automático tras registrarse; botón de ubicación primero. | escritor web | Pendiente |
-| A4 | Web: `maplibre-gl` al parche (crítico de `pnpm audit`); revisar los avisos de react-router. | escritor web | Pendiente |
+| A1 | Web: bugs de sesión. Doble refresh en StrictMode o con varias pestañas; logout por errores de red o 5xx; 401 sin renovar y reintentar. | escritor web | Hecho |
+| A2 | Web: bugs del panel. Simulador desactualizado, borrador de bitácora, idempotencia de órdenes, toasts, backoff del WS, guardarArchivo, admin que se desactiva a sí mismo, fallback 2D si falla la malla, bucle del hero. | escritor web | Hecho |
+| A3 | Web: UX. "Usted" a voseo; códigos crudos a etiquetas legibles; "Pedir ayuda" y "Mi sector" en `/mi-cuenta`; copy de `/app`; login automático tras registrarse; botón de ubicación primero. | escritor web | Hecho |
+| A4 | Web: `maplibre-gl` al parche (crítico de `pnpm audit`); revisar los avisos de react-router. | escritor web | Hecho |
+| A5 | Web: hero 3D interactivo. Arrastrar, zoom y giro acotados; recorrido del río con barra, reproducir y atajos a los hitos; volver a la vista inicial; sin secuestrar el scroll. | escritor web | Hecho |
 | B1 | App: cola offline. Foto inexistente, `hayRed` en LAN sin internet, duplicado al encolar, máximo de intentos, purga de enviadas, segunda pasada del vaciado, límites de personas y animales. | escritor mobile | Hecho |
 | B2 | App: otros bugs. FormGrupoFamiliar que pisa datos, Solicitudes desactualizadas, orden servidor/sesión en ConfigServidor, especie en el SMS, `&body=` de iOS, cámara cancelada, WS (try/catch y reconexión), checklist de canceladas, categoría en el mapa. | escritor mobile | Hecho |
 | B3 | App: UX sin conectividad. En bienvenida, "Pedir ayuda sin cuenta" (SMS armado) y "Llamar al 103"; "¿Sin datos? Enviar por SMS" visible en Asistencia; aviso a mandos de que su panel está en la web; guía offline estática (qué hacer y a quién llamar). | escritor mobile | Hecho |
@@ -34,3 +35,4 @@
 
 - Auditorías (solo lectura) recibidas: UX/IA, seguridad (OWASP 2025, sin edición 2026 oficial), bugs web/mobile (31 confirmados), canales/IA (MVP y decisiones del equipo). Bugs de backend: en curso.
 - App B1-B3 hechos (commits a12f7d8 y 243c68e); B4 parcial (5793f4e): etiquetas, Estado de tu sector con caché SQLite, referencia dentro del texto. Pendientes B4: referencia_ubicacion como campo propio (el backend aún no lo tiene) y pestaña Monitor (falta `GET /panel/resumen`). Verificación en apps/mobile: tsc sin errores, jest 180/180, expo export android correcto. Sin copia de la foto al directorio de documentos (expo-file-system no es dependencia directa).
+- Web A1-A5 hechos (commits 54223e2, 47f2592, db53917, 6b927fa y el de A5). Verificación en apps/frontend: tsc sin errores, eslint sin avisos, vitest 14 archivos en verde, build correcto. A4: maplibre-gl 6.16.0 (la versión parcheada es 6.4.1 o superior; la 6.x más reciente con más de 2 semanas); react-router solo se corrige en 7.18, no se migró (aviso moderado abierto). A2/A3: la ciudadanía recibe `Idempotency-Key` en pedidos y órdenes (el backend de órdenes aún debe respetarlo). A5: no se pudo comprobar la escena 3D en navegador (Edge headless sin WebGL); se revisó el diseño del panel en 390/1024/1440 sin superposición con titular, CTA ni panel de altura.
