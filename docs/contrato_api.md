@@ -552,11 +552,35 @@ Cuando una tarea ligada a un pedido de asistencia está `en_curso`, la cuadrilla
 ```
 
 - `estado`: `en_camino` (hay posición) o `asignada_sin_posicion` (todavía no llegó ninguna; `posicion`, `distancia_m` y `llegada_estimada_min` son `null`).
-- `distancia_m` = recta entre la cuadrilla y el pedido por `factor_desvio` (1,3); `llegada_estimada_min` = distancia / `velocidad_cuadrilla_kmh` (40 km/h), redondeada hacia arriba. Si el pedido no tiene coordenadas, ambos son `null`.
+- `distancia_m` y `llegada_estimada_min` salen de la `ruta` (ver "Recorrido animado"): metros y minutos que **faltan**; la llegada es distancia / `velocidad_cuadrilla_kmh` (40 km/h), redondeada hacia arriba. Sin red vial equivalen a la recta por `factor_desvio` (1,3). Si el pedido no tiene coordenadas, ambos son `null`.
 - `posicion_vieja` es `true` si pasaron más de `posicion_vieja_minutos` (5 min) desde `actualizada_en`.
 - La cuadrilla se identifica por tipo y roles del catálogo, nunca por personas.
 
-Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
+#### Recorrido animado (`seguimiento.ruta`)
+
+Cada ítem de seguimiento (en `GET /mi/seguimiento` y dentro de `seguimiento` de `GET /mi/pedidos`) suma `ruta` y `simulada`. `ruta` es `null` si todavía no hay posición (y el modo demostración está apagado) o el pedido no tiene coordenadas.
+
+```json
+{ "solicitud_id": 12, "tarea_id": 7, "tipo_cuadrilla": "ganadera", "roles": ["encargado_cuadrilla", "veterinario"],
+  "estado": "en_camino",
+  "posicion": { "lat": -26.1884, "lon": -58.1752, "precision_m": null },
+  "actualizada_en": "2026-11-20T15:05:11-03:00", "posicion_vieja": false,
+  "distancia_m": 3120, "llegada_estimada_min": 5,
+  "ruta": {
+    "coordenadas": [[-58.176, -26.2], [-58.1752, -26.1884], [-58.1811, -26.1703], [-58.1875, -26.156]],
+    "distancia_km": 3.12, "llegada_estimada_min": 5, "metodo": "red_vial", "simulada": true,
+    "progreso": 0.2814, "velocidad_kmh": 40, "calculada_en": "2026-11-20T15:02:12-03:00" },
+  "simulada": true, "categoria": "SIMULADO", "fuente": "Posición SIMULADA por el servidor (modo demostración): ...",
+  "supuestos": { "...": "..." }, "nota": "Modo demostración (SIMULADO): ..." }
+```
+
+- `coordenadas`: `[[lon, lat], ...]` (hasta 300 puntos) desde la posición de la cuadrilla (o la base simulada) hasta el pedido, en el sentido del viaje. `distancia_km` y `llegada_estimada_min`: lo que **falta** (a `velocidad_kmh`). `progreso` 0..1: fracción ya recorrida de la ruta (con posición real la ruta parte del vehículo y vale 0; con la simulada llega a 1 y la llegada a 0). `calculada_en`: cuándo se calculó el trazado (se reusa ~60 s por origen redondeado a ~50 m).
+- `metodo`: `red_vial` (pgRouting sobre `red_vial`, perfil del vehículo de la cuadrilla: el camión jaula solo pavimento y ripio; excluye los caminos que el operador marcó no transitables y los tramos dentro de sectores comprometidos según la última lectura de Puerto Formosa) o `aproximado` (sin red o sin ruta: recta por `factor_desvio`; la lancha va siempre en recta a `velocidad_lancha_kmh`). La ruta es una guía de demostración, no un recorrido garantizado.
+- `simulada: true` (en `ruta` y en el ítem): la posición la puso el servidor (**modo demostración**). Con `seguimiento_demo: true` (`supuestos.yaml`, SIMULADO), la tarea `en_curso` y **ninguna posición real vigente**, el vehículo sale de `base_cuadrillas_simulada` (SUPUESTO) en el instante de inicio de la tarea y avanza por la ruta a `velocidad_kmh`; en `posicion` va el punto simulado (`precision_m: null`). Una posición real siempre gana: si la cuadrilla comparte la suya, `simulada` es `false`. Para apagarlo: `seguimiento_demo: false`.
+- Control de acceso sin cambios: solo quien hizo el pedido lo ve; la ruta no revela más que el punto de ese pedido y la posición de su cuadrilla.
+- Los mandos (`GET /cuadrillas/posiciones`) ven también las posiciones simuladas, marcadas `simulada: true`.
+
+Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "simulada", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
 
 Evento WebSocket `posicion_cuadrilla` (`{ "cuadrillas": [id] }`): solo `operador`, `decisor` y `admin`; lleva ids sin coordenadas y el panel consulta `GET /cuadrillas/posiciones`.
 
@@ -598,7 +622,7 @@ Respuesta `{ "categoria": "SIMULADO", "items": [...] }`, hasta 100 pedidos **pro
 curl -s $API/mi/pedidos -H "$H_CIUDADANO"
 ```
 
-Prueba automática: `tests/test_seguimiento.py` y `tests/test_pedidos.py`.
+Prueba automática: `tests/test_seguimiento.py`, `tests/test_ruta_seguimiento.py` y `tests/test_pedidos.py`.
 
 ## Lluvia
 
