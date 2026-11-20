@@ -98,7 +98,9 @@ def test_integrante_puede_enviar_cada_tipo_de_parte(client, como, db):
         "autor_rol",
         "creado_en",
         "resuelta",
+        "adjuntos",
     }
+    assert p["tipo"] == "avance" and p["adjuntos"] == []
     assert p["tipo"] == "avance" and p["resuelta"] is None and p["resultado"] is None
     assert p["autor_rol"] == "encargado_cuadrilla"  # rol operativo, nunca un nombre
     assert p["cuadrilla_id"] == _cuadrilla_demo_id(db)
@@ -315,6 +317,7 @@ def test_partes_recientes_orden_y_campos(client, como, db):
         "autor_rol",
         "creado_en",
         "resuelta",
+        "adjuntos",
         "sector_id",
         "solicitud_id",
         "cuadrilla_nombre",
@@ -413,17 +416,18 @@ def test_integrantes_agregar_y_quitar(client, como, token_admin, db):
     )
     assert r.status_code == 201, r.text
     mios = [i for i in r.json()["integrantes"] if i["usuario_id"] == nuevo]
-    assert mios == [{"usuario_id": nuevo, "rol_operativo": "sipec", "es_encargado": False}]
+    assert len(mios) == 1 and mios[0]["rol_operativo"] == "sipec"
+    assert mios[0]["es_encargado"] is False and mios[0]["profesion"] == "medicina"
     # repetir: 409
     r = client.post(
         url, json={"usuario_id": nuevo, "rol_operativo": "sipec"}, headers=como("admin")
     )
     assert r.status_code == 409
-    # quitar
-    r = client.delete(f"{url}/{nuevo}", headers=como("operador"))
+    # quitar (por el id del integrante, que también sirve para los puestos vacantes)
+    r = client.delete(f"{url}/{mios[0]['id']}", headers=como("operador"))
     assert r.status_code == 200
     assert all(i["usuario_id"] != nuevo for i in r.json()["integrantes"])
-    assert client.delete(f"{url}/{nuevo}", headers=como("operador")).status_code == 404
+    assert client.delete(f"{url}/{mios[0]['id']}", headers=como("operador")).status_code == 404
 
 
 def test_integrantes_solo_usuarios_cuadrilla_y_roles_validos(client, como, token_admin, db):
@@ -478,9 +482,12 @@ def test_integrante_nuevo_puede_enviar_partes_y_el_quitado_no(client, como, toke
         headers=como("operador"),
     )
     assert r.status_code == 201
+    integrante_id = next(
+        i["id"] for i in r.json()["integrantes"] if i["usuario_id"] == ajena["usuario"]["id"]
+    )
     r = client.post(f"/api/v1/tareas/{tarea_id}/partes", json=cuerpo, headers=ajena["h"])
     assert r.status_code == 201 and r.json()["autor_rol"] == "transporte"
-    client.delete(f"{url}/{ajena['usuario']['id']}", headers=como("operador"))
+    client.delete(f"{url}/{integrante_id}", headers=como("operador"))
     assert (
         client.post(
             f"/api/v1/tareas/{tarea_id}/partes", json=cuerpo, headers=ajena["h"]

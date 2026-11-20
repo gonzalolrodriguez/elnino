@@ -204,6 +204,7 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
     ids = {tarea.cuadrilla_id for tarea, *_ in filas}
     guardadas = _posiciones(db, ids)
     roles = _roles(db, ids)
+    bases = _bases(db, ids)
     items = []
     for tarea, solicitud, tipo, vehiculo, plon, plat in filas:
         pos = guardadas.get(tarea.cuadrilla_id)
@@ -214,7 +215,15 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
         # Modo demostración (SIMULADO): sin posición real, el móvil sale de la base simulada.
         sim = None
         if pos is None and destino is not None and rutas.demo_activo():
-            sim = rutas.simular(db, destino, vehiculo, tarea.actualizado_en, ahora_, tarea.id)
+            sim = rutas.simular(
+                db,
+                destino,
+                vehiculo,
+                tarea.actualizado_en,
+                ahora_,
+                tarea.id,
+                origen=bases.get(tarea.cuadrilla_id),
+            )
         item: dict = {
             "solicitud_id": solicitud.id,
             "tarea_id": tarea.id,
@@ -256,16 +265,78 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
     return items
 
 
+def _bases(db: Session, cuadrillas: set[int]) -> dict[int, tuple[float, float]]:
+    """Base propia (``cuadrillas.base``) de las cuadrillas que la tienen: salida del modo demostración."""
+    if not cuadrillas:
+        return {}
+    return {
+        cid: (lon, lat)
+        for cid, lon, lat in db.execute(
+            select(Cuadrilla.id, func.ST_X(Cuadrilla.base), func.ST_Y(Cuadrilla.base)).where(
+                Cuadrilla.id.in_(cuadrillas), Cuadrilla.base.is_not(None)
+            )
+        ).all()
+    }
+
+
+def _destinos(db: Session, cuadrillas: set[int] | None = None) -> dict[int, dict]:
+    """Destino de cada cuadrilla: su tarea en curso más reciente con un pedido ubicado."""
+    consulta = (
+        select(
+            Tarea.cuadrilla_id,
+            Tarea.id,
+            Tarea.solicitud_id,
+            Tarea.sector_id,
+            Tarea.actualizado_en,
+            func.ST_X(SolicitudAsistencia.geom),
+            func.ST_Y(SolicitudAsistencia.geom),
+        )
+        .join(SolicitudAsistencia, SolicitudAsistencia.id == Tarea.solicitud_id)
+        .where(Tarea.estado == "en_curso", SolicitudAsistencia.geom.is_not(None))
+        .order_by(Tarea.id.desc())
+    )
+    if cuadrillas is not None:
+        consulta = consulta.where(Tarea.cuadrilla_id.in_(cuadrillas or {-1}))
+    destinos: dict[int, dict] = {}
+    for cid, tarea_id, solicitud_id, sector, inicio, lon, lat in db.execute(consulta).all():
+        if cid is not None and cid not in destinos:  # la más reciente gana
+            destinos[cid] = {
+                "tarea_id": tarea_id,
+                "solicitud_id": solicitud_id,
+                "sector_id": sector,
+                "inicio": inicio,
+                "lon": lon,
+                "lat": lat,
+            }
+    return destinos
+
+
+def _destino_publico(d: dict | None) -> dict | None:
+    if d is None:
+        return None
+    return {
+        "lat": d["lat"],
+        "lon": d["lon"],
+        "tarea_id": d["tarea_id"],
+        "solicitud_id": d["solicitud_id"],
+        "sector_id": d["sector_id"],
+    }
+
+
 def posiciones_operativas(db: Session) -> list[dict]:
     """Última posición de cada cuadrilla con tarea en curso (solo roles operativos).
 
-    Las posiciones vencidas (``posicion_vencida_minutos``) no se devuelven.
+    Las posiciones vencidas (``posicion_vencida_minutos``) no se devuelven. Cada ítem trae el
+    ``destino`` (el pedido de su tarea en curso) y la ``ruta`` hacia él, con la misma forma que
+    ``seguimiento.ruta`` de ``GET /mi/pedidos``; ``null`` si la tarea no tiene un pedido ubicado.
     """
     filas = db.execute(
         select(
             Cuadrilla.id,
             Cuadrilla.nombre,
             Cuadrilla.tipo_incidente,
+            Cuadrilla.tipo_operativo,
+            Cuadrilla.vehiculo,
             func.ST_X(PosicionCuadrilla.geom),
             func.ST_Y(PosicionCuadrilla.geom),
             PosicionCuadrilla.precision_m,
@@ -282,79 +353,102 @@ def posiciones_operativas(db: Session) -> list[dict]:
     ahora_ = ahora()
     ids = {fila[0] for fila in filas}
     roles = _roles(db, ids)
-    en_curso = (
-        dict(
-            db.execute(
-                select(Tarea.cuadrilla_id, func.count(Tarea.id))
-                .where(Tarea.cuadrilla_id.in_(ids), Tarea.estado == "en_curso")
-                .group_by(Tarea.cuadrilla_id)
-            ).all()
+    destinos = _destinos(db, ids)
+    en_curso = _en_curso(db, ids)
+    reales = []
+    for cid, nombre, tipo, operativo, vehiculo, lon, lat, precision, registrada in filas:
+        destino = destinos.get(cid)
+        ruta = None
+        if destino is not None:
+            ruta = rutas.ruta_hacia(
+                db,
+                (lon, lat),
+                (destino["lon"], destino["lat"]),
+                vehiculo=vehiculo,
+                clave=destino["tarea_id"],
+            ).a_dict(0.0, simulada=False)
+        reales.append(
+            {
+                "cuadrilla_id": cid,
+                "nombre": nombre,
+                "tipo_incidente": tipo,
+                "tipo_operativo": operativo,
+                "vehiculo": vehiculo,
+                "roles": roles[cid],
+                "lat": lat,
+                "lon": lon,
+                "precision_m": precision,
+                "actualizada_en": registrada.isoformat(),
+                "posicion_vieja": dom.posicion_vieja(registrada, ahora_, limite),
+                "tareas_en_curso": en_curso.get(cid, 0),
+                "simulada": False,
+                "destino": _destino_publico(destino),
+                "ruta": ruta,
+                "categoria": CATEGORIA,
+            }
         )
-        if ids
-        else {}
-    )
-    reales = [
-        {
-            "cuadrilla_id": cid,
-            "nombre": nombre,
-            "tipo_incidente": tipo,
-            "roles": roles[cid],
-            "lat": lat,
-            "lon": lon,
-            "precision_m": precision,
-            "actualizada_en": registrada.isoformat(),
-            "posicion_vieja": dom.posicion_vieja(registrada, ahora_, limite),
-            "tareas_en_curso": en_curso.get(cid, 0),
-            "simulada": False,
-            "categoria": CATEGORIA,
-        }
-        for cid, nombre, tipo, lon, lat, precision, registrada in filas
-    ]
     if rutas.demo_activo():
         reales += _posiciones_simuladas(db, ids, ahora_)
         reales.sort(key=lambda p: p["cuadrilla_id"])
     return reales
 
 
+def _en_curso(db: Session, cuadrillas: set[int]) -> dict[int, int]:
+    if not cuadrillas:
+        return {}
+    return dict(
+        db.execute(
+            select(Tarea.cuadrilla_id, func.count(Tarea.id))
+            .where(Tarea.cuadrilla_id.in_(cuadrillas), Tarea.estado == "en_curso")
+            .group_by(Tarea.cuadrilla_id)
+        ).all()
+    )
+
+
 def _posiciones_simuladas(db: Session, con_posicion_real: set[int], ahora_) -> list[dict]:
     """Modo demostración: cuadrillas con tarea en curso y sin posición real, sobre su ruta simulada."""
-    filas = db.execute(
-        select(
-            Tarea,
-            Cuadrilla.nombre,
-            Cuadrilla.tipo_incidente,
-            Cuadrilla.vehiculo,
-            func.ST_X(SolicitudAsistencia.geom),
-            func.ST_Y(SolicitudAsistencia.geom),
+    destinos = {
+        cid: d for cid, d in _destinos(db).items() if cid not in con_posicion_real
+    }  # una por cuadrilla: su tarea en curso más reciente
+    if not destinos:
+        return []
+    ids = set(destinos)
+    datos = {
+        c.id: c for c in db.execute(select(Cuadrilla).where(Cuadrilla.id.in_(ids))).scalars().all()
+    }
+    roles = _roles(db, ids)
+    bases = _bases(db, ids)
+    en_curso = _en_curso(db, ids)
+    items = []
+    for cid, d in sorted(destinos.items()):
+        c = datos[cid]
+        sim = rutas.simular(
+            db,
+            (d["lon"], d["lat"]),
+            c.vehiculo,
+            d["inicio"],
+            ahora_,
+            d["tarea_id"],
+            origen=bases.get(cid),
         )
-        .join(SolicitudAsistencia, SolicitudAsistencia.id == Tarea.solicitud_id)
-        .join(Cuadrilla, Cuadrilla.id == Tarea.cuadrilla_id)
-        .where(Tarea.estado == "en_curso", SolicitudAsistencia.geom.is_not(None))
-        .order_by(Tarea.id.desc())
-    ).all()
-    vistas = set(con_posicion_real)
-    candidatas = []
-    for tarea, nombre, tipo, vehiculo, lon, lat in filas:
-        if tarea.cuadrilla_id in vistas:
-            continue
-        vistas.add(tarea.cuadrilla_id)  # una por cuadrilla: su tarea en curso más reciente
-        candidatas.append((tarea, nombre, tipo, vehiculo, lon, lat))
-    roles = _roles(db, {t.cuadrilla_id for t, *_ in candidatas})
-    return [
-        {
-            "cuadrilla_id": tarea.cuadrilla_id,
-            "nombre": nombre,
-            "tipo_incidente": tipo,
-            "roles": roles[tarea.cuadrilla_id],
-            "lat": sim.lat,
-            "lon": sim.lon,
-            "precision_m": None,
-            "actualizada_en": ahora_.isoformat(),
-            "posicion_vieja": False,
-            "tareas_en_curso": sum(1 for t, *_ in filas if t.cuadrilla_id == tarea.cuadrilla_id),
-            "simulada": True,
-            "categoria": CATEGORIA,
-        }
-        for tarea, nombre, tipo, vehiculo, lon, lat in candidatas
-        for sim in [rutas.simular(db, (lon, lat), vehiculo, tarea.actualizado_en, ahora_, tarea.id)]
-    ]
+        items.append(
+            {
+                "cuadrilla_id": cid,
+                "nombre": c.nombre,
+                "tipo_incidente": c.tipo_incidente,
+                "tipo_operativo": c.tipo_operativo,
+                "vehiculo": c.vehiculo,
+                "roles": roles[cid],
+                "lat": sim.lat,
+                "lon": sim.lon,
+                "precision_m": None,
+                "actualizada_en": ahora_.isoformat(),
+                "posicion_vieja": False,
+                "tareas_en_curso": en_curso.get(cid, 0),
+                "simulada": True,
+                "destino": _destino_publico(d),
+                "ruta": sim.ruta.a_dict(sim.progreso, simulada=True),
+                "categoria": CATEGORIA,
+            }
+        )
+    return items

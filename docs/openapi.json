@@ -1254,78 +1254,6 @@
         }
       }
     },
-    "/api/v1/cuadrillas": {
-      "get": {
-        "tags": [
-          "operacion"
-        ],
-        "summary": "Listar Cuadrillas",
-        "operationId": "listar_cuadrillas_api_v1_cuadrillas_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Listar Cuadrillas Api V1 Cuadrillas Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "operacion"
-        ],
-        "summary": "Crear Cuadrilla",
-        "operationId": "crear_cuadrilla_api_v1_cuadrillas_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CuadrillaIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Crear Cuadrilla Api V1 Cuadrillas Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/tareas": {
       "get": {
         "tags": [
@@ -1810,13 +1738,13 @@
         ]
       }
     },
-    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes": {
+    "/api/v1/tareas/{tarea_id}/partes/{parte_id}/adjuntos": {
       "post": {
         "tags": [
           "partes"
         ],
-        "summary": "Agregar Integrante",
-        "operationId": "agregar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes_post",
+        "summary": "Subir Adjunto Parte",
+        "operationId": "subir_adjunto_parte_api_v1_tareas__tarea_id__partes__parte_id__adjuntos_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1824,21 +1752,30 @@
         ],
         "parameters": [
           {
-            "name": "cuadrilla_id",
+            "name": "tarea_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Cuadrilla Id"
+              "title": "Tarea Id"
+            }
+          },
+          {
+            "name": "parte_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Parte Id"
             }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/IntegranteAlta"
+                "$ref": "#/components/schemas/Body_subir_adjunto_parte_api_v1_tareas__tarea_id__partes__parte_id__adjuntos_post"
               }
             }
           }
@@ -1850,7 +1787,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "title": "Response Agregar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes Post"
+                  "title": "Response Subir Adjunto Parte Api V1 Tareas  Tarea Id  Partes  Parte Id  Adjuntos Post"
                 }
               }
             }
@@ -1868,13 +1805,13 @@
         }
       }
     },
-    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes/{usuario_id}": {
-      "delete": {
+    "/api/v1/tareas/{tarea_id}/partes/{parte_id}/adjuntos/{n}": {
+      "get": {
         "tags": [
           "partes"
         ],
-        "summary": "Quitar Integrante",
-        "operationId": "quitar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes__usuario_id__delete",
+        "summary": "Descargar Adjunto Parte",
+        "operationId": "descargar_adjunto_parte_api_v1_tareas__tarea_id__partes__parte_id__adjuntos__n__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1882,21 +1819,30 @@
         ],
         "parameters": [
           {
-            "name": "cuadrilla_id",
+            "name": "tarea_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Cuadrilla Id"
+              "title": "Tarea Id"
             }
           },
           {
-            "name": "usuario_id",
+            "name": "parte_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Usuario Id"
+              "title": "Parte Id"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "N"
             }
           }
         ],
@@ -1905,10 +1851,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Quitar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes  Usuario Id  Delete"
-                }
+                "schema": {}
               }
             }
           },
@@ -2528,6 +2471,661 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/cuadrillas": {
+      "get": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Listar Cuadrillas",
+        "operationId": "listar_cuadrillas_api_v1_cuadrillas_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "incluir_bajas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Incluir Bajas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Listar Cuadrillas Api V1 Cuadrillas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Crear Cuadrilla",
+        "operationId": "crear_cuadrilla_api_v1_cuadrillas_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuadrillaIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Crear Cuadrilla Api V1 Cuadrillas Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cuadrillas/plantillas": {
+      "get": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Plantillas De Cuadrillas",
+        "operationId": "plantillas_de_cuadrillas_api_v1_cuadrillas_plantillas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Plantillas De Cuadrillas Api V1 Cuadrillas Plantillas Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}": {
+      "get": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Obtener Cuadrilla",
+        "description": "Los mandos ven todo; un integrante solo su cuadrilla y sin nombres de personas.",
+        "operationId": "obtener_cuadrilla_api_v1_cuadrillas__cuadrilla_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Obtener Cuadrilla Api V1 Cuadrillas  Cuadrilla Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Actualizar Cuadrilla",
+        "operationId": "actualizar_cuadrilla_api_v1_cuadrillas__cuadrilla_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuadrillaPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Actualizar Cuadrilla Api V1 Cuadrillas  Cuadrilla Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Eliminar Cuadrilla",
+        "description": "409 si tiene una tarea en curso; con historial queda dada de baja; sin historial se borra.",
+        "operationId": "eliminar_cuadrilla_api_v1_cuadrillas__cuadrilla_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Eliminar Cuadrilla Api V1 Cuadrillas  Cuadrilla Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mi/cuadrilla": {
+      "get": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Mi Cuadrilla",
+        "description": "La cuadrilla de quien consulta (la activa de menor id), sin nombres de personas.",
+        "operationId": "mi_cuadrilla_api_v1_mi_cuadrilla_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Mi Cuadrilla Api V1 Mi Cuadrilla Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes": {
+      "post": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Agregar Integrante",
+        "operationId": "agregar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntegranteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Agregar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes/{integrante_id}": {
+      "patch": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Actualizar Integrante",
+        "operationId": "actualizar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes__integrante_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          },
+          {
+            "name": "integrante_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Integrante Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntegrantePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Actualizar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes  Integrante Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Quitar Integrante",
+        "operationId": "quitar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes__integrante_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          },
+          {
+            "name": "integrante_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Integrante Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Quitar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes  Integrante Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}/avisos": {
+      "post": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Crear Aviso",
+        "operationId": "crear_aviso_api_v1_cuadrillas__cuadrilla_id__avisos_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvisoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Crear Aviso Api V1 Cuadrillas  Cuadrilla Id  Avisos Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Listar Avisos",
+        "operationId": "listar_avisos_api_v1_cuadrillas__cuadrilla_id__avisos_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          },
+          {
+            "name": "solo_sin_leer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Solo Sin Leer"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Listar Avisos Api V1 Cuadrillas  Cuadrilla Id  Avisos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avisos/{aviso_id}/leido": {
+      "post": {
+        "tags": [
+          "cuadrillas"
+        ],
+        "summary": "Marcar Leido",
+        "operationId": "marcar_leido_api_v1_avisos__aviso_id__leido_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "aviso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Aviso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Marcar Leido Api V1 Avisos  Aviso Id  Leido Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/solicitudes": {
@@ -4055,6 +4653,64 @@
         ],
         "title": "AlternativasIn"
       },
+      "AvisoIn": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "desvio",
+              "equipamiento",
+              "instruccion",
+              "seguridad"
+            ],
+            "title": "Tipo"
+          },
+          "texto": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Texto"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Items"
+          },
+          "geometria": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometria"
+          },
+          "tarea_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tarea Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tipo",
+          "texto"
+        ],
+        "title": "AvisoIn"
+      },
       "BitacoraIn": {
         "properties": {
           "decision": {
@@ -4157,6 +4813,21 @@
           "archivo"
         ],
         "title": "Body_subir_adjunto_api_v1_solicitudes__solicitud_id__adjuntos_post"
+      },
+      "Body_subir_adjunto_parte_api_v1_tareas__tarea_id__partes__parte_id__adjuntos_post": {
+        "properties": {
+          "archivo": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Archivo",
+            "description": "Foto JPEG, PNG o WebP (5 MB) o video MP4 (20 MB)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "archivo"
+        ],
+        "title": "Body_subir_adjunto_parte_api_v1_tareas__tarea_id__partes__parte_id__adjuntos_post"
       },
       "Body_subir_foto_constancia_api_v1_tareas__tarea_id__cierre_adjuntos_post": {
         "properties": {
@@ -4403,14 +5074,53 @@
             "minLength": 2,
             "title": "Nombre"
           },
+          "tipo_operativo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "personas",
+                  "familias",
+                  "productores_ganado",
+                  "apicola",
+                  "bienes",
+                  "traslado_mixto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo Operativo"
+          },
           "tipo_incidente": {
-            "type": "string",
-            "enum": [
-              "humana",
-              "ganadera",
-              "apicola"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "humana",
+                  "ganadera",
+                  "apicola"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Tipo Incidente"
+          },
+          "cantidad_integrantes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cantidad Integrantes"
           },
           "vehiculo": {
             "anyOf": [
@@ -4430,22 +5140,186 @@
             ],
             "title": "Vehiculo"
           },
+          "equipamiento": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Equipamiento"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PuntoIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notas"
+          },
           "integrantes": {
             "items": {
               "$ref": "#/components/schemas/IntegranteIn"
             },
             "type": "array",
-            "maxItems": 30,
+            "maxItems": 50,
             "title": "Integrantes"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "nombre",
-          "tipo_incidente"
+          "nombre"
         ],
         "title": "CuadrillaIn"
+      },
+      "CuadrillaPatch": {
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "tipo_operativo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "personas",
+                  "familias",
+                  "productores_ganado",
+                  "apicola",
+                  "bienes",
+                  "traslado_mixto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo Operativo"
+          },
+          "tipo_incidente": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "humana",
+                  "ganadera",
+                  "apicola"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo Incidente"
+          },
+          "cantidad_integrantes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cantidad Integrantes"
+          },
+          "vehiculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "4x4",
+                  "camion_jaula",
+                  "colectivo",
+                  "lancha",
+                  "moto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiculo"
+          },
+          "equipamiento": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipamiento"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PuntoIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notas"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "disponible"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CuadrillaPatch"
       },
       "EscenarioIn": {
         "properties": {
@@ -4613,40 +5487,63 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "IntegranteAlta": {
-        "properties": {
-          "usuario_id": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Usuario Id"
-          },
-          "rol_operativo": {
-            "type": "string",
-            "maxLength": 60,
-            "minLength": 2,
-            "title": "Rol Operativo"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "usuario_id",
-          "rol_operativo"
-        ],
-        "title": "IntegranteAlta"
-      },
       "IntegranteIn": {
         "properties": {
           "rol_operativo": {
-            "type": "string",
-            "maxLength": 60,
-            "minLength": 2,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Rol Operativo"
+          },
+          "profesion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "medicina",
+                  "enfermeria",
+                  "veterinaria",
+                  "zootecnia",
+                  "trabajo_social",
+                  "policia",
+                  "bomberos",
+                  "defensa_civil",
+                  "prefectura",
+                  "chofer",
+                  "tecnico_energia",
+                  "logistica",
+                  "otra"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profesion"
+          },
+          "es_encargado": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Es Encargado"
           },
           "usuario_id": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 1.0
               },
               {
                 "type": "null"
@@ -4657,10 +5554,77 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "rol_operativo"
-        ],
-        "title": "IntegranteIn"
+        "title": "IntegranteIn",
+        "description": "Integrante: la profesión y el rol del catálogo se deducen uno del otro si falta alguno."
+      },
+      "IntegrantePatch": {
+        "properties": {
+          "rol_operativo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rol Operativo"
+          },
+          "profesion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "medicina",
+                  "enfermeria",
+                  "veterinaria",
+                  "zootecnia",
+                  "trabajo_social",
+                  "policia",
+                  "bomberos",
+                  "defensa_civil",
+                  "prefectura",
+                  "chofer",
+                  "tecnico_energia",
+                  "logistica",
+                  "otra"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profesion"
+          },
+          "es_encargado": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Es Encargado"
+          },
+          "usuario_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usuario Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IntegrantePatch"
       },
       "ItemChecklist": {
         "properties": {
@@ -5000,6 +5964,29 @@
           "lat"
         ],
         "title": "Punto"
+      },
+      "PuntoIn": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "PuntoIn"
       },
       "ReaperturaIn": {
         "properties": {

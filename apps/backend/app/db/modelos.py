@@ -379,6 +379,17 @@ class Cuadrilla(Base):
     estado: Mapped[str] = mapped_column(String(20), default="disponible")
     # SIMULADO: 4x4|camion_jaula|colectivo|lancha|moto; NULL = sin vehículo asignado
     vehiculo: Mapped[str | None] = mapped_column(String(20))
+    # Gestión completa (migración 0011): el tipo operativo afina a ``tipo_incidente``, que se
+    # mantiene porque el reparto de órdenes y las plantillas de roles lo usan.
+    tipo_operativo: Mapped[str] = mapped_column(
+        String(30), default="personas", server_default="personas"
+    )
+    cantidad_integrantes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    equipamiento: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    base = mapped_column(_punto())  # punto de salida SIMULADO de la cuadrilla (nullable)
+    notas: Mapped[str | None] = mapped_column(Text)
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 
@@ -391,6 +402,41 @@ class IntegranteCuadrilla(Base):
     )
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     rol_operativo: Mapped[str] = mapped_column(ForeignKey("roles_operativos.codigo"))
+    # Profesión del integrante (equipo interdisciplinario) y marca de encargado: uno por cuadrilla.
+    profesion: Mapped[str] = mapped_column(String(30), default="otra", server_default="otra")
+    es_encargado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+
+
+class AvisoCuadrilla(Base):
+    """Aviso del operativo a una cuadrilla: desvío de camino, qué llevar, instrucción o seguridad.
+
+    El texto lo leen los mandos y los integrantes de esa cuadrilla; por WebSocket solo viajan ids y
+    tipo. El autor y quien lo leyó figuran por rol operativo, nunca por nombre.
+    """
+
+    __tablename__ = "avisos_cuadrilla"
+    __table_args__ = (
+        CheckConstraint(
+            "tipo IN ('desvio','equipamiento','instruccion','seguridad')", name="ck_aviso_tipo"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cuadrilla_id: Mapped[int] = mapped_column(
+        ForeignKey("cuadrillas.id", ondelete="CASCADE"), index=True
+    )
+    tarea_id: Mapped[int | None] = mapped_column(ForeignKey("tareas.id", ondelete="SET NULL"))
+    tipo: Mapped[str] = mapped_column(String(14))
+    texto: Mapped[str] = mapped_column(Text)
+    items: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    geometria: Mapped[dict | None] = mapped_column(JSONB)  # GeoJSON Point|LineString (EPSG:4326)
+    creado_por: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_por_rol: Mapped[str | None] = mapped_column(String(60))
+    creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+    leido_en: Mapped[datetime | None] = mapped_column(_TZ)
+    leido_por: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    leido_por_rol: Mapped[str | None] = mapped_column(String(60))
+    categoria: Mapped[str] = mapped_column(String(30), default="SIMULADO")
 
 
 class Tarea(Base):
@@ -450,6 +496,11 @@ class ParteTarea(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(36))
     categoria: Mapped[str] = mapped_column(String(30), default="SIMULADO")
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora, index=True)
+    # Evidencia multimedia (fotos y video): [{n, mime, tipo, bytes, sha256, archivo, subido_por,
+    # subido_en}]. El archivo vive en ``uploads/partes/<tarea>/<parte>/`` con nombre del servidor.
+    adjuntos: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class PosicionCuadrilla(Base):

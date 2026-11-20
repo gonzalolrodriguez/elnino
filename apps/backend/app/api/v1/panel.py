@@ -201,7 +201,11 @@ def panel_resumen(
     tareas_por = Counter(
         (t.cuadrilla_id, t.estado) for t in db.execute(select(Tarea)).scalars().all()
     )
-    cuadrillas = db.execute(select(Cuadrilla).order_by(Cuadrilla.id)).scalars().all()
+    cuadrillas = (
+        db.execute(select(Cuadrilla).where(Cuadrilla.estado != "baja").order_by(Cuadrilla.id))
+        .scalars()
+        .all()
+    )
     bloque_cuadrillas = _bloque(
         "SIMULADO",
         FUENTE_PLATAFORMA,

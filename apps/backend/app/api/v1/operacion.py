@@ -23,12 +23,10 @@ from app.db.modelos import (
     IntegranteCuadrilla,
     Notificacion,
     Orden,
-    RolOperativo,
     Tarea,
     Usuario,
 )
 from app.db.sesion import get_db
-from app.domain import cuadrillas as dom
 from app.servicios import contexto
 from app.servicios import ordenes as srv_ordenes
 from app.servicios import partes as srv_partes
@@ -36,86 +34,6 @@ from app.servicios.mi import sectores_de_usuario
 
 router = APIRouter(tags=["operacion"])
 _MANDOS = ("operador", "decisor", "admin")
-
-
-# ---- cuadrillas ---------------------------------------------------------------------------------
-
-
-class IntegranteIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    rol_operativo: str = Field(min_length=2, max_length=60)
-    usuario_id: int | None = None
-
-
-class CuadrillaIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    nombre: str = Field(min_length=2, max_length=120)
-    tipo_incidente: Literal["humana", "ganadera", "apicola"]
-    vehiculo: Literal["4x4", "camion_jaula", "colectivo", "lancha", "moto"] | None = None
-    integrantes: list[IntegranteIn] = Field(default_factory=list, max_length=30)
-
-
-def _cuadrilla_a_dict(db: Session, c: Cuadrilla) -> dict:
-    integrantes = (
-        db.execute(select(IntegranteCuadrilla).where(IntegranteCuadrilla.cuadrilla_id == c.id))
-        .scalars()
-        .all()
-    )
-    roles = [i.rol_operativo for i in integrantes]
-    return {
-        "id": c.id,
-        "nombre": c.nombre,
-        "tipo_incidente": c.tipo_incidente,
-        "vehiculo": c.vehiculo,
-        "estado": c.estado,
-        "integrantes": [
-            {"rol_operativo": i.rol_operativo, "usuario_id": i.usuario_id} for i in integrantes
-        ],
-        "plantilla_sugerida": dom.plantilla(c.tipo_incidente),
-        "roles_faltantes": dom.roles_faltantes(c.tipo_incidente, roles),
-        "categoria": "SIMULADO",
-    }
-
-
-@router.get("/cuadrillas")
-def listar_cuadrillas(
-    _: Usuario = Depends(requiere_rol(*_MANDOS)), db: Session = Depends(get_db)
-) -> dict:
-    filas = db.execute(select(Cuadrilla).order_by(Cuadrilla.id)).scalars().all()
-    return {
-        "cuadrillas": [_cuadrilla_a_dict(db, c) for c in filas],
-        "plantillas": dom.PLANTILLAS,
-    }
-
-
-@router.post("/cuadrillas", status_code=201)
-def crear_cuadrilla(
-    datos: CuadrillaIn,
-    request: Request,
-    usuario: Usuario = Depends(requiere_rol(*_MANDOS)),
-    db: Session = Depends(get_db),
-) -> dict:
-    for i in datos.integrantes:
-        if db.get(RolOperativo, i.rol_operativo) is None:
-            raise HTTPException(422, f"rol_operativo desconocido: {i.rol_operativo}")
-        if i.usuario_id is not None and db.get(Usuario, i.usuario_id) is None:
-            raise HTTPException(422, f"usuario_id inexistente: {i.usuario_id}")
-    cuadrilla = Cuadrilla(
-        nombre=datos.nombre, tipo_incidente=datos.tipo_incidente, vehiculo=datos.vehiculo
-    )
-    db.add(cuadrilla)
-    db.flush()
-    for i in datos.integrantes:
-        db.add(
-            IntegranteCuadrilla(
-                cuadrilla_id=cuadrilla.id, usuario_id=i.usuario_id, rol_operativo=i.rol_operativo
-            )
-        )
-    auditoria.registrar(
-        db, "cuadrilla_creada", f"cuadrillas/{cuadrilla.id}", usuario.id, ip_cliente(request)
-    )
-    db.commit()
-    return _cuadrilla_a_dict(db, cuadrilla)
 
 
 # ---- tareas -------------------------------------------------------------------------------------

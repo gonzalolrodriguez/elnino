@@ -130,3 +130,29 @@ seguimiento_demo:
 base_cuadrillas_simulada:
   valor: {lon: -58.176, lat: -26.200}
   fuente: "SUPUESTO (punto de salida SIMULADO de las cuadrillas en el ejido urbano de Formosa, entre los sectores S2 y S3; no es la ubicación de ninguna institución real)"
+
+# --- Gestión completa de cuadrillas: plantillas por tipo operativo ---
+cuadrillas_plantillas:
+  valor:
+    personas:
+      profesiones: [medicina, enfermeria, trabajo_social, policia, chofer, defensa_civil]
+      equipamiento: [botiquín de primeros auxilios, chalecos salvavidas, linternas, bidones de agua, ruedas de auxilio, cadenas, sogas, palas, lonas, radio portátil, generador]
+    familias:
+      profesiones: [trabajo_social, medicina, enfermeria, chofer, logistica]
+      equipamiento: [botiquín de primeros auxilios, chalecos salvavidas, linternas, bidones de agua, lonas, frazadas, ruedas de auxilio, palas, radio portátil]
+    productores_ganado:
+      profesiones: [veterinaria, zootecnia, chofer, policia, logistica]
+      equipamiento: [jaulas, mangas portátiles, bebederos, forraje, sogas, ruedas de auxilio, cadenas, palas, lonas, linternas, generador]
+    apicola:
+      profesiones: [zootecnia, veterinaria, chofer, logistica]
+      equipamiento: [trajes de apicultor, ahumadores, redes y lonas para cubrir colmenas, sogas y precintos, ruedas de auxilio, palas, linternas]
+    bienes:
+      profesiones: [logistica, chofer, bomberos, tecnico_energia]
+      equipamiento: [lonas, sogas, cadenas, ruedas de auxilio, palas, linternas, generador, bolsas de arena]
+    traslado_mixto:
+      profesiones: [logistica, chofer, medicina, veterinaria, trabajo_social, policia]
+      equipamiento: [botiquín de primeros auxilios, chalecos salvavidas, jaulas, forraje, bidones de agua, ruedas de auxilio, cadenas, sogas, palas, lonas, linternas, generador]
+  fuente: "SUPUESTO (equipamiento y profesiones sugeridos por tipo operativo; el operador confirma la composición real; sin fuente normativa)"
+adjuntos_parte:
+  valor: {imagen_max_mb: 5, video_max_mb: 20, max_por_parte: 5}
+  fuente: "SUPUESTO (topes de la evidencia multimedia de un parte: fotos JPEG/PNG/WebP y video MP4; decisión del equipo, sin norma)"

@@ -6,7 +6,7 @@ import os
 import uuid
 from datetime import timedelta
 
-from sqlalchemy import select, text, update
+from sqlalchemy import func, select, text, update
 
 from app.api.v1.canales import firmar
 from app.core.eventos import Difusor
@@ -335,7 +335,15 @@ def test_las_ordenes_se_reparten_entre_cuadrillas_del_mismo_tipo(client, como, d
         headers=h,
         json={"nombre": f"Humana extra {uuid.uuid4().hex[:6]}", "tipo_incidente": "humana"},
     ).json()["id"]
-    for _ in range(2):
+    # El reparto va a la cuadrilla con menos tareas abiertas (desempata por id): las cuadrillas
+    # humanas sin tareas (los equipos de demostración incluidos) van antes que la nueva, que la
+    # recibe como mucho a la orden número de cuadrillas humanas.
+    cantidad = db.execute(
+        select(func.count(Cuadrilla.id)).where(
+            Cuadrilla.tipo_incidente == "humana", Cuadrilla.estado != "baja"
+        )
+    ).scalar_one()
+    for _ in range(cantidad):
         client.post(
             "/api/v1/ordenes",
             headers=como("decisor"),

@@ -317,9 +317,15 @@ def simular(
     inicio: datetime,
     ahora_: datetime,
     clave: object,
+    origen: Punto | None = None,
 ) -> Simulacion:
-    """Posición simulada: la ruta desde la base y lo recorrido a la velocidad supuesta (tope: llegada)."""
-    ruta = ruta_hacia(db, base_simulada(), destino, vehiculo=vehiculo, clave=("demo", clave))
+    """Posición simulada: la ruta desde la base y lo recorrido a la velocidad supuesta (tope: llegada).
+
+    ``origen``: base propia de la cuadrilla (``cuadrillas.base``); sin ella, la base simulada global.
+    """
+    ruta = ruta_hacia(
+        db, origen or base_simulada(), destino, vehiculo=vehiculo, clave=("demo", clave)
+    )
     segundos = max(0.0, (ahora_ - inicio).total_seconds())
     recorrido_m = segundos * ruta.velocidad_kmh * 1000 / 3600
     progreso = 1.0 if ruta.distancia_m <= 0 else min(1.0, recorrido_m / ruta.distancia_m)
