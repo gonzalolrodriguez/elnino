@@ -7,6 +7,7 @@ import { rutaInicio, useAuth } from "../auth/AuthContext";
 import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
+import { ElegirEnMapa } from "../components/ElegirEnMapa";
 import { Layout } from "../components/Layout";
 import { Plegable } from "../components/Plegable";
 import { ResumenSectores } from "../components/PaginaFormulario";
@@ -145,6 +146,7 @@ export default function RegistroProductor() {
               Ubicación de la tranquera
             </Heading>
             <BotonUbicacion primario onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <ElegirEnMapa lon={v.lon} lat={v.lat} onChange={(p) => setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }))} />
             <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
               <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
                 <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,18" />

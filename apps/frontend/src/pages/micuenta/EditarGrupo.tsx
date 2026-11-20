@@ -2,6 +2,7 @@ import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../../components/BotonUbicacion";
+import { ElegirEnMapa } from "../../components/ElegirEnMapa";
 import { AlertaError, Campo } from "../../components/Formulario";
 import { Plegable } from "../../components/Plegable";
 import { solicitar } from "../../lib/api";
@@ -116,6 +117,14 @@ export function EditarGrupo({ grupo, alGuardar }: { grupo: Grupo | null; alGuard
             onUbicacion={(lo, la) => {
               setGuardado(false);
               setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }));
+            }}
+          />
+          <ElegirEnMapa
+            lon={v.lon}
+            lat={v.lat}
+            onChange={(p) => {
+              setGuardado(false);
+              setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }));
             }}
           />
           <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
