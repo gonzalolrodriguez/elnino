@@ -5,6 +5,8 @@ import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
 import { api } from "../api";
 import type { CalculoGanadero } from "../tipos";
+import { IconoCaja } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { AvisoSimulado, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
@@ -134,9 +136,7 @@ export default function Produccion() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Producción y ganado
-      </Heading>
+      <CabeceraPagina titulo="Producción y ganado" icono={<IconoCaja tam="1.5rem" />} />
       <AvisoSimulado>El rodeo de ejemplo es el caso de control (8 preñadas, 10 con cría, 10 terneros, 1 vaquillona y 1 toro). Las capacidades y raciones son supuestos a verificar, no normativa.</AvisoSimulado>
       <Seccion titulo="Calculadora ganadera" categoria="SIMULADO" id="sec-ganaderia">
         <Text fontWeight={600} fontSize="sm" mb={1}>

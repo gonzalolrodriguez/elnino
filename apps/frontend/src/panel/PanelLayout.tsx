@@ -1,16 +1,19 @@
 import { Box, Button, Flex, Link, Text, useToast } from "@chakra-ui/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { Layout } from "../components/Layout";
+import { IconoBandeja, IconoCaja, IconoCamion, IconoEscudo, IconoGota, IconoHistorial, IconoInfo, IconoMapa, IconoMegafono, IconoMira, IconoOlas, IconoPersonas, IconoPuntos, type PropsIcono } from "../components/iconos/Iconos";
+import { IconoChevron, IconoTablero } from "./iconos";
 import { describirEvento, useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { AvisoEscenario } from "./AvisoEscenario";
 import { EscenarioProvider } from "./EscenarioContext";
 import { TiempoRealContext } from "./TiempoRealContext";
 import { etiquetaRol, etiquetaRolOperativo } from "../lib/etiquetas";
 
-type Seccion = { to: string; fin?: true; texto: string };
+/** `icono` es opcional: una sección nueva sin ícono usa uno genérico. */
+type Seccion = { to: string; fin?: true; texto: string; icono?: ComponentType<PropsIcono> };
 
 /** Las secciones se agrupan por tarea y con nombres corrientes; las rutas se mantienen. */
 export const GRUPOS_NAVEGACION: { id: string; titulo: string; secciones: Seccion[] }[] = [
@@ -18,37 +21,37 @@ export const GRUPOS_NAVEGACION: { id: string; titulo: string; secciones: Seccion
     id: "situacion",
     titulo: "Situación",
     secciones: [
-      { to: "/comando", fin: true, texto: "Tablero" },
-      { to: "/comando/rio", texto: "Río y lluvia" },
-      { to: "/comando/lluvia", texto: "Partes de lluvia" },
-      { to: "/comando/mapa", texto: "Mapa y simulador" },
+      { to: "/comando", fin: true, texto: "Tablero", icono: IconoTablero },
+      { to: "/comando/rio", texto: "Río y lluvia", icono: IconoOlas },
+      { to: "/comando/lluvia", texto: "Partes de lluvia", icono: IconoGota },
+      { to: "/comando/mapa", texto: "Mapa y simulador", icono: IconoMapa },
     ],
   },
   {
     id: "decidir",
     titulo: "Decidir",
     secciones: [
-      { to: "/comando/recomendacion", texto: "Recomendación" },
-      { to: "/comando/produccion", texto: "Producción y ganado" },
-      { to: "/comando/ordenes", texto: "Órdenes" },
+      { to: "/comando/recomendacion", texto: "Recomendación", icono: IconoMira },
+      { to: "/comando/produccion", texto: "Producción y ganado", icono: IconoCaja },
+      { to: "/comando/ordenes", texto: "Órdenes", icono: IconoMegafono },
     ],
   },
   {
     id: "ejecutar",
     titulo: "Ejecutar",
     secciones: [
-      { to: "/comando/operacion", texto: "Solicitudes y cuadrillas" },
-      { to: "/comando/cuadrillas", texto: "Cuadrillas" },
-      { to: "/comando/evacuaciones", texto: "Evacuaciones" },
+      { to: "/comando/operacion", texto: "Solicitudes y cuadrillas", icono: IconoBandeja },
+      { to: "/comando/cuadrillas", texto: "Cuadrillas", icono: IconoPersonas },
+      { to: "/comando/evacuaciones", texto: "Evacuaciones", icono: IconoCamion },
     ],
   },
   {
     id: "registro",
     titulo: "Respaldo y registro",
     secciones: [
-      { to: "/comando/bitacora", texto: "Bitácora de decisiones" },
-      { to: "/comando/centinela", texto: "Auditoría de datos (Centinela)" },
-      { to: "/comando/limites", texto: "Límites" },
+      { to: "/comando/bitacora", texto: "Bitácora de decisiones", icono: IconoHistorial },
+      { to: "/comando/centinela", texto: "Auditoría de datos (Centinela)", icono: IconoEscudo },
+      { to: "/comando/limites", texto: "Límites", icono: IconoInfo },
     ],
   },
 ];
@@ -137,13 +140,20 @@ export function PanelLayout() {
             borderColor="borde"
             px={3}
             py={5}
+            position={{ lg: "sticky" }}
+            top={{ lg: "var(--altura-leyenda)" }}
+            alignSelf={{ lg: "flex-start" }}
+            maxH={{ lg: "calc(100vh - var(--altura-leyenda))" }}
+            overflowY={{ lg: "auto" }}
           >
-            <Text fontWeight={700} fontSize="lg" letterSpacing="-0.02em" mb={0.5}>
-              Panel operativo
-            </Text>
-            <Text fontSize="sm" color="textoSuave" mb={3}>
-              {usuario ? `${etiquetaRol(usuario.rol)}${usuario.rol_operativo ? ` · ${etiquetaRolOperativo(usuario.rol_operativo)}` : ""}` : ""}
-            </Text>
+            <Box px={3.5} mb={4}>
+              <Text fontWeight={700} fontSize="lg" letterSpacing="-0.02em" lineHeight={1.2}>
+                Panel operativo
+              </Text>
+              <Text textStyle="microdato" mt={0.5}>
+                {usuario ? `${etiquetaRol(usuario.rol)}${usuario.rol_operativo ? ` · ${etiquetaRolOperativo(usuario.rol_operativo)}` : ""}` : ""}
+              </Text>
+            </Box>
             <Button
               type="button"
               variant="outline"
@@ -158,43 +168,49 @@ export function PanelLayout() {
               mb={abierto ? 2 : 0}
             >
               <span>Sección: {actual}</span>
-              <span aria-hidden="true">{abierto ? "▲" : "▼"}</span>
+              <IconoChevron style={{ transform: abierto ? "rotate(180deg)" : undefined, transition: "transform 160ms var(--ease-out)" }} />
             </Button>
             <Box id="secciones-panel" display={{ base: abierto ? "block" : "none", lg: "block" }}>
               {GRUPOS_NAVEGACION.map((g) => (
-                <Box key={g.id} mb={3}>
-                  <Text id={`nav-${g.id}`} fontSize="xs" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" px={3.5} mb={1}>
+                <Box key={g.id} mb={4}>
+                  <Text id={`nav-${g.id}`} fontSize="0.8125rem" fontWeight={700} color="textoSuave" px={3.5} mb={1}>
                     {g.titulo}
                   </Text>
                   <Flex as="ul" aria-labelledby={`nav-${g.id}`} listStyleType="none" m={0} p={0} direction="column" sx={{ "& > li + li": { marginTop: "0.125rem" } }}>
-                    {g.secciones.map((s) => (
-                      <li key={s.to}>
-                        <Link
-                          as={NavLink}
-                          to={s.to}
-                          end={!!s.fin}
-                          display="flex"
-                          alignItems="center"
-                          minH="2.75rem"
-                          px={3.5}
-                          fontSize="sm"
-                          fontWeight={600}
-                          color="texto"
-                          textDecoration="none"
-                          borderRadius="lg"
-                          transition="background-color 140ms var(--ease-out), color 140ms var(--ease-out)"
-                          _hover={{ bg: "pizarra.100", color: "texto", textDecoration: "none" }}
-                          _activeLink={{ bg: "suave", color: "primarioHover" }}
-                        >
-                          {s.texto}
-                        </Link>
-                      </li>
-                    ))}
+                    {g.secciones.map((s) => {
+                      const Icono = s.icono ?? IconoPuntos;
+                      return (
+                        <li key={s.to}>
+                          <Link
+                            as={NavLink}
+                            to={s.to}
+                            end={!!s.fin}
+                            display="flex"
+                            alignItems="center"
+                            gap={3}
+                            minH="2.75rem"
+                            px={3.5}
+                            fontSize="sm"
+                            fontWeight={600}
+                            color="textoSuave"
+                            textDecoration="none"
+                            borderRadius="lg"
+                            transition="background-color 140ms var(--ease-out), color 140ms var(--ease-out)"
+                            _hover={{ bg: "pizarra.100", color: "texto", textDecoration: "none" }}
+                            _activeLink={{ bg: "suave", color: "primarioHover", fontWeight: 700 }}
+                            sx={{ "&.active svg": { color: "var(--chakra-colors-primario)" } }}
+                          >
+                            <Icono tam="1.25rem" />
+                            {s.texto}
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </Flex>
                 </Box>
               ))}
             </Box>
-            <Flex align="center" mt={4} fontSize="sm" role="status" aria-live="polite" data-testid="estado-ws">
+            <Flex align="center" mt={2} px={3.5} fontSize="sm" color="textoSuave" role="status" aria-live="polite" data-testid="estado-ws">
               <Box as="span" w="10px" h="10px" mr={2} flexShrink={0} borderRadius="full" bg={estadoWs.color} aria-hidden="true" />
               {estadoWs.texto}
             </Flex>

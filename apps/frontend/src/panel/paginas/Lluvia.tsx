@@ -1,9 +1,11 @@
-import { Alert, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, Text, useToast } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Input, Select, Text, useToast } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
 import { useCarga } from "../../lib/useCarga";
 import { api, descargar, guardarArchivo, importarPlanilla } from "../api";
+import { IconoGota } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { AvisoSimulado, Cargando, Seccion } from "../ui";
 
 type Origen = "carga_manual" | "parte_policial" | "simulado";
@@ -188,9 +190,7 @@ export default function Lluvia() {
   const lecturas = useCarga(() => api.lluvia(100));
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Partes de lluvia
-      </Heading>
+      <CabeceraPagina titulo="Partes de lluvia" icono={<IconoGota tam="1.5rem" />} />
       <AvisoSimulado>El kit no tiene lluvia observada. Los puestos son lugares reales (DOCUMENTO DE REFERENCIA), pero las lecturas de demostración son SIMULADO; cada lectura muestra su origen.</AvisoSimulado>
       <Seccion titulo="Cargar un parte" id="sec-parte">
         <FormParte alCargar={lecturas.recargar} />

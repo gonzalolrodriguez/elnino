@@ -8,6 +8,8 @@ import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Ascenso, Lluvia, SerieFormosa } from "../tipos";
+import { IconoOlas } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
@@ -174,9 +176,7 @@ export default function Monitor() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Río y lluvia
-      </Heading>
+      <CabeceraPagina titulo="Río y lluvia" icono={<IconoOlas tam="1.5rem" />} />
       <Seccion titulo="Puerto Formosa: serie diaria, umbrales y picos" categoria="DATO OBSERVADO" id="sec-serie">
         <Cargando carga={serie} hijos={(s) => <SerieYCifras s={s} />} />
       </Seccion>

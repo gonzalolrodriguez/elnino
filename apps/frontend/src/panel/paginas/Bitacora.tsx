@@ -1,13 +1,14 @@
-import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, Text, Textarea, useToast } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Input, Text, Textarea, useToast } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthContext";
 import { AlertaError } from "../../components/Formulario";
-import { Insignia } from "../../components/Insignia";
 import { useCarga } from "../../lib/useCarga";
 import { api, descargar, guardarArchivo } from "../api";
 import type { CamposBitacora, EntradaBitacora } from "../tipos";
+import { IconoHistorial } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, fmtFecha, Seccion } from "../ui";
 import { etiquetaEstadoBitacora } from "../../lib/etiquetas";
 
@@ -152,15 +153,7 @@ export default function Bitacora() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={1}>
-        Bitácora de decisiones
-      </Heading>
-      <Flex gap={2} align="center" mb={4}>
-        <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="textoSuave">
-          Cada decisión lleva responsable (rol), evidencia y fecha del día simulado.
-        </Text>
-      </Flex>
+      <CabeceraPagina titulo="Bitácora de decisiones" icono={<IconoHistorial tam="1.5rem" />} categoria="SIMULADO" ayuda="Cada decisión lleva responsable (rol), evidencia y fecha del día simulado." />
       <Seccion titulo={borrador ? `Completar el borrador ${borrador.id}${borrador.orden_id ? ` (orden ${borrador.orden_id})` : ""}` : "Nueva decisión"} id="sec-form" derecha={
         borrador ? (
           <Button size="xs" variant="outline" onClick={() => setParams({})}>

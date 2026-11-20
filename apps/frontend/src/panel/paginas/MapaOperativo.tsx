@@ -9,7 +9,6 @@ import {
   FormControl,
   FormErrorMessage,
   FormLabel,
-  Heading,
   Input,
   Select,
   Text,
@@ -29,6 +28,8 @@ import { useEscenario } from "../EscenarioContext";
 import { LeyendaLamina } from "../LeyendaLamina";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
+import { IconoMapa } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, fmtFecha, fmtNum, NOMBRE_ACCESO, Seccion } from "../ui";
 
 const MapaGL = lazy(() => import("../MapaGL"));
@@ -372,9 +373,7 @@ export default function MapaOperativo() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Mapa operativo y simulador
-      </Heading>
+      <CabeceraPagina titulo="Mapa operativo y simulador" icono={<IconoMapa tam="1.5rem" />} />
       <Flex direction={{ base: "column", xl: "row-reverse" }} align={{ base: "stretch", xl: "flex-start" }} sx={{ "& > * + *": { marginTop: "1rem" }, "@media (min-width: 80em)": { "& > * + *": { marginTop: 0, marginRight: "1rem" } } }}>
         <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "calc(var(--altura-leyenda) + 1rem)" }}>
           <Box

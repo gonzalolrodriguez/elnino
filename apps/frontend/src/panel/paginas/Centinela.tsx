@@ -1,9 +1,11 @@
-import { Badge, Box, Flex, Heading, List, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Badge, Box, Flex, List, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { Insignia } from "../../components/Insignia";
 import { AUDITORIA_K1 } from "../../datos/auditoriaK1";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
+import { IconoEscudo } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
@@ -30,9 +32,7 @@ export default function Centinela() {
   const k7 = useCarga(() => api.k7());
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Auditoría de datos (Centinela)
-      </Heading>
+      <CabeceraPagina titulo="Auditoría de datos (Centinela)" icono={<IconoEscudo tam="1.5rem" />} />
 
       <Seccion titulo="Auditoría de la limpieza de K1" categoria="DATO OBSERVADO" id="sec-k1">
         <Text fontSize="sm" mb={2}>
