@@ -23,6 +23,7 @@ from app.db.modelos import (
     SolicitudAsistencia,
     Tarea,
 )
+from app.servicios import partes as srv_partes
 from app.servicios import seguimiento as srv_seguimiento
 
 CATEGORIA = "SIMULADO"
@@ -148,6 +149,7 @@ def pedidos_de(db: Session, usuario_id: int) -> list[dict]:
         confirmaciones[k.solicitud_id] = k
     auditadas = _marcas_auditadas(db, ids)
     en_vivo = {s["solicitud_id"]: s for s in srv_seguimiento.seguimiento_de(db, usuario_id)}
+    novedades = srv_partes.novedades_de_tareas(db, list(tareas.values()))
 
     items = []
     for s, lon, lat in solicitudes:
@@ -207,6 +209,7 @@ def pedidos_de(db: Session, usuario_id: int) -> list[dict]:
                     if k
                     else None
                 ),
+                "novedad": _novedad(t, novedades, en_vivo.get(s.id), tarea),
                 "centro": (
                     {"id": centro[0], "nombre": centro[1], "lat": centro[3], "lon": centro[2]}
                     if centro
@@ -215,3 +218,25 @@ def pedidos_de(db: Session, usuario_id: int) -> list[dict]:
             }
         )
     return items
+
+
+def _novedad(
+    t: Tarea | None, novedades: dict[int, dict], vivo: dict | None, tarea: dict | None
+) -> dict | None:
+    """Última novedad relevante del pedido, sin el texto de la observación de la cuadrilla.
+
+    Prioridad: dificultad o resultado no completo de un parte; si no hay, ``demora`` cuando la tarea
+    está en curso y la última posición de la cuadrilla venció (``posicion_vencida_minutos``).
+    """
+    if t is None:
+        return None
+    if t.id in novedades:
+        return novedades[t.id]
+    if (
+        t.estado == "en_curso"
+        and vivo is not None
+        and vivo.get("posicion_vieja") is True
+        and vivo.get("estado") == "asignada_sin_posicion"
+    ):
+        return {"tipo": "demora", "en": (tarea or {}).get("iniciada_en") or _iso(t.actualizado_en)}
+    return None

@@ -34,6 +34,7 @@ from app.db.modelos import (
     Cuadrilla,
     GrupoFamiliar,
     Notificacion,
+    ParteTarea,
     Sector,
     SolicitudAsistencia,
     Tarea,
@@ -358,7 +359,20 @@ def cerrar_tarea(
     )
     db.add(constancia)
     tarea.estado = "completada"
+    tarea.requiere_atencion = False
     tarea.actualizado_en = ahora()
+    # El cierre con constancia también queda como parte de resultado "completa" en el historial.
+    db.add(
+        ParteTarea(
+            tarea_id=tarea.id,
+            cuadrilla_id=tarea.cuadrilla_id,
+            tipo="resultado",
+            resultado="completa",
+            autor_id=usuario.id,
+            autor_rol=rol_operativo,
+            categoria=CATEGORIA,
+        )
+    )
     db.flush()
     srv_ordenes.liberar_si_sin_tareas(db, tarea.cuadrilla_id)
 
@@ -389,6 +403,17 @@ def cerrar_tarea(
         r.eventos += _avisar_discrepancia(db, tarea, motivos)
     r.eventos.append(
         ("tarea", {"id": tarea.id, "estado": tarea.estado, "cuadrilla_id": tarea.cuadrilla_id})
+    )
+    r.eventos.append(
+        (
+            "parte_tarea",
+            {
+                "tarea_id": tarea.id,
+                "cuadrilla_id": tarea.cuadrilla_id,
+                "tipo": "resultado",
+                "resultado": "completa",
+            },
+        )
     )
     return constancia, r
 
