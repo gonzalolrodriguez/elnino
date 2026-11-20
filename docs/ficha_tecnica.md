@@ -84,9 +84,15 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web. El solicitante ve en un mapa el recorrido por la red vial (evitando caminos cerrados), el vehículo avanzando y la llegada estimada (supuesto de velocidad). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea, vence a los 30 minutos y solo la ven el solicitante y los roles operativos. Para la demostración, sin un teléfono real, el servidor mueve al vehículo por la ruta desde una base SIMULADA, rotulado "SIMULADO · recorrido de demostración".
   - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.
   - **Lámina de agua ilustrativa:** en el simulador, cada sector se cubre según cuánto supera el río su altura de compromiso (K10). Los accesos cortados se ven discontinuos y hay un botón "Reproducir subida". No es un modelo hidráulico.
-- **Pruebas automáticas al 20/11/2026 (rama `dev-gonzalo`):** backend 320, web 232, app 250. El APK de `main` generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
+- **Pruebas automáticas al 20/11/2026:** backend 426, web 329 y app 314, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
-No se pudo comprobar todavía en pantalla y con sesión real el tablero, las constancias y el panel. Hay pruebas automáticas con datos simulados. Tampoco se comprobó la fluidez del 3D en distintos equipos ni el uso completo de la app en campo: cámara, GPS y cola sin señal. De los distintivos SAPUKAY, los tres relojes se vieron en un navegador; la brújula, la cuadrilla en camino y la lámina de agua solo tienen pruebas automáticas.
+Se vieron en un navegador, contra el backend real, la landing (con y sin sesión), Mi cuenta de una ciudadana de prueba con su pedido y el mapa de OpenStreetMap, y los tres relojes. El panel rediseñado, la página de cuadrillas y el recorrido animado se revisaron con capturas sobre datos simulados.
+
+No se comprobó todavía:
+- El uso completo de la app en un teléfono: GPS, cámara, cola sin señal, llamada al 103 y SMS.
+- La fluidez del 3D en distintos equipos.
+- La política de seguridad de contenido (CSP) en la versión compilada de la web.
+- La brújula y la lámina de agua, que solo tienen pruebas automáticas.
 
 ## Qué falta para que la mesa la use
 - **Datos reales de la autoridad:** qué edificios son centros de recepción y su capacidad (hoy `SIMULADO`; las escuelas del Mapa Educativo son solo candidatas), recursos disponibles, responsables por rol y sectores definitivos (K10 es simulado y está "a validar por la mesa"). Dependen de Defensa Civil y del comité.

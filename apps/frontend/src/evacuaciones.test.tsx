@@ -245,7 +245,10 @@ describe("cierre con constancia (cuadrilla)", () => {
       "POST /tareas/7/cierre/adjuntos": () => ({ estado: 201, json: { n: 1 } }),
     });
     renderRuta("/cuadrilla");
-    fireEvent.click(await screen.findByRole("button", { name: "Cerrar con constancia" }));
+    // «Terminar tarea» → «Completa» en una evacuación lleva al cierre con constancia.
+    fireEvent.click(await screen.findByRole("button", { name: "Terminar tarea" }));
+    fireEvent.click(screen.getByLabelText(/Completa/));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con la constancia" }));
     const form = await screen.findByRole("form", { name: /Constancia de la tarea 7/ });
 
     // Sin datos no se llama al backend.
@@ -275,11 +278,13 @@ describe("cierre con constancia (cuadrilla)", () => {
     await waitFor(() => expect(llamadas(f, "POST /tareas/7/cierre/adjuntos")).toHaveLength(1));
   });
 
-  it("una tarea que no es evacuación sigue con el botón Completar", async () => {
+  it("una tarea que no es evacuación se termina con un parte, sin constancia", async () => {
     conSesion("cuadrilla", { ...base, "GET /tareas": ok({ tareas: [{ ...TAREA, solicitud_id: null, orden_id: null }] }) });
     renderRuta("/cuadrilla");
-    expect(await screen.findByRole("button", { name: "Completar" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cerrar con constancia" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Terminar tarea" }));
+    fireEvent.click(screen.getByLabelText(/Completa/));
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continuar con la constancia" })).not.toBeInTheDocument();
   });
 });
 
