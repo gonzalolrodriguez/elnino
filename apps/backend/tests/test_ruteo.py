@@ -123,6 +123,40 @@ def test_camion_jaula_no_usa_tierra(red):
     assert "e1 tierra" in {t["nombre"] for t in v["tramos"]}
 
 
+def test_superficies_cerradas_por_lluvia_siguen_los_umbrales():
+    assert dom.superficies_cerradas_por_lluvia("vehicular", 0) == set()
+    assert dom.superficies_cerradas_por_lluvia("vehicular", 29.9) == set()
+    assert dom.superficies_cerradas_por_lluvia("vehicular", 30) == {"tierra", "desconocida"}
+    assert dom.superficies_cerradas_por_lluvia("camion_jaula", 80) == {
+        "tierra",
+        "desconocida",
+        "ripio",
+    }
+    assert dom.superficies_cerradas_por_lluvia("arreo", 500) == set()
+
+
+def test_lluvia_cierra_tramos_de_tierra_de_la_red(red):
+    # Con 40 mm el vehicular sigue saliendo, pero solo por ripio y pavimento
+    mojado = srv.resolver_ruta(red, "vehicular", S4, S2, lluvia_mm=40)
+    assert mojado["metodo"] == "pgrouting"
+    assert mojado["superficies_cerradas_por_lluvia"] == ["desconocida", "tierra"]
+    assert {t["superficie"] for t in mojado["tramos"]} <= {"pavimento", "ripio"}
+    # Si además se bloquea el ripio, en seco queda la tierra, pero con 40 mm ya no hay camino
+    red.execute(text("UPDATE red_vial SET bloqueada = true WHERE nombre = 'e3 ripio'"))
+    red.commit()
+    seco = srv.resolver_ruta(red, "vehicular", S4, S2)
+    assert "e1 tierra" in {t["nombre"] for t in seco["tramos"]}
+    assert srv.resolver_ruta(red, "vehicular", S4, S2, lluvia_mm=40)["metodo"] == "aproximado"
+    red.execute(text("UPDATE red_vial SET bloqueada = false"))
+    red.commit()
+    # Con 80 mm se cierra también el ripio: no queda camino por la red
+    muy_mojado = srv.resolver_ruta(red, "vehicular", S4, S2, lluvia_mm=80)
+    assert muy_mojado["metodo"] == "aproximado"
+    # El arreo a pie no depende de la lluvia
+    arreo = srv.resolver_ruta(red, "arreo", S4, S2, lluvia_mm=80)
+    assert arreo["metodo"] == "pgrouting" and arreo["superficies_cerradas_por_lluvia"] == []
+
+
 def test_arista_bloqueada_se_evita(red):
     red.execute(
         text("UPDATE red_vial SET bloqueada = true WHERE nombre IN ('e2 pavimento', 'e3 ripio')")

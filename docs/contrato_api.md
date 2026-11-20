@@ -268,11 +268,34 @@ Estados de acceso: `cerrado_operador`, `intransitable_lluvia` (tierra con 30 mm 
 
 ### `POST /simulacion/recomendacion`
 
-Mismo cuerpo que el escenario más `prioridad` (`riesgo` o `poblacion`) y `sectores` (ids, opcional). Devuelve una **RECOMENDACIÓN, no una orden** (campo `etiqueta`). Por cada sector comprometido o en riesgo: población (K10 más familias registradas por `ST_Intersects`, con menores y mayores; no se descifran datos de salud), producción (establecimientos y stock agregado antes de unir, sin duplicar personas), ventana en días hasta el compromiso (rango, `SUPUESTO` lineal) y momento de inicio del traslado de ganado (24 a 48 h antes), vehículo y viajes, camiones jaula, asignación a centros con `personas_sin_lugar` y `animales_sin_cupo`, y cuadrillas sugeridas.
+Mismo cuerpo que el escenario más `prioridad` (`riesgo` o `poblacion`), `sectores` (ids, opcional) y `pronostico_lluvia` (opcional, `SIMULADO`): `{ "mm": 100, "horas": 6 }` (`mm` mayor que 0 y hasta 1000, que se suman a la lluvia del escenario; `horas` mayor que 0 y hasta 720; un campo de más, ausente o fuera de rango da 422). Devuelve una **RECOMENDACIÓN, no una orden** (campo `etiqueta`). Por cada sector comprometido o en riesgo: población (K10 más familias registradas por `ST_Intersects`, con menores y mayores; no se descifran datos de salud), producción (establecimientos y stock agregado antes de unir, sin duplicar personas), ventana en días hasta el compromiso (rango, `SUPUESTO` lineal) y momento de inicio del traslado de ganado (24 a 48 h antes), vehículo y viajes, camiones jaula, asignación a centros con `personas_sin_lugar` y `animales_sin_cupo`, y cuadrillas sugeridas.
+
+Cómo se arma el plan:
+
+- **Centros:** se descartan los que quedan dentro de un sector comprometido y, con el supuesto `centro_excluir_en_riesgo`, de uno en riesgo. Van en `centros_descartados` (`id`, `nombre`, `motivo`).
+- **Tiempos de viaje:** por la red vial real (OpenStreetMap, `pgr_dijkstraCost` de cada sector a cada centro, con las reglas de `POST /ruteo`, incluida la lluvia). Si no hay red o ruta, línea recta × factor de desvío 1,3 a la velocidad de la superficie del acceso; un sector aislado sale en lancha (línea recta). El método va en `metodo_tiempo` de cada asignación (`red_vial`, `aproximado`, `lancha_linea_recta`, `arreo_aproximado`) y en `metricas.metodo_tiempos`.
+- **Reparto:** flujo de costo mínimo. Respeta el orden de prioridad (un sector de mayor prioridad nunca queda sin lugar para dárselo a uno de menor) y, con eso fijo, minimiza personas × minutos de viaje (`metricas.personas_minuto`).
+- **Familias indivisibles:** el flujo fija cuántos lugares de cada centro le tocan a cada sector. Dentro de cada sector, cada familia va entera al centro más rápido cuyo cupo la contiene: primero las que tienen menores o mayores, después las más grandes. Si no entra entera en ningún centro, se informa y **no se la separa**. Los viajes se cuentan sin repartir una familia entre viajes distintos. Las familias registradas siempre cuentan como unidad. Con `poblacion_k10_en_hogares: true` (opcional, por defecto `false`), la población de K10 se toma del set separado de hogares SIMULADOS (`data/simulado/hogares_k10.json`, tamaños `SUPUESTO`). Cada sector trae `familias` (`registradas`, `hogares_simulados`, `personas_en_familias`, `juntas`, `sin_lugar_entero`, `personas_en_familias_sin_lugar`, `tamanos_sin_lugar`). No se exponen identificadores de familias.
+- **Flota:** cada tipo de vehículo tiene su línea de tiempo. Los sectores que usan el mismo tipo van en secuencia (en el orden de la alternativa) y los que usan tipos distintos, en paralelo. `traslado_personas` trae `tiempo_inicio_min`, `tiempo_para_completar_min` y `tiempo_acumulado_min` (minuto en que el sector termina, contado desde la orden). `traslado_ganado` hace lo mismo con los camiones jaula.
+
+**Factibilidad** (`factibilidad.personas` y, si hay bovinos, `factibilidad.ganado`, `SIMULADO`):
+
+```json
+{ "veredicto": "justo", "plazo_minimo_h": 33.6, "plazo_maximo_h": 110.4, "limitante": "rio",
+  "tiempo_para_completar_h": 30.0, "holgura_h": 3.6, "iniciar_antes_de_h": 3.6,
+  "explicacion": "Termina en 30.0 h: no entra con holgura en el plazo más corto (33.6 h) pero sí en el más largo (110.4 h). ..." }
+```
+
+- Plazo del río: horas hasta la altura de compromiso con la tasa de ascenso más rápida (`plazo_minimo_h`) y la más lenta (`plazo_maximo_h`) observadas en K1 (proyección lineal, `SUPUESTO`).
+- Ventana seca: si `pronostico_lluvia` deja intransitable el acceso que usa el sector (tierra desde 30 mm, ripio desde 80 mm), el plazo es `horas` y `limitante` pasa a `ventana_seca`.
+- Veredictos: `alcanza` (termina dentro del plazo mínimo y deja libre al menos `margen_seguridad_fraccion`, 25 %, `SUPUESTO`), `justo` (entra en el plazo máximo pero no con esa holgura en el mínimo), `no_alcanza`, `ya_comprometido` (el sector ya alcanzó su altura: emergencia) y `sin_estimacion` (sin flota o sin plazo).
+- Ganado: el plazo se adelanta 48 h (extremo conservador de la anticipación de 24 a 48 h).
+
+Métricas nuevas en `metricas`: `sectores_no_alcanzan`, `sectores_justos`, `sectores_ya_comprometidos`, `veredictos`, `metodo_tiempos`, `personas_minuto`, `familias_juntas`, `familias_sin_lugar_entero` y `personas_en_familias_sin_lugar`.
 
 ### `POST /simulacion/alternativas`
 
-Mismo cuerpo que el escenario, más `editable` opcional: `{ "nombre", "orden_sectores": ["S1","S4"], "centros_excluidos": [1] }`. Devuelve tres alternativas (`riesgo`, `poblacion` y `editable`), cada una guardada en `alternativas` (`id`), y una `comparacion` lado a lado. Métricas: personas con lugar y sin lugar, animales con y sin cupo, viajes por tipo de vehículo, `tiempo_primer_sector_min` y `tiempo_total_min` (flota compartida, sectores en secuencia, velocidades `SUPUESTO`), `accesos_vulnerables_usados` y `faltantes` (vehículos, camiones jaula, cupos y roles frente a las plantillas de cuadrilla).
+Mismo cuerpo que el escenario, más `editable` opcional: `{ "nombre", "orden_sectores": ["S1","S4"], "centros_excluidos": [1] }` y `pronostico_lluvia` y `poblacion_k10_en_hogares` opcionales (como en la recomendación). Devuelve tres alternativas (`riesgo`, `poblacion` y `editable`), cada una guardada en `alternativas` (`id`), y una `comparacion` lado a lado. Cada alternativa tiene la misma forma que `recomendacion` (incluida la factibilidad por sector). Métricas comparadas: personas con lugar y sin lugar, animales con y sin cupo, viajes por tipo de vehículo, `tiempo_primer_sector_min` y `tiempo_total_min` (cada tipo de vehículo en secuencia, tipos en paralelo, velocidades `SUPUESTO`), `accesos_vulnerables_usados`, `sectores_no_alcanzan`, `sectores_justos`, `personas_minuto`, `familias_juntas`, `familias_sin_lugar_entero` y `faltantes` (vehículos, camiones jaula, cupos y roles frente a las plantillas de cuadrilla).
 
 ### `POST /ruteo`
 
@@ -281,7 +304,7 @@ Mismo cuerpo que el escenario, más `editable` opcional: `{ "nombre", "orden_sec
   "altura_formosa_m": 7.6, "lluvia_mm": 0, "caminos_cerrados": [] }
 ```
 
-`perfil`: `vehicular`, `camion_jaula` (solo pavimento y ripio) o `arreo` (penaliza los tramos dentro de sectores comprometidos). En lugar de `destino` se puede enviar `centro_id`. Con red cargada usa `pgr_dijkstra` (`"metodo": "pgrouting"`, con `geometria`, `tramos` y `capas`); las aristas bloqueadas se excluyen y, para los perfiles con ruedas, también las que cruzan sectores comprometidos (se exime el sector de origen y se advierte). Sin red, o si no hay ruta, devuelve `"metodo": "aproximado"`: distancia hasta el acceso transitable más cercano más la línea recta por el factor de desvío 1,3 (`SUPUESTO`), con `limitacion` explícita. Si el sector de origen no tiene un acceso utilizable para el perfil, `encontrada` es `false` y se indica el motivo. La superficie `desconocida` (OSM sin dato) cuesta como tierra y el camión jaula no la usa. La red se carga con `python -m app.ingest.red_vial [archivo.geojson]` (por defecto `data/geo/red_vial.geojson`).
+`perfil`: `vehicular`, `camion_jaula` (solo pavimento y ripio) o `arreo` (penaliza los tramos dentro de sectores comprometidos). En lugar de `destino` se puede enviar `centro_id`. Con red cargada usa `pgr_dijkstra` (`"metodo": "pgrouting"`, con `geometria`, `tramos` y `capas`); las aristas bloqueadas se excluyen y, para los perfiles con ruedas, también las que cruzan sectores comprometidos (se exime el sector de origen y se advierte). Sin red, o si no hay ruta, devuelve `"metodo": "aproximado"`: distancia hasta el acceso transitable más cercano más la línea recta por el factor de desvío 1,3 (`SUPUESTO`), con `limitacion` explícita. Si el sector de origen no tiene un acceso utilizable para el perfil, `encontrada` es `false` y se indica el motivo. La superficie `desconocida` (OSM sin dato) cuesta como tierra y el camión jaula no la usa. Con lluvia, los perfiles con ruedas pierden los tramos de tierra y superficie desconocida (desde 30 mm) y de ripio (desde 80 mm), igual que los accesos de los sectores; la respuesta lo indica en `superficies_cerradas_por_lluvia`. El arreo no depende de la lluvia. El origen y el destino se enganchan al nodo más cercano que toca un tramo firme y usable (o, si no hay, cualquier tramo usable) siempre que no quede a más de `ruteo_enganche_usable_m` (500 m, `SUPUESTO`) por encima del nodo más cercano. `docker compose` carga `data/geo/red_vial.geojson` al arrancar si la tabla está vacía; a mano: `python -m app.ingest.red_vial [archivo.geojson] [--si-vacia]`.
 
 ## Producción
 
@@ -550,7 +573,7 @@ curl -s -X POST $API/canales/sms-sim -H "X-Hub-Signature-256: $FIRMA" -H 'Conten
 # Con el texto "LLUVIA PLUV-SIM-C" (sin mm) y su propia firma -> 422
 ```
 
-Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_ruteo.py`, `test_ganaderia_y_parser.py`, `test_lluvia_y_canales.py`, `test_operacion.py` y `test_seguridad_fase2.py`.
+Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_motor_evacuacion.py`, `test_ruteo.py`, `test_ganaderia_y_parser.py`, `test_lluvia_y_canales.py`, `test_operacion.py` y `test_seguridad_fase2.py`.
 
 ## Regenerar el esquema OpenAPI
 
