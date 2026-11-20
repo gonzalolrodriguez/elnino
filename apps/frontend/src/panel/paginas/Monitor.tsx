@@ -10,7 +10,7 @@ import { useEscenario } from "../EscenarioContext";
 import type { Ascenso, Lluvia, SerieFormosa } from "../tipos";
 import { IconoOlas } from "../../components/iconos/Iconos";
 import { CabeceraPagina } from "../CabeceraPagina";
-import { Cargando, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
+import { Cargando, categoriaComun, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 /** Convierte los puntos de la API en serie diaria con huecos (null): los días sin dato no se interpolan. */
@@ -52,8 +52,16 @@ const ORIGEN: Record<string, string> = {
 function TablaLluvia({ l }: { l: Lluvia }) {
   const porOrigen = new Map<string, number>();
   for (const x of l.lecturas) porOrigen.set(x.origen, (porOrigen.get(x.origen) ?? 0) + 1);
+  // Si todas las lecturas comparten categoría se muestra una vez arriba y no por fila.
+  const comun = categoriaComun(l.lecturas.map((x) => x.categoria));
   return (
     <>
+      {comun && (
+        <Flex align="center" gap={2} mb={2} data-testid="lluvia-categoria-comun">
+          <Text fontSize="sm">Categoría de las lecturas:</Text>
+          <Insignia categoria={comun} />
+        </Flex>
+      )}
       {l.sin_dato_observado && (
         <Text mb={2} fontSize="sm" data-testid="lluvia-sin-observado">
           Sin dato observado en el kit: las lecturas que se muestran son cargas o datos de demostración, con su origen.
@@ -75,7 +83,7 @@ function TablaLluvia({ l }: { l: Lluvia }) {
               <Th>Puesto</Th>
               <Th isNumeric>mm</Th>
               <Th>Origen</Th>
-              <Th>Categoría</Th>
+              {!comun && <Th>Categoría</Th>}
             </Tr>
           </Thead>
           <Tbody>
@@ -86,9 +94,11 @@ function TablaLluvia({ l }: { l: Lluvia }) {
                 <Td>{x.puesto_nombre}</Td>
                 <Td isNumeric>{x.mm === null ? "sin medición" : fmtNum(x.mm, 1)}</Td>
                 <Td>{ORIGEN[x.origen] ?? x.origen}</Td>
-                <Td>
-                  <Insignia categoria={x.categoria} />
-                </Td>
+                {!comun && (
+                  <Td>
+                    <Insignia categoria={x.categoria} />
+                  </Td>
+                )}
               </Tr>
             ))}
           </Tbody>

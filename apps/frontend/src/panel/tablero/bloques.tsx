@@ -179,9 +179,6 @@ function TarjetaSector({ s }: { s: ResumenSector }) {
           </Text>
         </Dato>
       </Box>
-      <Box mt="auto">
-        <Insignia categoria="SIMULADO" />
-      </Box>
     </Flex>
   );
 }
@@ -480,6 +477,8 @@ export function BloqueOrdenes({ bloque, decisor }: { bloque: ResumenPanel["orden
 
 export function BloqueLluvia({ bloque }: { bloque: ResumenPanel["lluvia_7d"] }) {
   const origenes = Object.entries(bloque.por_origen);
+  // Si todos los orígenes comparten la categoría del bloque, ya figura en el encabezado y no se repite por fila.
+  const mixto = origenes.some(([, d]) => d.categoria !== bloque.categoria);
   return (
     <Seccion titulo="Lluvia de los últimos 7 días" categoria={bloque.categoria} id="tab-lluvia" icono={<IconoGota />} derecha={`Desde el ${fmtFecha(bloque.desde)}`}>
       {bloque.sin_dato_observado && (
@@ -499,7 +498,7 @@ export function BloqueLluvia({ bloque }: { bloque: ResumenPanel["lluvia_7d"] }) 
                 <Th isNumeric>Lecturas</Th>
                 <Th isNumeric>mm acumulados</Th>
                 <Th isNumeric>Sin medición</Th>
-                <Th>Categoría</Th>
+                {mixto && <Th>Categoría</Th>}
               </Tr>
             </Thead>
             <Tbody>
@@ -509,9 +508,11 @@ export function BloqueLluvia({ bloque }: { bloque: ResumenPanel["lluvia_7d"] }) 
                   <Td isNumeric data-etiqueta="Lecturas">{fmtNum(d.lecturas)}</Td>
                   <Td isNumeric data-etiqueta="mm acumulados">{fmtNum(d.mm_total, 1)}</Td>
                   <Td isNumeric data-etiqueta="Sin medición">{fmtNum(d.sin_medicion)}</Td>
-                  <Td data-etiqueta="Categoría">
-                    <Insignia categoria={d.categoria} />
-                  </Td>
+                  {mixto && (
+                    <Td data-etiqueta="Categoría">
+                      <Insignia categoria={d.categoria} />
+                    </Td>
+                  )}
                 </Tr>
               ))}
             </Tbody>

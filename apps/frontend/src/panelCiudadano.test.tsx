@@ -135,7 +135,9 @@ describe("panel personal en /mi-cuenta", () => {
     const cuad = within(tarjeta).getByTestId("cuadrilla-asignada");
     expect(cuad).toHaveTextContent("Encargado: Encargado de cuadrilla");
     expect(cuad).toHaveTextContent("Camión jaula");
-    expect(cuad.querySelector('[data-categoria="SIMULADO"]')).not.toBeNull();
+    // La categoría se muestra una vez en el encabezado del bloque, no en cada fila.
+    expect(tarjeta.querySelector('[data-categoria="SIMULADO"]')).not.toBeNull();
+    expect(cuad.querySelector('[data-categoria]')).toBeNull();
     const cifras = within(tarjeta).getByTestId("seguimiento-estado");
     expect(cifras).toHaveTextContent("Llegada estimada");
     expect(cifras).toHaveTextContent("unos 8 min");

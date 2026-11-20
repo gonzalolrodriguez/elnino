@@ -33,7 +33,6 @@ import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthContext";
 import { AlertaError } from "../../components/Formulario";
-import { Insignia } from "../../components/Insignia";
 import { etiquetaOrigenLluvia } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
@@ -231,7 +230,7 @@ export default function Ordenes() {
           </Alert>
         )}
       </Seccion>
-      <Seccion titulo="Órdenes emitidas" id="sec-lista">
+      <Seccion titulo="Órdenes emitidas" categoria="SIMULADO" id="sec-lista">
         <Cargando carga={ordenes} esVacio={(d) => d.ordenes.length === 0} vacio="Todavía no se emitió ninguna orden." hijos={(d) => (
           <TablaDesplazable etiqueta="Órdenes emitidas">
             <Table size="sm" aria-label="Órdenes emitidas">
@@ -242,7 +241,6 @@ export default function Ordenes() {
                   <Th>Sectores</Th>
                   <Th>Emitida por (rol)</Th>
                   <Th>Fecha</Th>
-                  <Th>Categoría</Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -253,9 +251,6 @@ export default function Ordenes() {
                     <Td>{o.sectores.join(", ")}</Td>
                     <Td>{o.emitida_por_rol ?? "sin rol"}</Td>
                     <Td>{fmtFecha(o.creada_en)}</Td>
-                    <Td>
-                      <Insignia categoria="SIMULADO" />
-                    </Td>
                   </Tr>
                 ))}
               </Tbody>

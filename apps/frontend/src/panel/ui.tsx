@@ -8,6 +8,11 @@ import { ESTADOS } from "../estilo/estados";
 import { Insignia } from "../components/Insignia";
 import type { Carga } from "../lib/useCarga";
 
+/** Categoría que comparten todos los elementos de un bloque, o `undefined` si hay mezcla (o ninguno). */
+export function categoriaComun(cats: readonly Categoria[]): Categoria | undefined {
+  return cats.length > 0 && cats.every((c) => c === cats[0]) ? cats[0] : undefined;
+}
+
 /** Formatea metros con coma decimal: 5.6 -> "5,60 m". */
 export function fmtM(v: number | null | undefined, dec = 2): string {
   return v === null || v === undefined ? "sin dato" : `${v.toFixed(dec).replace(".", ",")} m`;
