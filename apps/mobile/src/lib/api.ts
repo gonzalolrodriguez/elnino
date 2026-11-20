@@ -1,6 +1,7 @@
 import type { Rol } from "@evacuaciones/shared";
 
 import { almacenSeguro } from "@/lib/almacenSeguro";
+import { borrarDatosLocalesDeSesion } from "@/lib/limpiezaLocal";
 import { cargarServidor, obtenerUrlServidor } from "@/lib/servidor";
 
 export type Salud = {
@@ -140,10 +141,12 @@ export function renovarSesion(): Promise<boolean> {
   return refrescando;
 }
 
+/** Cierra la sesión en el teléfono: tokens y, además, la caché personal y la cola ya resuelta. */
 export async function limpiarSesionLocal(): Promise<void> {
   fijarAccess(null);
   await almacenSeguro.borrar(CLAVE_REFRESH);
   await almacenSeguro.borrar(CLAVE_USUARIO);
+  await borrarDatosLocalesDeSesion();
 }
 
 export async function usuarioGuardado(): Promise<Usuario | null> {
