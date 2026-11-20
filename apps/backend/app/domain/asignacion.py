@@ -204,3 +204,140 @@ def asignar_costo_minimo(
             resultado.sin_lugar[did] = red.cap[e ^ 1]
     resultado.cupos_restantes = {cid: red.cap[e] for cid, e in cupo_arista.items()}
     return resultado
+
+
+# --- Familias indivisibles (odd/tasks/motor-evacuacion.md, M7) --------------------------------
+
+
+@dataclass(frozen=True)
+class Familia:
+    """Grupo familiar que viaja y se aloja junto. ``id`` es interno: no se expone en la API."""
+
+    id: str
+    demanda_id: str
+    personas: int
+    vulnerable: bool = False  # tiene menores o mayores: se ubica primero
+
+
+@dataclass
+class ResultadoFamilias(ResultadoAsignacion):
+    familias_ubicadas: dict[str, int] = field(default_factory=dict)  # familia_id -> centro_id
+    familias_sin_lugar: list[Familia] = field(default_factory=list)
+
+
+def asignar_con_familias(
+    demandas: list[Demanda],
+    familias: list[Familia],
+    capacidades: list[Capacidad],
+    costos: dict[tuple[str, int], float],
+) -> ResultadoFamilias:
+    """Reparte sin separar familias.
+
+    1. Cupos por grupo: ``asignar_costo_minimo`` decide cuántos lugares de cada centro le tocan a
+       cada grupo (prioridad y tiempo total).
+    2. Dentro de cada grupo, en orden de prioridad, cada familia (primero las vulnerables y después
+       las más grandes, que son las más difíciles de ubicar) va entera al centro más rápido cuyo
+       cupo la contiene; si ninguno alcanza, puede completar con lugar libre de ese centro. Si no
+       entra entera en ningún centro, queda en ``familias_sin_lugar``: nunca se la separa.
+    3. El resto del grupo (personas sin familia declarada) ocupa los cupos que quedan y, si hace
+       falta, lugar libre. Los cupos que un grupo no usa quedan libres para los siguientes.
+
+    ``demandas[i].cantidad`` incluye a las personas de sus familias.
+    """
+    base = asignar_costo_minimo(demandas, capacidades, costos)
+    nombres = {c.id: c.nombre for c in capacidades}
+    cuota: dict[tuple[str, int], int] = {}
+    for a in base.asignaciones:
+        cuota[(a.demanda_id, a.centro_id)] = cuota.get((a.demanda_id, a.centro_id), 0) + a.cantidad
+    libre = dict(base.cupos_restantes)
+    colocado: dict[tuple[str, int], int] = {}
+    resultado = ResultadoFamilias()
+
+    def poner(did: str, cid: int, cantidad: int) -> None:
+        colocado[(did, cid)] = colocado.get((did, cid), 0) + cantidad
+
+    for d in sorted(demandas, key=lambda x: (x.prioridad, x.id)):
+        propias = sorted(
+            (f for f in familias if f.demanda_id == d.id),
+            key=lambda f: (not f.vulnerable, -f.personas, f.id),
+        )
+        centros = sorted(
+            (cid for (did, cid) in costos if did == d.id and cid in nombres),
+            key=lambda cid: (costos[(d.id, cid)], cid),
+        )
+        for f in propias:
+            elegido = next(
+                (cid for cid in centros if cuota.get((d.id, cid), 0) >= f.personas), None
+            )
+            de_cuota = f.personas
+            if elegido is None:
+                elegido = next(
+                    (
+                        cid
+                        for cid in centros
+                        if cuota.get((d.id, cid), 0) + libre.get(cid, 0) >= f.personas
+                    ),
+                    None,
+                )
+                if elegido is not None:
+                    de_cuota = cuota.get((d.id, elegido), 0)
+            if elegido is None:
+                resultado.familias_sin_lugar.append(f)
+                continue
+            cuota[(d.id, elegido)] = cuota.get((d.id, elegido), 0) - de_cuota
+            libre[elegido] = libre.get(elegido, 0) - (f.personas - de_cuota)
+            poner(d.id, elegido, f.personas)
+            resultado.familias_ubicadas[f.id] = elegido
+
+        resto = max(d.cantidad - sum(f.personas for f in propias), 0)
+        for fuente in ("cuota", "libre"):
+            for cid in centros:
+                if resto == 0:
+                    break
+                disponible = cuota.get((d.id, cid), 0) if fuente == "cuota" else libre.get(cid, 0)
+                toma = min(resto, disponible)
+                if toma > 0:
+                    if fuente == "cuota":
+                        cuota[(d.id, cid)] -= toma
+                    else:
+                        libre[cid] -= toma
+                    poner(d.id, cid, toma)
+                    resto -= toma
+        sin_familia = sum(f.personas for f in resultado.familias_sin_lugar if f.demanda_id == d.id)
+        if resto + sin_familia > 0:
+            resultado.sin_lugar[d.id] = resto + sin_familia
+        # Los cupos que este grupo no usó vuelven a estar libres para los siguientes.
+        for (did, cid), q in list(cuota.items()):
+            if did == d.id and q > 0:
+                libre[cid] = libre.get(cid, 0) + q
+                cuota[(did, cid)] = 0
+
+    for (did, cid), cantidad in sorted(colocado.items()):
+        if cantidad > 0:
+            resultado.asignaciones.append(Asignacion(did, cid, nombres[cid], cantidad))
+    resultado.cupos_restantes = {cid: libre.get(cid, 0) for cid in sorted(nombres)}
+    return resultado
+
+
+def viajes_sin_partir(familias: list[int], resto: int, capacidad: int) -> int:
+    """Viajes de vehículos de ``capacidad`` lugares sin repartir una familia entre viajes distintos.
+
+    Empaquetado "el primero que entra, de mayor a menor". Una familia más grande que el vehículo
+    ocupa vehículos completos del mismo convoy y su parte final va como bloque. Las personas sin
+    familia (``resto``) llenan los lugares que sobran y, si hace falta, vehículos nuevos.
+    """
+    if capacidad <= 0:
+        return 0
+    huecos: list[int] = []  # lugares libres de cada vehículo
+    for tam in sorted((t for t in familias if t > 0), reverse=True):
+        completos, parte = divmod(tam, capacidad)
+        huecos.extend([0] * completos)
+        if parte:
+            i = next((i for i, h in enumerate(huecos) if h >= parte), None)
+            if i is None:
+                huecos.append(capacidad - parte)
+            else:
+                huecos[i] -= parte
+    libres = sum(huecos)
+    faltan = max(resto - libres, 0)
+    return len(huecos) + -(-faltan // capacidad)

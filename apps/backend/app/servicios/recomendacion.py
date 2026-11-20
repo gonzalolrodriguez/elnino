@@ -27,6 +27,7 @@ from app.db.modelos import (
 )
 from app.domain import ascenso, asignacion, cuadrillas, factibilidad, ganaderia, ruteo
 from app.domain import escenario as esc
+from app.ingest import hogares_simulados
 from app.servicios import contexto
 from app.servicios import ruteo as srv_ruteo
 from app.servicios.contexto import CentroGeo, SectorGeo
@@ -49,6 +50,8 @@ class Exposicion:
     mayores: int = 0
     establecimientos: list[dict] = field(default_factory=list)
     stock: list[tuple[str, str, int]] = field(default_factory=list)  # especie, categoría, cant.
+    # Grupos familiares registrados: (id, integrantes, tiene menores o mayores). Sin datos de salud.
+    grupos: list[tuple[int, int, bool]] = field(default_factory=list)
 
 
 def cargar_exposicion(db: Session) -> dict[str, Exposicion]:
@@ -74,6 +77,21 @@ def cargar_exposicion(db: Session) -> dict[str, Exposicion]:
         e = exp.setdefault(sid, Exposicion())
         e.familias, e.personas_registradas = int(n), int(personas)
         e.menores, e.mayores = int(menores), int(mayores)
+    grupos = db.execute(
+        select(
+            Sector.id,
+            GrupoFamiliar.id,
+            GrupoFamiliar.integrantes,
+            GrupoFamiliar.menores,
+            GrupoFamiliar.mayores,
+        )
+        .join(GrupoFamiliar, func.ST_Intersects(Sector.geom, GrupoFamiliar.domicilio))
+        .order_by(Sector.id, GrupoFamiliar.id)
+    ).all()
+    for sid, gid, integrantes, menores, mayores in grupos:
+        exp.setdefault(sid, Exposicion()).grupos.append(
+            (int(gid), int(integrantes or 0), bool((menores or 0) + (mayores or 0)))
+        )
 
     ubicados = db.execute(
         select(Sector.id, Establecimiento.id, Establecimiento.nombre).join(
@@ -200,6 +218,8 @@ class DatosPlan:
     # Minutos por la red vial (pgRouting) de cada sector a cada centro, por perfil.
     tiempos_red: dict[str, dict[tuple[str, int], float]] = field(default_factory=dict)
     pronostico: Pronostico | None = None
+    # Set separado de hogares SIMULADOS de K10 (tamaños por sector); None = K10 como total.
+    hogares_k10: dict[str, list[int]] | None = None
 
 
 def descartar_centros(
@@ -232,6 +252,7 @@ def cargar_datos(
     caminos_cerrados: set[int],
     humedad_suelo: float | None = None,
     pronostico: Pronostico | None = None,
+    poblacion_k10_en_hogares: bool = False,
 ) -> DatosPlan:
     escenario = contexto.calcular_escenario(
         db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo
@@ -277,6 +298,7 @@ def cargar_datos(
         centros_descartados=descartados,
         tiempos_red=tiempos_red,
         pronostico=pronostico,
+        hogares_k10=hogares_simulados.cargar() if poblacion_k10_en_hogares else None,
     )
 
 
@@ -481,6 +503,35 @@ def _factibilidad(
     return resultado
 
 
+def familias_de(datos: DatosPlan, orden: list[str], info: dict) -> list[asignacion.Familia]:
+    """Familias indivisibles de cada sector: las registradas y, si se pidió, los hogares SIMULADOS
+    del set separado (que suman exactamente la población de K10 del sector)."""
+    familias: list[asignacion.Familia] = []
+    for sid in orden:
+        for gid, integrantes, vulnerable in info[sid]["exp"].grupos:
+            if integrantes > 0:
+                familias.append(asignacion.Familia(f"r{gid}", sid, integrantes, vulnerable))
+        if datos.hogares_k10 is not None:
+            tamanos = datos.hogares_k10.get(sid, [])
+            if sum(tamanos) == datos.sectores[sid].poblacion_simulada:
+                familias.extend(
+                    asignacion.Familia(f"h{sid}-{n}", sid, t) for n, t in enumerate(tamanos)
+                )
+    return familias
+
+
+def limite_familias(datos: DatosPlan) -> str:
+    if datos.hogares_k10 is None:
+        return (
+            "Familias: las registradas nunca se separan; la población de K10 no tiene hogares y "
+            "se reparte como total."
+        )
+    return (
+        "Familias: las registradas y los hogares SIMULADOS de K10 (set separado "
+        "data/simulado/hogares_k10.json, tamaños SUPUESTO) nunca se separan."
+    )
+
+
 def construir_plan(
     datos: DatosPlan,
     orden: list[str],
@@ -536,11 +587,16 @@ def construir_plan(
                 m, metodo = minutos_animales(datos, sid, c, i["superficie"])
                 if m is not None:
                     min_a[(sid, c.id)], metodo_a[(sid, c.id)] = m, metodo
-    res_p = asignacion.asignar_costo_minimo(
+    familias = familias_de(datos, orden, info)
+    res_p = asignacion.asignar_con_familias(
         [asignacion.Demanda(sid, info[sid]["personas"], i) for i, sid in enumerate(orden)],
+        familias,
         [asignacion.Capacidad(c.id, c.nombre, c.cupo_personas) for c in centros],
         min_p,
     )
+    familias_por_sector: dict[str, list[asignacion.Familia]] = {}
+    for f in familias:
+        familias_por_sector.setdefault(f.demanda_id, []).append(f)
     res_a = asignacion.asignar_costo_minimo(
         [asignacion.Demanda(sid, info[sid]["animales"], i) for i, sid in enumerate(orden)],
         [asignacion.Capacidad(c.id, c.nombre, c.cupo_animales) for c in centros],
@@ -570,7 +626,14 @@ def construir_plan(
         asignadas = res_p.asignado_a(sid)
         cap = datos.recursos.get(modo, {}).get("capacidad_unitaria", 0)
         disp = datos.recursos.get(modo, {}).get("cantidad", 0)
-        viajes = math.ceil(asignadas / cap) if cap else 0
+        propias = familias_por_sector.get(sid, [])
+        ubicadas = [f.personas for f in propias if f.id in res_p.familias_ubicadas]
+        sin_lugar_fam = [f.personas for f in propias if f.id not in res_p.familias_ubicadas]
+        viajes = (
+            asignacion.viajes_sin_partir(ubicadas, max(asignadas - sum(ubicadas), 0), cap)
+            if cap
+            else 0
+        )
         rondas = math.ceil(viajes / disp) if disp else 0
         sin_flota = bool(asignadas) and not (cap and disp)
         asig_centros = [a for a in res_p.asignaciones if a.demanda_id == sid]
@@ -637,6 +700,12 @@ def construir_plan(
             )
         if res_p.sin_lugar.get(sid):
             advertencias.append(f"{res_p.sin_lugar[sid]} personas sin lugar en los centros.")
+        if sin_lugar_fam:
+            advertencias.append(
+                f"{len(sin_lugar_fam)} familias ({sum(sin_lugar_fam)} personas) no entran enteras "
+                "en ningún centro: el plan no las separa. Buscar otro lugar o decidir con ellas "
+                "(decisión de una persona con rol autorizado)."
+            )
         if res_a.sin_lugar.get(sid):
             advertencias.append(f"{res_a.sin_lugar[sid]} animales sin cupo en los centros.")
         if estado.aislado:
@@ -729,6 +798,17 @@ def construir_plan(
                 "cuadrillas_sugeridas": [
                     {"tipo": t, "roles": cuadrillas.plantilla(t)} for t in tipos
                 ],
+                "familias": {
+                    "registradas": sum(1 for f in propias if f.id.startswith("r")),
+                    "hogares_simulados": sum(1 for f in propias if f.id.startswith("h")),
+                    "personas_en_familias": sum(f.personas for f in propias),
+                    "juntas": len(ubicadas),
+                    "sin_lugar_entero": len(sin_lugar_fam),
+                    "personas_en_familias_sin_lugar": sum(sin_lugar_fam),
+                    "tamanos_sin_lugar": sorted(sin_lugar_fam, reverse=True),
+                    "nota": "Cada familia viaja y se aloja entera: el plan nunca la reparte entre "
+                    "centros ni entre viajes distintos.",
+                },
                 "advertencias": advertencias,
             }
         )
@@ -756,6 +836,9 @@ def construir_plan(
         "sectores_ya_comprometidos": veredictos.get(factibilidad.YA_COMPROMETIDO, 0),
         "veredictos": veredictos,
         "metodo_tiempos": metodos_usados,
+        "familias_juntas": len(res_p.familias_ubicadas),
+        "familias_sin_lugar_entero": len(res_p.familias_sin_lugar),
+        "personas_en_familias_sin_lugar": sum(f.personas for f in res_p.familias_sin_lugar),
         "personas_minuto": round(
             sum(min_p[(a.demanda_id, a.centro_id)] * a.cantidad for a in res_p.asignaciones), 1
         ),
@@ -784,6 +867,7 @@ def construir_plan(
 
 def _entrada_dict(datos: DatosPlan, caminos: set[int]) -> dict:
     return {
+        "poblacion_k10_en_hogares": datos.hogares_k10 is not None,
         "altura_formosa_m": datos.altura_m,
         "lluvia_mm": datos.lluvia_mm,
         "caminos_cerrados": sorted(caminos),
@@ -802,8 +886,17 @@ def recomendar(
     sectores: list[str] | None = None,
     humedad_suelo: float | None = None,
     pronostico: Pronostico | None = None,
+    poblacion_k10_en_hogares: bool = False,
 ) -> dict:
-    datos = cargar_datos(db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo, pronostico)
+    datos = cargar_datos(
+        db,
+        altura_m,
+        lluvia_mm,
+        caminos_cerrados,
+        humedad_suelo,
+        pronostico,
+        poblacion_k10_en_hogares,
+    )
     orden = orden_por(datos, prioridad, sectores)
     plan = construir_plan(datos, orden)
     return {
@@ -813,6 +906,7 @@ def recomendar(
         "recomendacion": plan,
         "limites": [
             "Población: la de K10 más las familias registradas es SIMULADA; no hay padrón real.",
+            limite_familias(datos),
             "Capacidad de centros, vehículos y camiones son SIMULADO.",
             *limites_tiempos(datos),
             ascenso.SUPUESTO_LINEAL,
@@ -837,6 +931,8 @@ ETIQUETAS_METRICAS = {
     "accesos_vulnerables_usados": "Sectores que usan accesos de ripio o tierra",
     "sectores_no_alcanzan": "Sectores que no alcanzan a evacuarse a tiempo",
     "sectores_justos": "Sectores que llegan justo (sin holgura)",
+    "familias_juntas": "Familias que viajan y se alojan juntas",
+    "familias_sin_lugar_entero": "Familias sin lugar entero (no se las separa)",
     "personas_minuto": "Personas × minutos de viaje (menor es mejor)",
 }
 

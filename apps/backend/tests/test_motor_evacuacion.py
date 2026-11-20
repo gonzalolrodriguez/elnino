@@ -209,3 +209,142 @@ def test_alternativas_comparan_factibilidad_y_personas_minuto(client, como):
     metricas = {f["metrica"] for f in r.json()["comparacion"]}
     assert {"sectores_no_alcanzan", "sectores_justos", "personas_minuto"} <= metricas
     assert r.json()["escenario"]["entrada"]["pronostico_lluvia"] == {"mm": 100.0, "horas": 2.0}
+
+
+# ------------------------------------------------------------------ familias indivisibles (M7)
+
+
+def _personas_por_centro(r, demanda):
+    return {a.centro_id: a.cantidad for a in r.asignaciones if a.demanda_id == demanda}
+
+
+def test_una_familia_nunca_se_reparte_entre_centros():
+    # 6 personas y dos centros de 5: el costo mínimo las partiría 5 + 1; con familia, no entra.
+    demandas = [asignacion.Demanda("A", 6, 0)]
+    familias = [asignacion.Familia("f1", "A", 6)]
+    centros = [asignacion.Capacidad(1, "c1", 5), asignacion.Capacidad(2, "c2", 5)]
+    costos = {("A", 1): 1, ("A", 2): 2}
+    sin = asignacion.asignar_costo_minimo(demandas, centros, costos)
+    assert len(_personas_por_centro(sin, "A")) == 2  # sin la regla, la familia se separaba
+    r = asignacion.asignar_con_familias(demandas, familias, centros, costos)
+    assert r.asignaciones == [] and [f.id for f in r.familias_sin_lugar] == ["f1"]
+    assert r.sin_lugar == {"A": 6} and r.cupos_restantes == {1: 5, 2: 5}
+
+
+def test_la_familia_va_entera_aunque_el_cupo_optimo_este_fragmentado():
+    # Cupos del flujo: 4 en c1 (rápido) y 4 en c2. La familia de 6 va entera a c2 con lugar libre
+    # y las 2 personas sin familia declarada van a c1.
+    demandas = [asignacion.Demanda("A", 8, 0)]
+    familias = [asignacion.Familia("f1", "A", 6)]
+    centros = [asignacion.Capacidad(1, "c1", 4), asignacion.Capacidad(2, "c2", 10)]
+    costos = {("A", 1): 1, ("A", 2): 5}
+    r = asignacion.asignar_con_familias(demandas, familias, centros, costos)
+    assert r.familias_ubicadas == {"f1": 2} and r.sin_lugar == {}
+    assert _personas_por_centro(r, "A") == {1: 2, 2: 6}
+
+
+def test_primero_las_familias_con_menores_o_mayores():
+    demandas = [asignacion.Demanda("A", 8, 0)]
+    familias = [
+        asignacion.Familia("grande", "A", 4),
+        asignacion.Familia("vulnerable", "A", 4, True),
+    ]
+    r = asignacion.asignar_con_familias(
+        demandas, familias, [asignacion.Capacidad(1, "c1", 4)], {("A", 1): 1}
+    )
+    assert r.familias_ubicadas == {"vulnerable": 1}
+    assert [f.id for f in r.familias_sin_lugar] == ["grande"]
+
+
+def test_las_familias_de_menor_prioridad_no_quitan_lugar():
+    demandas = [asignacion.Demanda("A", 5, 0), asignacion.Demanda("B", 3, 1)]
+    familias = [asignacion.Familia("fb", "B", 3)]
+    r = asignacion.asignar_con_familias(
+        demandas,
+        familias,
+        [asignacion.Capacidad(1, "c1", 6)],
+        {("A", 1): 9, ("B", 1): 1},
+    )
+    assert r.asignado_a("A") == 5 and r.asignado_a("B") == 0
+    assert [f.id for f in r.familias_sin_lugar] == ["fb"] and r.cupos_restantes == {1: 1}
+
+
+@pytest.mark.parametrize(
+    ("familias", "resto", "capacidad", "viajes"),
+    [
+        ([3, 3], 0, 5, 2),
+        ([3, 3, 3], 0, 5, 3),  # en total entran 9 en 2 vehículos, pero partiría una familia
+        ([7], 0, 5, 2),  # más grande que el vehículo: convoy de 2
+        ([4], 3, 5, 2),  # 1 lugar libre + 2 personas sin familia en otro vehículo
+        ([], 12, 5, 3),
+        ([2, 2], 1, 5, 1),
+    ],
+)
+def test_viajes_sin_partir_familias(familias, resto, capacidad, viajes):
+    assert asignacion.viajes_sin_partir(familias, resto, capacidad) == viajes
+
+
+def test_set_separado_de_hogares_suma_la_poblacion_de_k10_y_es_reproducible():
+    from app.ingest import hogares_simulados
+
+    generado = hogares_simulados.generar()
+    for sid, poblacion in hogares_simulados.poblacion_k10().items():
+        s = generado["sectores"][sid]
+        assert sum(s["tamanos"]) == poblacion == s["poblacion_k10"]
+        assert all(1 <= t <= 8 for t in s["tamanos"])
+    assert generado["categoria"] == "SIMULADO"
+    assert hogares_simulados.cargar() == {
+        sid: s["tamanos"] for sid, s in generado["sectores"].items()
+    }
+
+
+def test_recomendacion_con_hogares_de_k10_no_separa_familias(client, como):
+    h = como("operador")
+    agregado = _recomendar(client, h)
+    hogares = _recomendar(client, h, poblacion_k10_en_hogares=True)
+    assert hogares["entrada"]["poblacion_k10_en_hogares"] is True
+    m = hogares["recomendacion"]["metricas"]
+    assert m["familias_juntas"] > 300
+    for s in hogares["recomendacion"]["sectores"]:
+        f = s["familias"]
+        assert f["juntas"] + f["sin_lugar_entero"] == f["registradas"] + f["hogares_simulados"]
+        asignadas = sum(a["cantidad"] for a in s["asignacion_personas"])
+        assert asignadas + s["personas_sin_lugar"] == s["poblacion"]["total_estimada"]
+    # Sin el set separado, K10 sigue como total y no hay hogares simulados
+    assert all(
+        s["familias"]["hogares_simulados"] == 0 for s in agregado["recomendacion"]["sectores"]
+    )
+    assert any("se reparte como total" in x for x in agregado["limites"])
+
+
+def test_con_cupo_escaso_las_familias_sin_lugar_entero_se_informan(client, como):
+    r = _recomendar(
+        client, como("operador"), altura_formosa_m=9.0, lluvia_mm=0, poblacion_k10_en_hogares=True
+    )
+    m = r["recomendacion"]["metricas"]
+    assert m["familias_sin_lugar_entero"] > 0 and m["personas_en_familias_sin_lugar"] > 0
+    assert m["personas_evacuadas"] + m["personas_sin_lugar"] == m["personas_a_evacuar"]
+    avisos = [a for s in r["recomendacion"]["sectores"] for a in s["advertencias"]]
+    assert any("no entran enteras" in a and "no las separa" in a for a in avisos)
+
+
+def test_familia_registrada_cuenta_como_unidad(client, como):
+    from tests.conftest import PASSWORD_VALIDA, correo_unico
+
+    h = como("operador")
+    antes = _sector(_recomendar(client, h), "S1")["familias"]["registradas"]
+    fam = {
+        "email": correo_unico("famS1"),
+        "password": PASSWORD_VALIDA,
+        "nombre_visible": "Familia S1",
+        "consentimiento": True,
+        "integrantes": 5,
+        "menores": 2,
+        "mayores": 0,
+        "lon": -58.1875,
+        "lat": -26.156,
+    }
+    assert client.post("/api/v1/auth/registro/ciudadano", json=fam).status_code == 201
+    s1 = _sector(_recomendar(client, h), "S1")
+    assert s1["familias"]["registradas"] == antes + 1
+    assert s1["familias"]["sin_lugar_entero"] == 0

@@ -87,6 +87,10 @@ class RecomendacionIn(EscenarioIn):
     prioridad: Literal["riesgo", "poblacion"] = "riesgo"
     sectores: list[str] | None = Field(default=None, max_length=10)
     pronostico_lluvia: PronosticoLluviaIn | None = None
+    poblacion_k10_en_hogares: bool = Field(
+        default=False,
+        description="Usar el set separado de hogares SIMULADOS de K10 (familias indivisibles)",
+    )
 
 
 def _validar_sectores(db: Session, ids: list[str] | None) -> None:
@@ -114,6 +118,7 @@ def recomendacion_(
         datos.sectores,
         datos.humedad_suelo,
         datos.pronostico_lluvia.a_dominio() if datos.pronostico_lluvia else None,
+        datos.poblacion_k10_en_hogares,
     )
 
 
@@ -134,6 +139,10 @@ class AlternativaEditable(BaseModel):
 class AlternativasIn(EscenarioIn):
     editable: AlternativaEditable | None = None
     pronostico_lluvia: PronosticoLluviaIn | None = None
+    poblacion_k10_en_hogares: bool = Field(
+        default=False,
+        description="Usar el set separado de hogares SIMULADOS de K10 (familias indivisibles)",
+    )
 
 
 @router.post("/alternativas")
@@ -152,6 +161,7 @@ def alternativas(
         cerrados,
         datos.humedad_suelo,
         datos.pronostico_lluvia.a_dominio() if datos.pronostico_lluvia else None,
+        datos.poblacion_k10_en_hogares,
     )
     editable = datos.editable.model_dump() if datos.editable else None
     alts = recomendacion.comparar(d, cerrados, editable)
@@ -163,6 +173,7 @@ def alternativas(
             "pronostico_lluvia": datos.pronostico_lluvia.model_dump()
             if datos.pronostico_lluvia
             else None,
+            "poblacion_k10_en_hogares": datos.poblacion_k10_en_hogares,
         },
         "rio": d.escenario.rio,
         "resumen": d.escenario.resumen,
