@@ -5,7 +5,7 @@ describe("rutaInterna (destino tras el login)", () => {
     expect(rutaInterna(r)).toBe(r);
   });
 
-  it.each(["//evil.example", "/\evil.example", "https://evil.example", "evil", "", null, 42, undefined])("descarta %p", (r) => {
+  it.each(["//evil.example", "/\\evil.example", "/comando\\..\\evil", "https://evil.example", "evil", "", null, 42, undefined])("descarta %p", (r) => {
     expect(rutaInterna(r)).toBeUndefined();
   });
 });
