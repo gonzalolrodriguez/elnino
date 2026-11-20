@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, Text } from "react-native";
 
+import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { Boton, COLOR, ErrorCaja, Insignia, Tarjeta, Texto } from "@/components/ui";
 import { RADIO } from "@/components/tema";
 import { useCola } from "@/lib/ColaContext";
@@ -42,18 +43,21 @@ export function AyudaAhora({
   const [error, setError] = useState<string | null>(null);
   const enCurso = useRef(false);
 
-  const mandar = useCallback(async () => {
+  const [manual, setManual] = useState<Coordenadas | null>(null);
+
+  /** Sin `puntoManual` toma el GPS; con él (marcado en el mapa) no hace falta el GPS. */
+  const mandar = useCallback(async (puntoManual?: Coordenadas) => {
     if (enCurso.current) return;
     enCurso.current = true;
     setError(null);
     setFase({ tipo: "enviando" });
     try {
-      const gps = await obtenerUbicacion();
-      const punto = gps.ok ? gps.coordenadas : null;
+      const gps = puntoManual ? null : await obtenerUbicacion();
+      const punto = puntoManual ?? (gps?.ok ? gps.coordenadas : null);
       const personas = await personasParaPedidoRapido(usuario.rol, `grupo_integrantes:${usuario.id}:${obtenerUrlServidor()}`);
       const datos = datosPedidoRapido(punto, personas, referencia);
       if (!datos) {
-        setFase({ tipo: "sin_ubicacion", motivo: gps.ok ? "error" : gps.motivo });
+        setFase({ tipo: "sin_ubicacion", motivo: !gps || gps.ok ? "error" : gps.motivo });
         return;
       }
       const r = await enviar(datos, null);
@@ -166,6 +170,8 @@ export function AyudaAhora({
           }
         >
           <Boton titulo="Escribir una referencia" variante="secundario" onPress={alNecesitarDetalle} />
+          <MarcarEnMapa punto={manual} alCambiar={(p) => setManual({ lat: p.lat, lon: p.lon })} />
+          {manual ? <Boton titulo="Enviar el pedido con este punto" onPress={() => void mandar(manual)} /> : null}
           <Texto suave pequeno>
             Sin datos móviles también podés usar «¿Sin datos? Enviar por SMS» más abajo, o llamar al 103.
           </Texto>

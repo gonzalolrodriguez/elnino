@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
 
+import { MapaRutaPedido, rutaDe } from "@/components/mapa/MapaRutaPedido";
 import { ItemCuadrillaEnCamino } from "@/components/TarjetaCuadrillaEnCamino";
 import { Boton, COLOR, Insignia, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { etiquetaRolOperativo, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
@@ -83,6 +84,7 @@ export function TarjetaPedido({ pedido }: { pedido: PedidoCiudadano }) {
         <Insignia categoria="SIMULADO" />
       </Tarjeta>
       {pedido.seguimiento ? <ItemCuadrillaEnCamino s={pedido.seguimiento} ahoraMs={Date.now()} /> : null}
+      {rutaDe(pedido) ? <MapaRutaPedido pedido={pedido} ruta={rutaDe(pedido)!} /> : null}
     </>
   );
 }

@@ -28,7 +28,26 @@ jest.mock("expo-notifications", () => ({
   AndroidImportance: { HIGH: 4 },
 }));
 
-jest.mock("react-native-maps", () => {
+// WebView simulado: guarda cada instancia (props y mensajes enviados) para que las pruebas lo inspeccionen.
+jest.mock("react-native-webview", () => {
+  const React = require("react");
   const { View } = require("react-native");
-  return { __esModule: true, default: View, Marker: View, Polygon: View };
+  const instancias: { props: Record<string, any>; postMessage: jest.Mock }[] = [];
+  const WebView = React.forwardRef((props: Record<string, any>, ref: any) => {
+    const instancia = React.useRef({ props, postMessage: jest.fn() }).current;
+    instancia.props = props;
+    React.useEffect(() => {
+      instancias.push(instancia);
+    }, [instancia]);
+    React.useImperativeHandle(ref, () => ({ postMessage: instancia.postMessage }));
+    return React.createElement(View, { testID: "webview", accessibilityLabel: props.accessibilityLabel });
+  });
+  return {
+    __esModule: true,
+    WebView,
+    default: WebView,
+    __instancias: instancias,
+    __ultima: () => instancias[instancias.length - 1],
+    __reiniciar: () => void (instancias.length = 0),
+  };
 });

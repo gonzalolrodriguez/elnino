@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
+import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { Boton, Campo, Cargando, COLOR, ErrorCaja, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { ErrorApi } from "@/lib/api";
 import { obtenerUbicacion } from "@/lib/dispositivo";
@@ -111,6 +112,7 @@ export function FormGrupoFamiliar() {
           else setError("No se pudo obtener la ubicación.");
         }}
       />
+      <MarcarEnMapa punto={ubicacion} alCambiar={(p) => setUbicacion({ lat: p.lat, lon: p.lon })} titulo="Marcar mi domicilio en el mapa" />
       {error ? <ErrorCaja mensaje={error} /> : null}
       {guardado ? <Text style={{ color: COLOR.ok }}>{guardado}</Text> : null}
       <Boton titulo="Guardar" onPress={guardar} cargando={guardando} />

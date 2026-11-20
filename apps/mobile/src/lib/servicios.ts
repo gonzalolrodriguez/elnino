@@ -70,6 +70,20 @@ export type ConsultaConfirmacion = {
   respondida_en: string | null;
 };
 
+/** Recorrido de la cuadrilla hasta el pedido (`seguimiento.ruta` de `GET /mi/pedidos`; SIMULADO si `simulada`). */
+export type RutaSeguimiento = {
+  /** Vértices [lon, lat] desde la posición de la cuadrilla hasta el pedido. */
+  coordenadas: [number, number][];
+  distancia_km: number;
+  llegada_estimada_min: number | null;
+  metodo: "red_vial" | "aproximado";
+  simulada: boolean;
+  /** 0..1 sobre la ruta, medido en `calculada_en`. */
+  progreso: number;
+  velocidad_kmh: number;
+  calculada_en: string;
+};
+
 /** Un pedido propio con tarea en curso (`GET /mi/seguimiento`). La cuadrilla se identifica por tipo y roles. */
 export type SeguimientoCuadrilla = {
   solicitud_id: number;
@@ -83,6 +97,8 @@ export type SeguimientoCuadrilla = {
   llegada_estimada_min: number | null;
   categoria: Categoria;
   supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+  /** Ausente en backends anteriores o sin posición: el mapa no se muestra. */
+  ruta?: RutaSeguimiento | null;
 };
 
 export type VehiculoCuadrilla = "4x4" | "camion_jaula" | "colectivo" | "lancha" | "moto";
