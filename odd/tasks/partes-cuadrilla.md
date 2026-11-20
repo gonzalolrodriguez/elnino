@@ -32,17 +32,18 @@
 
 | ID | Tarea | Agente y archivos | Estado |
 |---|---|---|---|
-| K1 | Backend: contrato de arriba, migración 0010, tests, contrato_api, openapi, seguridad | backend (`apps/backend`, `docs/`) | Pendiente |
-| K2 | Panel: página "Cuadrillas" (Ejecutar), componente `NovedadesCuadrillas`, partes en Operación | web-panel-cuadrillas | Pendiente |
-| K3 | Web: página de la cuadrilla con partes (avance, dificultad, resultado) e historial; novedad en Mi cuenta | web-cuadrilla | Pendiente |
-| K4 | App: partes en el modo cuadrilla; novedad en Mis pedidos | app | Pendiente |
-| K5 | Rediseño visual del panel (layout, primitivas, Tablero) | web-panel-visual | Pendiente |
-| R1 | Backend: ruta de la cuadrilla al pedido por la red vial y modo demostración | backend-ruta | Pendiente |
-| R2 | Web: mapa animado estilo seguimiento de vehículo en Mi cuenta | web-ruta | Pendiente |
-| K6 | Integración: merges, insertar `NovedadesCuadrillas` en el Tablero, tests, capturas, PR | coordinador | Pendiente |
+| K1 | Backend: contrato de arriba, migración 0010, tests, contrato_api, openapi, seguridad | backend (`apps/backend`, `docs/`) | Hecha (PR #8) |
+| K2 | Panel: página "Cuadrillas" (Ejecutar), componente `NovedadesCuadrillas`, partes en Operación | web-panel-cuadrillas | Hecha (PR #8) |
+| K3 | Web: página de la cuadrilla con partes (avance, dificultad, resultado) e historial; novedad en Mi cuenta | web-cuadrilla | Hecha (PR #8) |
+| K4 | App: partes en el modo cuadrilla; novedad en Mis pedidos | app | Hecha (PR #8) |
+| K5 | Rediseño visual del panel (layout, primitivas, Tablero) | web-panel-visual | Hecha (PR #8) |
+| R1 | Backend: ruta de la cuadrilla al pedido por la red vial y modo demostración | backend-ruta | Hecha (PR #8) |
+| R2 | Web: mapa animado estilo seguimiento de vehículo en Mi cuenta | web-ruta | Hecha (PR #8) |
+| K6 | Integración: merges, insertar `NovedadesCuadrillas` en el Tablero, tests, capturas, PR | coordinador | Hecha (PR #8) |
 
 Reglas para no pisarse: cada agente toca solo sus archivos; nadie edita `src/test/utils.ts` ni este archivo (solo el coordinador); `docs/` solo K1.
 
 ## Progreso
 
 - 20/11: rama `dev-cuadrillas` creada desde `dev-ciudadano` (`6781bf8`). Cinco agentes lanzados en paralelo.
+- 20/11: integrado en `dev-cuadrillas` y PR #8 abierto (sin merge a main). Backend 426/426, web 329/329 (en serie), app 314/314. Pendiente humano: app en teléfono, CSP en build, worker de MapLibre en vite dev.

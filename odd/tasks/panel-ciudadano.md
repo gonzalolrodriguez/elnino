@@ -16,15 +16,16 @@
 
 | ID | Tarea | Agente y archivos | Estado |
 |---|---|---|---|
-| C1 | Backend: contrato de arriba, migración 0009, seed, tests, contrato_api, openapi, ficha_fuentes | backend (`apps/backend`, `docs/`) | Pendiente |
-| C2 | Web: componente `ElegirEnMapa` (MapLibre, sectores K10) en Pedir ayuda, Editar grupo y los dos registros; "Personas" arranca en el grupo familiar | web-formularios | Pendiente |
-| C3 | Web: Mi cuenta como panel personal (estado del sector, Mi pedido con línea de tiempo y mapa en vivo, confirmación de 5 opciones, avisos, centro, historial, datos plegados); corregir fecha 30/10 | web-micuenta | Pendiente |
-| C4 | Web: landing según sesión y rol; "Recorrer el río" plegado en escritorio; panel Evacuaciones con las 5 respuestas | web-landing-panel | Pendiente |
-| C5 | App: Mis pedidos con línea de tiempo, cuadrilla y vehículo; confirmación de 5 opciones | app | Pendiente |
-| C6 | Integración: merges, tests completos, prueba contra backend real, push y PR | coordinador | Pendiente |
+| C1 | Backend: contrato de arriba, migración 0009, seed, tests, contrato_api, openapi, ficha_fuentes | backend (`apps/backend`, `docs/`) | Hecha (PR #8) |
+| C2 | Web: componente `ElegirEnMapa` (MapLibre, sectores K10) en Pedir ayuda, Editar grupo y los dos registros; "Personas" arranca en el grupo familiar | web-formularios | Hecha (PR #8) |
+| C3 | Web: Mi cuenta como panel personal (estado del sector, Mi pedido con línea de tiempo y mapa en vivo, confirmación de 5 opciones, avisos, centro, historial, datos plegados); corregir fecha 30/10 | web-micuenta | Hecha (PR #8) |
+| C4 | Web: landing según sesión y rol; "Recorrer el río" plegado en escritorio; panel Evacuaciones con las 5 respuestas | web-landing-panel | Hecha (PR #8) |
+| C5 | App: Mis pedidos con línea de tiempo, cuadrilla y vehículo; confirmación de 5 opciones | app | Hecha (PR #8) |
+| C6 | Integración: merges, tests completos, prueba contra backend real, push y PR | coordinador | Hecha (PR #8) |
 
 Reglas para no pisarse: cada agente toca solo sus archivos; nadie edita `src/test/utils.ts`, `theme.ts` (solo C3), `docs/` (solo C1) ni este archivo (solo el coordinador).
 
 ## Progreso
 
 - 20/11: rama `dev-ciudadano` creada desde `main` (`51d9447`). Cinco agentes lanzados en paralelo.
+- 20/11: integrado en `dev-cuadrillas` y PR #8 abierto (sin merge a main). Backend 426/426, web 329/329 (en serie), app 314/314. Pendiente humano: app en teléfono, CSP en build, worker de MapLibre en vite dev.
