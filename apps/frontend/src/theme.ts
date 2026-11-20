@@ -26,6 +26,10 @@ const TAMANOS_TITULO = {
   "3xl": { fontSize: "clamp(2.125rem, 1.4rem + 3vw, 3.5rem)", lineHeight: 1.08 },
   "4xl": { fontSize: "clamp(2.375rem, 1.4rem + 4vw, 4rem)", lineHeight: 1.05 },
   "5xl": { fontSize: "clamp(2.5rem, 1.3rem + 5vw, 4.5rem)", lineHeight: 1.03 },
+  // Escala fija del panel (DESIGN.md): h1 de página y h2 de bloque. Equivalen a los textStyles homónimos; el tamaño del
+  // `Heading` gana sobre `textStyle`, por eso existen también como `size`.
+  pagina: { fontSize: "1.75rem", lineHeight: 1.15, letterSpacing: "-0.03em" },
+  bloque: { fontSize: "1.125rem", lineHeight: 1.25, letterSpacing: "-0.02em" },
 };
 
 const TRANSICION_CONTROL =
@@ -34,6 +38,8 @@ const TRANSICION_CONTROL =
 export const theme = extendTheme({
   config: { initialColorMode: "light", useSystemColorMode: false },
   fonts: { heading: FUENTE, body: FUENTE, mono: "ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" },
+  // Escala de DESIGN.md: `rotulo` (13 px) es el piso de texto de apoyo; nunca menos de 12 px (`xs`).
+  fontSizes: { rotulo: "0.8125rem" },
   radii: { none: "0", sm: "6px", base: "8px", md: "10px", lg: "12px", xl: "16px", "2xl": "20px", full: "9999px" },
   colors: {
     ...PAL,
@@ -57,6 +63,8 @@ export const theme = extendTheme({
   textStyles: {
     cifra: { fontFamily: "heading", fontWeight: 700, fontVariantNumeric: "tabular-nums lining-nums", lineHeight: 1.1, letterSpacing: "-0.02em" },
     nota: { fontSize: "sm", color: "textoSuave" },
+    // Texto corrido: 16 px / 1,6; el ancho de línea lo limita el contenedor (70 caracteres).
+    cuerpo: { fontSize: "md", fontWeight: 400, lineHeight: 1.6 },
     // Panel personal: saludo, cifras grandes (tabulares) y rótulos chicos de datos.
     pantalla: { fontFamily: "heading", fontWeight: 700, fontSize: "clamp(2rem, 1.3rem + 2.6vw, 3.25rem)", lineHeight: 1.05, letterSpacing: "-0.03em" },
     cifraGrande: {
@@ -68,11 +76,11 @@ export const theme = extendTheme({
       fontVariantNumeric: "tabular-nums lining-nums",
     },
     cifraMedia: { fontFamily: "heading", fontWeight: 700, fontSize: "1.75rem", lineHeight: 1.1, letterSpacing: "-0.025em", fontVariantNumeric: "tabular-nums lining-nums" },
-    rotulo: { fontSize: "0.8125rem", fontWeight: 600, lineHeight: 1.3, color: "textoSuave" },
+    rotulo: { fontSize: "rotulo", fontWeight: 600, lineHeight: 1.3, color: "textoSuave" },
     // Panel operativo: título de página y de bloque (escala fija, no fluida) y dato menudo con numerales tabulares.
     titularPagina: { fontFamily: "heading", fontWeight: 700, fontSize: "1.75rem", lineHeight: 1.15, letterSpacing: "-0.03em" },
     tituloBloque: { fontFamily: "heading", fontWeight: 700, fontSize: "1.125rem", lineHeight: 1.25, letterSpacing: "-0.02em" },
-    microdato: { fontSize: "0.8125rem", lineHeight: 1.4, color: "textoSuave", fontVariantNumeric: "tabular-nums" },
+    microdato: { fontSize: "rotulo", lineHeight: 1.4, color: "textoSuave", fontVariantNumeric: "tabular-nums" },
   },
   styles: {
     global: {
@@ -99,7 +107,7 @@ export const theme = extendTheme({
       "h1, h2, h3": { textWrap: "balance" },
       "p, li": { textWrap: "pretty" },
       // Foco visible de dos tonos según el fondo: azul oscuro sobre claro, ámbar claro sobre oscuro.
-      "a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible":
+      "a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible, [role='tab']:focus-visible, [role='menuitem']:focus-visible":
         { outline: "3px solid", outlineColor: "foco", outlineOffset: "2px" },
       ".sobre-oscuro a:focus-visible, .sobre-oscuro button:focus-visible, .sobre-oscuro [tabindex]:focus-visible, a.sobre-oscuro:focus-visible":
         { outlineColor: "focoClaro" },
@@ -181,7 +189,7 @@ export const theme = extendTheme({
             borderRadius: "md",
             transition: TRANSICION_CONTROL,
             _hover: { borderColor: "pizarra.700" },
-            _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)", zIndex: 1 },
+            _focusVisible: { borderColor: "foco", boxShadow: "none", zIndex: 1 },
             _invalid: { borderColor: "escala.evacuacion", boxShadow: "0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
             _placeholder: { color: "pizarra.500" },
           },
@@ -202,7 +210,7 @@ export const theme = extendTheme({
             borderColor: "bordeControl",
             borderRadius: "md",
             _hover: { borderColor: "pizarra.700" },
-            _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)" },
+            _focusVisible: { borderColor: "foco", boxShadow: "none" },
             _invalid: { borderColor: "escala.evacuacion" },
           },
         },
@@ -216,28 +224,58 @@ export const theme = extendTheme({
           borderColor: "bordeControl",
           borderRadius: "md",
           _hover: { borderColor: "pizarra.700" },
-          _focusVisible: { borderColor: "primario", boxShadow: "0 0 0 1px var(--chakra-colors-primario)" },
+          _focusVisible: { borderColor: "foco", boxShadow: "none" },
           _invalid: { borderColor: "escala.evacuacion", boxShadow: "0 0 0 1px var(--chakra-colors-escala-evacuacion)" },
         },
       },
     },
     Form: {
       baseStyle: {
-        helperText: { color: "textoSuave", fontSize: "sm", mt: 1 },
+        helperText: { color: "textoSuave", fontSize: "rotulo", lineHeight: 1.4, mt: 1 },
       },
     },
     FormLabel: { baseStyle: { fontWeight: 600, fontSize: "sm", mb: 1, color: "texto" } },
     FormError: {
       baseStyle: { text: { color: "evacuacion.700", fontSize: "sm", fontWeight: 600 } },
     },
+    // Booleanos y excluyentes: objetivo de 44 px, control de 20 px con borde de 3:1 (WCAG 1.4.11) y el mismo anillo de foco.
     Checkbox: {
       baseStyle: {
+        container: { minH: "2.75rem", alignItems: "center" },
         control: {
+          w: "1.25rem",
+          h: "1.25rem",
           borderColor: "bordeControl",
           borderWidth: "1px",
           borderRadius: "sm",
           bg: "superficie",
           _checked: { bg: "primario", borderColor: "primario", color: "papel", _hover: { bg: "primarioHover", borderColor: "primarioHover" } },
+          _focusVisible: { boxShadow: "none", outline: "3px solid", outlineColor: "foco", outlineOffset: "2px" },
+          _invalid: { borderColor: "escala.evacuacion" },
+        },
+      },
+    },
+    Radio: {
+      baseStyle: {
+        container: { minH: "2.75rem", alignItems: "center" },
+        control: {
+          w: "1.25rem",
+          h: "1.25rem",
+          borderColor: "bordeControl",
+          borderWidth: "1px",
+          bg: "superficie",
+          _checked: { bg: "primario", borderColor: "primario", color: "papel", _hover: { bg: "primarioHover", borderColor: "primarioHover" } },
+          _focusVisible: { boxShadow: "none", outline: "3px solid", outlineColor: "foco", outlineOffset: "2px" },
+          _invalid: { borderColor: "escala.evacuacion" },
+        },
+      },
+    },
+    Switch: {
+      baseStyle: {
+        container: { minH: "2.75rem", alignItems: "center" },
+        track: {
+          bg: "pizarra.500",
+          _checked: { bg: "primario" },
           _focusVisible: { boxShadow: "none", outline: "3px solid", outlineColor: "foco", outlineOffset: "2px" },
         },
       },

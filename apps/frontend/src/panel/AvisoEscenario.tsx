@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Input, Text } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { IconoOlas } from "../components/iconos/Iconos";
@@ -31,7 +31,7 @@ export function AvisoEscenario() {
       aria-label="Escenario del panel"
       data-testid="barra-escenario"
       position="sticky"
-      top={{ base: "2.9rem", md: "2rem" }}
+      top="calc(var(--altura-leyenda) + 0.25rem)"
       zIndex={20}
       mb={4}
       px={4}
@@ -75,7 +75,7 @@ export function AvisoEscenario() {
       </Flex>
       <Flex id="controles-escenario" display={{ base: abierto ? "flex" : "none", md: "flex" }} mt={2} gap={{ base: 3, md: 6 }} wrap="wrap" align="flex-end">
         <Box flex="1 1 16rem">
-          <Text as="label" htmlFor="barra-altura-num" fontSize="xs" fontWeight={600} display="block">
+          <Text as="label" htmlFor="barra-altura-num" textStyle="rotulo" color="inherit" display="block">
             Altura del río en el escenario (m) · SIMULADO si difiere de {fmtM(alturaObservada)}
           </Text>
           <Flex gap={2} align="center">
@@ -89,10 +89,13 @@ export function AvisoEscenario() {
               onChange={(e) => fijarAltura(Number(e.target.value))}
               style={{ flex: 1, minWidth: 0 }}
             />
-            <input
+            <Input
               id="barra-altura-num"
               type="number"
               inputMode="decimal"
+              size="sm"
+              w="5.5rem"
+              flexShrink={0}
               min={ALTURA_MIN}
               max={ALTURA_MAX}
               step={0.05}
@@ -101,12 +104,11 @@ export function AvisoEscenario() {
                 const v = Number(e.target.value);
                 if (e.target.value !== "" && Number.isFinite(v)) fijarAltura(acotar(v, ALTURA_MIN, ALTURA_MAX));
               }}
-              style={{ width: "5rem", padding: "0.25rem 0.375rem", border: "1px solid var(--chakra-colors-borde, #ccc)", borderRadius: "0.375rem", background: "inherit", color: "inherit" }}
             />
           </Flex>
         </Box>
         <Box flex="1 1 12rem">
-          <Text as="label" htmlFor="barra-lluvia" fontSize="xs" fontWeight={600} display="block">
+          <Text as="label" htmlFor="barra-lluvia" textStyle="rotulo" color="inherit" display="block">
             Lluvia del escenario: {fmtNum(entrada.lluvia_mm)} mm ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
           </Text>
           <input
