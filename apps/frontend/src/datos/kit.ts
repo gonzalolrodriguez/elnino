@@ -125,3 +125,28 @@ export function sectorDe(lon: number, lat: number): Sector | null {
   }
   return null;
 }
+
+/**
+ * Cifras de "Tres relojes". Cada una figura en docs/ficha_fuentes.md.
+ * Ritmo de ascenso: mayor suba diaria de 2019 (0,36 m/día) y promedio de octubre de 2026 (0,1077 m/día); son los dos extremos que usa
+ * `app/domain/ascenso.py` para el rango de tiempo restante (proyección lineal, SUPUESTO).
+ */
+export const ASCENSO_RAPIDO_M_DIA = 0.36;
+export const ASCENSO_LENTO_M_DIA = 0.1077;
+/** Lluvia que corta el camino, por superficie (SUPUESTO, supuestos.yaml). */
+export const LLUVIA_CORTA_TIERRA_MM = 30;
+export const LLUVIA_CORTA_RIPIO_MM = 80;
+/** Pronóstico estacional CFS v2, emisión 29/10/2026 (DOCUMENTO DE REFERENCIA): mm proyectados y normal 1991-2020, de noviembre a julio. */
+export const CFS_MENSUAL: { mes: string; proyectado: number; normal: number }[] = [
+  { mes: "Nov", proyectado: 198, normal: 160 },
+  { mes: "Dic", proyectado: 214, normal: 168 },
+  { mes: "Ene", proyectado: 216, normal: 172 },
+  { mes: "Feb", proyectado: 245, normal: 162 },
+  { mes: "Mar", proyectado: 308, normal: 175 },
+  { mes: "Abr", proyectado: 246, normal: 182 },
+  { mes: "May", proyectado: 80, normal: 110 },
+  { mes: "Jun", proyectado: 68, normal: 58 },
+  { mes: "Jul", proyectado: 48, normal: 42 },
+];
+export const CFS_ACUMULADO_MM = 1623;
+export const CFS_NORMAL_MM = 1229;

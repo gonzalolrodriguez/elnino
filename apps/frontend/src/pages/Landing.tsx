@@ -3,6 +3,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { Layout } from "../components/Layout";
 import { Plegable } from "../components/Plegable";
+import { TresRelojes } from "../components/TresRelojes";
 import { LIMITES_ESTATICOS } from "../datos/kit";
 import { Hero } from "../landing/Hero";
 import { useMeta } from "../lib/useMeta";
@@ -39,6 +40,8 @@ export default function Landing() {
   return (
     <Layout contenedor={false} titulo="Inicio">
       <Hero />
+
+      <TresRelojes />
 
       <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 12, md: 20 }} pb={{ base: 10, md: 14 }}>
         <Heading as="h2" id="titulo-perfiles" size="xl" mb={2}>
