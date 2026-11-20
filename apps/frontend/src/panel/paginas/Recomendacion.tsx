@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
@@ -249,7 +250,7 @@ function BloquePronostico({ valor, onCambio }: { valor: PronosticoLluvia | null;
         </FormControl>
       </Flex>
       {activo && !valido && (
-        <Text fontSize="xs" color="red.600" mt={1} role="alert">
+        <Text fontSize="xs" color="umbral.textoEvacuacion" mt={1} role="alert">
           Indicá entre 0 y 1.000 mm y entre 0 y 720 horas (mayores que cero).
         </Text>
       )}
@@ -281,7 +282,7 @@ function BloqueRecomendacion({ pronostico, hogares }: { pronostico: PronosticoLl
       <Alert status="info" mb={3} fontSize="sm">
         <AlertIcon />
         <AlertDescription data-testid="etiqueta-recomendacion">
-          RECOMENDACIÓN, no una orden: la orden la emite una persona con rol autorizado (sección Órdenes) y queda registrada.
+          RECOMENDACIÓN, no una orden: la orden la emite una persona con rol autorizado (<RouterLink to="/comando/ordenes" style={{ textDecoration: "underline" }}>sección Órdenes</RouterLink>) y queda registrada.
         </AlertDescription>
       </Alert>
       <Text fontSize="sm" mb={2}>
@@ -311,6 +312,16 @@ function BloqueRecomendacion({ pronostico, hogares }: { pronostico: PronosticoLl
             <Insignia categoria={r.categoria} />
           </Flex>
           <ResumenPlan p={r.recomendacion} />
+          {r.recomendacion.sectores.length > 0 && (
+            <Flex align="center" gap={3} wrap="wrap" mb={3}>
+              <Button as={RouterLink} to={`/comando/ordenes?sectores=${r.recomendacion.sectores.map((s) => s.id).join(",")}`} size="sm">
+                Preparar orden con estos sectores
+              </Button>
+              <Text fontSize="xs" color="textoSuave">
+                Solo precarga el formulario de Órdenes ({r.recomendacion.sectores.map((s) => s.id).join(", ")}): la orden la emite una persona con rol de decisor.
+              </Text>
+            </Flex>
+          )}
           {r.recomendacion.sectores.length === 0 ? (
             <Alert status="success" fontSize="sm">
               <AlertIcon />

@@ -29,6 +29,8 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
   const arrastrando = useRef(false);
   const [estado, setEstado] = useState<Pick<EstadoRecorrido, "modo" | "reproduciendo">>({ modo: "intro", reproduciendo: false });
   const [cercano, setCercano] = useState<IdHito | null>(null);
+  // En pantallas angostas los controles quedan plegados para que el texto y la escena no queden lejos del inicio.
+  const [abierto, setAbierto] = useState(false);
 
   const aplicar = useCallback((e: EstadoRecorrido) => {
     const c = control.current;
@@ -90,8 +92,22 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
         <Text id="recorrido-titulo" fontWeight={700} fontSize="sm">
           Recorrer el río
         </Text>
+        <Button
+          type="button"
+          size="sm"
+          variant="sobreOscuro"
+          display={{ base: "inline-flex", lg: "none" }}
+          minH={MINIMO}
+          ml="auto"
+          aria-expanded={abierto}
+          aria-controls="recorrido-contenido"
+          onClick={() => setAbierto((v) => !v)}
+          data-testid="recorrido-alternar"
+        >
+          {abierto ? "Ocultar controles" : "Mostrar controles"}
+        </Button>
         {disponible3D && (
-          <>
+          <Box display={{ base: abierto ? "flex" : "none", lg: "contents" }} w={{ base: "100%", lg: "auto" }} alignItems="center" gap={3} flexWrap="wrap">
             <Button
               type="button"
               size="sm"
@@ -141,52 +157,54 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
                 }
               }}
             />
-          </>
+          </Box>
         )}
       </Flex>
 
-      <Flex gap={2} wrap="wrap" mt={2} role="group" aria-label="Ir a un punto del recorrido">
-        {CHIPS_RECORRIDO.map((c) => (
-          <Button
-            key={c.id}
-            type="button"
-            size="sm"
-            variant="sobreOscuro"
-            minH={MINIMO}
-            aria-pressed={activoChip === c.id}
-            bg={activoChip === c.id ? "rgba(255,255,255,0.3)" : undefined}
-            onClick={() => (disponible3D ? control.current?.irAHito(c.id, { instantaneo: reducido }) : alResaltar(c.id))}
-            data-testid={`recorrido-hito-${c.id}`}
-          >
-            {c.nombre}
-          </Button>
-        ))}
-      </Flex>
-
-      {disponible3D && (
-        <Flex gap={2} wrap="wrap" mt={2} align="center">
-          {libre ? (
-            <Button type="button" size="sm" variant="acento" minH={MINIMO} onClick={() => control.current?.explorar(false)} data-testid="recorrido-salir">
-              Salir del mapa (Esc)
+      <Box id="recorrido-contenido" display={{ base: abierto ? "block" : "none", lg: "block" }}>
+        <Flex gap={2} wrap="wrap" mt={2} role="group" aria-label="Ir a un punto del recorrido">
+          {CHIPS_RECORRIDO.map((c) => (
+            <Button
+              key={c.id}
+              type="button"
+              size="sm"
+              variant="sobreOscuro"
+              minH={MINIMO}
+              aria-pressed={activoChip === c.id}
+              bg={activoChip === c.id ? "rgba(255,255,255,0.3)" : undefined}
+              onClick={() => (disponible3D ? control.current?.irAHito(c.id, { instantaneo: reducido }) : alResaltar(c.id))}
+              data-testid={`recorrido-hito-${c.id}`}
+            >
+              {c.nombre}
             </Button>
-          ) : (
-            <Button type="button" size="sm" variant="sobreOscuro" minH={MINIMO} onClick={() => control.current?.explorar(true)} data-testid="recorrido-explorar">
-              Explorar el mapa
-            </Button>
-          )}
-          <Button type="button" size="sm" variant="sobreOscuro" minH={MINIMO} onClick={() => control.current?.volverInicio()} data-testid="recorrido-volver">
-            Volver a la vista inicial
-          </Button>
+          ))}
         </Flex>
-      )}
 
-      <Text role="status" aria-live="polite" fontSize="xs" color="oscuro.suave" mt={2} minH="1.1em">
-        {libre
-          ? "Arrastrá para moverte, rueda o pellizco para acercar, clic derecho o dos dedos para girar."
-          : pista
-            ? "Usá Ctrl + rueda para hacer zoom"
-            : ""}
-      </Text>
+        {disponible3D && (
+          <Flex gap={2} wrap="wrap" mt={2} align="center">
+            {libre ? (
+              <Button type="button" size="sm" variant="acento" minH={MINIMO} onClick={() => control.current?.explorar(false)} data-testid="recorrido-salir">
+                Salir del mapa (Esc)
+              </Button>
+            ) : (
+              <Button type="button" size="sm" variant="sobreOscuro" minH={MINIMO} onClick={() => control.current?.explorar(true)} data-testid="recorrido-explorar">
+                Explorar el mapa
+              </Button>
+            )}
+            <Button type="button" size="sm" variant="sobreOscuro" minH={MINIMO} onClick={() => control.current?.volverInicio()} data-testid="recorrido-volver">
+              Volver a la vista inicial
+            </Button>
+          </Flex>
+        )}
+
+        <Text role="status" aria-live="polite" fontSize="xs" color="oscuro.suave" mt={2} minH="1.1em">
+          {libre
+            ? "Arrastrá para moverte, rueda o pellizco para acercar, clic derecho o dos dedos para girar."
+            : pista
+              ? "Usá Ctrl + rueda para hacer zoom"
+              : ""}
+        </Text>
+      </Box>
     </Box>
   );
 }

@@ -19,6 +19,7 @@ Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su 
 | Pico de 2019 | 9,72 m (02/06/2019 00:00 en la serie; otros documentos citan el 03/06 por huso horario) | K1 limpio | Observado | 02/06/2019 |
 | Altura al inicio de octubre de 2026 | 2,37 m | K1 limpio | Observado | 01/10/2026 |
 | Altura al corte | 5,60 m | K1 limpio | Observado | 31/10/2026 |
+| Frase de estado de la portada ("Faltan 2,20 m para la alerta") | 2,20 m = 7,80 m (alerta) - 5,60 m (corte); se calcula en pantalla con las constantes del kit | K3 (alerta) y K1 limpio (corte), cálculo propio | Observado (derivado) | 31/10/2026 |
 | Valor mínimo de la serie | -0,86 m (141 lecturas negativas conservadas) | K1 limpio | Observado | 07/11/2024 |
 | Valor imposible en cuarentena | 98,1 (2012-07-15), no se reemplaza ni se usa | K1 · `registro_limpieza.md` | Observado | 15/07/2012 |
 | Cobertura de 2018 | 25 días sin dato (sin interpolar) | K1 limpio (`data/processed/k1_diario.csv`) | Observado | 2018 |

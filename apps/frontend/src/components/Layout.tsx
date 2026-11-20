@@ -166,7 +166,7 @@ function ColumnaPie({ titulo, children }: { titulo: string; children: ReactNode 
       <Text fontWeight={700} color="oscuro.fg" mb={3}>
         {titulo}
       </Text>
-      <Box as="ul" listStyleType="none" m={0} p={0} sx={{ "& > li + li": { marginTop: "0.5rem" } }}>
+      <Box as="ul" listStyleType="none" m={0} p={0} sx={{ "& > li + li": { marginTop: "0.25rem" } }}>
         {children}
       </Box>
     </Box>
@@ -174,7 +174,8 @@ function ColumnaPie({ titulo, children }: { titulo: string; children: ReactNode 
 }
 
 function EnlacePie({ to, href, children }: { to?: string; href?: string; children: ReactNode }) {
-  const comun = { color: "oscuro.suave", textDecoration: "none", _hover: { color: "oscuro.fg", textDecoration: "underline" } } as const;
+  // Área táctil de al menos 24 px de alto (WCAG 2.2, 2.5.8) sin cambiar la separación visual entre enlaces.
+  const comun = { display: "inline-block", py: "0.25rem", color: "oscuro.suave", textDecoration: "none", _hover: { color: "oscuro.fg", textDecoration: "underline" } } as const;
   return (
     <li>
       {to ? (

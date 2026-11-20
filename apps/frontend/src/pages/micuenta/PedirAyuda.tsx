@@ -122,7 +122,7 @@ export function PedirAyuda({ esProductor, alEnviar }: { esProductor: boolean; al
               </Box>
             </Plegable>
             {errores.lat && errores.lon && !v.lat && !v.lon && (
-              <Text fontSize="sm" color="red.600" role="alert">
+              <Text fontSize="sm" color="umbral.textoEvacuacion" role="alert">
                 Necesitamos tu ubicación para enviar el pedido.
               </Text>
             )}

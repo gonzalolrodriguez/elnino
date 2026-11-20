@@ -1,6 +1,7 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 
 import { Insignia } from "../components/Insignia";
+import { fechaLarga } from "../datos/kit";
 import { Plegable } from "../components/Plegable";
 import { EXAGERACION_VERTICAL, fmtM, marcasLeyenda, type MetaRelieve } from "./datos";
 
@@ -43,7 +44,7 @@ export function LeyendaRelieve({ meta, vista }: { meta: MetaRelieve; vista: "3d"
       </Text>
       <Flex gap={2} align="center" wrap="wrap" mt={1.5}>
         <Insignia categoria="DOCUMENTO DE REFERENCIA" onDark />
-        <Text as="span">Descarga {meta.fecha_descarga}</Text>
+        <Text as="span">Descarga {fechaLarga(meta.fecha_descarga)}</Text>
       </Flex>
       <Plegable titulo={<span style={{ fontSize: "0.75rem" }}>Leyenda de altitud y fuentes</span>} tono="oscuro">
         <Box pb={2}>

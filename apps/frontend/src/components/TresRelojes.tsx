@@ -112,6 +112,8 @@ function Pie({ categorias, fuente }: { categorias: Categoria[]; fuente: string }
 
 type Props = {
   variante?: "amplia" | "compacta";
+  /** Texto corto sobre el título (solo en la variante amplia), p. ej. el nombre de la sección en la portada. */
+  sobretitulo?: string;
   /** Altura del río en metros. Por defecto, el dato del corte (31/10/2026). */
   alturaM?: number;
   /** Categoría de la altura: DATO OBSERVADO para el corte; SIMULADO si es un valor del simulador. */
@@ -121,7 +123,7 @@ type Props = {
   lluviaCategoria?: Categoria;
 };
 
-export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CATEGORIAS.OBSERVADO, lluviaMm, lluviaCategoria = CATEGORIAS.SIMULADO }: Props) {
+export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaCategoria = CATEGORIAS.OBSERVADO, lluviaMm, lluviaCategoria = CATEGORIAS.SIMULADO }: Props) {
   const amplia = variante === "amplia";
   const corte = CIFRAS_FORMOSA.find((c) => c.id === "corte");
   const altura = alturaM ?? corte?.valor ?? 5.6;
@@ -299,6 +301,11 @@ export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CA
       <Box maxW={amplia ? "90rem" : undefined} mx="auto" px={amplia ? { base: 4, md: 8 } : { base: 4, md: 5 }} py={amplia ? { base: 10, md: 16 } : 4}>
         {amplia ? (
           <Box mb={{ base: 6, md: 10 }} maxW="40rem">
+            {sobretitulo && (
+              <Text fontSize="sm" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" mb={1}>
+                {sobretitulo}
+              </Text>
+            )}
             <Heading as="h2" id={`titulo-relojes-${variante}`} size="xl" mb={2}>
               Tres relojes corren a la vez
             </Heading>
