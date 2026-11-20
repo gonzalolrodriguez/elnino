@@ -42,6 +42,7 @@ function conSesion(rol: string, extra: Parameters<typeof simularFetch>[0] = {}) 
   return simularFetch({
     "POST /auth/refresh": () => sesion(rol),
     "GET /tareas": ok({ tareas: [TAREA] }),
+    "GET /tareas/7/partes": ok({ items: [] }),
     "GET /mi/notificaciones": ok({ notificaciones: [{ id: 1, orden_id: 2, mensaje: "Orden de evacuación preventiva", leida: false, creada_en: "2026-11-17T10:00:00Z" }], no_leidas: 1 }),
     ...extra,
   });
@@ -114,8 +115,8 @@ describe("pantalla de cuadrilla", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Iniciar" }));
     await waitFor(() => expect(screen.getByTestId("estado-7")).toHaveTextContent("En curso"));
     expect(JSON.parse(String((llamadas(f, "PATCH /tareas/7")[0][1] as RequestInit).body))).toEqual({ estado: "en_curso" });
-    // Una tarea ligada a un pedido es una evacuación: se cierra con constancia, no con un "Completar" suelto.
-    expect(screen.getByRole("button", { name: "Cerrar con constancia" })).toBeInTheDocument();
+    // Una tarea ligada a un pedido es una evacuación: se termina por «Terminar tarea» y «Completa» lleva a la constancia, no a un "Completar" suelto.
+    expect(screen.getByRole("button", { name: "Terminar tarea" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Completar" })).not.toBeInTheDocument();
   });
 

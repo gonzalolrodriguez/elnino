@@ -6,6 +6,9 @@ export type EtapaPedido = "recibida" | "verificada" | "asignada" | "en_curso" | 
 
 export type PasoLineaTiempo = { estado: EtapaPedido | string; en: string | null; alcanzado?: boolean };
 
+/** Última novedad relevante de la tarea del pedido. Nunca trae el texto de la observación de la cuadrilla. */
+export type NovedadPedido = { tipo: "demora" | "dificultad" | "parcial" | "no_realizada" | "reprogramada"; en: string | null };
+
 export type Pedido = {
   id: number;
   tipo: string;
@@ -27,6 +30,7 @@ export type Pedido = {
   seguimiento: SeguimientoCuadrilla | null;
   confirmacion: null | { solicitud_id: number; codigo?: string; respondida: boolean; respuesta: string | null; comentario: string | null };
   centro: null | { id: number; nombre: string; lat: number; lon: number };
+  novedad?: NovedadPedido | null;
 };
 
 export type RespuestaPedidos = { categoria: string; items: Pedido[] };
