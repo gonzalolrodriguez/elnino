@@ -1,7 +1,8 @@
 import { Alert, AlertIcon, Box, Button, FormControl, FormErrorMessage, FormLabel, Heading, Select, Text, Textarea, VStack } from "@chakra-ui/react";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AvisoFueraDeFormosa, BotonUbicacion } from "../../components/BotonUbicacion";
+import { ElegirEnMapa } from "../../components/ElegirEnMapa";
 import { AlertaError, Campo } from "../../components/Formulario";
 import { Plegable } from "../../components/Plegable";
 import { solicitar } from "../../lib/api";
@@ -20,14 +21,32 @@ const TIPOS_PRODUCTOR = ["asistencia", "evacuacion", "ganado", "otro"] as const;
  */
 export function PedirAyuda({ esProductor, alEnviar }: { esProductor: boolean; alEnviar?: () => void }) {
   const tipos = esProductor ? TIPOS_PRODUCTOR : TIPOS_CIUDADANIA;
-  const [v, setV] = useState({ tipo: "asistencia", personas: "0", animales: "0", texto: "", lon: "", lat: "" });
+  const [v, setV] = useState({ tipo: "asistencia", personas: "1", animales: "0", texto: "", lon: "", lat: "" });
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [errorApi, setErrorApi] = useState<unknown>(null);
   const [creada, setCreada] = useState<Creada | null>(null);
   const clave = useRef<string | null>(null);
+  const personasEditadas = useRef(false);
 
-  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
+  // «Personas» arranca en el tamaño del grupo familiar (nunca en 0); sin grupo cargado queda en 1.
+  useEffect(() => {
+    let vivo = true;
+    solicitar<{ integrantes?: number }>("/mi/grupo-familiar", { autenticado: true })
+      .then((g) => {
+        const n = g?.integrantes;
+        if (vivo && !personasEditadas.current && typeof n === "number" && n >= 1) setV((x) => ({ ...x, personas: String(n) }));
+      })
+      .catch(() => undefined); // 404 o sin conexión: se queda en 1
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (k === "personas") personasEditadas.current = true;
+    setV({ ...v, [k]: e.target.value });
+  };
   const lon = decimal(v.lon);
   const lat = decimal(v.lat);
   const puntoValido = lon !== null && lat !== null && !Number.isNaN(lon) && !Number.isNaN(lat);
@@ -39,12 +58,9 @@ export function PedirAyuda({ esProductor, alEnviar }: { esProductor: boolean; al
     const personas = entero(v.personas);
     const animales = entero(v.animales);
     const err: Errores = { ...validarCoordenadas(v.lon, v.lat, true) };
-    if (!enRango(personas, 0, 500)) err.personas = "Entre 0 y 500 personas.";
+    if (!enRango(personas, 1, 500)) err.personas = "Entre 1 y 500 personas.";
     if (!enRango(animales, 0, 100000)) err.animales = "Entre 0 y 100.000 animales.";
     if (v.texto.length > 500) err.texto = "Máximo 500 caracteres.";
-    if (!err.personas && !err.animales && !personas && !animales && !v.texto.trim()) {
-      err.personas = "Indicá cuántas personas o animales necesitan ayuda, o escribí un mensaje.";
-    }
     setErrores(err);
     if (Object.keys(err).length) {
       enfocarPrimerError();
@@ -115,6 +131,7 @@ export function PedirAyuda({ esProductor, alEnviar }: { esProductor: boolean; al
               {errores.texto && <FormErrorMessage>{errores.texto}</FormErrorMessage>}
             </FormControl>
             <BotonUbicacion primario onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
+            <ElegirEnMapa lon={v.lon} lat={v.lat} onChange={(p) => setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }))} />
             <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
               <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
                 <Campo id="ayuda-lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
