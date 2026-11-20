@@ -5,6 +5,8 @@
  * y en memoria en las pruebas.
  */
 
+import type { RespuestaEvacuado } from "@/lib/servicios";
+
 export type DatosSolicitud = {
   tipo: "evacuacion" | "asistencia" | "ganado" | "logistica" | "otro";
   personas: number;
@@ -49,7 +51,8 @@ export type DatosCierre = {
 export type DatosConfirmacion = {
   clase: "confirmacion";
   solicitud_id: number;
-  respuesta: "si" | "no" | "problema";
+  /** Canónica; los valores viejos (`si/no/problema`) ya encolados se mapean al enviar. */
+  respuesta: RespuestaEvacuado;
   comentario?: string;
   resultado?: { repetida: boolean };
 };

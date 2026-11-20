@@ -3,10 +3,11 @@ import { Text } from "react-native";
 
 import { Boton, Campo, ErrorCaja, FilaBotones, Insignia, Tarjeta, Texto } from "@/components/ui";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
-import { abrirSMSConfirmacion, ETIQUETA_RESPUESTA, MAX_COMENTARIO } from "@/lib/confirmacion";
+import { abrirSMSConfirmacion, MAX_COMENTARIO } from "@/lib/confirmacion";
 import { useCola } from "@/lib/ColaContext";
 import { obtenerUrlServidor } from "@/lib/servidor";
-import { api, type ConsultaConfirmacion, type RespuestaEvacuado } from "@/lib/servicios";
+import { canonicaRespuesta, ETIQUETA_OPCION, etiquetaRespuesta, palabraSMS, RESPUESTAS_CANONICAS } from "@/lib/respuestas";
+import { api, type ConsultaConfirmacion, type RespuestaCanonica, type RespuestaEvacuado } from "@/lib/servicios";
 import { useUsuario } from "@/lib/SesionContext";
 import { textoDestinoSMS } from "@/lib/ayudaSms";
 
@@ -53,10 +54,13 @@ type Resultado =
   | { tipo: "rechazada"; mensaje: string }
   | null;
 
-const GRACIAS: Record<RespuestaEvacuado, string> = {
-  si: "Gracias por avisar que llegaste.",
-  no: "Gracias por avisarnos. Un operador va a revisar lo que pasó.",
-  problema: "Gracias por avisarnos. Un operador va a revisar lo que pasó.",
+const REVISION = "Gracias por avisarnos. Un operador va a revisar lo que pasó.";
+const GRACIAS: Record<RespuestaCanonica, string> = {
+  completa: "Gracias por avisar que te asistieron.",
+  parcial: REVISION,
+  no_encontraron: REVISION,
+  no_vinieron: REVISION,
+  otro_problema: REVISION,
 };
 
 /**
@@ -66,7 +70,7 @@ const GRACIAS: Record<RespuestaEvacuado, string> = {
  */
 export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respondida = null, alResponder }: Props) {
   const { enviar } = useCola();
-  const [elegida, setElegida] = useState<RespuestaEvacuado | null>(null);
+  const [elegida, setElegida] = useState<RespuestaCanonica | null>(null);
   const [comentario, setComentario] = useState("");
   const [trabajando, setTrabajando] = useState(false);
   const [resultado, setResultado] = useState<Resultado>(null);
@@ -120,7 +124,7 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
     return (
       <Tarjeta>
         <Text style={{ fontWeight: "700" }}>¿Llegaste {donde}?</Text>
-        <Texto>Tu respuesta: {ETIQUETA_RESPUESTA[respuestaFinal]}. Es una sola y no se puede cambiar.</Texto>
+        <Texto>Tu respuesta: {etiquetaRespuesta(respuestaFinal)}. Es una sola y no se puede cambiar.</Texto>
         <Insignia categoria="SIMULADO" />
       </Tarjeta>
     );
@@ -135,7 +139,7 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
       </Texto>
 
       {resultado?.tipo === "enviada" ? (
-        <Texto>{elegida ? GRACIAS[elegida] : "Gracias."}</Texto>
+        <Texto>{elegida ? GRACIAS[canonicaRespuesta(elegida)] : "Gracias."}</Texto>
       ) : null}
       {resultado?.tipo === "guardada" ? (
         <Texto>Guardamos tu respuesta en el teléfono; se va a enviar sola cuando haya conexión.</Texto>
@@ -145,10 +149,10 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
       {resultado?.tipo !== "enviada" && resultado?.tipo !== "guardada" ? (
         <>
           <FilaBotones>
-            {(["si", "no", "problema"] as const).map((r) => (
+            {RESPUESTAS_CANONICAS.map((r) => (
               <Boton
                 key={r}
-                titulo={r === "si" ? "Sí" : r === "no" ? "No" : "Hubo un problema"}
+                titulo={ETIQUETA_OPCION[r]}
                 variante={elegida === r ? "primario" : "secundario"}
                 onPress={() => setElegida(r)}
               />
@@ -168,8 +172,8 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
               <Boton titulo="Enviar mi respuesta" onPress={() => void responder()} cargando={trabajando} />
               <Boton titulo="Responder por SMS (si no tenés internet)" variante="secundario" onPress={() => void porSMS()} />
               <Texto suave pequeno>
-                Por SMS se manda «{elegida === "si" ? "SI" : elegida === "no" ? "NO" : "PROBLEMA"} {codigo}
-                {elegida === "problema" ? " y tu comentario" : ""}». Solo vale si lo mandás desde el
+                Por SMS se manda «{palabraSMS(elegida)} {codigo}
+                {palabraSMS(elegida) === "PROBLEMA" ? " y el motivo" : ""}». Solo vale si lo mandás desde el
                 teléfono que registraste. La respuesta del canal es siempre la misma, así que no sirve
                 para saber si quedó registrada: cuando tengas internet, abrí la app y fijate. {textoDestinoSMS()}
               </Texto>
