@@ -5,31 +5,15 @@ import { Layout } from "../components/Layout";
 import { Plegable } from "../components/Plegable";
 import { TresRelojes } from "../components/TresRelojes";
 import { LIMITES_ESTATICOS } from "../datos/kit";
+import { FranjaEstado } from "../landing/FranjaEstado";
 import { Hero } from "../landing/Hero";
 import { useMeta } from "../lib/useMeta";
 
+/** Selector compacto de perfil: los mismos destinos de siempre, en tres botones. */
 const PERFILES = [
-  {
-    id: "ciudadania",
-    nombre: "Ciudadanía",
-    texto: "Registrá tu grupo familiar y tu domicilio para saber en qué sector estás, recibir alertas y pedir asistencia si el camino se corta.",
-    principal: { a: "/registro/ciudadania", t: "Registrarme" },
-    secundaria: { a: "/login", t: "Ya tengo cuenta" },
-  },
-  {
-    id: "productores",
-    nombre: "Productores agropecuarios",
-    texto: "Declará tu establecimiento, la ubicación de la tranquera y tu hacienda para planificar el traslado de animales antes de que los caminos se saturen.",
-    principal: { a: "/registro/productor", t: "Registrar mi establecimiento" },
-    secundaria: { a: "/app", t: "Descargar la app" },
-  },
-  {
-    id: "mandos",
-    nombre: "Mandos operativos y decisores",
-    texto: "Monitor del río, simulador de escenarios y emisión de órdenes. Las cuentas institucionales las crea el administrador: no hay autorregistro.",
-    principal: { a: "/login", t: "Ingresar con cuenta institucional" },
-    secundaria: null,
-  },
+  { id: "ciudadania", nombre: "Ciudadanía", detalle: "Registrá tu grupo familiar y tu domicilio, recibí alertas y pedí asistencia.", a: "/registro/ciudadania" },
+  { id: "productores", nombre: "Productores", detalle: "Declará tu establecimiento y tu hacienda para planificar el traslado.", a: "/registro/productor" },
+  { id: "mandos", nombre: "Mandos operativos", detalle: "Cuenta institucional: la crea el administrador, no hay autorregistro.", a: "/login" },
 ] as const;
 
 export default function Landing() {
@@ -41,38 +25,37 @@ export default function Landing() {
     <Layout contenedor={false} titulo="Inicio">
       <Hero />
 
-      <TresRelojes />
+      <FranjaEstado />
 
-      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 12, md: 20 }} pb={{ base: 10, md: 14 }}>
-        <Heading as="h2" id="titulo-perfiles" size="xl" mb={2}>
+      <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 8, md: 10 }} pb={{ base: 8, md: 10 }}>
+        <Heading as="h2" id="titulo-perfiles" size="lg" mb={4}>
           ¿Cómo querés ingresar?
         </Heading>
-        <Text color="textoSuave" maxW="34rem" mb={{ base: 6, md: 8 }}>
-          Elegí tu perfil. Cada uno ve la información que necesita.
-        </Text>
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" }} gap={{ base: 4, md: 5 }}>
+        <Box as="ul" listStyleType="none" m={0} p={0} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" }} gap={{ base: 3, md: 4 }}>
           {PERFILES.map((p) => (
-            <Box key={p.id} layerStyle="tarjeta" p={{ base: 5, md: 6 }} display="flex" flexDirection="column">
-              <Heading as="h3" size="md" mb={2}>
-                {p.nombre}
-              </Heading>
-              <Text color="textoSuave" flex="1" mb={5}>
-                {p.texto}
+            <Box as="li" key={p.id} layerStyle="tarjeta" p={4} display="flex" flexDirection="column" gap={3}>
+              <Text color="textoSuave" fontSize="sm" flex="1">
+                {p.detalle}
               </Text>
-              <Box display="flex" alignItems="center" flexWrap="wrap" columnGap={4} rowGap={2}>
-                <Button as={RouterLink} to={p.principal.a}>
-                  {p.principal.t}
-                </Button>
-                {p.secundaria && (
-                  <Link as={RouterLink} to={p.secundaria.a} fontWeight={600}>
-                    {p.secundaria.t}
-                  </Link>
-                )}
-              </Box>
+              <Button as={RouterLink} to={p.a} size="lg" w="100%">
+                {p.nombre}
+              </Button>
             </Box>
           ))}
         </Box>
+        <Text mt={4} fontSize="sm" color="textoSuave">
+          ¿Ya tenés cuenta?{" "}
+          <Link as={RouterLink} to="/login" fontWeight={600}>
+            Ingresar
+          </Link>
+          {" · "}
+          <Link as={RouterLink} to="/app" fontWeight={600}>
+            Descargar la app
+          </Link>
+        </Text>
       </Box>
+
+      <TresRelojes sobretitulo="Entender la situación" />
 
       <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pb={{ base: 12, md: 20 }}>
         <Box layerStyle="suave" p={{ base: 6, md: 10 }} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }} gap={{ base: 6, md: 12 }} alignItems="start">
