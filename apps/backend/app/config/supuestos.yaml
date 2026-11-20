@@ -78,6 +78,17 @@ acceso_red_vial_buffer_m:
   valor: 25
   fuente: SUPUESTO (radio alrededor de un acceso dentro del cual una arista de la red vial se considera ese mismo camino; si el acceso se cierra, se cortan las aristas contenidas en ese radio)
 
+# --- Motor de evacuación: factibilidad, centros y reparto (odd/tasks/motor-evacuacion.md) ---
+margen_seguridad_fraccion:
+  valor: 0.25
+  fuente: "SUPUESTO (parte del plazo más corto que debe quedar libre para que un plan 'alcanza', como holgura ante demoras; si termina dentro del plazo pero con menos holgura, es 'justo')"
+ruteo_enganche_usable_m:
+  valor: 500
+  fuente: "SUPUESTO (un punto se engancha al nodo más cercano con un tramo usable para el perfil y la lluvia si está a no más de esta distancia adicional; si no, al nodo más cercano, aunque su tramo esté cerrado)"
+centro_excluir_en_riesgo:
+  valor: true
+  fuente: "SUPUESTO (criterio conservador; un centro de recepción dentro de un sector en riesgo no recibe evacuados, y dentro de uno comprometido nunca)"
+
 # --- Constancias de evacuación ---
 distancia_max_destino_m:
   valor: 500

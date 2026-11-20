@@ -38,16 +38,59 @@ def red_disponible(db: Session) -> bool:
     )
 
 
-def _nodo_cercano(db: Session, lon: float, lat: float) -> tuple[int, float] | None:
+def _nodo_mas_cercano(
+    db: Session, lon: float, lat: float, superficies: list[str] | None = None
+) -> tuple[int, float] | None:
+    filtro = ""
+    params: dict = {"lon": lon, "lat": lat, "srid": SRID}
+    if superficies is not None:
+        filtro = (
+            "WHERE EXISTS (SELECT 1 FROM red_vial r WHERE (r.source = n.id OR r.target = n.id) "
+            "AND NOT r.bloqueada AND COALESCE(r.superficie, 'tierra') = ANY(CAST(:sup AS text[]))) "
+        )
+        params["sup"] = list(superficies)
     fila = db.execute(
         text(
-            "SELECT id, ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), :srid)::geography) "
-            "FROM red_vial_nodos "
-            "ORDER BY geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), :srid) LIMIT 1"
+            "SELECT n.id, ST_Distance(n.geom::geography, "
+            "ST_SetSRID(ST_MakePoint(:lon, :lat), :srid)::geography) "
+            f"FROM red_vial_nodos n {filtro}"
+            "ORDER BY n.geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), :srid) LIMIT 1"
         ),
-        {"lon": lon, "lat": lat, "srid": SRID},
+        params,
     ).first()
     return None if fila is None else (int(fila[0]), float(fila[1]))
+
+
+def _nodo_cercano(
+    db: Session, lon: float, lat: float, superficies: list[str] | None = None
+) -> tuple[int, float] | None:
+    """Nodo de la red donde se engancha el punto y su distancia en metros.
+
+    Con ``superficies``, prefiere el nodo más cercano que toca un tramo no bloqueado y firme
+    (pavimento o ripio) y, si no hay, uno de cualquier superficie usable; así un origen no queda
+    enganchado a un camino de tierra cerrado por la lluvia ni a uno lento cuando hay una ruta firme
+    al lado. Solo si queda a no más de ``ruteo_enganche_usable_m`` por encima del nodo más cercano:
+    un salto mayor equivaldría a recorrer sin costo un camino que no se puede usar.
+    """
+    cercano = _nodo_mas_cercano(db, lon, lat)
+    if superficies is None or cercano is None:
+        return cercano
+    tope = cercano[1] + float(supuesto("ruteo_enganche_usable_m"))
+    # Primero un camino firme (pavimento o ripio) usable; si no hay cerca, cualquier usable.
+    firmes = [s for s in superficies if s in ("pavimento", "ripio")]
+    for opciones in (firmes, superficies):
+        if not opciones:
+            continue
+        nodo = _nodo_mas_cercano(db, lon, lat, opciones)
+        if nodo is not None and nodo[1] <= tope:
+            return nodo
+    return cercano
+
+
+def superficies_usables(perfil: str, lluvia_mm: float) -> list[str]:
+    """Superficies que el perfil puede usar con esa lluvia."""
+    cerradas = dom.superficies_cerradas_por_lluvia(perfil, lluvia_mm)
+    return [s for s in dom.velocidades(perfil) if s not in cerradas]
 
 
 def _consulta_aristas(
@@ -119,8 +162,9 @@ def _ruta_en_red(
     lluvia_mm: float = 0.0,
 ) -> dict | None:
     maximo = float(supuesto("ruteo_distancia_maxima_a_red_m"))
-    n_o = _nodo_cercano(db, *origen)
-    n_d = _nodo_cercano(db, *destino)
+    usables = superficies_usables(perfil, lluvia_mm)
+    n_o = _nodo_cercano(db, *origen, usables)
+    n_d = _nodo_cercano(db, *destino, usables)
     if n_o is None or n_d is None or n_o[1] > maximo or n_d[1] > maximo:
         return None
     aristas = _consulta_aristas(perfil, comprometidos, exentos, accesos_bloqueados, lluvia_mm)
@@ -208,14 +252,7 @@ def resolver_ruta(
         comprometidos = [s.id for s in escenario.sectores if s.estado == esc.COMPROMETIDO]
     # Accesos que no se pueden usar: el arreo solo respeta el cierre del operador; los vehículos
     # también la lluvia y el anegamiento.
-    estados_cerrados = (
-        {esc.ACCESO_CERRADO_OPERADOR}
-        if perfil == dom.ARREO
-        else {esc.ACCESO_CERRADO_OPERADOR, esc.ACCESO_INTRANSITABLE_LLUVIA, esc.ACCESO_ANEGADO}
-    )
-    bloqueados = sorted(
-        a.id for sec in escenario.sectores for a in sec.accesos if a.estado in estados_cerrados
-    )
+    bloqueados = accesos_cerrados_para(perfil, escenario)
     base_bloqueados = bloqueados
     base = {
         "perfil": perfil,
@@ -283,3 +320,88 @@ def resolver_ruta(
         "geometria": None,
         "capas": [],
     }
+
+
+def accesos_cerrados_para(perfil: str, escenario: esc.Escenario) -> list[int]:
+    """Accesos que el perfil no puede usar en el escenario (el arreo solo respeta al operador)."""
+    estados = (
+        {esc.ACCESO_CERRADO_OPERADOR}
+        if perfil == dom.ARREO
+        else {esc.ACCESO_CERRADO_OPERADOR, esc.ACCESO_INTRANSITABLE_LLUVIA, esc.ACCESO_ANEGADO}
+    )
+    return sorted(a.id for s in escenario.sectores for a in s.accesos if a.estado in estados)
+
+
+def matriz_tiempos(
+    db: Session,
+    perfil: str,
+    origenes: dict[str, tuple[float, float]],
+    destinos: dict[int, tuple[float, float]],
+    escenario: esc.Escenario,
+    lluvia_mm: float,
+    sector_de_origen: dict[str, str | None] | None = None,
+) -> dict[tuple[str, int], float]:
+    """Minutos por la red de cada origen a cada destino (``pgr_dijkstraCost``, muchos a muchos).
+
+    Mismas reglas que ``resolver_ruta``: excluye aristas bloqueadas, accesos cerrados, superficies
+    cerradas por la lluvia y, para los perfiles con ruedas, los tramos dentro de sectores
+    comprometidos (salvo el sector del propio origen). Los orígenes se agrupan por sector eximido:
+    una consulta por grupo. Un par ausente del resultado no tiene ruta por la red (o la red no está
+    cargada, o el punto queda a más de ``ruteo_distancia_maxima_a_red_m``).
+    """
+    if not origenes or not destinos or not red_disponible(db):
+        return {}
+    maximo = float(supuesto("ruteo_distancia_maxima_a_red_m"))
+    vel_min = min(dom.velocidades(perfil).values()) * 1000 / 60  # m/min
+
+    usables = superficies_usables(perfil, lluvia_mm)
+
+    def nodos(puntos: dict) -> dict:
+        r = {}
+        for clave, (lon, lat) in puntos.items():
+            n = _nodo_cercano(db, lon, lat, usables)
+            if n is not None and n[1] <= maximo:
+                r[clave] = n
+        return r
+
+    n_orig, n_dest = nodos(origenes), nodos(destinos)
+    if not n_orig or not n_dest:
+        return {}
+    comprometidos = [s.id for s in escenario.sectores if s.estado == esc.COMPROMETIDO]
+    bloqueados = accesos_cerrados_para(perfil, escenario)
+    sectores = sector_de_origen or {}
+    grupos: dict[str | None, list[str]] = {}
+    for clave in n_orig:
+        sid = sectores.get(clave)
+        grupos.setdefault(sid if sid in comprometidos else None, []).append(clave)
+
+    resultado: dict[tuple[str, int], float] = {}
+    destinos_por_nodo: dict[int, list[int]] = {}
+    for did, (nodo, _) in n_dest.items():
+        destinos_por_nodo.setdefault(nodo, []).append(did)
+    for exento, claves in grupos.items():
+        aristas = _consulta_aristas(
+            perfil, comprometidos, [exento] if exento else [], bloqueados, lluvia_mm
+        )
+        inicio = sorted({n_orig[c][0] for c in claves})
+        fin = sorted(destinos_por_nodo)
+        costos = {
+            (int(f[0]), int(f[1])): float(f[2])
+            for f in db.execute(
+                text(
+                    "SELECT start_vid, end_vid, agg_cost FROM pgr_dijkstraCost("
+                    "CAST(:aristas AS text), CAST(:o AS bigint[]), CAST(:d AS bigint[]), false)"
+                ),
+                {"aristas": aristas, "o": inicio, "d": fin},
+            ).all()
+        }
+        for clave in claves:
+            n_o, conexion_o = n_orig[clave]
+            for n_d, dids in destinos_por_nodo.items():
+                segundos = 0.0 if n_o == n_d else costos.get((n_o, n_d))
+                if segundos is None:
+                    continue
+                for did in dids:
+                    conexion = conexion_o + n_dest[did][1]
+                    resultado[(clave, did)] = round(segundos / 60 + conexion / vel_min, 1)
+    return resultado

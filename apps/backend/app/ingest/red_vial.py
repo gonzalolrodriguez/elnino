@@ -3,7 +3,7 @@
 Uso (desde ``apps/backend``; sin archivo usa ``DATA_DIR/geo/red_vial.geojson``)::
 
     python -m app.ingest.red_vial [archivo.geojson] [--fuente TEXTO] [--categoria CATEGORIA]
-                                  [--fecha AAAA-MM-DD] [--agregar]
+                                  [--fecha AAAA-MM-DD] [--agregar] [--si-vacia]
 
 Entrada: GeoJSON con ``LineString`` o ``MultiLineString`` en EPSG:4326. Propiedades reconocidas
 (todas opcionales):
@@ -22,7 +22,8 @@ El script parte las líneas en las intersecciones (nodado propio con Shapely, si
 calcula ``longitud_m`` y guarda los vértices en ``red_vial_nodos``. El costo según el perfil
 (vehicular, camión jaula, arreo) se calcula al consultar, con las velocidades de ``supuestos.yaml``.
 Por defecto reemplaza toda la red anterior; con ``--agregar`` la suma a la existente (los vértices
-de la red agregada no se unen a los de la anterior: usar un solo archivo).
+de la red agregada no se unen a los de la anterior: usar un solo archivo). Con ``--si-vacia`` no
+hace nada si ya hay una red cargada (así lo usa ``docker compose`` al arrancar el backend).
 """
 
 from __future__ import annotations
@@ -216,6 +217,11 @@ def cargar_archivo(
         return cargar_red(db, features, fuente or ruta.name, categoria, fecha, reemplazar)
 
 
+def red_cargada() -> bool:
+    with get_sessionmaker()() as db:
+        return bool(db.execute(text("SELECT EXISTS (SELECT 1 FROM red_vial)")).scalar_one())
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Carga una red vial GeoJSON en red_vial (pgRouting).")
     ap.add_argument(
@@ -233,7 +239,13 @@ def main() -> None:
         "--fecha", type=date.fromisoformat, default=None, help="Fecha del dato (AAAA-MM-DD)"
     )
     ap.add_argument("--agregar", action="store_true", help="No reemplazar la red existente")
+    ap.add_argument(
+        "--si-vacia", action="store_true", help="Cargar solo si todavía no hay red cargada"
+    )
     args = ap.parse_args()
+    if args.si_vacia and red_cargada():
+        print("red_vial: ya cargada, no se modifica")
+        return
     resumen = cargar_archivo(
         args.archivo, args.fuente, args.categoria, args.fecha, not args.agregar
     )
