@@ -11,12 +11,13 @@ import { api } from "../api";
 import type { CuadrillaResumen } from "../tipos";
 import { Chip, FichaIcono } from "../ui";
 import { FormularioIntegrante } from "./FormularioIntegrante";
+import { etiquetaProfesion, etiquetaTipoOperativo } from "./catalogos";
 import { AvisoAtencion, ChipEstadoTarea, ChipParte, TACTIL, truncar } from "./partes";
 
 export { AvisoAtencion };
 
 export const TIPO_INCIDENTE: Record<string, string> = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" };
-const ESTADO_CUADRILLA: Record<string, string> = { disponible: "Disponible", en_tarea: "En tarea", inactiva: "Inactiva" };
+export const ESTADO_CUADRILLA: Record<string, string> = { disponible: "Disponible", en_tarea: "En tarea", inactiva: "Inactiva", baja: "De baja" };
 
 /** Título de cada bloque de la ficha: una línea de texto normal con ícono, no un rótulo en mayúsculas. */
 function Rotulo({ icono, children, id }: { icono?: ReactNode; children: ReactNode; id?: string }) {
@@ -29,7 +30,7 @@ function Rotulo({ icono, children, id }: { icono?: ReactNode; children: ReactNod
 }
 
 /** Ficha de una cuadrilla: quién la integra (por rol), en qué está y qué informó por última vez. */
-export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: CuadrillaResumen; puedeGestionar: boolean; alCambiar: () => void }) {
+export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaja }: { c: CuadrillaResumen; puedeGestionar: boolean; alCambiar: () => void; alEditar?: (id: number) => void; alBaja?: (c: { id: number; nombre: string }) => void }) {
   const toast = useToast();
   const [agregando, setAgregando] = useState(false);
   const [quitando, setQuitando] = useState<number | null>(null);
@@ -58,7 +59,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
           <Heading as="h2" id={tituloId} size="sm" textStyle="tituloBloque">
             {c.nombre}
           </Heading>
-          <Text textStyle="microdato">{TIPO_INCIDENTE[c.tipo_incidente] ?? c.tipo_incidente}</Text>
+          <Text textStyle="microdato">{c.tipo_operativo ? etiquetaTipoOperativo(c.tipo_operativo) : (TIPO_INCIDENTE[c.tipo_incidente] ?? c.tipo_incidente)}</Text>
           <Flex align="center" gap={1.5} wrap="wrap" mt={2}>
             <Chip tono={t ? "info" : "ok"}>{ESTADO_CUADRILLA[c.estado] ?? c.estado.replace("_", " ")}</Chip>
             {vehiculo && <Chip tono="neutro">{vehiculo}</Chip>}
@@ -86,6 +87,11 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
                 <Text as="span" fontWeight={600}>
                   {etiquetaRolOperativo(i.rol_operativo)}
                 </Text>
+                {i.profesion && (
+                  <Text as="span" color="textoSuave">
+                    {etiquetaProfesion(i.profesion)}
+                  </Text>
+                )}
                 {i.es_encargado && (
                   <Chip tono="ok" data-testid="encargado">
                     Encargado
@@ -172,6 +178,22 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
           </Text>
         )}
       </Box>
+
+      <Flex mt={4} pt={3} borderTop="1px solid" borderColor="borde" gap={2} wrap="wrap" align="center">
+        <Button as={RouterLink} to={`/comando/cuadrillas/${c.id}`} size="sm" {...TACTIL} variant="outline" aria-label={`Ver detalle de ${c.nombre}`}>
+          Ver detalle
+        </Button>
+        {puedeGestionar && alEditar && c.estado !== "baja" && (
+          <Button size="sm" {...TACTIL} variant="outline" onClick={() => alEditar(c.id)} aria-label={`Editar ${c.nombre}`}>
+            Editar
+          </Button>
+        )}
+        {puedeGestionar && alBaja && c.estado !== "baja" && (
+          <Button size="sm" {...TACTIL} variant="outline" colorScheme="red" onClick={() => alBaja({ id: c.id, nombre: c.nombre })} aria-label={`Dar de baja a ${c.nombre}`}>
+            Dar de baja
+          </Button>
+        )}
+      </Flex>
     </Box>
   );
 }

@@ -1,6 +1,13 @@
 import { API_BASE, ApiError, obtenerToken, solicitar } from "../lib/api";
 import type {
   AfirmacionK6,
+  AvisoCuadrilla,
+  CuadrillaCompleta,
+  CuerpoAviso,
+  CuerpoCuadrilla,
+  CuerpoIntegrante,
+  Integrante,
+  RespuestaSeguimientoCuadrillas,
   Alternativas,
   Ascenso,
   CalculoGanadero,
@@ -140,6 +147,18 @@ export const api = {
   quitarIntegrante: (cuadrillaId: number, usuarioId: number) => solicitar<unknown>(`/cuadrillas/${cuadrillaId}/integrantes/${usuarioId}`, { ...a, metodo: "DELETE" }),
   partesDeTarea: (tareaId: number) => solicitar<{ items: ParteTarea[] }>(`/tareas/${tareaId}/partes`, a),
   resolverParte: (parteId: number) => solicitar<ParteTarea>(`/partes/${parteId}`, { ...a, metodo: "PATCH", cuerpo: { resuelta: true } }),
+  cuadrillaCompleta: (id: number) => solicitar<CuadrillaCompleta>(`/cuadrillas/${id}`, a),
+  plantillasCuadrilla: () => solicitar<unknown>("/cuadrillas/plantillas", a),
+  crearCuadrillaCompleta: (c: CuerpoCuadrilla & { integrantes: CuerpoIntegrante[] }) => solicitar<CuadrillaCompleta>("/cuadrillas", { ...a, cuerpo: c }),
+  editarCuadrilla: (id: number, c: Partial<CuerpoCuadrilla>) => solicitar<CuadrillaCompleta>(`/cuadrillas/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
+  bajaCuadrilla: (id: number) => solicitar<unknown>(`/cuadrillas/${id}`, { ...a, metodo: "DELETE" }),
+  sumarIntegrante: (id: number, c: CuerpoIntegrante) => solicitar<Integrante>(`/cuadrillas/${id}/integrantes`, { ...a, cuerpo: c }),
+  editarIntegrante: (id: number, integranteId: number, c: Partial<CuerpoIntegrante>) =>
+    solicitar<Integrante>(`/cuadrillas/${id}/integrantes/${integranteId}`, { ...a, metodo: "PATCH", cuerpo: c }),
+  borrarIntegrante: (id: number, integranteId: number) => solicitar<unknown>(`/cuadrillas/${id}/integrantes/${integranteId}`, { ...a, metodo: "DELETE" }),
+  avisosDeCuadrilla: (id: number) => solicitar<{ avisos?: AvisoCuadrilla[]; items?: AvisoCuadrilla[] }>(`/cuadrillas/${id}/avisos`, a),
+  enviarAviso: (id: number, c: CuerpoAviso) => solicitar<AvisoCuadrilla>(`/cuadrillas/${id}/avisos`, { ...a, cuerpo: c }),
+  seguimientoCuadrillas: () => solicitar<RespuestaSeguimientoCuadrillas>("/cuadrillas/posiciones", a),
   partesRecientes: (limite = 20) => solicitar<{ items: ParteReciente[] }>(`/partes/recientes?limite=${limite}`, a),
 };
 
@@ -189,6 +208,9 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   // Se libera tarde: revocar enseguida puede cortar la descarga en algunos navegadores.
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+/** Descarga la evidencia (foto o video) de un parte con la sesión: se muestra como recurso local. */
+export const adjuntoParte = (tareaId: number, parteId: number, n: number): Promise<Blob> => descargar(`/tareas/${tareaId}/partes/${parteId}/adjuntos/${n}`);
 
 /** Sube una foto de la constancia (multipart, campo `archivo`). El backend responde 200 con `duplicado` si ya estaba. */
 export async function subirFotoCierre(tareaId: number, archivo: File): Promise<{ duplicado?: boolean }> {

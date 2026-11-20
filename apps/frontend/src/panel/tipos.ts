@@ -656,6 +656,8 @@ export type ParteTarea = {
   creado_en: string;
   /** Solo aplica a las dificultades. */
   resuelta: boolean | null;
+  /** Evidencia multimedia (fotos y video) del parte. */
+  adjuntos?: AdjuntoParte[];
 };
 
 export type ParteReciente = ParteTarea & { sector_id: string | null; solicitud_id: number | null; cuadrilla_nombre: string; tarea_estado: string };
@@ -666,8 +668,93 @@ export type CuadrillaResumen = {
   tipo_incidente: string;
   vehiculo: string | null;
   estado: string;
-  integrantes: { usuario_id: number; rol_operativo: string; es_encargado: boolean }[];
+  integrantes: { usuario_id: number; rol_operativo: string; es_encargado: boolean; profesion?: string }[];
+  /** Los agrega la gestión completa de cuadrillas; un servidor anterior no los envía. */
+  tipo_operativo?: TipoOperativo;
+  cantidad_integrantes?: number;
   tarea_actual: { id: number; estado: string; solicitud_id: number | null; sector_id: string | null; requiere_atencion: boolean } | null;
   ultimo_parte: ParteTarea | null;
   dificultades_abiertas: number;
 };
+
+// ---------- Gestión completa de cuadrillas (odd/tasks/gestion-cuadrillas.md) ----------
+
+export type TipoOperativo = "personas" | "familias" | "productores_ganado" | "apicola" | "bienes" | "traslado_mixto";
+
+/** Integrante de una cuadrilla. `nombre_visible` solo llega a operador, decisor y admin. */
+export type Integrante = {
+  id: number;
+  usuario_id: number | null;
+  rol_operativo: string;
+  profesion: string;
+  es_encargado: boolean;
+  nombre_visible: string | null;
+};
+
+export type CuadrillaCompleta = {
+  id: number;
+  nombre: string;
+  tipo_operativo: TipoOperativo;
+  tipo_incidente: string;
+  cantidad_integrantes: number;
+  vehiculo: string | null;
+  equipamiento: string[];
+  estado: string;
+  base: { lat: number; lon: number } | null;
+  notas: string | null;
+  integrantes: Integrante[];
+  creado_en: string;
+};
+
+export type CuerpoIntegrante = { usuario_id: number | null; rol_operativo: string; profesion: string; es_encargado: boolean };
+
+export type CuerpoCuadrilla = {
+  nombre: string;
+  tipo_operativo: TipoOperativo;
+  tipo_incidente: string;
+  cantidad_integrantes: number;
+  vehiculo: string | null;
+  equipamiento: string[];
+  base: { lat: number; lon: number } | null;
+  notas: string | null;
+};
+
+/** `GET /cuadrillas/plantillas`: equipamiento y profesiones sugeridos por tipo de operativo (SUPUESTO). */
+export type PlantillaOperativo = { equipamiento: string[]; profesiones: string[] };
+export type Plantillas = Partial<Record<TipoOperativo, PlantillaOperativo>>;
+
+export type TipoAviso = "desvio" | "equipamiento" | "instruccion" | "seguridad";
+export type GeometriaAviso = { type: "LineString"; coordinates: [number, number][] } | { type: "Point"; coordinates: [number, number] };
+export type LecturaAviso = { leido_por_rol: string | null; leido_en: string };
+export type AvisoCuadrilla = {
+  id: number;
+  cuadrilla_id: number;
+  tipo: TipoAviso;
+  texto: string;
+  items: string[];
+  geometria: GeometriaAviso | null;
+  tarea_id: number | null;
+  creado_en: string;
+  emitido_por_rol?: string | null;
+  /** Lecturas de integrantes de la cuadrilla; si el servidor devuelve una sola, llega en `leido_en`. */
+  lecturas?: LecturaAviso[];
+  leido_en?: string | null;
+  leido_por_rol?: string | null;
+};
+export type CuerpoAviso = { tipo: TipoAviso; texto: string; items: string[]; geometria: GeometriaAviso | null; tarea_id: number | null };
+
+export type AdjuntoParte = { n: number; tipo: string; bytes: number };
+
+/** Recorrido de una cuadrilla hacia su tarea (misma forma que en `/mi/pedidos`). */
+export type RutaCuadrilla = {
+  coordenadas: [number, number][];
+  distancia_km: number;
+  llegada_estimada_min: number | null;
+  metodo: "red_vial" | "aproximado";
+  simulada: boolean;
+  progreso: number;
+  velocidad_kmh: number;
+  calculada_en?: string;
+};
+export type PosicionSeguimiento = PosicionCuadrilla & { ruta?: RutaCuadrilla | null; destino?: { lat: number; lon: number } | null };
+export type RespuestaSeguimientoCuadrillas = Omit<RespuestaPosiciones, "posiciones"> & { posiciones: PosicionSeguimiento[] };
