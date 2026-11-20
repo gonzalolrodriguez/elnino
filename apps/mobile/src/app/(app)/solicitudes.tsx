@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { FilaHistorial, TarjetaPedido } from "@/components/MisPedidos";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
-import { esCierre, esSolicitud, hostDeUrl } from "@/lib/cola";
+import { esCierre, esParte, esSolicitud, hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
 import { descripcionItemCola, etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
@@ -77,7 +77,7 @@ export default function Solicitudes() {
   }, [cargar, items.length, enviadasLocales]);
 
   // Los cierres con constancia pertenecen a la pestaña de la cuadrilla.
-  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !otroServidor.some((o) => o.id === i.id));
+  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !esParte(i.datos) && !otroServidor.some((o) => o.id === i.id));
 
   return (
     <Pantalla dosColumnas alRefrescar={() => void cargar()} refrescando={refrescando}>

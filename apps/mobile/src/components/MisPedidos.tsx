@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { ItemCuadrillaEnCamino } from "@/components/TarjetaCuadrillaEnCamino";
 import { Boton, COLOR, Insignia, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { etiquetaRolOperativo, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
+import { textoNovedad } from "@/lib/partes";
 import { estadoFinal, etiquetaTipoCuadrilla, etiquetaVehiculo, lineaDeTiempo } from "@/lib/pedidos";
 import { etiquetaRespuesta } from "@/lib/respuestas";
 import type { PedidoCiudadano } from "@/lib/servicios";
@@ -71,6 +72,7 @@ export function TarjetaPedido({ pedido }: { pedido: PedidoCiudadano }) {
         ) : (
           <Texto suave>Todavía no hay una cuadrilla asignada.</Texto>
         )}
+        {textoNovedad(pedido.novedad) ? <Texto suave>{textoNovedad(pedido.novedad)}</Texto> : null}
         {pedido.centro ? (
           <View style={{ gap: 6 }}>
             <Subtitulo>Centro asignado</Subtitulo>

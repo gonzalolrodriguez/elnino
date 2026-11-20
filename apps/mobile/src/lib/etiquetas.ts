@@ -1,4 +1,5 @@
-import { esCierre, esConfirmacion, type DatosCola } from "@/lib/cola";
+import { esCierre, esConfirmacion, esParte, type DatosCola } from "@/lib/cola";
+import { descripcionParte } from "@/lib/partes";
 import { etiquetaRespuesta } from "@/lib/respuestas";
 
 /**
@@ -64,6 +65,7 @@ const ROL: Record<string, string> = {
 export function descripcionItemCola(d: DatosCola): string {
   if (esCierre(d)) return `Cierre con constancia de la tarea #${d.tarea_id}`;
   if (esConfirmacion(d)) return `Tu respuesta sobre el traslado: ${etiquetaRespuesta(d.respuesta)}`;
+  if (esParte(d)) return descripcionParte(d);
   return `${etiquetaTipoSolicitud(d.tipo)} · ${d.personas} personas · ${d.animales} animales`;
 }
 

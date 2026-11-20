@@ -2,7 +2,10 @@ import { Image } from "react-native";
 
 import { ErrorApi, peticion } from "@/lib/api";
 import { canonicaRespuesta } from "@/lib/respuestas";
-import { esCierre, esConfirmacion, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
+import { esCierre, esConfirmacion, esParte, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosParte, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
+import { cuerpoParte, type ParteTarea } from "@/lib/partes";
+
+export type { ParteTarea, ResultadoParte, TipoParte } from "@/lib/partes";
 
 /** Tipos de las respuestas de la API que consume la app (contrato: docs/contrato_api.md). */
 export type Categoria = "DATO OBSERVADO" | "DOCUMENTO DE REFERENCIA" | "SIMULADO";
@@ -106,6 +109,8 @@ export type PedidoCiudadano = {
   seguimiento: SeguimientoCuadrilla | null;
   confirmacion: null | { solicitud_id: number; respondida: boolean; respuesta: RespuestaEvacuado | null; comentario: string | null };
   centro: null | { id: number; nombre: string; lat: number | null; lon: number | null };
+  /** Última novedad de la cuadrilla, sin el texto de la observación. Ausente en backends anteriores. */
+  novedad?: null | { tipo: "demora" | "dificultad" | "parcial" | "no_realizada" | "reprogramada"; en: string | null };
 };
 
 export type GrupoFamiliar = {
@@ -194,6 +199,9 @@ export type Tarea = {
   sector_id: string | null;
   checklist: ItemChecklist[] | null;
   actualizado_en: string;
+  /** Una tarea que volvió a `pendiente` tras un parte parcial, no realizado o reprogramado. */
+  requiere_atencion?: boolean;
+  ultimo_parte?: ParteTarea | null;
 };
 
 /** Bloque común del resumen del panel: cada bloque trae su categoría, fuente y fecha. */
@@ -362,6 +370,23 @@ export async function enviarCierre(datos: DatosCierre, clave: string): Promise<R
   }
 }
 
+/**
+ * Parte de la cuadrilla. Un 409 («Cerrá la tarea con constancia») es un rechazo definitivo: la pantalla
+ * lo traduce en abrir el cierre con constancia. La `Idempotency-Key` acompaña los reintentos.
+ */
+export async function enviarParte(datos: DatosParte, clave: string): Promise<ResultadoEnvio> {
+  try {
+    const p = await peticion<{ id: number }>(`/tareas/${datos.tarea_id}/partes`, {
+      metodo: "POST",
+      cuerpo: cuerpoParte(datos),
+      cabeceras: { "Idempotency-Key": clave },
+    });
+    return { ok: true, servidorId: p.id };
+  } catch (e) {
+    return clasificar(e);
+  }
+}
+
 /** Respuesta del evacuado: 201 la primera vez, 200 repetida; otra respuesta distinta da 409 (rechazo). */
 export async function enviarConfirmacion(datos: DatosConfirmacion): Promise<ResultadoEnvio> {
   try {
@@ -383,6 +408,7 @@ export async function enviarConfirmacion(datos: DatosConfirmacion): Promise<Resu
 export function enviarItem(datos: DatosCola, clave: string): Promise<ResultadoEnvio> {
   if (esCierre(datos)) return enviarCierre(datos, clave);
   if (esConfirmacion(datos)) return enviarConfirmacion(datos);
+  if (esParte(datos)) return enviarParte(datos, clave);
   return enviarSolicitud(datos, clave);
 }
 
@@ -457,6 +483,7 @@ export const api = {
   centros: () => peticion<{ centros: Centro[] }>("/centros"),
   sectoresGeo: () => peticion<GeoSectores>("/sectores", { auth: false }),
   tareas: () => peticion<{ tareas: Tarea[] }>("/tareas"),
+  partesDeTarea: (id: number) => peticion<{ items: ParteTarea[] }>(`/tareas/${id}/partes`),
   actualizarTarea: (
     id: number,
     cambios: { estado?: Tarea["estado"]; checklist?: ItemChecklist[] },
