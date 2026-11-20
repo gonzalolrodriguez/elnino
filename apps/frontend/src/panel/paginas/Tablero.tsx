@@ -2,7 +2,10 @@ import { Alert, AlertDescription, AlertIcon, Box, Button, Center, Flex, Heading,
 import { useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
+import { CATEGORIAS } from "@evacuaciones/shared";
+
 import { useAuth } from "../../auth/AuthContext";
+import { TresRelojes } from "../../components/TresRelojes";
 import { AlertaError } from "../../components/Formulario";
 import { hace, useAhora, useCargaViva } from "../../lib/vivo";
 import { api } from "../api";
@@ -60,7 +63,7 @@ export default function Tablero() {
   const { usuario } = useAuth();
   const decisor = usuario?.rol !== "operador";
   const senal = useSenalTiempoReal();
-  const { fijarAlturaObservada } = useEscenario();
+  const { entrada, escenarioSimulado, fijarAlturaObservada } = useEscenario();
   const carga = useCargaViva(() => api.resumenPanel(), { cadaMs: REFRESCO_TABLERO_MS, senal });
   const ahora = useAhora();
 
@@ -91,6 +94,13 @@ export default function Tablero() {
           )}
         </Flex>
       </Flex>
+
+      <TresRelojes
+        variante="compacta"
+        alturaM={entrada.altura_formosa_m}
+        alturaCategoria={escenarioSimulado ? CATEGORIAS.SIMULADO : CATEGORIAS.OBSERVADO}
+        lluviaMm={entrada.lluvia_mm > 0 ? entrada.lluvia_mm : undefined}
+      />
 
       {carga.cargando && (
         <Center py={10} role="status" aria-label="Cargando">
