@@ -1,9 +1,11 @@
-import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Text, VStack } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 
-import { AvisoFueraDeFormosa, BotonUbicacion } from "../../components/BotonUbicacion";
-import { ElegirEnMapa } from "../../components/ElegirEnMapa";
+import { AvisoFueraDeFormosa } from "../../components/BotonUbicacion";
+import { Contador } from "../../components/Contador";
 import { AlertaError, Campo } from "../../components/Formulario";
+import { IconoLapiz, IconoMascota, IconoMayor, IconoMenor, IconoPersonas, IconoTilde } from "../../components/iconos/Iconos";
+import { SelectorUbicacion } from "../../components/SelectorUbicacion";
 import { Plegable } from "../../components/Plegable";
 import { solicitar } from "../../lib/api";
 import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validarCoordenadas, type Errores } from "../../lib/validacion";
@@ -26,7 +28,7 @@ const txt = (n: number | null | undefined, porDefecto: string) => (n === null ||
  * «Editar mi grupo familiar»: PUT /mi/grupo-familiar. El PUT reemplaza todo el registro, así que los campos
  * que esta pantalla no muestra (salud, vulnerabilidad) se reenvían tal como vinieron del servidor.
  */
-export function EditarGrupo({ grupo, alGuardar }: { grupo: Grupo | null; alGuardar: () => void }) {
+export function EditarGrupo({ grupo, alGuardar, abrirMapa = 0 }: { grupo: Grupo | null; alGuardar: () => void; abrirMapa?: number }) {
   const [v, setV] = useState({
     integrantes: txt(grupo?.integrantes, "1"),
     menores: txt(grupo?.menores, "0"),
@@ -41,10 +43,11 @@ export function EditarGrupo({ grupo, alGuardar }: { grupo: Grupo | null; alGuard
   const [errorApi, setErrorApi] = useState<unknown>(null);
   const [guardado, setGuardado] = useState(false);
 
-  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const poner = (k: keyof typeof v, valor: string) => {
     setGuardado(false);
-    setV({ ...v, [k]: e.target.value });
+    setV((x) => ({ ...x, [k]: valor }));
   };
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => poner(k, e.target.value);
   const lon = decimal(v.lon);
   const lat = decimal(v.lat);
   const puntoValido = lon !== null && lat !== null && !Number.isNaN(lon) && !Number.isNaN(lat);
@@ -98,50 +101,67 @@ export function EditarGrupo({ grupo, alGuardar }: { grupo: Grupo | null; alGuard
   }
 
   return (
-    <Plegable titulo="Editar mi grupo familiar" abiertoInicial={!grupo}>
+    <Plegable
+      titulo={
+        <Flex as="span" align="center" gap={2} color="primarioHover">
+          <IconoLapiz />
+          <span>Editar mi grupo familiar</span>
+        </Flex>
+      }
+      abiertoInicial={!grupo}
+    >
       <form onSubmit={(e) => void enviar(e)} noValidate aria-label="Editar mi grupo familiar">
-        <VStack spacing={4} align="stretch" maxW="34rem" pb={2}>
+        <VStack spacing={6} align="stretch" pt={3} pb={2}>
           <AlertaError error={errorApi} />
-          <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4}>
-            <Campo id="g-integrantes" etiqueta="Integrantes" inputMode="numeric" value={v.integrantes} onChange={set("integrantes")} error={errores.integrantes} />
-            <Campo id="g-mascotas" etiqueta="Mascotas" inputMode="numeric" value={v.mascotas} onChange={set("mascotas")} error={errores.mascotas} />
-            <Campo id="g-menores" etiqueta="Menores" inputMode="numeric" value={v.menores} onChange={set("menores")} error={errores.menores} />
-            <Campo id="g-mayores" etiqueta="Personas mayores" inputMode="numeric" value={v.mayores} onChange={set("mayores")} error={errores.mayores} />
-          </Box>
-          <Campo id="g-telefono" etiqueta="Teléfono (opcional)" type="tel" value={v.telefono} onChange={set("telefono")} error={errores.telefono} ayuda="Se guarda cifrado." autoComplete="tel" />
-          <Heading as="h3" size="xs">
-            Domicilio (opcional)
-          </Heading>
-          <BotonUbicacion
-            primario
-            onUbicacion={(lo, la) => {
-              setGuardado(false);
-              setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }));
-            }}
-          />
-          <ElegirEnMapa
-            lon={v.lon}
-            lat={v.lat}
-            onChange={(p) => {
-              setGuardado(false);
-              setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }));
-            }}
-          />
-          <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
-            <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
-              <Campo id="g-lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
-              <Campo id="g-lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
+          <Box as="fieldset" border="0" p={0} m={0} minW={0}>
+            <Heading as="h3" size="sm" mb={3}>
+              Quiénes son
+            </Heading>
+            <Box display="grid" gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" }} gap={4} alignItems="end">
+              <Contador id="g-integrantes" etiqueta="Integrantes" icono={<IconoPersonas />} min={1} max={40} value={v.integrantes} onChange={(t) => poner("integrantes", t)} error={errores.integrantes} />
+              <Contador id="g-menores" etiqueta="Menores" icono={<IconoMenor />} max={40} value={v.menores} onChange={(t) => poner("menores", t)} error={errores.menores} />
+              <Contador id="g-mayores" etiqueta="Personas mayores" icono={<IconoMayor />} max={40} value={v.mayores} onChange={(t) => poner("mayores", t)} error={errores.mayores} />
+              <Contador id="g-mascotas" etiqueta="Mascotas" icono={<IconoMascota />} max={100} value={v.mascotas} onChange={(t) => poner("mascotas", t)} error={errores.mascotas} />
             </Box>
-          </Plegable>
-          <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
-          <Button type="submit" isLoading={enviando} loadingText="Guardando" minH="2.75rem">
-            Guardar cambios
-          </Button>
-          {guardado && (
-            <Text role="status" fontSize="sm">
-              Cambios guardados.
+          </Box>
+          <Box maxW="22rem">
+            <Campo id="g-telefono" etiqueta="Teléfono (opcional)" type="tel" value={v.telefono} onChange={set("telefono")} error={errores.telefono} ayuda="Se guarda cifrado." autoComplete="tel" />
+          </Box>
+          <Box>
+            <Heading as="h3" size="sm" mb={1}>
+              Domicilio (opcional)
+            </Heading>
+            <Text fontSize="sm" color="textoSuave" mb={3}>
+              Con tu domicilio sabemos en qué sector estás y a qué centro te corresponde ir.
             </Text>
-          )}
+            <SelectorUbicacion
+              id="domicilio-selector"
+              idBase="g"
+              lon={v.lon}
+              lat={v.lat}
+              inicial={grupo?.lon != null && grupo?.lat != null ? "mapa" : "ubicacion"}
+              abrirMapa={abrirMapa}
+              errorLon={errores.lon}
+              errorLat={errores.lat}
+              onPunto={(lo, la) => {
+                setGuardado(false);
+                setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }));
+              }}
+              onTexto={(campo, valor) => poner(campo, valor)}
+            />
+          </Box>
+          <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
+          <Flex align="center" gap={4} wrap="wrap">
+            <Button type="submit" isLoading={enviando} loadingText="Guardando" minH="2.75rem">
+              Guardar cambios
+            </Button>
+            {guardado && (
+              <Flex role="status" align="center" gap={1.5} fontSize="sm" fontWeight={600} color="verde.800">
+                <IconoTilde />
+                Cambios guardados.
+              </Flex>
+            )}
+          </Flex>
         </VStack>
       </form>
     </Plegable>
