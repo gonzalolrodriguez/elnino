@@ -56,7 +56,7 @@ export function ElegirEnMapa({ lon, lat, onChange }: Props) {
                 {textoPuntoEnSector(lonN, latN)}
               </Text>
               <Text fontSize="xs" mt={1} color="textoSuave">
-                Mapa base: OpenStreetMap (ODbL), documento de referencia. Sectores: SIMULADO.
+                Mapa base: OpenStreetMap (ODbL), documento de referencia. Sectores: SIMULADO. Las imágenes del mapa se piden a los servidores de OpenStreetMap, que ven tu dirección IP y la zona que mirás (no tus datos).
               </Text>
             </>
           )}
