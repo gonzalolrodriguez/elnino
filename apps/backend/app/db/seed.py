@@ -312,9 +312,16 @@ def sembrar_cuadrillas(db: Session) -> int:
     datos = _json(SIMULADO / "cuadrillas.json")
     nuevas = 0
     for c in datos["cuadrillas"]:
-        if db.execute(select(Cuadrilla.id).where(Cuadrilla.nombre == c["nombre"])).first():
+        existente = db.execute(
+            select(Cuadrilla).where(Cuadrilla.nombre == c["nombre"])
+        ).scalar_one_or_none()
+        if existente is not None:
+            if existente.vehiculo is None and c.get("vehiculo"):
+                existente.vehiculo = c["vehiculo"]  # bases sembradas antes de la migración 0009
             continue
-        cuadrilla = Cuadrilla(nombre=c["nombre"], tipo_incidente=c["tipo_incidente"])
+        cuadrilla = Cuadrilla(
+            nombre=c["nombre"], tipo_incidente=c["tipo_incidente"], vehiculo=c.get("vehiculo")
+        )
         db.add(cuadrilla)
         db.flush()
         for i in c["integrantes"]:

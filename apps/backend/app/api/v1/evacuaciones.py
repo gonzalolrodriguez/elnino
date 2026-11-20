@@ -50,6 +50,7 @@ from app.db.modelos import (
     Usuario,
 )
 from app.db.sesion import get_db
+from app.domain import evacuaciones as dom
 from app.servicios import evacuaciones as srv
 
 router = APIRouter(tags=["evacuaciones"])
@@ -435,8 +436,24 @@ class ConfirmacionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     solicitud_id: int | None = Field(default=None, ge=1)
     codigo: str | None = Field(default=None, min_length=1, max_length=8)
-    respuesta: Literal["si", "no", "problema"]
+    # Canónicas: completa|parcial|no_encontraron|no_vinieron|otro_problema. Se aceptan además los
+    # valores anteriores si|no|problema, que se normalizan.
+    respuesta: Literal[
+        "completa",
+        "parcial",
+        "no_encontraron",
+        "no_vinieron",
+        "otro_problema",
+        "si",
+        "no",
+        "problema",
+    ]
     comentario: str | None = Field(default=None, max_length=500)
+
+    @field_validator("respuesta")
+    @classmethod
+    def _canonica(cls, v: str) -> str:
+        return dom.normalizar_respuesta(v) or v
 
     @model_validator(mode="after")
     def uno_solo(self):

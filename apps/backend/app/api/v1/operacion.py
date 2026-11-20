@@ -50,6 +50,7 @@ class CuadrillaIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     nombre: str = Field(min_length=2, max_length=120)
     tipo_incidente: Literal["humana", "ganadera", "apicola"]
+    vehiculo: Literal["4x4", "camion_jaula", "colectivo", "lancha", "moto"] | None = None
     integrantes: list[IntegranteIn] = Field(default_factory=list, max_length=30)
 
 
@@ -64,6 +65,7 @@ def _cuadrilla_a_dict(db: Session, c: Cuadrilla) -> dict:
         "id": c.id,
         "nombre": c.nombre,
         "tipo_incidente": c.tipo_incidente,
+        "vehiculo": c.vehiculo,
         "estado": c.estado,
         "integrantes": [
             {"rol_operativo": i.rol_operativo, "usuario_id": i.usuario_id} for i in integrantes
@@ -97,7 +99,9 @@ def crear_cuadrilla(
             raise HTTPException(422, f"rol_operativo desconocido: {i.rol_operativo}")
         if i.usuario_id is not None and db.get(Usuario, i.usuario_id) is None:
             raise HTTPException(422, f"usuario_id inexistente: {i.usuario_id}")
-    cuadrilla = Cuadrilla(nombre=datos.nombre, tipo_incidente=datos.tipo_incidente)
+    cuadrilla = Cuadrilla(
+        nombre=datos.nombre, tipo_incidente=datos.tipo_incidente, vehiculo=datos.vehiculo
+    )
     db.add(cuadrilla)
     db.flush()
     for i in datos.integrantes:
