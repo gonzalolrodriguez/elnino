@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
+import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { FormCierre } from "@/components/FormCierre";
 import { SoloRol } from "@/components/SoloRol";
 import {
@@ -159,6 +160,7 @@ function ListaTareas() {
   return (
     <Pantalla dosColumnas>
       <Titulo>Tareas de la cuadrilla</Titulo>
+      <EnlaceBrujula />
       <Texto suave>
         Los cambios de estado requieren conexión. El cierre con constancia se puede cargar sin
         conexión: queda en el teléfono y se envía solo.
