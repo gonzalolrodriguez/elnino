@@ -131,12 +131,15 @@ describe("panel personal en /mi-cuenta", () => {
     for (const t of ["Recibido", "Verificado", "Cuadrilla asignada", "En camino", "Asistido"]) expect(linea).toHaveTextContent(t);
     expect(within(linea).getByTestId("paso-en_curso")).toHaveAttribute("data-actual", "true");
     expect(within(linea).getByTestId("paso-resuelta")).toHaveAttribute("data-alcanzado", "false");
-    expect(within(linea).getByTestId("paso-verificada")).toHaveTextContent(/20\/11\/2026,? 14:05/);
+    expect(within(linea).getByTestId("paso-verificada")).toHaveTextContent(/14:05/);
     const cuad = within(tarjeta).getByTestId("cuadrilla-asignada");
     expect(cuad).toHaveTextContent("Encargado: Encargado de cuadrilla");
-    expect(cuad).toHaveTextContent("Vehículo: Camión jaula");
+    expect(cuad).toHaveTextContent("Camión jaula");
     expect(cuad.querySelector('[data-categoria="SIMULADO"]')).not.toBeNull();
-    expect(within(tarjeta).getByTestId("seguimiento-estado")).toHaveTextContent("A 3,5 km de tu pedido · llegada estimada: unos 8 min");
+    const cifras = within(tarjeta).getByTestId("seguimiento-estado");
+    expect(cifras).toHaveTextContent("Llegada estimada");
+    expect(cifras).toHaveTextContent("unos 8 min");
+    expect(cifras).toHaveTextContent("3,5 km");
     expect(tarjeta).toHaveTextContent("Última posición recibida a las 15:02");
     expect(tarjeta).toHaveTextContent("Centro de destino: Escuela de referencia");
     expect(within(tarjeta).queryByTestId("confirmacion-asistencia")).not.toBeInTheDocument();

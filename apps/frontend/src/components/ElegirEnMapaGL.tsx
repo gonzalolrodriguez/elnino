@@ -14,13 +14,15 @@ type Props = {
   onChange: (p: PuntoMapa) => void;
   /** Se llama si el mapa no se pudo crear (p. ej. sin WebGL). */
   onFallo: () => void;
+  /** Alto del mapa (CSS); por defecto 20rem. */
+  alto?: string;
 };
 
 const redondear5 = (n: number) => Number(n.toFixed(5));
 const valido = (n: number | null): n is number => n !== null && Number.isFinite(n);
 
 /** Mapa MapLibre (carga diferida): sectores K10 (SIMULADO) sobre OpenStreetMap; clic o arrastre del marcador fijan el punto. */
-export default function ElegirEnMapaGL({ lon, lat, onChange, onFallo }: Props) {
+export default function ElegirEnMapaGL({ lon, lat, onChange, onFallo, alto = "20rem" }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const marcador = useRef<maplibregl.Marker | null>(null);
@@ -111,5 +113,5 @@ export default function ElegirEnMapaGL({ lon, lat, onChange, onFallo }: Props) {
     m.easeTo({ center: [lon, lat], duration: 300 });
   }, [lon, lat]);
 
-  return <div ref={contenedor} role="application" aria-label="Mapa para marcar tu ubicación. Si no podés usarlo, escribí las coordenadas a mano." style={{ width: "100%", height: "20rem" }} />;
+  return <div ref={contenedor} role="application" aria-label="Mapa para marcar tu ubicación. Si no podés usarlo, escribí las coordenadas a mano." style={{ width: "100%", height: alto }} />;
 }

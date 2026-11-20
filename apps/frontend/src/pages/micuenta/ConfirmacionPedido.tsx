@@ -1,7 +1,8 @@
-import { Alert, AlertDescription, AlertIcon, Box, Button, FormControl, FormLabel, Heading, Radio, RadioGroup, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, Radio, RadioGroup, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
+import { IconoPersonas } from "../../components/iconos/Iconos";
 import { OPCIONES_ASISTENCIA, type RespuestaAsistencia } from "../../lib/confirmacion";
 import { solicitar } from "../../lib/api";
 
@@ -42,17 +43,20 @@ export function ConfirmacionPedido({ solicitudId, alResponder }: { solicitudId: 
     );
   }
   return (
-    <Box as="section" aria-labelledby={`conf-${solicitudId}`} bg="alerta.50" border="2px solid" borderColor="alerta.600" borderRadius="xl" p={{ base: 4, md: 5 }} data-testid="confirmacion-asistencia">
-      <Heading as="h3" size="md" id={`conf-${solicitudId}`} mb={1}>
-        ¿Te asistieron?
-      </Heading>
+    <Box as="section" aria-labelledby={`conf-${solicitudId}`} bg="alerta.50" border="1px solid" borderColor="alerta.300" borderRadius="xl" p={{ base: 4, md: 5 }} data-testid="confirmacion-asistencia">
+      <Flex align="center" gap={2.5} mb={1} color="alerta.900">
+        <IconoPersonas tam="1.5rem" />
+        <Heading as="h3" size="md" id={`conf-${solicitudId}`}>
+          ¿Te asistieron?
+        </Heading>
+      </Flex>
       <Text fontSize="sm" mb={3}>
         La cuadrilla cerró tu pedido n.º {solicitudId}. Contanos cómo fue: tu respuesta ayuda a revisar que la asistencia salió bien. No es una denuncia.
       </Text>
       <RadioGroup value={respuesta} onChange={(v) => setRespuesta(v as RespuestaAsistencia)}>
         <Stack spacing={2} role="radiogroup" aria-label="Cómo te fue con la asistencia">
           {OPCIONES_ASISTENCIA.map((o) => (
-            <Box key={o.valor} layerStyle="tarjeta" px={3} py={2} borderColor={respuesta === o.valor ? "primario" : "borde"} minH="2.75rem" display="flex" alignItems="center">
+            <Box key={o.valor} layerStyle="tarjeta" px={3.5} py={2.5} borderColor={respuesta === o.valor ? "primario" : "borde"} bg={respuesta === o.valor ? "agua.50" : "superficie"} boxShadow={respuesta === o.valor ? "0 0 0 1px var(--chakra-colors-primario)" : undefined} transition="background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out)" minH="2.75rem" display="flex" alignItems="center">
               <Radio value={o.valor} size="lg" alignItems="flex-start">
                 <Text fontWeight={600} lineHeight={1.3}>
                   {o.etiqueta}
