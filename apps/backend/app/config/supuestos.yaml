@@ -85,6 +85,9 @@ margen_seguridad_fraccion:
 ruteo_enganche_usable_m:
   valor: 500
   fuente: "SUPUESTO (un punto se engancha al nodo más cercano con un tramo usable para el perfil y la lluvia si está a no más de esta distancia adicional; si no, al nodo más cercano, aunque su tramo esté cerrado)"
+hogar_tamano_distribucion:
+  valor: {1: 0.15, 2: 0.20, 3: 0.20, 4: 0.18, 5: 0.12, 6: 0.08, 7: 0.04, 8: 0.03}
+  fuente: "SUPUESTO (proporción de hogares por cantidad de personas para el set separado data/simulado/hogares_k10.json; promedio 3,5 personas; reemplazar por el cuadro del Censo 2022 de hogares por cantidad de personas de Formosa cuando se obtenga)"
 centro_excluir_en_riesgo:
   valor: true
   fuente: "SUPUESTO (criterio conservador; un centro de recepción dentro de un sector en riesgo no recibe evacuados, y dentro de uno comprometido nunca)"
