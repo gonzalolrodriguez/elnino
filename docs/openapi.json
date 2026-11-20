@@ -2055,6 +2055,34 @@
         ]
       }
     },
+    "/api/v1/mi/pedidos": {
+      "get": {
+        "tags": [
+          "seguimiento"
+        ],
+        "summary": "Mis Pedidos",
+        "description": "Pedidos propios con línea de tiempo, cuadrilla (por rol), vehículo, seguimiento y centro.",
+        "operationId": "mis_pedidos_api_v1_mi_pedidos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Mis Pedidos Api V1 Mi Pedidos Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/cuadrillas/posiciones": {
       "get": {
         "tags": [
@@ -3916,6 +3944,11 @@
           "respuesta": {
             "type": "string",
             "enum": [
+              "completa",
+              "parcial",
+              "no_encontraron",
+              "no_vinieron",
+              "otro_problema",
               "si",
               "no",
               "problema"
@@ -3958,6 +3991,24 @@
               "apicola"
             ],
             "title": "Tipo Incidente"
+          },
+          "vehiculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "4x4",
+                  "camion_jaula",
+                  "colectivo",
+                  "lancha",
+                  "moto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiculo"
           },
           "integrantes": {
             "items": {
