@@ -89,7 +89,7 @@ No se pudo comprobar todavía en pantalla y con sesión real el tablero, las con
   Estimación del equipo: varias semanas de trabajo sostenido y la participación de la autoridad. No hay una cifra confirmada.
 
 ## Cómo está hecha
-- **Backend:** Python 3.12 (probado con 3.13), FastAPI 0.115, Pydantic 2, SQLAlchemy 2 + GeoAlchemy2, Alembic, PostgreSQL 16 con PostGIS y pgRouting (imagen `pgrouting/pgrouting:16-3.4-3.6.1`), Argon2, PyJWT, `cryptography`, slowapi, openpyxl, pytest y ruff.
+- **Backend:** Python 3.12 (probado con 3.13), FastAPI 0.165 (Starlette 1.10), Pydantic 2, SQLAlchemy 2 + GeoAlchemy2, Alembic, PostgreSQL 16 con PostGIS y pgRouting (imagen `pgrouting/pgrouting:16-3.4-3.6.1`), Argon2, PyJWT, `cryptography`, slowapi, openpyxl, pytest y ruff.
 - **Web:** React 18, TypeScript, Vite 6, Chakra UI 2, Framer Motion, React Three Fiber y Drei (landing), MapLibre GL 6 y Deck.gl (mapa), tipografía Atkinson Hyperlegible Next, `@vitejs/plugin-legacy` (navegadores antiguos), vitest.
 - **App móvil:** Expo SDK 58, React Native 0.88, expo-router, expo-sqlite, expo-secure-store, expo-location, react-native-maps, jest-expo; APK con EAS Build (perfil `preview`).
 - **Monorepo:** pnpm 10 con workspaces; Node 24.
