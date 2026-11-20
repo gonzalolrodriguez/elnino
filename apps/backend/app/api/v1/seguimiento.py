@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.operacion import _cuadrillas_de
 from app.core import auditoria
 from app.core.eventos import difusor
+from app.core.limitador import limite_por_usuario, limite_usuario
 from app.core.rbac import ip_cliente, requiere_rol
 from app.core.tiempo import hoy_ar
 from app.db.modelos import Usuario
@@ -26,7 +27,10 @@ from app.db.sesion import get_db
 from app.servicios import pedidos
 from app.servicios import seguimiento as srv
 
-router = APIRouter(tags=["seguimiento"])
+router = APIRouter(
+    tags=["seguimiento"],
+    dependencies=[Depends(limite_por_usuario("usuario", limite_usuario))],
+)
 _MANDOS = ("operador", "decisor", "admin")
 
 

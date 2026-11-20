@@ -335,3 +335,44 @@ def test_primera_posicion_simultanea_no_da_500(db, pedido_en_curso):
     db.expire_all()
     assert db.get(PosicionCuadrilla, cid) is not None
 
+
+# ---- límite por persona (no por IP) ------------------------------------------------------------
+
+
+def test_limite_por_persona_en_mi_pedidos(client, como, monkeypatch):
+    from app.config.settings import get_settings
+    from app.core.limitador import limiter
+
+    monkeypatch.setattr(get_settings(), "rate_limit_usuario", "2/minute")
+    limiter.reset()
+    limiter.enabled = True
+    try:
+        h = como("ciudadano1")
+        rs = [client.get("/api/v1/mi/pedidos", headers=h) for _ in range(3)]
+        otra = client.get("/api/v1/mi/pedidos", headers=como("productor1"))
+        sin_sesion = client.get("/api/v1/mi/pedidos")
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+    assert [r.status_code for r in rs] == [200, 200, 429]
+    assert int(rs[2].headers["Retry-After"]) >= 1
+    assert rs[2].json()["error"]["codigo"] == "demasiados_intentos"
+    assert otra.status_code == 200  # es por persona: la misma IP con otra cuenta no se frena
+    assert sin_sesion.status_code == 401
+
+
+def test_limite_por_persona_en_simulacion(client, como, monkeypatch):
+    from app.config.settings import get_settings
+    from app.core.limitador import limiter
+
+    monkeypatch.setattr(get_settings(), "rate_limit_simulacion", "1/minute")
+    limiter.reset()
+    limiter.enabled = True
+    cuerpo = {"altura_formosa_m": 5.6, "lluvia_mm": 0, "caminos_cerrados": []}
+    try:
+        h = como("operador")
+        rs = [client.post("/api/v1/simulacion/escenario", json=cuerpo, headers=h) for _ in range(2)]
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+    assert [r.status_code for r in rs] == [200, 429]
