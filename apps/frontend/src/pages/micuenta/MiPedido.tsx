@@ -4,7 +4,7 @@ import { CATEGORIAS } from "@evacuaciones/shared";
 import { IconoEdificio, IconoPersonas, IconoReloj, IconoTriangulo, IconoVehiculo } from "../../components/iconos/Iconos";
 import { Insignia } from "../../components/Insignia";
 import { etiquetaTipoSolicitud, etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
-import { ETAPAS, etiquetaVehiculo, pideConfirmacion, type Pedido } from "../../lib/pedidos";
+import { ETAPAS, etiquetaVehiculo, pideConfirmacion, rutaDe, type Pedido } from "../../lib/pedidos";
 import { ETIQUETA_TIPO_CUADRILLA, formatearDistancia, formatearLlegada, horaCorta } from "../../lib/seguimiento";
 import { ConfirmacionPedido } from "./ConfirmacionPedido";
 import { LineaTiempoPedido } from "./LineaTiempoPedido";
@@ -161,7 +161,7 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
               </Flex>
             )}
             {p.lat !== null && p.lon !== null && (
-              <MapaPedido pedido={{ lat: p.lat, lon: p.lon }} cuadrilla={posicion ? { lat: posicion.lat, lon: posicion.lon } : null} centro={p.centro} />
+              <MapaPedido pedido={{ lat: p.lat, lon: p.lon }} cuadrilla={posicion ? { lat: posicion.lat, lon: posicion.lon } : null} centro={p.centro} ruta={rutaDe(p)} vehiculo={cuad?.vehiculo ?? null} />
             )}
             <NotasSeguimiento p={p} />
           </Flex>

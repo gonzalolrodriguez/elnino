@@ -82,3 +82,23 @@ export const pideConfirmacion = (p: Pedido): boolean => p.confirmacion !== null 
 
 export const ORDEN_SEVERIDAD: Record<string, number> = { evacuacion: 3, evacuacion_preventiva: 2, alerta: 1 };
 export const severidad = (tipo: string): number => ORDEN_SEVERIDAD[tipo] ?? 0;
+
+/** Recorrido de la cuadrilla hasta el pedido (`seguimiento.ruta` de `GET /mi/pedidos`; SIMULADO si `simulada`). */
+export type RutaPedido = {
+  /** Vértices [lon, lat] desde la posición de la cuadrilla hasta el pedido. */
+  coordenadas: [number, number][];
+  distancia_km: number;
+  llegada_estimada_min: number | null;
+  metodo: "red_vial" | "aproximado";
+  simulada: boolean;
+  /** 0..1 sobre la ruta, medido en `calculada_en`. */
+  progreso: number;
+  velocidad_kmh: number;
+  calculada_en: string;
+};
+
+/** La ruta puede faltar (backend anterior o sin posición): el mapa cae al comportamiento de solo puntos. */
+export function rutaDe(p: Pick<Pedido, "seguimiento">): RutaPedido | null {
+  const r = (p.seguimiento as (Pedido["seguimiento"] & { ruta?: RutaPedido | null }) | null)?.ruta;
+  return r && Array.isArray(r.coordenadas) && r.coordenadas.length >= 2 ? r : null;
+}
