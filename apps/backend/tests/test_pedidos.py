@@ -56,8 +56,14 @@ def test_pedidos_flujo_completo_con_linea_de_tiempo(client, como, db):
     cuadrilla = item["tarea"]["cuadrilla"]
     assert cuadrilla["tipo_incidente"] == "humana" and cuadrilla["vehiculo"] == "4x4"
     assert cuadrilla["rol_encargado"] == "encargado_cuadrilla"
+    codigo = item["confirmacion"]["codigo"]
+    # El mismo código que /mi/confirmaciones: 8 caracteres, el que acepta el SMS (SI/PARCIAL <código>)
+    assert isinstance(codigo, str) and len(codigo) == 8
+    propias = client.get("/api/v1/mi/confirmaciones", headers=p["h"]).json()["confirmaciones"]
+    assert codigo in {c["codigo"] for c in propias}
     assert item["confirmacion"] == {
         "solicitud_id": p["solicitud_id"],
+        "codigo": codigo,
         "respondida": True,
         "respuesta": "parcial",
         "comentario": None,

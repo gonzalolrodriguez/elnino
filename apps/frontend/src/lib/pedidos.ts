@@ -25,7 +25,7 @@ export type Pedido = {
     cerrada_en: string | null;
   };
   seguimiento: SeguimientoCuadrilla | null;
-  confirmacion: null | { solicitud_id: number; respondida: boolean; respuesta: string | null; comentario: string | null };
+  confirmacion: null | { solicitud_id: number; codigo?: string; respondida: boolean; respuesta: string | null; comentario: string | null };
   centro: null | { id: number; nombre: string; lat: number; lon: number };
 };
 

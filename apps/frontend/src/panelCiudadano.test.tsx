@@ -221,6 +221,16 @@ describe("confirmación «¿Te asistieron?»", () => {
     expect(within(tarjeta).getAllByRole("radio")).toHaveLength(5);
     for (const o of OPCIONES_ASISTENCIA) expect(within(tarjeta).getByLabelText(new RegExp(o.etiqueta))).toBeInTheDocument();
     expect(within(tarjeta).getByRole("button", { name: "Enviar respuesta" })).toBeDisabled();
+    expect(within(tarjeta).queryByTestId("confirmacion-sms")).not.toBeInTheDocument(); // sin código, sin SMS
+  });
+
+  it("con el código muestra cómo responder por SMS (SI y PARCIAL)", async () => {
+    const p = cerrado();
+    conSesion([{ ...p, confirmacion: { solicitud_id: 41, codigo: "K7M2Q9XA", respondida: false, respuesta: null, comentario: null } }]);
+    renderRuta("/mi-cuenta");
+    const sms = await screen.findByTestId("confirmacion-sms");
+    expect(sms).toHaveTextContent("SI K7M2Q9XA");
+    expect(sms).toHaveTextContent("PARCIAL K7M2Q9XA");
   });
 
   it.each(OPCIONES_ASISTENCIA.map((o) => [o.valor, o.etiqueta] as const))("envía «%s» con el comentario y muestra la nota del servidor", async (valor, etiqueta) => {

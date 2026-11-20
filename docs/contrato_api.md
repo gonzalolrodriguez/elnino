@@ -495,14 +495,14 @@ Respuesta `{ "categoria": "SIMULADO", "items": [...] }`, hasta 100 pedidos **pro
     "cuadrilla": { "id": 1, "tipo_incidente": "humana", "rol_encargado": "encargado_cuadrilla", "vehiculo": "4x4" },
     "iniciada_en": null, "cerrada_en": "2026-11-20T18:01:15.823719+00:00" },
   "seguimiento": null,
-  "confirmacion": { "solicitud_id": 4, "respondida": true, "respuesta": "parcial", "comentario": null },
+  "confirmacion": { "solicitud_id": 4, "codigo": "K7M2Q9XA", "respondida": true, "respuesta": "parcial", "comentario": null },
   "centro": { "id": 1, "nombre": "Centro de recepción SIMULADO 1", "lat": -26.17, "lon": -58.165 } }
 ```
 
 - `linea_tiempo` siempre trae los 5 estados en orden. `alcanzado` dice si el estado ya se cumplió; `en` es la hora **solo si el sistema la registró** (si no, `null`, también con `alcanzado: true`). Se toma de: alta del pedido (`recibida`); la bitácora de cambios de estado de la solicitud (`verificada`, `asignada`, `en_curso`, `resuelta`); la hora de creación de la tarea (`asignada`, de respaldo); la última actualización de la tarea mientras está `en_curso`; y la constancia de cierre o el cierre de la tarea (`resuelta`, de respaldo). Si la tarea va más adelantada que la solicitud (p. ej. tarea `completada`), esos estados cuentan como alcanzados.
 - `tarea` es la tarea vigente (la más nueva no cancelada) o `null`. `cuadrilla` se identifica por tipo, `rol_encargado` (rol del catálogo si la cuadrilla tiene encargado; nunca un nombre) y `vehiculo` (`SIMULADO`, puede ser `null`). `iniciada_en` y `cerrada_en` son `null` si no hay hora registrada.
-- `seguimiento`: el mismo ítem que devuelve `GET /mi/seguimiento` para ese pedido (solo con la tarea `en_curso`), si no `null`.
-- `confirmacion`: la consulta del traslado (`respuesta` canónica, ver "Respuestas del evacuado") o `null` si todavía no se pidió; sin el código.
+- `seguimiento`: el mismo ítem que devuelve `GET /mi/seguimiento` para ese pedido (solo con la tarea `en_curso`), si no `null`. Una posición de más de `posicion_vencida_minutos` (30 min, SUPUESTO) no se devuelve: el ítem queda `asignada_sin_posicion` con `posicion_vieja: true`.
+- `confirmacion`: la consulta del traslado (`respuesta` canónica, ver "Respuestas del evacuado") o `null` si todavía no se pidió. Incluye `codigo` (el mismo que `GET /mi/confirmaciones`) para que la persona también pueda responder por SMS (`SI <código>`, `PARCIAL <código>`, `NO <código>` o `PROBLEMA <código> <texto>`); solo lo ve la dueña del pedido.
 - `centro`: el centro de recepción registrado en la constancia de cierre (`null` antes del cierre o sin centro). No es la sugerencia de `GET /mi/sector`.
 - Otros roles: 403; sin sesión: 401. No se registra en la bitácora de accesos (son datos propios de quien consulta, igual que `/mi/seguimiento`).
 
@@ -615,9 +615,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 `docs/openapi.json` se exporta de la aplicación (64 rutas y 74 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
-python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='
-').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'
-')"
+python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='\n').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'\n')"
 ```
 
 Con el backend en marcha, el mismo esquema se sirve en `GET /openapi.json` y la interfaz interactiva en `GET /docs`.
