@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
 
 import { Icono, type NombreIcono } from "@/components/Icono";
-import { COLOR } from "@/components/tema";
+import { COLOR, TIPO } from "@/components/tema";
 import { Cargando, EnPestanasContext } from "@/components/ui";
 import { AlertasProvider, useAlertas } from "@/lib/AlertasContext";
 import { ColaProvider, useCola } from "@/lib/ColaContext";
@@ -45,7 +45,7 @@ function Pestanas({ visibles }: { visibles: Pestana[] }) {
         // La barra tiene alto fijo: su etiqueta sigue la fuente del sistema solo hasta 1,3x para no
         // recortarse; el resto de la app escala sin tope.
         tabBarAllowFontScaling: false,
-        tabBarLabelStyle: { fontSize: fuenteAcotada(11, d.fontScale, 1.3) },
+        tabBarLabelStyle: { fontSize: fuenteAcotada(TIPO.minimo.fontSize, d.fontScale, 1.3) },
         tabBarItemStyle: { minHeight: 48 },
         tabBarBadgeStyle: { backgroundColor: COLOR.error, color: COLOR.papel, fontWeight: "700" },
       }}

@@ -3,6 +3,7 @@ import { Linking, Text } from "react-native";
 
 import { Encabezado } from "@/components/Piezas";
 import { Boton, COLOR, Insignia, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 
 /** Teléfonos de emergencia. Fuente: argentina.gob.ar, consultada el 19/11/2026. */
 export const TELEFONOS = [
@@ -41,7 +42,7 @@ function Lista({ items }: { items: string[] }) {
   return (
     <>
       {items.map((t) => (
-        <Text key={t} style={{ fontSize: 16, lineHeight: 23, color: COLOR.texto }}>
+        <Text key={t} style={{ ...TIPO.cuerpo, color: COLOR.texto }}>
           {"•"} {t}
         </Text>
       ))}

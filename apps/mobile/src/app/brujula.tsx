@@ -5,6 +5,7 @@ import { Text } from "react-native";
 import { FlechaBrujula } from "@/components/FlechaBrujula";
 import { Aviso, Encabezado } from "@/components/Piezas";
 import { Boton, Cargando, COLOR, Enlace, Insignia, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import {
   descripcionDireccion,
   distanciaM,
@@ -115,7 +116,7 @@ export default function Brujula() {
             {flecha !== null ? (
               <FlechaBrujula grados={flecha} etiqueta={descripcionDireccion(rumbo, distancia, punto.nombre)} />
             ) : null}
-            <Text maxFontSizeMultiplier={1.5} style={{ fontSize: 22, lineHeight: 28, fontWeight: "700", letterSpacing: -0.3, color: COLOR.texto, textAlign: "center" }}>
+            <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.destacado, color: COLOR.texto, textAlign: "center" }}>
               {flecha !== null ? `Distancia en línea recta: ${formatearDistanciaBrujula(distancia)}` : `Está ${rumboEnTexto(rumbo, distancia)}`}
             </Text>
             {flecha !== null ? (

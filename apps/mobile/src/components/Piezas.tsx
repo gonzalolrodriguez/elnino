@@ -19,8 +19,8 @@ export const TONOS: Record<Tono, { fondo: string; linea: string; texto: string; 
   ok: { fondo: COLOR.okFondo, linea: COLOR.okLinea, texto: COLOR.okTexto, disco: COLOR.ok },
   aviso: { fondo: COLOR.avisoFondo, linea: COLOR.avisoLinea, texto: COLOR.avisoTexto, disco: COLOR.aviso },
   error: { fondo: COLOR.errorFondo, linea: COLOR.errorLinea, texto: COLOR.errorTexto, disco: COLOR.error },
-  info: { fondo: COLOR.cielo, linea: "#BBD3EC", texto: "#174A86", disco: COLOR.primario },
-  neutro: { fondo: "#F1F5F9", linea: COLOR.borde, texto: COLOR.suave, disco: "#64748B" },
+  info: { fondo: COLOR.cielo, linea: COLOR.infoLinea, texto: COLOR.infoTexto, disco: COLOR.primario },
+  neutro: { fondo: COLOR.neutroFondo, linea: COLOR.borde, texto: COLOR.suave, disco: COLOR.neutroDisco },
 };
 
 /** Etiqueta corta con ícono: estado, rol, vehículo. Se acomoda en varias líneas si no entra. */
@@ -266,7 +266,7 @@ export function Paso({
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: ESPACIO.s, flexWrap: "wrap" }}>
           <Text
             maxFontSizeMultiplier={1.6}
-            style={{ flexShrink: 1, fontSize: estado === "actual" ? 18 : 16, lineHeight: 23, fontWeight: estado === "actual" ? "700" : lleno ? "600" : "400", color: hecho ? COLOR.texto : COLOR.suave }}
+            style={[estado === "actual" ? TIPO.subtitulo : lleno ? TIPO.cuerpoFuerte : TIPO.cuerpo, { flexShrink: 1, color: hecho ? COLOR.texto : COLOR.suave }]}
           >
             {etiqueta}
           </Text>
@@ -337,7 +337,7 @@ function BotonRedondo({ icono, etiqueta, onPress, deshabilitado }: { icono: Nomb
       disabled={deshabilitado}
       onPress={onPress}
       hitSlop={4}
-      style={({ pressed }) => [estilos.redondo, pressed && { transform: [{ scale: 0.94 }], backgroundColor: "#D5E5F6" }, deshabilitado && { opacity: 0.4 }]}
+      style={({ pressed }) => [estilos.redondo, pressed && { transform: [{ scale: 0.94 }], backgroundColor: COLOR.secundarioPresionado }, deshabilitado && { opacity: 0.4 }]}
     >
       <Icono nombre={icono} tam={22} color={COLOR.primario} />
     </Pressable>
@@ -352,7 +352,7 @@ export function Aviso({ tono, icono, children }: { tono: Tono; icono: NombreIcon
       <View style={{ marginTop: 2 }}>
         <Icono nombre={icono} tam={20} color={t.texto} />
       </View>
-      <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, ...TIPO.cuerpo, fontWeight: "600", color: t.texto }}>
+      <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, ...TIPO.cuerpoFuerte, color: t.texto }}>
         {children}
       </Text>
     </View>
@@ -380,11 +380,11 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  encabezado: { ...TIPO.subtitulo, color: COLOR.texto, flex: 1, letterSpacing: -0.2 },
+  encabezado: { ...TIPO.subtitulo, color: COLOR.texto, flex: 1 },
   rotulo: { ...TIPO.rotulo, color: COLOR.suave },
   nota: { ...TIPO.pequeno, color: COLOR.suave },
-  unidad: { fontSize: 16, fontWeight: "700", color: COLOR.suave },
-  unidadGrande: { fontSize: 22, fontWeight: "700", color: COLOR.suave },
+  unidad: { ...TIPO.cuerpo, fontWeight: "700", color: COLOR.suave },
+  unidadGrande: { ...TIPO.destacado, color: COLOR.suave },
   kpi: {
     flexGrow: 1,
     flexBasis: 140,
@@ -394,12 +394,12 @@ const estilos = StyleSheet.create({
     borderRadius: RADIO.tarjeta,
     padding: ESPACIO.m,
   },
-  banda: { borderWidth: 1, borderRadius: 20, padding: ESPACIO.l, gap: ESPACIO.m },
-  bandaTitulo: { ...TIPO.subtitulo, fontWeight: "700" },
-  bandaFrase: { fontSize: 19, lineHeight: 26, fontWeight: "700", letterSpacing: -0.2, color: COLOR.texto },
-  escala: { height: 12, borderRadius: 6, backgroundColor: COLOR.superficie, borderWidth: 1, borderColor: "rgba(14,27,44,0.14)" },
+  banda: { borderWidth: 1, borderRadius: RADIO.tarjeta, padding: ESPACIO.l, gap: ESPACIO.m },
+  bandaTitulo: { ...TIPO.cuerpoFuerte, fontWeight: "700" },
+  bandaFrase: { ...TIPO.subtitulo, color: COLOR.texto },
+  escala: { height: 12, borderRadius: 6, backgroundColor: COLOR.superficie, borderWidth: 1, borderColor: COLOR.contornoEscala },
   discoPaso: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  discoActual: { borderColor: "#9CC0E6", borderWidth: 4 },
+  discoActual: { borderColor: COLOR.aroActual, borderWidth: 4 },
   contador: {
     flexDirection: "row",
     alignItems: "center",
@@ -412,7 +412,7 @@ const estilos = StyleSheet.create({
     paddingVertical: 4,
   },
   contadorEtiqueta: { ...TIPO.cuerpo, fontWeight: "600", color: COLOR.texto, flexShrink: 1 },
-  contadorValor: { minWidth: 36, textAlign: "center", fontSize: 22, lineHeight: 28, fontWeight: "700", color: COLOR.texto },
+  contadorValor: { ...TIPO.destacado, minWidth: 36, textAlign: "center", color: COLOR.texto },
   redondo: {
     width: TOQUE_MIN,
     height: TOQUE_MIN,

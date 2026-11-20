@@ -167,7 +167,7 @@ describe("tarjeta «Cuadrilla en camino»", () => {
     expect(screen.getByLabelText("Distancia a tu pedido: 3,5 km")).toBeTruthy();
     expect(screen.getByLabelText("Llegada estimada: unos 8 min")).toBeTruthy();
     expect(screen.getByText("Última posición recibida a las 15:02.")).toBeTruthy();
-    expect(screen.getByText(/Es una estimación \(SUPUESTO/)).toBeTruthy();
+    expect(screen.getByText(/Es una estimación \(supuesto del equipo/)).toBeTruthy();
     expect(screen.getByText("SIMULADO")).toBeTruthy();
     expect(screen.getByRole("progressbar")).toBeTruthy();
     expect(screen.queryByText(/pueden no ser confiables/)).toBeNull();

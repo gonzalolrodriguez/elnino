@@ -16,6 +16,8 @@
  *  - `referrer` = `strict-origin-when-cross-origin`: OSM recibe el origen y no una ruta (misma
  *    política que la web; ver docs/seguridad.md, «Teselas de OpenStreetMap»).
  */
+import { COLOR } from "@/components/tema";
+
 export const LEAFLET_VERSION = "1.9.4";
 export const LEAFLET_JS = `https://unpkg.com/leaflet@${LEAFLET_VERSION}/dist/leaflet.js`;
 export const LEAFLET_CSS = `https://unpkg.com/leaflet@${LEAFLET_VERSION}/dist/leaflet.css`;
@@ -63,8 +65,8 @@ teselas.on("tileerror",function(){fallidas++;if(!avisado&&cargadas===0&&fallidas
 teselas.addTo(mapa);
 var capas=L.layerGroup().addTo(mapa);
 function ll(p){return [p[1],p[0]];}
-function elemento(forma,color,txt){var e=document.createElement("div");e.setAttribute("role","img");e.setAttribute("aria-label",txt);e.style.cssText="width:18px;height:18px;background:"+color+";border:3px solid #fff;box-shadow:0 0 0 1px "+color+";"+(forma==="circulo"?"border-radius:50%;":forma==="rombo"?"transform:rotate(45deg);":"border-radius:3px;");return e;}
-function colorOk(c){return /^#[0-9a-fA-F]{6}$/.test(c)?c:"#1E5AA0";}
+function elemento(forma,color,txt){var e=document.createElement("div");e.setAttribute("role","img");e.setAttribute("aria-label",txt);e.style.cssText="width:18px;height:18px;background:"+color+";border:3px solid ${COLOR.papel};box-shadow:0 0 0 1px "+color+";"+(forma==="circulo"?"border-radius:50%;":forma==="rombo"?"transform:rotate(45deg);":"border-radius:3px;");return e;}
+function colorOk(c){return /^#[0-9a-fA-F]{6}$/.test(c)?c:"${COLOR.primario}";}
 function dibujarCapas(m){
   capas.clearLayers();
   (m.sectores||[]).forEach(function(s){
@@ -76,7 +78,7 @@ function dibujarCapas(m){
   (m.lineas||[]).forEach(function(l){
     if(!l.coordenadas||l.coordenadas.length<2)return;
     var c=colorOk(l.color),pts=l.coordenadas.map(ll);
-    L.polyline(pts,{color:"#ffffff",weight:10,lineCap:"round",lineJoin:"round"}).addTo(capas);
+    L.polyline(pts,{color:"${COLOR.papel}",weight:10,lineCap:"round",lineJoin:"round"}).addTo(capas);
     var tl=document.createElement("span");tl.textContent=l.etiqueta;
     L.polyline(pts,{color:c,weight:6,lineCap:"round",lineJoin:"round",dashArray:"2 10"}).addTo(capas).bindTooltip(tl,{sticky:true});
   });
@@ -94,7 +96,7 @@ function encuadrar(puntos,zoomMax){
 var elegir=false,pin=null;
 function ponerPin(lon,lat){
   if(pin){pin.setLatLng([lat,lon]);return;}
-  var e=elemento("circulo","#B42318","Punto elegido");
+  var e=elemento("circulo","${COLOR.error}","Punto elegido");
   pin=L.marker([lat,lon],{draggable:true,icon:L.divIcon({html:e,className:"",iconSize:[18,18],iconAnchor:[9,9]}),title:"Punto elegido",keyboard:false}).addTo(mapa);
   pin.on("dragend",function(){var p=pin.getLatLng();enviar({t:"punto",lon:p.lng,lat:p.lat,origen:"arrastre"});});
 }
@@ -108,7 +110,7 @@ mapa.on("click",function(e){if(!elegir)return;ponerPin(e.latlng.lng,e.latlng.lat
 /* Ruta y vehículo */
 ${MOTOR_JS}
 var R=null,reducido=false,seguir=false,raf=0,intervalo=0;
-var HECHO="#1E5AA0";
+var HECHO="${COLOR.primario}";
 function limpiarRuta(){
   if(R){mapa.removeLayer(R.resto);mapa.removeLayer(R.hecho);mapa.removeLayer(R.borde);mapa.removeLayer(R.marca);}
   R=null;if(raf){cancelAnimationFrame(raf);raf=0;}if(intervalo){clearInterval(intervalo);intervalo=0;}
@@ -116,9 +118,9 @@ function limpiarRuta(){
 function marcaVehiculo(){
   var e=document.createElement("div");e.setAttribute("role","img");e.setAttribute("aria-label","Cuadrilla en camino");e.style.cssText="position:relative;width:44px;height:44px;";
   var f=document.createElement("div");f.style.cssText="position:absolute;left:0;top:0;width:44px;height:44px;";
-  var p=document.createElement("div");p.style.cssText="position:absolute;left:15px;top:-2px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #B42318;";
+  var p=document.createElement("div");p.style.cssText="position:absolute;left:15px;top:-2px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid ${COLOR.error};";
   f.appendChild(p);
-  var b=document.createElement("div");b.style.cssText="position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:#B42318;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);";
+  var b=document.createElement("div");b.style.cssText="position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:${COLOR.error};border:3px solid ${COLOR.papel};box-shadow:0 1px 5px rgba(0,0,0,.45);";
   e.appendChild(f);e.appendChild(b);
   return {el:e,flecha:f};
 }
@@ -131,7 +133,7 @@ function rutaMsg(m){
     limpiarRuta();
     var v=marcaVehiculo();
     R={clave:clave,coords:coords,acum:ac,largo:largo,disp:0,base:0,t0:Date.now(),vel:0,hor:null,ini:false,angulo:0,ultLinea:0,ultAviso:0,flecha:v.flecha,
-       borde:L.polyline([],{color:"#ffffff",weight:9,lineCap:"round"}).addTo(mapa),
+       borde:L.polyline([],{color:"${COLOR.papel}",weight:9,lineCap:"round"}).addTo(mapa),
        resto:L.polyline(coords.map(ll),{color:HECHO,weight:5,lineCap:"round"}).addTo(mapa),
        hecho:L.polyline([],{color:HECHO,weight:4,opacity:0.3,lineCap:"round"}).addTo(mapa),
        marca:L.marker(ll(coords[0]),{icon:L.divIcon({html:v.el,className:"",iconSize:[44,44],iconAnchor:[22,22]}),interactive:false,keyboard:false}).addTo(mapa)};
@@ -208,7 +210,7 @@ export function construirHtml(): string {
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="stylesheet" href="${LEAFLET_CSS}" integrity="${LEAFLET_CSS_SRI}" crossorigin="">
-<style>html,body,#m{height:100%;margin:0;padding:0;background:#E6F0FA}.et{background:rgba(255,255,255,.85);border:0;box-shadow:none;font:700 12px sans-serif;color:#0E1B2C;padding:1px 4px}.et:before{display:none}.leaflet-container{font:12px sans-serif}</style>
+<style>html,body,#m{height:100%;margin:0;padding:0;background:${COLOR.cielo}}.et{background:rgba(255,255,255,.85);border:0;box-shadow:none;font:700 12px sans-serif;color:${COLOR.tinta};padding:1px 4px}.et:before{display:none}.leaflet-container{font:12px sans-serif}</style>
 </head><body>
 <div id="m"></div>
 <script src="${LEAFLET_JS}" integrity="${LEAFLET_JS_SRI}" crossorigin=""></script>

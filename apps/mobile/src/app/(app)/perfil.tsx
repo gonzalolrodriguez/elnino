@@ -7,6 +7,7 @@ import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
 import { Chip, Chips } from "@/components/Piezas";
 import { Boton, COLOR, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { borrarCache } from "@/lib/cacheLocal";
 import { useCola } from "@/lib/ColaContext";
 import { etiquetaRol, etiquetaRolOperativo } from "@/lib/etiquetas";
@@ -50,7 +51,7 @@ export default function Perfil() {
             accessibilityElementsHidden
             style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: COLOR.primario, alignItems: "center", justifyContent: "center" }}
           >
-            <Text maxFontSizeMultiplier={1.2} style={{ color: COLOR.papel, fontSize: 24, fontWeight: "700" }}>
+            <Text maxFontSizeMultiplier={1.2} style={{ ...TIPO.destacado, color: COLOR.papel }}>
               {(usuario.nombre_visible.trim()[0] ?? "?").toUpperCase()}
             </Text>
           </View>

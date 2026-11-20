@@ -6,6 +6,7 @@ import { MapaRutaPedido, rutaDe } from "@/components/mapa/MapaRutaPedido";
 import { Aviso, Chip, Chips, Encabezado, Paso } from "@/components/Piezas";
 import { ItemCuadrillaEnCamino } from "@/components/TarjetaCuadrillaEnCamino";
 import { Boton, COLOR, Insignia, Tarjeta, Texto } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { etiquetaRolOperativo, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
 import { textoNovedad } from "@/lib/partes";
 import { estadoFinal, etiquetaTipoCuadrilla, etiquetaVehiculo, lineaDeTiempo } from "@/lib/pedidos";
@@ -67,7 +68,7 @@ export function TarjetaPedido({ pedido }: { pedido: PedidoCiudadano }) {
   return (
     <>
       <Tarjeta>
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={{ fontWeight: "700", fontSize: 18, lineHeight: 24, letterSpacing: -0.2, color: COLOR.texto }}>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={{ ...TIPO.subtitulo, color: COLOR.texto }}>
           Pedido n.º {pedido.id} · {etiquetaTipoSolicitud(pedido.tipo)}
         </Text>
         <Chips>
@@ -116,7 +117,7 @@ export function FilaHistorial({ pedido }: { pedido: PedidoCiudadano }) {
   const listo = f.icono === "✓";
   return (
     <Tarjeta>
-      <Text maxFontSizeMultiplier={1.6} style={{ fontWeight: "700", fontSize: 16, lineHeight: 22, color: COLOR.texto }}>
+      <Text maxFontSizeMultiplier={1.6} style={{ ...TIPO.cuerpoFuerte, fontWeight: "700", color: COLOR.texto }}>
         Pedido n.º {pedido.id} · {etiquetaTipoSolicitud(pedido.tipo)}
       </Text>
       <Chips>

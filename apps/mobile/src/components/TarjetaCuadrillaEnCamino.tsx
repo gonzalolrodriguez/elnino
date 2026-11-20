@@ -3,6 +3,7 @@ import { AppState, Text, View } from "react-native";
 
 import { Aviso, Cifra, Encabezado } from "@/components/Piezas";
 import { COLOR, Insignia, Tarjeta, Texto } from "@/components/ui";
+import { TIPO as TIPOGRAFIA } from "@/components/tema";
 import { api, type SeguimientoCuadrilla } from "@/lib/servicios";
 import {
   esPosicionVieja,
@@ -111,7 +112,7 @@ export function ItemCuadrillaEnCamino({ s, ahoraMs, distanciaInicialM }: { s: Se
               ) : null}
             </View>
           ) : (
-            <Text style={{ fontWeight: "700", fontSize: 18 }}>La cuadrilla está en camino</Text>
+            <Text style={{ ...TIPOGRAFIA.subtitulo, color: COLOR.texto }}>La cuadrilla está en camino</Text>
           )}
           {!llegada ? (
             <Texto>No podemos calcular la llegada porque tu pedido no tiene una ubicación exacta. Un operador la va a verificar.</Texto>
@@ -126,7 +127,7 @@ export function ItemCuadrillaEnCamino({ s, ahoraMs, distanciaInicialM }: { s: Se
         </>
       )}
       <Texto suave pequeno>
-        Es una estimación (SUPUESTO: línea recta por un factor de desvío de {String(s.supuestos.factor_desvio).replace(".", ",")} y una velocidad media de{" "}
+        Es una estimación (supuesto del equipo: línea recta por un factor de desvío de {String(s.supuestos.factor_desvio).replace(".", ",")} y una velocidad media de{" "}
         {s.supuestos.velocidad_cuadrilla_kmh} km/h), no una promesa de llegada.
       </Texto>
       <Insignia categoria={s.categoria} />

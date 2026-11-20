@@ -5,9 +5,10 @@ import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { MapaConRespaldo } from "@/components/MapaSector";
 import { Chip, Chips, Cifra, Disco, Encabezado, type Tono } from "@/components/Piezas";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
-import { etiquetaEstadoSector, etiquetaTipoOrden } from "@/lib/etiquetas";
+import { etiquetaEstadoAcceso, etiquetaEstadoSector, etiquetaSuperficie, etiquetaTipoOrden } from "@/lib/etiquetas";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
 
 const ESTADO_SECTOR: Record<string, { tono: Tono; icono: "tilde" | "advertencia" | "alerta" }> = {
@@ -101,19 +102,20 @@ export default function Sector() {
           valor={ok.sector.altura_referencia.altura_m.toFixed(2).replace(".", ",")}
           unidad="m"
           categoria={ok.sector.altura_referencia.categoria}
-          etiquetaAccesible={`Altura de referencia: ${ok.sector.altura_referencia.altura_m.toFixed(2)} m`}
+          etiquetaAccesible={`Altura de referencia: ${ok.sector.altura_referencia.altura_m.toFixed(2).replace(".", ",")} m`}
         />
         <Texto suave pequeno>
           {ok.sector.altura_referencia.fecha} · {ok.sector.altura_referencia.fuente}
         </Texto>
       </Tarjeta>
 
+      {ok.sector.sectores[0] ? <Insignia categoria={ok.sector.sectores[0].categoria} /> : null}
       <Rejilla>
         {ok.sector.sectores.map((s) => (
           <Tarjeta key={s.id}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Disco tono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).tono} icono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).icono} tam={36} />
-              <Text maxFontSizeMultiplier={1.6} accessibilityRole="header" style={{ flex: 1, fontWeight: "700", fontSize: 17, lineHeight: 23, color: COLOR.texto }}>
+              <Text maxFontSizeMultiplier={1.6} accessibilityRole="header" style={{ flex: 1, ...TIPO.subtitulo, color: COLOR.texto }}>
                 {s.id} · {s.nombre}
               </Text>
             </View>
@@ -126,12 +128,12 @@ export default function Sector() {
               {s.aislado ? <Chip tono="error" icono="alerta" texto="Aislado (sin accesos transitables)" /> : null}
             </Chips>
             <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 28, rowGap: 8 }}>
-              <Cifra rotulo="Se compromete a" valor={s.altura_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Altura de compromiso: ${s.altura_compromiso_m.toFixed(2)} m`} />
-              <Cifra rotulo="Margen" valor={s.margen_a_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Margen: ${s.margen_a_compromiso_m.toFixed(2)} m`} />
+              <Cifra rotulo="Se compromete a" valor={s.altura_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Altura de compromiso: ${s.altura_compromiso_m.toFixed(2).replace(".", ",")} m`} />
+              <Cifra rotulo="Margen" valor={s.margen_a_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Margen: ${s.margen_a_compromiso_m.toFixed(2).replace(".", ",")} m`} />
             </View>
             {s.accesos.map((a, i) => (
               <Texto key={`${s.id}-${i}`} suave>
-                Acceso {a.nombre} ({a.superficie}): {a.estado}
+                Acceso {a.nombre} ({etiquetaSuperficie(a.superficie)}): {etiquetaEstadoAcceso(a.estado).toLowerCase()}
               </Texto>
             ))}
             {s.alertas.map((a) => (
@@ -139,7 +141,6 @@ export default function Sector() {
                 Orden #{a.orden_id} ({etiquetaTipoOrden(a.tipo)}): {a.fundamento}
               </Texto>
             ))}
-            <Insignia categoria={s.categoria} />
           </Tarjeta>
         ))}
       </Rejilla>
