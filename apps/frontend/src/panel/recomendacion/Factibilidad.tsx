@@ -42,7 +42,7 @@ export function LineaFactibilidad({ titulo, f }: { titulo: string; f: Factibilid
         {margen !== null && (
           <Box textAlign="right" aria-label={`Margen de tiempo: ${margen >= 0 ? "sobran" : "faltan"} ${fmtH(Math.abs(margen))}`}>
             <Text textStyle="rotulo">{margen >= 0 ? "Margen" : "Déficit"}</Text>
-            <Text as="span" fontFamily="heading" fontWeight={700} fontSize="1.75rem" lineHeight={1.1} letterSpacing="-0.025em" color={a.color} sx={{ fontVariantNumeric: "tabular-nums lining-nums" }}>
+            <Text as="span" textStyle="cifraMedia" color={a.color}>
               {margen >= 0 ? "+" : "−"}
               {fmtH(Math.abs(margen))}
             </Text>

@@ -1,8 +1,9 @@
-import { Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
 import { useState } from "react";
 
-import { AlertaError } from "../../components/Formulario";
+import { AlertaError, Campo } from "../../components/Formulario";
 import { IconoTilde } from "../../components/iconos/Iconos";
+import { Opcion } from "../../components/Opcion";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
@@ -55,7 +56,7 @@ function TablaComparacion({ res }: { res: Alternativas }) {
               {res.alternativas.map((a, i) => (
                 <Th key={a.id} scope="col" whiteSpace="normal" verticalAlign="bottom" textTransform="none" letterSpacing="normal" fontSize="sm" color="texto">
                   {a.nombre}
-                  <Text as="span" display="block" fontWeight={500} color={victorias[i] === maxVictorias && maxVictorias > 0 ? "verde.800" : "textoSuave"} fontSize="0.8125rem">
+                  <Text as="span" display="block" textStyle="microdato" fontWeight={500} color={victorias[i] === maxVictorias && maxVictorias > 0 ? "verde.800" : "textoSuave"}>
                     Mejor en {victorias[i]} de {comparables.length}
                   </Text>
                 </Th>
@@ -140,30 +141,18 @@ export function Comparador({ pronostico, hogares }: { pronostico: PronosticoLluv
 
   return (
     <Seccion titulo="Comparador de alternativas" categoria={res?.categoria ?? "SIMULADO"} id="sec-comp">
-      <Text textStyle="microdato" fontSize="sm" mb={4} maxW="70ch">
+      <Text textStyle="microdato" mb={4} maxW="70ch">
         Se generan dos alternativas (prioridad por riesgo y por población) y una tercera editable: indicá el orden de los sectores y los centros que no se usarían.
       </Text>
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} maxW="48rem">
-        <FormControl>
-          <FormLabel htmlFor="alt-nombre" fontSize="sm" mb={1}>
-            Nombre de la alternativa editable
-          </FormLabel>
-          <Input id="alt-nombre" size="sm" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} />
-        </FormControl>
-        <FormControl>
-          <FormLabel htmlFor="alt-orden" fontSize="sm" mb={1}>
-            Orden de sectores (ej.: S4, S1)
-          </FormLabel>
-          <Input id="alt-orden" size="sm" bg="superficie" value={orden} onChange={(e) => setOrden(e.target.value)} />
-        </FormControl>
+        <Campo id="alt-nombre" etiqueta="Nombre de la alternativa editable" value={nombre} onChange={(e) => setNombre(e.target.value.slice(0, 120))} />
+        <Campo id="alt-orden" etiqueta="Orden de sectores" ayuda="Separados por coma, por ejemplo S4, S1." value={orden} onChange={(e) => setOrden(e.target.value)} />
       </SimpleGrid>
       {lista.length > 0 && (
         <Plegable mt={4} resumen={`Centros que no se usarían en la alternativa editable${excluidos.length ? ` (${excluidos.length} elegidos)` : ""}`}>
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacingX={4} spacingY={2}>
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={2}>
             {lista.map((c) => (
-              <Checkbox key={c.id} size="md" isChecked={excluidos.includes(c.id)} onChange={() => setExcluidos((x) => (x.includes(c.id) ? x.filter((i) => i !== c.id) : [...x, c.id]))}>
-                {c.nombre}
-              </Checkbox>
+              <Opcion key={c.id} etiqueta={c.nombre} isChecked={excluidos.includes(c.id)} onChange={(marcado) => setExcluidos((x) => (marcado ? [...x, c.id] : x.filter((i) => i !== c.id)))} />
             ))}
           </SimpleGrid>
         </Plegable>
@@ -174,7 +163,7 @@ export function Comparador({ pronostico, hogares }: { pronostico: PronosticoLluv
       <AlertaError error={error} />
       {res && (
         <Box data-testid="comparacion" mt={6}>
-          <Heading as="h3" size="xs" mb={3}>
+          <Heading as="h3" size="sm" mb={3}>
             {res.etiqueta}
           </Heading>
           <TablaComparacion res={res} />

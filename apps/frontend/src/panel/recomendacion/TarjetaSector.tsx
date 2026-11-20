@@ -3,18 +3,19 @@ import { Box, Divider, Flex, Heading, List, ListItem, SimpleGrid, Text } from "@
 import { IconoAlerta, IconoVehiculo } from "../../components/iconos/Iconos";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import type { PlanSector } from "../tipos";
-import { Chip, COLOR_ESTADO, fmtDias, fmtNum } from "../ui";
+import { Chip, fmtDias, fmtNum } from "../ui";
 import { LineaFactibilidad } from "./Factibilidad";
 import { NOMBRE_METODO } from "./formato";
 import { Dato, Plegable } from "./piezas";
 
+const TIPO_CUADRILLA: Record<string, string> = { humana: "Humana", ganadera: "Ganadera", apicola: "Apícola" };
+
 /** Recomendación de un sector: veredicto de tiempo primero, cifras clave después y el método plegado. */
 export function TarjetaSector({ s }: { s: PlanSector }) {
-  const c = COLOR_ESTADO[s.estado];
-  const metodos = s.traslado_personas.metodo_tiempo ?? [];
+    const metodos = s.traslado_personas.metodo_tiempo ?? [];
   const f = s.familias;
   return (
-    <Box as="article" layerStyle="tarjeta" borderLeft={`4px solid ${c.stroke}`} p={{ base: 4, md: 5 }} data-testid={`plan-${s.id}`} aria-labelledby={`plan-titulo-${s.id}`} minW={0}>
+    <Box as="article" layerStyle="tarjeta" p={{ base: 4, md: 5 }} data-testid={`plan-${s.id}`} aria-labelledby={`plan-titulo-${s.id}`} minW={0}>
       <Flex align="center" columnGap={3} rowGap={2} wrap="wrap" mb={4}>
         <Flex aria-hidden="true" w="2rem" h="2rem" flexShrink={0} align="center" justify="center" borderRadius="full" bg="pizarra.100" color="pizarra.700" fontWeight={700} sx={{ fontVariantNumeric: "tabular-nums" }}>
           {s.prioridad}
@@ -26,7 +27,7 @@ export function TarjetaSector({ s }: { s: PlanSector }) {
           <Text textStyle="microdato">Prioridad {s.prioridad}</Text>
         </Box>
         <Flex gap={2} align="center" wrap="wrap" ml={{ md: "auto" }}>
-          <Text as="span" fontSize="sm" fontWeight={600}>
+          <Text as="span" fontWeight={600}>
             <MuestraEstado estado={s.estado} aislado={s.aislado} />
           </Text>
           {s.aislado && (
@@ -68,9 +69,9 @@ export function TarjetaSector({ s }: { s: PlanSector }) {
           />
           <Dato
             etiqueta="Ventana hasta el compromiso"
-            tam={s.ventana.ya_comprometido ? "1.125rem" : undefined}
+            compacto={s.ventana.ya_comprometido}
             valor={s.ventana.ya_comprometido ? "ya comprometido" : fmtDias(s.ventana.dias_hasta_compromiso_minimo, s.ventana.dias_hasta_compromiso_maximo)}
-            nota="proyección lineal, SUPUESTO"
+            nota="Proyección lineal (supuesto del equipo)"
           />
         </SimpleGrid>
       </SimpleGrid>
@@ -110,7 +111,7 @@ export function TarjetaSector({ s }: { s: PlanSector }) {
       {f && f.registradas + f.hogares_simulados > 0 && (
         <Text fontSize="sm" mt={3} data-testid={`familias-${s.id}`}>
           <strong>Familias:</strong> {fmtNum(f.juntas)} viajan y se alojan juntas
-          {f.hogares_simulados > 0 ? ` (${fmtNum(f.registradas)} registradas y ${fmtNum(f.hogares_simulados)} hogares SIMULADOS)` : ""}.
+          {f.hogares_simulados > 0 ? ` (${fmtNum(f.registradas)} registradas y ${fmtNum(f.hogares_simulados)} hogares simulados)` : ""}.
           {f.sin_lugar_entero > 0 ? ` ${fmtNum(f.sin_lugar_entero)} no entran enteras en ningún centro (${fmtNum(f.personas_en_familias_sin_lugar)} personas): no se las separa.` : ""}
         </Text>
       )}
@@ -119,7 +120,7 @@ export function TarjetaSector({ s }: { s: PlanSector }) {
         {s.cuadrillas_sugeridas.length > 0 ? (
           s.cuadrillas_sugeridas.map((q) => (
             <Chip key={q.tipo} tono="neutro">
-              {q.tipo}
+              {TIPO_CUADRILLA[q.tipo] ?? q.tipo}
             </Chip>
           ))
         ) : (
@@ -129,10 +130,10 @@ export function TarjetaSector({ s }: { s: PlanSector }) {
 
       <Plegable mt={3} resumen={s.advertencias.length > 0 ? `Supuestos y método (${s.advertencias.length} ${s.advertencias.length === 1 ? "aviso" : "avisos"})` : "Supuestos y método"}>
         <List spacing={1.5} styleType="disc" pl={4} color="textoSuave">
-          <ListItem>Ventana hasta el compromiso: proyección lineal del río (SUPUESTO).</ListItem>
+          <ListItem>Ventana hasta el compromiso: proyección lineal del río (supuesto del equipo).</ListItem>
           {metodos.length > 0 && <ListItem>Tiempos de traslado {metodos.map((m) => NOMBRE_METODO[m] ?? m).join(" y ")}.</ListItem>}
           {s.traslado_personas.tiempo_inicio_min ? <ListItem>Empieza a los {fmtNum(s.traslado_personas.tiempo_inicio_min)} min, cuando se libera la flota.</ListItem> : null}
-          {s.factibilidad && <ListItem>Margen de seguridad del plazo: {fmtNum(s.factibilidad.margen_seguridad_fraccion * 100)} % (SUPUESTO).</ListItem>}
+          {s.factibilidad && <ListItem>Margen de seguridad del plazo: {fmtNum(s.factibilidad.margen_seguridad_fraccion * 100)} % (supuesto del equipo).</ListItem>}
           {(s.factibilidad?.supuestos ?? []).map((x) => (
             <ListItem key={x}>{x}</ListItem>
           ))}

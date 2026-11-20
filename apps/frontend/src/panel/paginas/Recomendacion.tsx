@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
+import { etiquetaOrigenLluvia } from "../../lib/etiquetas";
 import { IconoMira } from "../../components/iconos/Iconos";
 import { api } from "../api";
 import { CabeceraPagina } from "../CabeceraPagina";
@@ -48,14 +49,14 @@ function BloqueEscenario({
       categoria="SIMULADO"
       id="sec-escenario"
       derecha={
-        <RouterLink to="/comando/mapa" style={{ textDecoration: "underline" }}>
+        <Button as={RouterLink} to="/comando/mapa" variant="link" minH="2.75rem" textDecoration="underline" fontWeight={600}>
           Cambiar en Mapa y simulador
-        </RouterLink>
+        </Button>
       }
     >
       <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4} mb={5} pb={5} borderBottom="1px solid" borderColor="borde" data-testid="escenario-resumen">
         <Dato etiqueta="Altura del río en Puerto Formosa" valor={fmtM(entrada.altura_formosa_m)} />
-        <Dato etiqueta="Lluvia del escenario" valor={`${fmtNum(entrada.lluvia_mm)} mm`} nota={entrada.lluvia_origen} />
+        <Dato etiqueta="Lluvia del escenario" valor={`${fmtNum(entrada.lluvia_mm)} mm`} nota={etiquetaOrigenLluvia(entrada.lluvia_origen)} />
         <Dato etiqueta="Caminos cerrados" valor={fmtNum(entrada.caminos_cerrados.length)} />
       </SimpleGrid>
       <Parametros prioridad={prioridad} onPrioridad={onPrioridad} pronostico={pronostico} onPronostico={onPronostico} hogares={hogares} onHogares={onHogares} plegado={plegado} onAlternarPlegado={() => setPlegado((p) => !p)} />
@@ -79,7 +80,7 @@ function BloqueResultado({ r }: { r: Recomendacion | null }) {
   return (
     <Seccion titulo="Recomendación por sector" categoria={r?.categoria ?? "SIMULADO"} id="sec-reco">
       {!r ? (
-        <Text fontSize="sm" color="textoSuave">
+        <Text color="textoSuave" maxW="70ch">
           Todavía no hay recomendación. Revisá el escenario y los parámetros y tocá «Generar recomendación».
         </Text>
       ) : (
@@ -101,7 +102,7 @@ function BloqueResultado({ r }: { r: Recomendacion | null }) {
           </Flex>
           <ResumenPlan p={r.recomendacion} />
           {ids.length === 0 ? (
-            <Alert status="success" fontSize="sm" mt={4}>
+            <Alert status="success" mt={4}>
               <AlertIcon />
               Ningún sector está comprometido ni en riesgo con estos valores: no hay nada que recomendar evacuar.
             </Alert>
@@ -155,7 +156,7 @@ export default function PaginaRecomendacion() {
         icono={<IconoMira tam="1.5rem" />}
         ayuda={
           <span data-testid="etiqueta-recomendacion">
-            RECOMENDACIÓN, no una orden: la orden la emite una persona con rol autorizado (
+            Se recomienda; no es una orden. La orden la emite una persona con rol de decisor (
             <RouterLink to="/comando/ordenes" style={{ textDecoration: "underline" }}>
               sección Órdenes
             </RouterLink>

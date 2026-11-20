@@ -117,7 +117,7 @@ describe("recomendador: factibilidad y ventana seca", () => {
     renderRuta("/comando/recomendacion");
 
     fireEvent.click(await screen.findByLabelText("Simular lluvia prevista"));
-    fireEvent.click(screen.getByLabelText("Usar hogares SIMULADOS para la población de K10"));
+    fireEvent.click(screen.getByLabelText("Usar hogares simulados en los sectores de evaluación (K10)"));
     fireEvent.change(screen.getByLabelText("Milímetros"), { target: { value: "100" } });
     fireEvent.change(screen.getByLabelText("Dentro de (horas)"), { target: { value: "6" } });
     fireEvent.click(screen.getByRole("button", { name: "Generar recomendación" }));
