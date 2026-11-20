@@ -85,7 +85,7 @@ describe("«Necesito ayuda ahora»", () => {
     expect("referencia_ubicacion" in datos).toBe(false);
     expect(foto).toBeNull();
     await screen.findByText(/Pedido enviado · n\.º 77/);
-    await fireEvent.press(screen.getByText("Ver Mis solicitudes"));
+    await fireEvent.press(screen.getByText("Ver Mis pedidos"));
     expect(mockPush).toHaveBeenCalledWith("/solicitudes");
   });
 

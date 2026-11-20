@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Text, View } from "react-native";
 
 import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { FormEstablecimientos } from "@/components/FormEstablecimientos";
 import { FormGrupoFamiliar } from "@/components/FormGrupoFamiliar";
-import { Boton, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Chip, Chips } from "@/components/Piezas";
+import { Boton, COLOR, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { borrarCache } from "@/lib/cacheLocal";
 import { useCola } from "@/lib/ColaContext";
 import { etiquetaRol, etiquetaRolOperativo } from "@/lib/etiquetas";
@@ -43,12 +44,25 @@ export default function Perfil() {
     <Pantalla dosColumnas>
       <Titulo>Perfil</Titulo>
       <Tarjeta>
-        <Subtitulo>{usuario.nombre_visible}</Subtitulo>
-        <Texto suave>{usuario.email}</Texto>
-        <Texto suave>
-          {etiquetaRol(usuario.rol)}
-          {usuario.rol_operativo ? ` · ${etiquetaRolOperativo(usuario.rol_operativo)}` : ""}
-        </Texto>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: COLOR.primario, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text maxFontSizeMultiplier={1.2} style={{ color: COLOR.papel, fontSize: 24, fontWeight: "700" }}>
+              {(usuario.nombre_visible.trim()[0] ?? "?").toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Subtitulo>{usuario.nombre_visible}</Subtitulo>
+            <Texto suave>{usuario.email}</Texto>
+          </View>
+        </View>
+        <Chips>
+          <Chip tono="info" icono="persona" texto={etiquetaRol(usuario.rol)} />
+          {usuario.rol_operativo ? <Chip icono="escudo" texto={etiquetaRolOperativo(usuario.rol_operativo)} /> : null}
+        </Chips>
       </Tarjeta>
 
       <Rejilla>
@@ -59,7 +73,7 @@ export default function Perfil() {
             sesion={{ pendientes, descartarPendientes: borrarLocal, cerrarSesionLocal: salirLocal }}
           />
         ) : (
-          <Boton titulo="Conexión con el servidor" variante="secundario" onPress={() => setVerConexion(true)} />
+          <Boton titulo="Conexión con el servidor" variante="secundario" icono="info" onPress={() => setVerConexion(true)} />
         )}
       </Rejilla>
       {!ciudadania && usuario.rol !== "cuadrilla" ? (

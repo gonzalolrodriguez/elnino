@@ -3,11 +3,18 @@ import { ScrollView, Text, View } from "react-native";
 
 import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { MapaConRespaldo } from "@/components/MapaSector";
+import { Chip, Chips, Cifra, Disco, Encabezado, type Tono } from "@/components/Piezas";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoSector, etiquetaTipoOrden } from "@/lib/etiquetas";
 import { api, type Centro, type GeoSectores, type MiSector } from "@/lib/servicios";
+
+const ESTADO_SECTOR: Record<string, { tono: Tono; icono: "tilde" | "advertencia" | "alerta" }> = {
+  normal: { tono: "ok", icono: "tilde" },
+  en_riesgo: { tono: "aviso", icono: "advertencia" },
+  comprometido: { tono: "error", icono: "alerta" },
+};
 
 type Carga =
   | { tipo: "cargando" }
@@ -88,32 +95,40 @@ export default function Sector() {
       <Texto suave>{ok.sector.nota}</Texto>
 
       <Tarjeta>
-        <Text style={{ fontWeight: "600" }}>
-          Altura de referencia: {ok.sector.altura_referencia.altura_m.toFixed(2)} m
-        </Text>
-        <Texto suave>
+        <Encabezado icono="gota">Altura de referencia</Encabezado>
+        <Cifra
+          rotulo="Río en Puerto Formosa"
+          valor={ok.sector.altura_referencia.altura_m.toFixed(2).replace(".", ",")}
+          unidad="m"
+          categoria={ok.sector.altura_referencia.categoria}
+          etiquetaAccesible={`Altura de referencia: ${ok.sector.altura_referencia.altura_m.toFixed(2)} m`}
+        />
+        <Texto suave pequeno>
           {ok.sector.altura_referencia.fecha} · {ok.sector.altura_referencia.fuente}
         </Texto>
-        <Insignia categoria={ok.sector.altura_referencia.categoria} />
       </Tarjeta>
 
       <Rejilla>
         {ok.sector.sectores.map((s) => (
           <Tarjeta key={s.id}>
-            <Text style={{ fontWeight: "700", fontSize: 16 }}>
-              {s.id} · {s.nombre}
-            </Text>
-            <Text
-              style={{
-                fontWeight: "700",
-                color: s.estado === "comprometido" ? COLOR.error : s.estado === "en_riesgo" ? COLOR.avisoTexto : COLOR.ok,
-              }}
-            >
-              {etiquetaEstadoSector(s.estado)}
-              {s.aislado ? " · aislado (sin accesos transitables)" : ""}
-            </Text>
-            <Texto>Altura de compromiso: {s.altura_compromiso_m.toFixed(2)} m</Texto>
-            <Texto>Margen: {s.margen_a_compromiso_m.toFixed(2)} m</Texto>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Disco tono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).tono} icono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).icono} tam={36} />
+              <Text maxFontSizeMultiplier={1.6} accessibilityRole="header" style={{ flex: 1, fontWeight: "700", fontSize: 17, lineHeight: 23, color: COLOR.texto }}>
+                {s.id} · {s.nombre}
+              </Text>
+            </View>
+            <Chips>
+              <Chip
+                tono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).tono}
+                icono={(ESTADO_SECTOR[s.estado] ?? ESTADO_SECTOR.normal).icono}
+                texto={etiquetaEstadoSector(s.estado)}
+              />
+              {s.aislado ? <Chip tono="error" icono="alerta" texto="Aislado (sin accesos transitables)" /> : null}
+            </Chips>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 28, rowGap: 8 }}>
+              <Cifra rotulo="Se compromete a" valor={s.altura_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Altura de compromiso: ${s.altura_compromiso_m.toFixed(2)} m`} />
+              <Cifra rotulo="Margen" valor={s.margen_a_compromiso_m.toFixed(2).replace(".", ",")} unidad="m" grande={false} etiquetaAccesible={`Margen: ${s.margen_a_compromiso_m.toFixed(2)} m`} />
+            </View>
             {s.accesos.map((a, i) => (
               <Texto key={`${s.id}-${i}`} suave>
                 Acceso {a.nombre} ({a.superficie}): {a.estado}
@@ -131,7 +146,7 @@ export default function Sector() {
 
       {ok.sector.centro_asignado ? (
         <Tarjeta>
-          <Text style={{ fontWeight: "700" }}>Centro de recepción sugerido</Text>
+          <Encabezado icono="casa">Centro de recepción sugerido</Encabezado>
           {asignado ? (
             <>
               <Texto>

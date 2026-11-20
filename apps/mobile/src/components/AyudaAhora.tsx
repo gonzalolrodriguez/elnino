@@ -1,7 +1,9 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { Icono } from "@/components/Icono";
+import { Disco } from "@/components/Piezas";
 import { Boton, COLOR, ErrorCaja, Insignia, Tarjeta, Texto } from "@/components/ui";
 import { RADIO } from "@/components/tema";
 import { useCola } from "@/lib/ColaContext";
@@ -118,15 +120,22 @@ export function AyudaAhora({
             setFase({ tipo: "confirmando", segundos: SEGUNDOS_CONFIRMACION });
           }}
           style={({ pressed }) => ({
-            minHeight: 72,
-            borderRadius: RADIO.boton,
+            minHeight: 84,
+            borderRadius: RADIO.tarjeta,
+            flexDirection: "row",
             justifyContent: "center",
             alignItems: "center",
+            gap: 12,
             paddingHorizontal: 16,
+            paddingVertical: 14,
             backgroundColor: pressed ? "#8F1D14" : COLOR.error,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <Text maxFontSizeMultiplier={1.5} style={{ color: "#fff", fontSize: 22, fontWeight: "700", textAlign: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
+            <Icono nombre="alerta" tam={28} color={COLOR.papel} />
+          </View>
+          <Text maxFontSizeMultiplier={1.5} style={{ color: COLOR.papel, fontSize: 22, lineHeight: 27, fontWeight: "700", letterSpacing: -0.3, flexShrink: 1 }}>
             Necesito ayuda ahora
           </Text>
         </Pressable>
@@ -143,10 +152,13 @@ export function AyudaAhora({
         <>
           <Text
             accessibilityLiveRegion="polite"
-            style={{ fontSize: 18, fontWeight: "700", color: COLOR.texto }}
+            style={{ fontSize: 20, lineHeight: 26, fontWeight: "700", letterSpacing: -0.2, color: COLOR.texto }}
           >
             Se enviará tu pedido de ayuda en {fase.segundos} s
           </Text>
+          <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ height: 8, borderRadius: 4, backgroundColor: COLOR.borde, overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 4, width: `${Math.round((fase.segundos / SEGUNDOS_CONFIRMACION) * 100)}%`, backgroundColor: COLOR.error }} />
+          </View>
           <Texto suave>Se toma tu ubicación y se avisa al panel operativo. Podés cancelar ahora.</Texto>
           <Boton titulo="Enviar ahora" onPress={() => void mandar()} />
           <Boton titulo="Cancelar" variante="secundario" onPress={() => setFase({ tipo: "reposo" })} />
@@ -176,10 +188,16 @@ export function AyudaAhora({
 
       {fase.tipo === "listo" ? (
         <>
-          <Text accessibilityLiveRegion="polite" style={{ color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.ok, fontWeight: "700", fontSize: 17 }}>
-            {fase.estado === "encolada" ? "Pedido guardado en el teléfono" : "Pedido enviado"}
-            {fase.id !== null ? ` · n.º ${fase.id}` : ""}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Disco tono={fase.estado === "encolada" ? "aviso" : "ok"} icono={fase.estado === "encolada" ? "reloj" : "tilde"} tam={40} />
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{ flex: 1, color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.okTexto, fontWeight: "700", fontSize: 18, lineHeight: 24 }}
+            >
+              {fase.estado === "encolada" ? "Pedido guardado en el teléfono" : "Pedido enviado"}
+              {fase.id !== null ? ` · n.º ${fase.id}` : ""}
+            </Text>
+          </View>
           <Insignia categoria="SIMULADO" />
           <Texto suave>
             {fase.estado === "encolada"
@@ -193,11 +211,11 @@ export function AyudaAhora({
           ) : null}
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="Ver Mis solicitudes"
+            accessibilityLabel="Ver Mis pedidos"
             onPress={() => router.push("/solicitudes")}
             style={{ minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center" }}
           >
-            <Text style={{ color: COLOR.primario, fontWeight: "600", fontSize: 15 }}>Ver Mis solicitudes</Text>
+            <Text style={{ color: COLOR.primario, fontWeight: "600", fontSize: 15 }}>Ver Mis pedidos</Text>
           </Pressable>
           <Boton titulo="Listo" variante="secundario" onPress={() => setFase({ tipo: "reposo" })} />
         </>

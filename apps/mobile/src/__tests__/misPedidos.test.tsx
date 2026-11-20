@@ -122,18 +122,19 @@ describe("Mis solicitudes con GET /mi/pedidos", () => {
     for (const paso of ["Recibido", "Verificado", "Cuadrilla asignada", "Asistido", "Confirmado por vos"]) {
       expect(screen.getAllByText(new RegExp(`^${paso}`)).length).toBeGreaterThan(0);
     }
-    expect(screen.getByText(/En camino \(ahora\)/)).toBeTruthy();
-    expect(screen.getByText(/Asistencia a personas · a cargo: Defensa civil/)).toBeTruthy();
-    expect(screen.getByText("Vehículo: Camión jaula")).toBeTruthy();
+    expect(screen.getByLabelText(/En camino: paso actual/)).toBeTruthy();
+    expect(screen.getByText("Asistencia a personas")).toBeTruthy();
+    expect(screen.getByText("A cargo: Defensa civil")).toBeTruthy();
+    expect(screen.getByText("Camión jaula")).toBeTruthy();
     expect(screen.getAllByText("SIMULADO").length).toBeGreaterThan(0);
-    expect(screen.getByText("A 3,5 km de tu pedido")).toBeTruthy();
-    expect(screen.getByText("Llegada estimada: unos 8 min")).toBeTruthy();
+    expect(screen.getByLabelText("Distancia a tu pedido: 3,5 km")).toBeTruthy();
+    expect(screen.getByLabelText("Llegada estimada: unos 8 min")).toBeTruthy();
     expect(screen.getByText("Escuela de prueba")).toBeTruthy();
     await fireEvent.press(screen.getByText("¿Hacia dónde voy?"));
     expect(mockPush).toHaveBeenCalledWith("/brujula");
     // Historial compacto con el estado final.
     expect(screen.getByText("Anteriores")).toBeTruthy();
-    expect(screen.getByText("✓ Asistido · Me asistieron en parte")).toBeTruthy();
+    expect(screen.getByText("Asistido · Me asistieron en parte")).toBeTruthy();
   });
 
   it("sin conexión muestra la última copia guardada con su fecha", async () => {
@@ -147,7 +148,7 @@ describe("Mis solicitudes con GET /mi/pedidos", () => {
     await render(conSafe(<Solicitudes />));
     await screen.findByText("Pedido n.º 12 · Evacuación");
     expect(screen.getByText(/Sin conexión: se muestra lo último guardado, actualizado el/)).toBeTruthy();
-    expect(screen.getByText("Vehículo: Camión jaula")).toBeTruthy();
+    expect(screen.getByText("Camión jaula")).toBeTruthy();
     expect(mockSolicitudes).not.toHaveBeenCalled();
   });
 

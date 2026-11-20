@@ -194,7 +194,7 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
               <Texto>
                 Tenés {sesion.pendientes} solicitud(es) sin enviar. Si las conservás, quedan en este teléfono
                 esperando a este servidor: nunca se envían a otro servidor y se reanudan solo si volvés a
-                este con la misma cuenta. Podés descartarlas desde «Mis solicitudes».
+                este con la misma cuenta. Podés descartarlas desde «Mis pedidos».
               </Texto>
               <Boton
                 titulo="Conservar pendientes"
