@@ -16,6 +16,8 @@ jest.mock("@/lib/SesionContext", () => ({
   useUsuario: () => ({ id: 7, email: "x", nombre_visible: "x", rol: "ciudadano", rol_operativo: null, estado: "activo" }),
 }));
 
+jest.mock("expo-router", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
 jest.mock("@/lib/ColaContext", () => ({ useCola: () => ({ enviar: jest.fn() }) }));
 
 const mockMiSector = jest.fn();

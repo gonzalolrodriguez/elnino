@@ -594,3 +594,45 @@ export type ConsultaConfirmacion = {
   solicitada_en: string;
   respondida_en: string | null;
 };
+
+/** Un pedido propio con tarea en curso (`GET /mi/seguimiento`). La cuadrilla se identifica por tipo y roles, nunca por personas. */
+export type SeguimientoCuadrilla = {
+  solicitud_id: number;
+  tarea_id: number;
+  tipo_cuadrilla: string;
+  roles: string[];
+  estado: "en_camino" | "asignada_sin_posicion";
+  posicion: { lat: number; lon: number; precision_m: number | null } | null;
+  actualizada_en: string | null;
+  posicion_vieja: boolean | null;
+  distancia_m: number | null;
+  llegada_estimada_min: number | null;
+  categoria: string;
+  supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+  nota: string;
+};
+
+export type RespuestaSeguimiento = { seguimientos: SeguimientoCuadrilla[]; categoria: string; fuente: string; fecha_dato: string };
+
+/** Última posición de una cuadrilla con tarea en curso (`GET /cuadrillas/posiciones`, solo roles operativos). */
+export type PosicionCuadrilla = {
+  cuadrilla_id: number;
+  nombre: string;
+  tipo_incidente: string;
+  roles: string[];
+  lat: number;
+  lon: number;
+  precision_m: number | null;
+  actualizada_en: string;
+  posicion_vieja: boolean;
+  tareas_en_curso: number;
+  categoria: string;
+};
+
+export type RespuestaPosiciones = {
+  posiciones: PosicionCuadrilla[];
+  categoria: string;
+  fuente: string;
+  fecha_dato: string;
+  supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+};

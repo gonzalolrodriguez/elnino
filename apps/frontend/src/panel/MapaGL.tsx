@@ -3,10 +3,11 @@ import { GeoJsonLayer, LineLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { hexDe, rgbaDe } from "../estilo/paleta";
-import { hayWebGL } from "../lib/entorno";
+import { hayWebGL, useMenosMovimiento } from "../lib/entorno";
+import { accesoCortado, crearCapaAccesosCortados, crearCapasLamina } from "./capasLamina";
 import type { AccesoProps, CapaOficial, Centro, Estacion, Geo, Ruta, SectorEscenario } from "./tipos";
 
 export type PropsMapa = {
@@ -27,11 +28,17 @@ export type PropsMapa = {
   origenRuta: { lon: number; lat: number } | null;
   /** Traslados de evacuaciones ya cerradas (origen del pedido a destino marcado). Opcional y solo para roles operativos. */
   traslados?: Traslado[];
+  /** Última posición de las cuadrillas con tarea en curso. Opcional y solo para roles operativos. */
+  cuadrillas?: PuntoCuadrilla[];
+  /** Lámina de agua ilustrativa (SIMULADO): altura que dibuja, si se ve y si se está reproduciendo la subida. */
+  lamina?: { altura: number; visible: boolean; reproduciendo: boolean };
   onAcceso: (a: AccesoProps) => void;
   onPunto: (lon: number, lat: number) => void;
 };
 
 export type Traslado = { id: number; origen: [number, number]; destino: [number, number]; estado: string };
+
+export type PuntoCuadrilla = { id: number; posicion: [number, number]; vieja: boolean };
 
 type RGBA = [number, number, number, number];
 
@@ -223,6 +230,16 @@ export default function MapaGL(props: PropsMapa) {
     };
   }, [sinWebGL]);
 
+  // Pulso suave del borde de los sectores en riesgo (solo si la lámina se ve y no se pidió menos movimiento).
+  const quieto = useMenosMovimiento();
+  const [pulso, setPulso] = useState(false);
+  const animarPulso = !quieto && !!props.lamina?.visible;
+  useEffect(() => {
+    if (!animarPulso) return;
+    const t = window.setInterval(() => setPulso((p) => !p), 900);
+    return () => window.clearInterval(t);
+  }, [animarPulso]);
+
   // Capas de Deck.gl (operativas, con selección).
   const capasDeck = useMemo(() => {
     const out: Layer[] = [];
@@ -244,6 +261,9 @@ export default function MapaGL(props: PropsMapa) {
         }),
       );
     }
+    if (props.lamina) {
+      out.push(...crearCapasLamina({ sectores, altura: props.lamina.altura, visible: props.lamina.visible, reproduciendo: props.lamina.reproduciendo, pulso, quieto }));
+    }
     if (accesos) {
       out.push(
         new GeoJsonLayer({
@@ -255,10 +275,17 @@ export default function MapaGL(props: PropsMapa) {
           lineWidthUnits: "pixels",
           getLineWidth: 5,
           lineWidthMinPixels: 4,
-          getLineColor: (f) => colorAcceso((f as { properties: AccesoProps }).properties, estadoAccesos, cerradosSimulacion),
+          // Los accesos cortados se dibujan tenues acá y con trazo discontinuo encima (capa "accesos-cortados").
+          getLineColor: (f) => {
+            const p = (f as { properties: AccesoProps }).properties;
+            const c = colorAcceso(p, estadoAccesos, cerradosSimulacion);
+            return accesoCortado(p.id, estadoAccesos, cerradosSimulacion) ? [c[0], c[1], c[2], 80] : c;
+          },
           updateTriggers: { getLineColor: [estadoAccesos, cerradosSimulacion] },
         }),
       );
+      const cortados = crearCapaAccesosCortados(accesos, estadoAccesos, cerradosSimulacion);
+      if (cortados) out.push(cortados);
     }
     if (ruta?.geometria) {
       out.push(
@@ -337,6 +364,22 @@ export default function MapaGL(props: PropsMapa) {
         }),
       );
     }
+    if (props.cuadrillas && props.cuadrillas.length > 0) {
+      out.push(
+        new ScatterplotLayer<PuntoCuadrilla>({
+          id: "cuadrillas",
+          data: props.cuadrillas,
+          getPosition: (c) => c.posicion,
+          getRadius: 9,
+          radiusUnits: "pixels",
+          // Posición vieja: relleno ámbar; vigente: verde. El texto de la lista del panel repite el estado.
+          getFillColor: (c) => (c.vieja ? rgbaDe("umbral.alerta") : rgbaDe("confirmacion")),
+          getLineColor: BLANCO,
+          stroked: true,
+          lineWidthMinPixels: 3,
+        }),
+      );
+    }
     if (origenRuta) {
       out.push(
         new ScatterplotLayer<{ lon: number; lat: number }>({
@@ -353,7 +396,7 @@ export default function MapaGL(props: PropsMapa) {
       );
     }
     return out;
-  }, [props]);
+  }, [props, pulso, quieto]);
 
   useEffect(() => {
     overlay.current?.setProps({ layers: capasDeck });

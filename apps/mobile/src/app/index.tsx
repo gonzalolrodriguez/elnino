@@ -2,6 +2,7 @@ import { Redirect, useRouter } from "expo-router";
 import { Linking, View } from "react-native";
 
 import { EnlaceConexion } from "@/components/EnlaceConexion";
+import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { Boton, Cargando, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
@@ -35,6 +36,7 @@ export default function Bienvenida() {
           </Texto>
           <Boton titulo="Llamar al 103" onPress={() => void Linking.openURL("tel:103")} />
           <Boton titulo="Pedir ayuda por SMS" variante="secundario" onPress={() => router.push("/ayuda-sms")} />
+          <EnlaceBrujula />
           <EnlaceQueHacer />
         </Tarjeta>
         <Texto suave pequeno>

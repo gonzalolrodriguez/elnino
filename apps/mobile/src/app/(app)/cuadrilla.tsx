@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 
 import { FormCierre } from "@/components/FormCierre";
 import { SoloRol } from "@/components/SoloRol";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import { esCierre } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
+import { useCompartirPosicion } from "@/lib/compartirPosicion";
 import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { api, type Tarea } from "@/lib/servicios";
@@ -98,6 +99,44 @@ function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar
   );
 }
 
+/**
+ * Comparte la posición de la cuadrilla con quien pidió ayuda, solo mientras hay una tarea en curso y con
+ * esta pantalla abierta (primer plano). Se puede pausar con el interruptor; no se guarda historial.
+ */
+function CompartirUbicacion() {
+  const [compartir, setCompartir] = useState(true);
+  const estado = useCompartirPosicion(compartir);
+  const motivo =
+    estado.fase === "sin_permiso"
+      ? "Sin permiso de ubicación: habilitalo en los ajustes del teléfono para compartirla."
+      : estado.fase === "sin_tarea"
+        ? "Ya no tenés una tarea en curso: dejamos de compartir tu ubicación."
+        : estado.fase === "compartiendo" && estado.pendiente
+          ? "No pudimos enviar tu última posición; se reintenta sola."
+          : null;
+  return (
+    <Tarjeta>
+      <Text style={{ fontWeight: "700", fontSize: 16 }}>
+        {compartir && estado.fase === "compartiendo" ? "Compartiendo tu ubicación con el solicitante" : "No estás compartiendo tu ubicación"}
+      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Switch
+          value={compartir}
+          onValueChange={setCompartir}
+          accessibilityLabel="Compartir mi ubicación con quien pidió ayuda"
+        />
+        <Text style={{ flex: 1 }}>{compartir ? "Pausá el envío con el interruptor." : "Activalo para volver a compartirla."}</Text>
+      </View>
+      {motivo ? <Text style={{ color: COLOR.avisoTexto }}>{motivo}</Text> : null}
+      <Texto suave pequeno>
+        Se envía cada 30 segundos mientras la app esté abierta en primer plano (no se usa el segundo plano). La ven quien pidió ayuda y los operadores,
+        solo mientras la tarea está en curso; no se guarda un historial.
+      </Texto>
+      <Insignia categoria="SIMULADO" />
+    </Tarjeta>
+  );
+}
+
 function ListaTareas() {
   const { items, descartar } = useCola();
   const rechazados = items.filter((i) => esCierre(i.datos) && i.estado === "rechazada");
@@ -127,6 +166,7 @@ function ListaTareas() {
       {error ? <ErrorCaja mensaje={error} onReintentar={cargar} /> : null}
       {!error && tareas === null ? <Cargando texto="Cargando tareas…" /> : null}
       {tareas && tareas.length === 0 ? <Vacio texto="No tenés tareas asignadas." /> : null}
+      {tareas?.some((t) => t.estado === "en_curso") ? <CompartirUbicacion /> : null}
       <Rejilla>
       {(tareas ?? []).map((t) => (
         <TarjetaTarea

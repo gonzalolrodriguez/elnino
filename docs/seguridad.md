@@ -166,6 +166,15 @@ Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), 
 - **Idempotencia.** El cierre exige `Idempotency-Key` (índice único parcial por usuario y clave): un reintento de la cola offline no duplica constancias ni consultas de confirmación.
 - Todo dato de demostración es `SIMULADO`; no hay personas reales.
 
+## Seguimiento de la cuadrilla (Ley 25.326)
+
+- **Finalidad exclusiva.** La posición de la cuadrilla se comparte solo para que quien pidió ayuda sepa que viene en camino y para que el mando coordine. La app de la cuadrilla envía la posición con el interruptor "Compartiendo tu ubicación" encendido y solo con la pantalla abierta (primer plano, sin permiso de segundo plano); se puede pausar en cualquier momento.
+- **Solo mientras hay una tarea en curso.** `POST /cuadrillas/mi-posicion` responde 409 si la cuadrilla no tiene una tarea `en_curso`. La tabla `posiciones_cuadrilla` guarda **una sola fila por cuadrilla** (la última posición; no hay historial ni trazas) y se borra cuando la cuadrilla cierra o cancela su última tarea en curso. Además, las lecturas solo devuelven posiciones de cuadrillas con una tarea en curso.
+- **Quién la ve.** Solo la persona que pidió esa ayuda (`GET /mi/seguimiento` filtra por solicitante: el pedido de otra persona no aparece) y los roles `operador`, `decisor` y `admin` (`GET /cuadrillas/posiciones`, auditado como `lectura_ubicacion_cuadrillas`). El evento WebSocket `posicion_cuadrilla` llega solo a esos tres roles y no lleva coordenadas. La cuadrilla se identifica por tipo y roles del catálogo, no por nombres de personas.
+- **Límite de frecuencia.** Una posición cada 10 s por cuadrilla (429 si se excede; SUPUESTO `intervalo_min_posicion_s`), con la fila bloqueada para que envíos simultáneos no se salteen el límite.
+- **Honestidad sobre la estimación.** La distancia y la llegada son una estimación (línea recta por factor de desvío y velocidad media, SUPUESTO) y se avisa cuando la posición tiene más de 5 minutos. No se presenta como promesa de llegada.
+- **Límite conocido.** La posición reportada la informa el teléfono de la cuadrilla: el servidor valida el rango, no la veracidad. En la demo todo es `SIMULADO`; no hay personas reales.
+
 ## Pendiente (documentado como hoja de ruta)
 
 - MFA para usuarios institucionales y desbloqueo por OTP o correo (ver `docs/decisiones.md`).

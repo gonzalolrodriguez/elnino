@@ -11,6 +11,7 @@ import { api } from "../panel/api";
 import type { Notificacion, Tarea } from "../panel/tipos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
 import { CerrarConConstancia } from "./cuadrilla/CerrarConConstancia";
+import { CompartirUbicacion } from "./cuadrilla/CompartirUbicacion";
 
 const ETIQUETA: Record<Tarea["estado"], string> = {
   pendiente: "Pendiente",
@@ -196,6 +197,10 @@ export default function Cuadrilla() {
             </Stack>
           )}
         />
+      </Seccion>
+
+      <Seccion titulo="Mi ubicación" categoria="SIMULADO" id="sec-ubicacion">
+        <CompartirUbicacion hayTareaEnCurso={(tareas.datos ?? []).some((t) => (locales[t.id] ?? t).estado === "en_curso")} />
       </Seccion>
 
       <Seccion titulo="Alertas y órdenes" categoria="SIMULADO" id="sec-alertas">

@@ -8,6 +8,8 @@ import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
 import { fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
 import { TablaDesplazable } from "../components/TablaDesplazable";
+import { ultimoHito } from "./lamina";
+import { useReproducirSubida } from "./useReproducirSubida";
 
 const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
   { valor: "simulado", texto: "Simulado (deslizador)" },
@@ -18,7 +20,9 @@ const ORIGENES: { valor: OrigenLluvia; texto: string }[] = [
 
 /** Controles del escenario (CLAUDE.md §8.1) y resultado por sector. Todo el resultado es SIMULADO. */
 export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
-  const { entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular } = useEscenario();
+  const { laminaVisible, fijarLaminaVisible, alturaVisual, entrada, fijarAltura, fijarLluvia, alternarCamino, escenario, entradaCalculada, desactualizado, calculando, error, simular } = useEscenario();
+  const { reproduciendo, reproducir, detener, puedeReproducir } = useReproducirSubida();
+  const hito = alturaVisual === null ? null : ultimoHito(alturaVisual);
   const lluviaSimulada = entrada.lluvia_origen === "simulado" || entrada.lluvia_origen === "manual";
 
   return (
@@ -42,6 +46,24 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
           <Text fontSize="xs" color="textoSuave">
             Valor SIMULADO. Alerta 7,80 m y evacuación 8,30 m (K3). Dato del corte: 5,60 m.
           </Text>
+          <Flex gap={3} align="center" wrap="wrap" mt={2}>
+            <Checkbox size="sm" isChecked={laminaVisible} onChange={(e) => fijarLaminaVisible(e.target.checked)}>
+              Lámina de agua ilustrativa
+            </Checkbox>
+            <Button size="xs" variant="outline" onClick={reproduciendo ? detener : reproducir} isDisabled={!reproduciendo && !puedeReproducir} aria-pressed={reproduciendo}>
+              {reproduciendo ? "Detener" : "Reproducir subida"}
+            </Button>
+          </Flex>
+          {reproduciendo && alturaVisual !== null && (
+            <Text fontSize="xs" mt={1} role="status" data-testid="sim-reproduccion">
+              Reproduciendo: {fmtM(alturaVisual)} (SIMULADO){hito ? `, superó el ${hito.texto}` : ""}.
+            </Text>
+          )}
+          {!reproduciendo && !puedeReproducir && (
+            <Text fontSize="xs" color="textoSuave" mt={1}>
+              Para reproducir la subida, elegí una altura mayor que el dato del corte.
+            </Text>
+          )}
         </FormControl>
 
         <FormControl>

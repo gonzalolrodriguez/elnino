@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
+import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { TarjetaConfirmacion, useConsultas } from "@/components/TarjetaConfirmacion";
+import { TarjetaCuadrillaEnCamino } from "@/components/TarjetaCuadrillaEnCamino";
 import { COLOR, Cargando, Insignia, Subtitulo, Tarjeta, Texto } from "@/components/ui";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { etiquetaEstadoSector, etiquetaTipoOrden, formatearFechaHora } from "@/lib/etiquetas";
@@ -25,7 +27,9 @@ export function EstadoSector() {
   return (
     <>
       <ConsultasPendientes />
+      <TarjetaCuadrillaEnCamino />
       <TarjetaSector />
+      <EnlaceBrujula />
     </>
   );
 }

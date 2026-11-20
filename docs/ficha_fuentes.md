@@ -153,6 +153,7 @@ Cifras verificadas el 18/11/2026 contra los archivos fuente (`K9_fuentes.md`; bo
 | Probabilidad de evento fuerte o muy fuerte | 83 % en octubre-diciembre, con persistencia hasta el verano | NOAA, Climate Prediction Center, Discusión ENSO (versión en español), vía K9: https://cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc_Sp.shtml | Referencia | 08/10/2026 |
 | Permanencia en fase El Niño | 100 % de probabilidad de permanencia en octubre-noviembre-diciembre de 2026 | SMN y COHIFE (Dirección Nacional de Política Hídrica y Coordinación Federal), Boletín El Niño N.º 8, publicado el 22/10/2026, pronósticos emitidos al 20/10/2026 (PDF `BOLETIN el Niño_22-10-2026.pdf`, carpeta IA-Lab) | Referencia | 22/10/2026 |
 | Pronóstico agroclimático estacional 2026/27 Formosa: modelo y período | CFS v2 (NOAA), ensamble de 20 miembros (corridas), período noviembre de 2026 a julio de 2027 | Informe "Pronóstico Climático Estacional 2026/27 Formosa", emisión 29/10/2026 (`20261029 Formosa.pptx`, carpeta IA-Lab; informe de un tercero, orientativo y probabilístico) | Referencia | 29/10/2026 |
+| Precipitación proyectada CFS v2 (Nov 2026 – Jul 2027) y serie mensual | Acumulado proyectado 1.623 mm frente a normal histórica 1.229 mm (+394 mm). Serie mensual proyectada / normal (mm): Nov 198/160 (+38), Dic 214/168 (+46), Ene 216/172 (+44), Feb 245/162 (+83), Mar 308/175 (+133, pico), Abr 246/182 (+64), May 80/110 (-30), Jun 68/58 (+10), Jul 48/42 (+6) | Mismo informe (`20261029 Formosa.pptx`, tabla de precipitación mensual proyectada vs. normal histórica 1991-2020) | Referencia | 29/10/2026 |
 | Índice ONI proyectado | Pico estimado +2,2; probabilidad de ONI >= +2,0 °C: 93 % (SON-OND-NDJ) | Mismo informe, diapositiva "Contexto ENSO". La diapositiva de análogos históricos del mismo informe indica +2,3 y 99 %; el portal usa la cifra de la diapositiva de contexto | Referencia | 29/10/2026 |
 | Campañas El Niño y tercio húmedo en Formosa | 8 de 14 campañas Niño en el tercio húmedo y una sola en el seco (45 campañas, 1981/82 a 2025/26); la fase ENOS cambia las probabilidades, no decide la campaña | Mismo informe, diapositiva "La fase ENSO cambia las probabilidades" | Referencia | 29/10/2026 |
 | Hitos de la cuenca (landing 3D y alternativa 2D) | Pantanal (-57,50; -17,80, posición aproximada sobre el río), Mato Grosso (nacientes del Paraguay, extremo norte de la línea de Natural Earth: -55,08; -14,32), Asunción (-57,63; -25,28, aproximada), confluencia con el Paraná (-58,57; -27,30, aproximada). Las estaciones usan las coordenadas oficiales de K3 | `apps/frontend/src/landing/geometria.ts`; relaciones hidrográficas auditadas contra K7 | Referencia (ubicación aproximada de los hitos) | 18/11/2026 |
@@ -205,3 +206,29 @@ Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del 
 | Prefectura Naval Argentina (emergencia náutica) | 106 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
 | Policía / emergencias | 911 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
 | Emergencias ambientales | 105 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
+
+## Seguimiento de la cuadrilla ("Cuadrilla en camino")
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Velocidad media de la cuadrilla para estimar la llegada | 40 km/h | Supuesto `velocidad_cuadrilla_kmh` (`supuestos.yaml`); sin fuente pública, mezcla pavimento, ripio y tierra | Simulado (SUPUESTO) | 20/11/2026 |
+| Factor de desvío de la distancia por calle | 1,3 | Supuesto `factor_desvio` (`supuestos.yaml`, ya citado en el ruteo) | Simulado (SUPUESTO) | 20/11/2026 |
+| Minutos para avisar que la posición es vieja | 5 min | Supuesto `posicion_vieja_minutos` (`supuestos.yaml`) | Simulado (SUPUESTO) | 20/11/2026 |
+| Intervalo mínimo entre posiciones de una cuadrilla | 10 s | Supuesto `intervalo_min_posicion_s` (`supuestos.yaml`); límite de frecuencia del backend | Simulado (SUPUESTO) | 20/11/2026 |
+| Intervalo de envío de la posición desde la app y de refresco de las pantallas | 30 s (envío) y 20 s (refresco) | Decisión de diseño del equipo, no un dato | Simulado (SUPUESTO) | 20/11/2026 |
+| Distancia y llegada estimada que ve el solicitante ("unos 12 min") | Calculadas con los supuestos anteriores | Posición compartida por la cuadrilla (SIMULADO en la demo); es una estimación, no una promesa | Simulado (SUPUESTO) | 20/11/2026 |
+
+
+## Lámina de agua ilustrativa del simulador (`apps/frontend/src/panel/lamina.ts`)
+
+La lámina no es un modelo hidráulico: dibuja cuánto supera la altura de Puerto Formosa elegida en el simulador la altura de compromiso de cada sector. Todo lo que muestra es `SIMULADO`.
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Excedente por sector (altura elegida menos compromiso) | S1 8,10 m · S2 8,60 m · S3 7,90 m · S4 7,50 m de compromiso | K10 (alturas ya citadas arriba); resta con la altura del deslizador | Simulado | 20/11/2026 |
+| Sector en riesgo (borde ámbar) | A 0,50 m o menos del compromiso | Supuesto `margen_riesgo_m` (ya citado arriba); el frontend lo repite para responder sin consultar al servidor en cada cambio | Simulado (SUPUESTO) | 20/11/2026 |
+| Altura exagerada de la lámina | ×150 (150 m dibujados por cada metro de excedente) | Parámetro de visualización del equipo, no una medida; solo se nota al inclinar el mapa | Simulado (parámetro de visualización) | 20/11/2026 |
+| Excedente en que el color deja de oscurecerse | 3 m | Parámetro de visualización del equipo, no una medida | Simulado (parámetro de visualización) | 20/11/2026 |
+| Hitos de "Reproducir subida" | Dato del corte 5,60 m → compromiso de S4 7,50 m → alerta 7,80 m → evacuación 8,30 m | Corte: K1 (31/10/2026, Observado); 7,50 m: K10; 7,80 y 8,30 m: K3 | Observado (corte y umbrales) y Simulado (la subida) | 31/10/2026 |
+| Duración de "Reproducir subida" | 7 s | Parámetro de visualización del equipo, no un pronóstico de tiempo | Simulado (parámetro de visualización) | 20/11/2026 |
+| Accesos cortados (trazo rojo discontinuo) | Estado del acceso devuelto por `/simulacion/escenario`: tierra desde 30 mm y ripio desde 80 mm de lluvia, cerrado por el operador o anegado | Supuestos de lluvia por superficie ya citados arriba; no se recalculan en el frontend | Simulado (SUPUESTO) | 17/11/2026 |

@@ -21,9 +21,12 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { AlertaError } from "../../components/Formulario";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import { Insignia } from "../../components/Insignia";
+import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
+import { useCargaViva } from "../../lib/vivo";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
+import { LeyendaLamina } from "../LeyendaLamina";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
 import { Cargando, fmtFecha, fmtNum, NOMBRE_ACCESO, Seccion } from "../ui";
@@ -315,7 +318,7 @@ function Leyenda() {
 }
 
 export default function MapaOperativo() {
-  const { escenario, entrada } = useEscenario();
+  const { escenario, entrada, laminaVisible, alturaVisual } = useEscenario();
   const sectores = useCarga(() => api.sectores());
   const accesos = useCarga(() => api.accesos());
   const centros = useCarga(() => api.centros());
@@ -334,6 +337,13 @@ export default function MapaOperativo() {
         .filter((e) => e.constancia && e.origen && ["cerrada_cuadrilla", "verificada", "con_discrepancia"].includes(e.estado))
         .map((e) => ({ id: e.tarea_id, origen: [e.origen!.lon, e.origen!.lat] as [number, number], destino: [e.constancia!.destino.lon, e.constancia!.destino.lat] as [number, number], estado: e.estado })),
     [verTraslados, evacuaciones.datos],
+  );
+  // Capa opcional "Cuadrillas": se consulta solo al activarla y se refresca sola cada 20 s.
+  const [verCuadrillas, setVerCuadrillas] = useState(false);
+  const posiciones = useCargaViva(() => (verCuadrillas ? api.posicionesCuadrillas() : Promise.resolve(null)), { cadaMs: 20_000, clave: String(verCuadrillas) });
+  const puntosCuadrillas = useMemo(
+    () => (verCuadrillas ? (posiciones.datos?.posiciones ?? []) : []).map((p) => ({ id: p.cuadrilla_id, posicion: [p.lon, p.lat] as [number, number], vieja: p.posicion_vieja })),
+    [verCuadrillas, posiciones.datos],
   );
   const [origenManual, setOrigenManual] = useState<{ lon: number; lat: number } | null>(null);
 
@@ -391,12 +401,15 @@ export default function MapaOperativo() {
                 modoOrigen={modoOrigen}
                 origenRuta={origenManual}
                 traslados={traslados}
+                cuadrillas={puntosCuadrillas}
+                lamina={{ altura: alturaVisual ?? entrada.altura_formosa_m, visible: laminaVisible, reproduciendo: alturaVisual !== null }}
                 onAcceso={(a) => setSeleccion(a.id)}
                 onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
               />
             </Suspense>
           </Box>
           <Leyenda />
+          {laminaVisible && <LeyendaLamina />}
           <Text fontSize="xs" color="textoSuave" mt={1}>
             Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
           </Text>
@@ -454,6 +467,38 @@ export default function MapaOperativo() {
             )}
             <Text fontSize="xs" color="textoSuave" mt={2}>
               Solo para roles operativos: la ubicación del evacuado es un dato sensible.
+            </Text>
+          </Seccion>
+          <Seccion titulo="Cuadrillas en operación" categoria="SIMULADO" id="sec-cuadrillas">
+            <Checkbox size="sm" isChecked={verCuadrillas} onChange={(e) => setVerCuadrillas(e.target.checked)}>
+              Mostrar dónde está cada cuadrilla con una tarea en curso
+            </Checkbox>
+            {verCuadrillas && posiciones.error !== null && (
+              <Text fontSize="sm" mt={2} role="alert" data-testid="error-cuadrillas">
+                {posiciones.datos ? "No pudimos actualizar las posiciones; se muestran las últimas recibidas." : "No se pudieron cargar las posiciones de las cuadrillas."}
+              </Text>
+            )}
+            {verCuadrillas && posiciones.datos && (
+              <Box mt={2} data-testid="leyenda-cuadrillas">
+                {posiciones.datos.posiciones.length === 0 ? (
+                  <Text fontSize="xs" color="textoSuave">Ninguna cuadrilla con tarea en curso está compartiendo su posición.</Text>
+                ) : (
+                  <Box as="ul" listStyleType="none" m={0} p={0} fontSize="xs">
+                    {posiciones.datos.posiciones.map((p) => (
+                      <li key={p.cuadrilla_id}>
+                        {p.nombre} ({p.roles.map(etiquetaRolOperativo).join(", ") || p.tipo_incidente}): {fechaHora(p.actualizada_en)}
+                        {p.posicion_vieja ? " · posición vieja" : ""}
+                      </li>
+                    ))}
+                  </Box>
+                )}
+                <Text color="textoSuave" fontSize="xs" mt={1}>
+                  Punto verde: posición reciente; ámbar: posición vieja (más de {posiciones.datos.supuestos.posicion_vieja_minutos} min, SUPUESTO).
+                </Text>
+              </Box>
+            )}
+            <Text fontSize="xs" color="textoSuave" mt={2}>
+              Solo para roles operativos y solo mientras la cuadrilla tiene una tarea en curso.
             </Text>
           </Seccion>
           <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas">

@@ -437,6 +437,46 @@ curl -s -X POST $API/mi/confirmaciones -H "$H_CIUDADANO" -H 'Content-Type: appli
 # Casos inválidos: sin Idempotency-Key -> 422; "lat": 95 -> 422; ciudadano en /tareas/7/cierre -> 403; cuadrilla ajena -> 403
 ```
 
+## Seguimiento de la cuadrilla ("Cuadrilla en camino")
+
+Cuando una tarea ligada a un pedido de asistencia está `en_curso`, la cuadrilla comparte su posición y la persona que pidió ayuda ve la distancia y una llegada **estimada**. Todo es `SIMULADO` en la demo y la llegada es una estimación con supuestos explícitos (`supuestos.yaml`), no una promesa.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/cuadrillas/mi-posicion` | `cuadrilla` | Cuerpo `{ "lat": -90..90, "lon": -180..180, "precision_m"?: >= 0 }`. Guarda (pisa) la última posición de las cuadrillas del usuario que tengan alguna tarea `en_curso`. Sin tarea en curso: 409 "No tenés ninguna tarea en curso...". Menos de `intervalo_min_posicion_s` (10 s, SUPUESTO) desde la anterior: 429 con `Retry-After`. Coordenadas fuera de rango o `precision_m` negativa: 422. Otros roles: 403. Respuesta `{ "cuadrillas": [id], "categoria": "SIMULADO" }`. Emite el evento WebSocket `posicion_cuadrilla` |
+| GET | `/mi/seguimiento` | `ciudadano`, `productor` | Un ítem por cada pedido **propio** con tarea en curso (los de otras personas nunca aparecen). Otros roles: 403 |
+| GET | `/cuadrillas/posiciones` | `operador`, `decisor`, `admin` | Última posición de cada cuadrilla con tarea en curso. Auditado (`lectura_ubicacion_cuadrillas`) |
+
+Ítem de `GET /mi/seguimiento` (`seguimientos[]`):
+
+```json
+{ "solicitud_id": 12, "tarea_id": 7, "tipo_cuadrilla": "humana", "roles": ["encargado_cuadrilla", "salud_sipec"],
+  "estado": "en_camino",
+  "posicion": { "lat": -26.18, "lon": -58.14, "precision_m": 12.5 },
+  "actualizada_en": "2026-11-20T15:02:11-03:00", "posicion_vieja": false,
+  "distancia_m": 3450, "llegada_estimada_min": 6,
+  "categoria": "SIMULADO", "fuente": "...",
+  "supuestos": { "factor_desvio": 1.3, "velocidad_cuadrilla_kmh": 40, "posicion_vieja_minutos": 5, "fuente": "SUPUESTO (ver supuestos.yaml)" },
+  "nota": "Es una estimación: ..." }
+```
+
+- `estado`: `en_camino` (hay posición) o `asignada_sin_posicion` (todavía no llegó ninguna; `posicion`, `distancia_m` y `llegada_estimada_min` son `null`).
+- `distancia_m` = recta entre la cuadrilla y el pedido por `factor_desvio` (1,3); `llegada_estimada_min` = distancia / `velocidad_cuadrilla_kmh` (40 km/h), redondeada hacia arriba. Si el pedido no tiene coordenadas, ambos son `null`.
+- `posicion_vieja` es `true` si pasaron más de `posicion_vieja_minutos` (5 min) desde `actualizada_en`.
+- La cuadrilla se identifica por tipo y roles del catálogo, nunca por personas.
+
+Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
+
+Evento WebSocket `posicion_cuadrilla` (`{ "cuadrillas": [id] }`): solo `operador`, `decisor` y `admin`; lleva ids sin coordenadas y el panel consulta `GET /cuadrillas/posiciones`.
+
+```bash
+curl -s -X POST $API/cuadrillas/mi-posicion -H "$H_CUADRILLA" -H 'Content-Type: application/json' -d '{"lat":-26.18,"lon":-58.14,"precision_m":12}'
+curl -s $API/mi/seguimiento -H "$H_CIUDADANO"
+# Casos inválidos: "lat": 95 -> 422; sin tarea en curso -> 409; dos envíos en menos de 10 s -> 429; ciudadano en /cuadrillas/mi-posicion -> 403
+```
+
+Prueba automática: `tests/test_seguimiento.py`.
+
 ## Lluvia
 
 | Método | Ruta | Acceso | Descripción |
@@ -487,7 +527,7 @@ Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de l
 
 ## Tiempo real
 
-`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos; ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
+`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
 
 La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
@@ -537,7 +577,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (60 rutas y 70 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (63 rutas y 73 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='
