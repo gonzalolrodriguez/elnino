@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentType } from "re
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import { ANCHO_CONTENEDOR, GUTTER } from "../components/Contenedor";
 import { Layout } from "../components/Layout";
 import { IconoBandeja, IconoCaja, IconoCamion, IconoEscudo, IconoGota, IconoHistorial, IconoInfo, IconoMapa, IconoMegafono, IconoMira, IconoOlas, IconoPersonas, IconoPuntos, type PropsIcono } from "../components/iconos/Iconos";
 import { IconoChevron, IconoTablero } from "./iconos";
@@ -10,6 +11,7 @@ import { describirEvento, useTiempoReal, type EventoTiempoReal } from "../lib/ws
 import { AvisoEscenario } from "./AvisoEscenario";
 import { NotaCategorias } from "./NotaCategorias";
 import { EscenarioProvider } from "./EscenarioContext";
+import { EnSlotEscenario, SlotEscenarioProvider } from "./SlotEscenario";
 import { TiempoRealContext } from "./TiempoRealContext";
 import { etiquetaRol, etiquetaRolOperativo } from "../lib/etiquetas";
 
@@ -129,6 +131,7 @@ export function PanelLayout() {
   return (
     <Layout contenedor={false} titulo="Panel operativo">
       <EscenarioProvider>
+        <SlotEscenarioProvider>
         <Flex direction={{ base: "column", lg: "row" }} minH="70vh" maxW="110rem" mx="auto" w="100%">
           <Box
             as="nav"
@@ -174,7 +177,7 @@ export function PanelLayout() {
             <Box id="secciones-panel" display={{ base: abierto ? "block" : "none", lg: "block" }}>
               {GRUPOS_NAVEGACION.map((g) => (
                 <Box key={g.id} mb={4}>
-                  <Text id={`nav-${g.id}`} fontSize="0.8125rem" fontWeight={700} color="textoSuave" px={3.5} mb={1}>
+                  <Text id={`nav-${g.id}`} fontSize="rotulo" fontWeight={700} color="textoSuave" px={3.5} mb={1}>
                     {g.titulo}
                   </Text>
                   <Flex as="ul" aria-labelledby={`nav-${g.id}`} listStyleType="none" m={0} p={0} direction="column" sx={{ "& > li + li": { marginTop: "0.125rem" } }}>
@@ -216,14 +219,18 @@ export function PanelLayout() {
               {estadoWs.texto}
             </Flex>
           </Box>
-          <Box flex="1" minW={0} px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }}>
-            <NotaCategorias />
-            <AvisoEscenario />
+          <Box flex="1" minW={0} maxW={ANCHO_CONTENEDOR.datos} px={GUTTER} py={{ base: 5, md: 6 }}>
+            {/* La nota y la barra del escenario se dibujan debajo del título de cada página (ver SlotEscenario). */}
+            <EnSlotEscenario>
+              <NotaCategorias />
+              <AvisoEscenario />
+            </EnSlotEscenario>
             <TiempoRealContext.Provider value={senal}>
               <Outlet />
             </TiempoRealContext.Provider>
           </Box>
         </Flex>
+        </SlotEscenarioProvider>
       </EscenarioProvider>
     </Layout>
   );

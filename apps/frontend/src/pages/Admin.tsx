@@ -274,7 +274,7 @@ export default function Admin() {
   const roles = useCarga(() => api.rolesOperativos());
   const catalogo = roles.datos?.roles ?? [];
   return (
-    <Layout titulo="Administración">
+    <Layout ancho="datos" titulo="Administración">
       <Heading as="h1" size="xl" mb={2}>
         Administración
       </Heading>
