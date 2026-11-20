@@ -210,3 +210,17 @@ Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del 
 | Intervalo de envío de la posición desde la app y de refresco de las pantallas | 30 s (envío) y 20 s (refresco) | Decisión de diseño del equipo, no un dato | Simulado (SUPUESTO) | 20/11/2026 |
 | Distancia y llegada estimada que ve el solicitante ("unos 12 min") | Calculadas con los supuestos anteriores | Posición compartida por la cuadrilla (SIMULADO en la demo); es una estimación, no una promesa | Simulado (SUPUESTO) | 20/11/2026 |
 
+
+## Lámina de agua ilustrativa del simulador (`apps/frontend/src/panel/lamina.ts`)
+
+La lámina no es un modelo hidráulico: dibuja cuánto supera la altura de Puerto Formosa elegida en el simulador la altura de compromiso de cada sector. Todo lo que muestra es `SIMULADO`.
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Excedente por sector (altura elegida menos compromiso) | S1 8,10 m · S2 8,60 m · S3 7,90 m · S4 7,50 m de compromiso | K10 (alturas ya citadas arriba); resta con la altura del deslizador | Simulado | 20/11/2026 |
+| Sector en riesgo (borde ámbar) | A 0,50 m o menos del compromiso | Supuesto `margen_riesgo_m` (ya citado arriba); el frontend lo repite para responder sin consultar al servidor en cada cambio | Simulado (SUPUESTO) | 20/11/2026 |
+| Altura exagerada de la lámina | ×150 (150 m dibujados por cada metro de excedente) | Parámetro de visualización del equipo, no una medida; solo se nota al inclinar el mapa | Simulado (parámetro de visualización) | 20/11/2026 |
+| Excedente en que el color deja de oscurecerse | 3 m | Parámetro de visualización del equipo, no una medida | Simulado (parámetro de visualización) | 20/11/2026 |
+| Hitos de "Reproducir subida" | Dato del corte 5,60 m → compromiso de S4 7,50 m → alerta 7,80 m → evacuación 8,30 m | Corte: K1 (31/10/2026, Observado); 7,50 m: K10; 7,80 y 8,30 m: K3 | Observado (corte y umbrales) y Simulado (la subida) | 31/10/2026 |
+| Duración de "Reproducir subida" | 7 s | Parámetro de visualización del equipo, no un pronóstico de tiempo | Simulado (parámetro de visualización) | 20/11/2026 |
+| Accesos cortados (trazo rojo discontinuo) | Estado del acceso devuelto por `/simulacion/escenario`: tierra desde 30 mm y ripio desde 80 mm de lluvia, cerrado por el operador o anegado | Supuestos de lluvia por superficie ya citados arriba; no se recalculan en el frontend | Simulado (SUPUESTO) | 17/11/2026 |

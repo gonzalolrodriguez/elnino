@@ -26,6 +26,7 @@ import { useCarga } from "../../lib/useCarga";
 import { useCargaViva } from "../../lib/vivo";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
+import { LeyendaLamina } from "../LeyendaLamina";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
 import { Cargando, fmtFecha, fmtNum, NOMBRE_ACCESO, Seccion } from "../ui";
@@ -317,7 +318,7 @@ function Leyenda() {
 }
 
 export default function MapaOperativo() {
-  const { escenario, entrada } = useEscenario();
+  const { escenario, entrada, laminaVisible, alturaVisual } = useEscenario();
   const sectores = useCarga(() => api.sectores());
   const accesos = useCarga(() => api.accesos());
   const centros = useCarga(() => api.centros());
@@ -401,12 +402,14 @@ export default function MapaOperativo() {
                 origenRuta={origenManual}
                 traslados={traslados}
                 cuadrillas={puntosCuadrillas}
+                lamina={{ altura: alturaVisual ?? entrada.altura_formosa_m, visible: laminaVisible, reproduciendo: alturaVisual !== null }}
                 onAcceso={(a) => setSeleccion(a.id)}
                 onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
               />
             </Suspense>
           </Box>
           <Leyenda />
+          {laminaVisible && <LeyendaLamina />}
           <Text fontSize="xs" color="textoSuave" mt={1}>
             Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
           </Text>

@@ -13,7 +13,7 @@
 | S1 | Seguimiento de la cuadrilla ("Uber del rescate"): posición de la cuadrilla en tarea en curso, tarjeta "Cuadrilla en camino" con llegada estimada para el solicitante (app y web), capa de cuadrillas en el mapa del panel | A | agente escritor en worktree (backend + app + web) | Pendiente |
 | S3 | Tres relojes (río, barro, Niño) en la landing y en el tablero del panel | A | agente escritor en worktree (web) | Pendiente |
 | S2 | Brújula offline hacia el centro asignado o punto de encuentro, en la app | B | agente escritor en worktree (app) | Pendiente |
-| S4 | Inundación ilustrativa de S1–S4 en el mapa del simulador, según la altura | B | agente escritor en worktree (web) | Pendiente |
+| S4 | Inundación ilustrativa de S1–S4 en el mapa del simulador, según la altura | B | agente escritor en worktree (web) | Hecha (ver progreso S4) |
 | S5 | Integración: merge en `dev-gonzalo`, tests completos, docs (ficha técnica, ficha de fuentes), push y PR | — | coordinador | Pendiente |
 
 ## Criterios comunes
@@ -26,3 +26,4 @@
 ## Progreso
 
 - 20/11 ~03:50: rama `dev-gonzalo` creada desde `main` (`8fd029a`). Tanda A lanzada.
+- 20/11 S4 (lámina de agua ilustrativa): `lamina.ts` (lógica pura), `capasLamina.ts` (capas deck.gl y accesos cortados discontinuos), interruptor y "Reproducir subida" en el simulador, leyenda SIMULADO con exageración ×150, parámetros en `ficha_fuentes.md`. Checks: tsc, eslint y vitest completo (19 archivos, 232 tests) en verde. No verificado: el dibujo real de deck.gl en el navegador (jsdom no dibuja WebGL).
