@@ -88,7 +88,7 @@ describe("sección Información", () => {
   it("/el-nino redirige a /informacion", async () => {
     renderRuta("/el-nino");
     expect(await screen.findByRole("heading", { level: 1, name: "Información para entender la crecida" })).toBeInTheDocument();
-    expect(document.title).toBe("Información · Operación Agua");
+    expect(document.title).toBe("Información · EvacuaFor");
   });
 
   it("la navegación principal dice Información y apunta a /informacion", () => {

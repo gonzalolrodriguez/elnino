@@ -1,7 +1,7 @@
 # Ficha técnica · AI LAB Misión: Código Formosa
 PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial · Entrega: viernes 20/11/2026, 18 h
 
-**Nombre de la herramienta:** Plataforma de Gestión de Evacuaciones (Operación Agua)
+**Nombre de la herramienta:** EvacuaFor · Plataforma de gestión de evacuaciones ante la crecida
 **Equipo · institución · integrantes y rol de cada uno:** Equipo 3 · Instituto Politécnico Formosa (IPF).
 - Gonzalo Rodríguez: backend (API, datos, base PostGIS y seguridad).
 - Dylan Cabrera: frontend web.
@@ -79,7 +79,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - "Necesito ayuda ahora": un toque, cuenta regresiva cancelable de 5 s, GPS automático y envío por la cola sin conexión.
   - Barra fija en todas las pantallas con el 103, el estado de conexión y los pedidos pendientes.
   - Mis pedidos con línea de tiempo, cuadrilla, vehículo y llegada estimada.
-- **Distintivos SAPUKAY:**
+- **Distintivos de EvacuaFor:**
   - **Tres relojes:** río (DATO OBSERVADO, distancia a la alerta y rango de días con supuesto lineal), barro (SUPUESTO: la tierra se corta con 30 mm y S4 se compromete 30 cm antes de la alerta) y El Niño (DOCUMENTO DE REFERENCIA, CFS v2). Están en la landing y en el tablero.
   - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web. El solicitante ve en un mapa el recorrido por la red vial (evitando caminos cerrados), el vehículo avanzando y la llegada estimada (supuesto de velocidad). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea, vence a los 30 minutos y solo la ven el solicitante y los roles operativos. Para la demostración, sin un teléfono real, el servidor mueve al vehículo por la ruta desde una base SIMULADA, rotulado "SIMULADO · recorrido de demostración".
   - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.

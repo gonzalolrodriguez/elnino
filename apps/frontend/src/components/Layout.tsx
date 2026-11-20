@@ -96,7 +96,7 @@ function Navegacion() {
             <Marca />
           </Box>
           <Text as="span" fontSize="lg" fontWeight={700} lineHeight={1.1} letterSpacing="-0.02em">
-            Operación Agua
+            EvacuaFor
             <Text as="span" display="block" fontSize="xs" fontWeight={400} color="textoSuave" letterSpacing="0">
               Gestión de evacuaciones
             </Text>
@@ -205,7 +205,7 @@ function Pie() {
                 <Marca />
               </Box>
               <Text as="span" fontSize="lg" fontWeight={700} letterSpacing="-0.02em">
-                Operación Agua
+                EvacuaFor
               </Text>
             </Flex>
             <Text color="oscuro.fg" fontWeight={600}>
@@ -266,7 +266,7 @@ function Pie() {
 export function Layout({ children, contenedor = true, titulo }: { children: ReactNode; contenedor?: boolean; titulo?: string }) {
   const { hash } = useLocation();
   useEffect(() => {
-    document.title = titulo ? `${titulo} · Operación Agua` : "Operación Agua · Gestión de evacuaciones";
+    document.title = titulo ? `${titulo} · EvacuaFor` : "EvacuaFor · Gestión de evacuaciones";
   }, [titulo]);
   // Los enlaces con ancla (p. ej. el pie) llevan a la sección aunque cambie de ruta.
   useEffect(() => {
