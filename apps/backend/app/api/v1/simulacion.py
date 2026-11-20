@@ -72,9 +72,21 @@ def escenario(
     return resultado
 
 
+class PronosticoLluviaIn(BaseModel):
+    """Lluvia prevista SIMULADA para la ventana seca: ``mm`` que caen dentro de ``horas``."""
+
+    model_config = ConfigDict(extra="forbid")
+    mm: float = Field(gt=0, le=1000, description="Lluvia prevista (mm), se suma a la del escenario")
+    horas: float = Field(gt=0, le=720, description="Horas desde ahora hasta esa lluvia")
+
+    def a_dominio(self) -> recomendacion.Pronostico:
+        return recomendacion.Pronostico(mm=self.mm, horas=self.horas)
+
+
 class RecomendacionIn(EscenarioIn):
     prioridad: Literal["riesgo", "poblacion"] = "riesgo"
     sectores: list[str] | None = Field(default=None, max_length=10)
+    pronostico_lluvia: PronosticoLluviaIn | None = None
 
 
 def _validar_sectores(db: Session, ids: list[str] | None) -> None:
@@ -101,6 +113,7 @@ def recomendacion_(
         datos.prioridad,
         datos.sectores,
         datos.humedad_suelo,
+        datos.pronostico_lluvia.a_dominio() if datos.pronostico_lluvia else None,
     )
 
 
@@ -120,6 +133,7 @@ class AlternativaEditable(BaseModel):
 
 class AlternativasIn(EscenarioIn):
     editable: AlternativaEditable | None = None
+    pronostico_lluvia: PronosticoLluviaIn | None = None
 
 
 @router.post("/alternativas")
@@ -132,7 +146,12 @@ def alternativas(
     if datos.editable:
         _validar_sectores(db, datos.editable.orden_sectores)
     d = recomendacion.cargar_datos(
-        db, datos.altura_formosa_m, datos.lluvia_mm, cerrados, datos.humedad_suelo
+        db,
+        datos.altura_formosa_m,
+        datos.lluvia_mm,
+        cerrados,
+        datos.humedad_suelo,
+        datos.pronostico_lluvia.a_dominio() if datos.pronostico_lluvia else None,
     )
     editable = datos.editable.model_dump() if datos.editable else None
     alts = recomendacion.comparar(d, cerrados, editable)
@@ -141,6 +160,9 @@ def alternativas(
             "altura_formosa_m": datos.altura_formosa_m,
             "lluvia_mm": datos.lluvia_mm,
             "caminos_cerrados": sorted(cerrados),
+            "pronostico_lluvia": datos.pronostico_lluvia.model_dump()
+            if datos.pronostico_lluvia
+            else None,
         },
         "rio": d.escenario.rio,
         "resumen": d.escenario.resumen,

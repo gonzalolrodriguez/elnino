@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import supuesto
 from app.core.tiempo import hoy_ar
+from app.db.consultas import sectores_de_puntos
 from app.db.modelos import (
     Cuadrilla,
     Establecimiento,
@@ -24,9 +25,10 @@ from app.db.modelos import (
     Sector,
     StockProductivo,
 )
-from app.domain import ascenso, asignacion, cuadrillas, ganaderia, ruteo
+from app.domain import ascenso, asignacion, cuadrillas, factibilidad, ganaderia, ruteo
 from app.domain import escenario as esc
 from app.servicios import contexto
+from app.servicios import ruteo as srv_ruteo
 from app.servicios.contexto import CentroGeo, SectorGeo
 
 ETIQUETA = (
@@ -174,6 +176,14 @@ def roles_de_cuadrillas(db: Session) -> dict[str, list[str]]:
     return resultado
 
 
+@dataclass(frozen=True)
+class Pronostico:
+    """Lluvia prevista (SIMULADO): ``mm`` que se suman a la lluvia del escenario en ``horas``."""
+
+    mm: float
+    horas: float
+
+
 @dataclass
 class DatosPlan:
     altura_m: float
@@ -185,6 +195,34 @@ class DatosPlan:
     recursos: dict[str, dict]
     tasas: dict[str, float]
     roles_cuadrillas: dict[str, list[str]]
+    # Centros que no pueden recibir evacuados en este escenario: id -> motivo.
+    centros_descartados: dict[int, str] = field(default_factory=dict)
+    # Minutos por la red vial (pgRouting) de cada sector a cada centro, por perfil.
+    tiempos_red: dict[str, dict[tuple[str, int], float]] = field(default_factory=dict)
+    pronostico: Pronostico | None = None
+
+
+def descartar_centros(
+    centros: list[CentroGeo],
+    sector_de_centro: dict[int, str | None],
+    escenario: esc.Escenario,
+    excluir_en_riesgo: bool,
+) -> dict[int, str]:
+    """Centros que no deben recibir evacuados: los que quedan dentro de un sector comprometido (y,
+    con el supuesto ``centro_excluir_en_riesgo``, de uno en riesgo)."""
+    estados = {s.id: s.estado for s in escenario.sectores}
+    descartados: dict[int, str] = {}
+    for c in centros:
+        sid = sector_de_centro.get(c.id)
+        estado = estados.get(sid) if sid else None
+        if estado == esc.COMPROMETIDO:
+            descartados[c.id] = f"Dentro del sector {sid}, comprometido en este escenario."
+        elif estado == esc.EN_RIESGO and excluir_en_riesgo:
+            descartados[c.id] = (
+                f"Dentro del sector {sid}, en riesgo en este escenario (supuesto "
+                "centro_excluir_en_riesgo)."
+            )
+    return descartados
 
 
 def cargar_datos(
@@ -193,19 +231,52 @@ def cargar_datos(
     lluvia_mm: float,
     caminos_cerrados: set[int],
     humedad_suelo: float | None = None,
+    pronostico: Pronostico | None = None,
 ) -> DatosPlan:
+    escenario = contexto.calcular_escenario(
+        db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo
+    )
+    sectores = {s.id: s for s in contexto.cargar_sectores(db)}
+    centros = contexto.cargar_centros(db)
+    sector_de_centro = sectores_de_puntos(db, {c.id: (c.lon, c.lat) for c in centros})
+    descartados = descartar_centros(
+        centros, sector_de_centro, escenario, bool(supuesto("centro_excluir_en_riesgo"))
+    )
+    exposicion = cargar_exposicion(db)
+    a_evacuar = [s.id for s in escenario.sectores if s.estado != esc.NORMAL]
+    origenes = {sid: (sectores[sid].lon, sectores[sid].lat) for sid in a_evacuar}
+    # El camión jaula solo hace falta donde hay producción declarada.
+    con_ganado = {sid: p for sid, p in origenes.items() if exposicion.get(sid, Exposicion()).stock}
+    tiempos_red = {
+        perfil: srv_ruteo.matriz_tiempos(
+            db,
+            perfil,
+            puntos,
+            {
+                c.id: (c.lon, c.lat)
+                for c in centros
+                if c.id not in descartados
+                and (c.cupo_personas if perfil == ruteo.VEHICULAR else c.cupo_animales) > 0
+            },
+            escenario,
+            lluvia_mm,
+            {s: s for s in puntos},
+        )
+        for perfil, puntos in ((ruteo.VEHICULAR, origenes), (ruteo.CAMION_JAULA, con_ganado))
+    }
     return DatosPlan(
         altura_m=altura_m,
         lluvia_mm=lluvia_mm,
-        escenario=contexto.calcular_escenario(
-            db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo
-        ),
-        sectores={s.id: s for s in contexto.cargar_sectores(db)},
-        exposicion=cargar_exposicion(db),
-        centros=contexto.cargar_centros(db),
+        escenario=escenario,
+        sectores=sectores,
+        exposicion=exposicion,
+        centros=centros,
         recursos=contexto.cargar_recursos(db),
         tasas=ascenso.tasas_m_dia(contexto.serie_diaria(db)),
         roles_cuadrillas=roles_de_cuadrillas(db),
+        centros_descartados=descartados,
+        tiempos_red=tiempos_red,
+        pronostico=pronostico,
     )
 
 
@@ -244,13 +315,6 @@ def _modo_transporte(estado: esc.SectorEstado) -> tuple[str, str | None]:
     return "lancha", None
 
 
-def _velocidad_kmh(modo: str, superficie: str | None) -> float:
-    if modo == "lancha":
-        return float(supuesto("velocidad_lancha_kmh"))
-    vel = ruteo.velocidades(ruteo.VEHICULAR)
-    return vel[superficie or "tierra"]
-
-
 def _ventana(datos: DatosPlan, estado: esc.SectorEstado, hay_ganado: bool) -> dict:
     tr = ascenso.tiempo_restante(datos.altura_m, estado.altura_compromiso_m, datos.tasas)
     h_min, h_max = supuesto("ventana_inicio_ganado_horas")
@@ -282,15 +346,158 @@ def _ventana(datos: DatosPlan, estado: esc.SectorEstado, hay_ganado: bool) -> di
     return ventana
 
 
+# --- Tiempos de viaje sector -> centro -------------------------------------------------------------
+
+METODO_RED = "red_vial"
+METODO_APROXIMADO = "aproximado"
+METODO_LANCHA = "lancha_linea_recta"
+METODO_ARREO = "arreo_aproximado"
+
+
+def _minutos_aprox(metros: float, perfil: str, superficie: str | None) -> float | None:
+    vel = ruteo.velocidades(perfil).get(superficie or "tierra")
+    if vel is None:
+        return None
+    return metros * float(supuesto("factor_desvio")) / (vel * 1000 / 60)
+
+
+def minutos_personas(
+    datos: DatosPlan, sid: str, centro: CentroGeo, modo: str, superficie: str | None
+) -> tuple[float | None, str]:
+    """Minutos de ida del sector al centro para personas, y el método con que se calcularon.
+
+    Lancha: línea recta a velocidad de lancha. Con ruedas: la red vial (pgRouting) si hay ruta; si
+    no, línea recta × factor de desvío a la velocidad de la superficie del acceso que se usa.
+    """
+    s = datos.sectores[sid]
+    recta = ruteo.haversine_m(s.lon, s.lat, centro.lon, centro.lat)
+    if modo == "lancha":
+        vel = float(supuesto("velocidad_lancha_kmh")) * 1000 / 60
+        return round(recta / vel, 1), METODO_LANCHA
+    red = datos.tiempos_red.get(ruteo.VEHICULAR, {}).get((sid, centro.id))
+    if red is not None:
+        return red, METODO_RED
+    m = _minutos_aprox(recta, ruteo.VEHICULAR, superficie)
+    return (None, METODO_APROXIMADO) if m is None else (round(m, 1), METODO_APROXIMADO)
+
+
+def minutos_animales(
+    datos: DatosPlan, sid: str, centro: CentroGeo, superficie: str | None
+) -> tuple[float | None, str]:
+    """Minutos de ida para el ganado: camión jaula (red o aproximado, solo pavimento y ripio) y, si
+    el camión no puede salir del sector, arreo a pie aproximado."""
+    s = datos.sectores[sid]
+    recta = ruteo.haversine_m(s.lon, s.lat, centro.lon, centro.lat)
+    red = datos.tiempos_red.get(ruteo.CAMION_JAULA, {}).get((sid, centro.id))
+    if red is not None and superficie in ("pavimento", "ripio"):
+        return red, METODO_RED
+    m = _minutos_aprox(recta, ruteo.CAMION_JAULA, superficie)
+    if m is not None:
+        return round(m, 1), METODO_APROXIMADO
+    m = _minutos_aprox(recta, ruteo.ARREO, superficie)
+    return (None, METODO_ARREO) if m is None else (round(m, 1), METODO_ARREO)
+
+
+def _promedio_ponderado(pares: list[tuple[float, int]]) -> float | None:
+    total = sum(c for _, c in pares)
+    if not total:
+        return None
+    return round(sum(m * c for m, c in pares) / total, 1)
+
+
+# --- Plazos y factibilidad ---------------------------------------------------------------------------
+
+
+def _plazo_rio_h(
+    datos: DatosPlan, estado: esc.SectorEstado
+) -> tuple[float | None, float | None, bool]:
+    tr = ascenso.tiempo_restante(datos.altura_m, estado.altura_compromiso_m, datos.tasas)
+    if tr.ya_alcanzado:
+        return 0.0, 0.0, True
+    if tr.dias_minimo is None:
+        return None, None, False
+    return tr.dias_minimo * 24, tr.dias_maximo * 24, False
+
+
+def _plazo_seco_h(datos: DatosPlan, superficie: str | None, perfil: str) -> float | None:
+    """Horas hasta la lluvia prevista si esa lluvia deja intransitable el acceso que se usa."""
+    p = datos.pronostico
+    if p is None or superficie is None:
+        return None
+    total = datos.lluvia_mm + p.mm
+    if superficie in ruteo.superficies_cerradas_por_lluvia(perfil, total):
+        return p.horas
+    return None
+
+
+def _factibilidad(
+    datos: DatosPlan,
+    estado: esc.SectorEstado,
+    superficie: str | None,
+    fin_personas_min: float | None,
+    fin_ganado_min: float | None,
+    hay_ganado: bool,
+) -> dict:
+    rio_min, rio_max, ya = _plazo_rio_h(datos, estado)
+    margen = float(supuesto("margen_seguridad_fraccion"))
+    plazo = factibilidad.plazo_efectivo(
+        rio_min, rio_max, _plazo_seco_h(datos, superficie, ruteo.VEHICULAR)
+    )
+    personas = factibilidad.evaluar(
+        plazo,
+        None if fin_personas_min is None else fin_personas_min / 60,
+        margen,
+        ya_comprometido=ya,
+    )
+    resultado = {
+        "personas": factibilidad.a_dict(personas),
+        "margen_seguridad_fraccion": margen,
+        "supuestos": [
+            ascenso.SUPUESTO_LINEAL,
+            "El tiempo para completar cuenta desde que se da la orden y usa la flota disponible "
+            "de cada tipo de vehículo, compartida entre los sectores en el orden de la alternativa.",
+        ],
+        "categoria": "SIMULADO",
+    }
+    if datos.pronostico is not None:
+        resultado["pronostico_lluvia"] = {
+            "mm": datos.pronostico.mm,
+            "horas": datos.pronostico.horas,
+            "categoria": "SIMULADO",
+        }
+    if hay_ganado:
+        _, h_max = supuesto("ventana_inicio_ganado_horas")
+        plazo_g = factibilidad.plazo_efectivo(
+            rio_min, rio_max, _plazo_seco_h(datos, superficie, ruteo.CAMION_JAULA)
+        )
+        ganado = factibilidad.evaluar(
+            plazo_g,
+            None if fin_ganado_min is None else fin_ganado_min / 60,
+            margen,
+            ya_comprometido=ya,
+            anticipacion_h=float(h_max),
+        )
+        resultado["ganado"] = factibilidad.a_dict(ganado)
+    return resultado
+
+
 def construir_plan(
     datos: DatosPlan,
     orden: list[str],
     centros_excluidos: set[int] | None = None,
 ) -> dict:
-    """Asigna personas y animales a centros en el orden dado y estima recursos y tiempos."""
+    """Asigna personas y animales a centros en el orden dado, estima recursos, tiempos y si alcanza.
+
+    - Centros: se quitan los excluidos por el usuario y los descartados por el escenario.
+    - Reparto: flujo de costo mínimo (minutos de viaje) que respeta el orden de prioridad.
+    - Tiempos: red vial real si está cargada; si no, línea recta × factor de desvío (se informa).
+    - Flota: cada tipo de vehículo tiene su línea de tiempo; los sectores que comparten un tipo van
+      en secuencia y los que usan tipos distintos, en paralelo.
+    """
     excluidos = centros_excluidos or set()
-    centros = [c for c in datos.centros if c.id not in excluidos]
-    factor = float(supuesto("factor_desvio"))
+    centros = [
+        c for c in datos.centros if c.id not in excluidos and c.id not in datos.centros_descartados
+    ]
 
     # ---- datos por sector --------------------------------------------------------------------
     info: dict[str, dict] = {}
@@ -301,6 +508,7 @@ def construir_plan(
         calc = ganaderia.calcular(entrada) if exp.stock else None
         animales = (calc["bovinos_total"] if calc else 0) + sum((entrada.menores or {}).values())
         personas = datos.sectores[sid].poblacion_simulada + exp.personas_registradas
+        modo, superficie = _modo_transporte(estado)
         info[sid] = {
             "estado": estado,
             "exp": exp,
@@ -308,40 +516,57 @@ def construir_plan(
             "calc": calc,
             "animales": animales,
             "personas": personas,
+            "modo": modo,
+            "superficie": superficie,
         }
 
-    def dist(sid: str, c: CentroGeo) -> float:
-        s = datos.sectores[sid]
-        return ruteo.haversine_m(s.lon, s.lat, c.lon, c.lat)
-
-    d_personas = {(sid, c.id): dist(sid, c) for sid in orden for c in centros}
-    res_p = asignacion.asignar(
+    # ---- tiempos de viaje y reparto -------------------------------------------------------------
+    min_p: dict[tuple[str, int], float] = {}
+    min_a: dict[tuple[str, int], float] = {}
+    metodo_p: dict[tuple[str, int], str] = {}
+    metodo_a: dict[tuple[str, int], str] = {}
+    for sid in orden:
+        i = info[sid]
+        for c in centros:
+            if c.cupo_personas > 0:
+                m, metodo = minutos_personas(datos, sid, c, i["modo"], i["superficie"])
+                if m is not None:
+                    min_p[(sid, c.id)], metodo_p[(sid, c.id)] = m, metodo
+            if c.cupo_animales > 0:
+                m, metodo = minutos_animales(datos, sid, c, i["superficie"])
+                if m is not None:
+                    min_a[(sid, c.id)], metodo_a[(sid, c.id)] = m, metodo
+    res_p = asignacion.asignar_costo_minimo(
         [asignacion.Demanda(sid, info[sid]["personas"], i) for i, sid in enumerate(orden)],
         [asignacion.Capacidad(c.id, c.nombre, c.cupo_personas) for c in centros],
-        d_personas,
+        min_p,
     )
-    res_a = asignacion.asignar(
+    res_a = asignacion.asignar_costo_minimo(
         [asignacion.Demanda(sid, info[sid]["animales"], i) for i, sid in enumerate(orden)],
         [asignacion.Capacidad(c.id, c.nombre, c.cupo_animales) for c in centros],
-        d_personas,
+        min_a,
     )
 
-    # ---- recursos, tiempos y detalle por sector ------------------------------------------------
+    # ---- flota, tiempos y detalle por sector --------------------------------------------------
     viajes_por_vehiculo: dict[str, int] = {}
     faltantes_veh: dict[str, int] = {}
+    linea_tiempo: dict[str, float] = {}  # minutos ocupados de cada tipo de vehículo
     camiones_necesarios = 0
-    acumulado = 0.0
+    disp_jaula = datos.recursos.get("camion_jaula", {}).get("cantidad", 0)
+    fines: list[float] = []
     primer_sector_min: float | None = None
     vulnerables = 0
     aislados_lancha = 0
     detalle: list[dict] = []
     tipos_cuadrilla: set[str] = set()
+    metodos_usados: dict[str, int] = {}
+    veredictos: dict[str, int] = {}
 
     for pos, sid in enumerate(orden):
         i = info[sid]
         estado: esc.SectorEstado = i["estado"]
         exp: Exposicion = i["exp"]
-        modo, superficie = _modo_transporte(estado)
+        modo, superficie = i["modo"], i["superficie"]
         asignadas = res_p.asignado_a(sid)
         cap = datos.recursos.get(modo, {}).get("capacidad_unitaria", 0)
         disp = datos.recursos.get(modo, {}).get("cantidad", 0)
@@ -349,17 +574,24 @@ def construir_plan(
         rondas = math.ceil(viajes / disp) if disp else 0
         sin_flota = bool(asignadas) and not (cap and disp)
         asig_centros = [a for a in res_p.asignaciones if a.demanda_id == sid]
-        principal = max(asig_centros, key=lambda a: a.cantidad, default=None)
-        ida_min = None
+        for a in asig_centros:
+            metodo = metodo_p[(sid, a.centro_id)]
+            metodos_usados[metodo] = metodos_usados.get(metodo, 0) + 1
+        ida_min = _promedio_ponderado(
+            [(min_p[(sid, a.centro_id)], a.cantidad) for a in asig_centros]
+        )
         completar_min = 0.0
-        if principal is not None and rondas:
-            centro = next(c for c in centros if c.id == principal.centro_id)
-            metros = d_personas[(sid, centro.id)] * factor
-            ida_min = ruteo.tiempo_min(metros, _velocidad_kmh(modo, superficie))
+        if ida_min is not None and rondas:
             completar_min = round((2 * rondas - 1) * ida_min, 1)
-        acumulado = round(acumulado + completar_min, 1)
-        if primer_sector_min is None and asignadas:
-            primer_sector_min = acumulado
+        inicio_min = linea_tiempo.get(modo, 0.0)
+        fin_min: float | None = None
+        if not sin_flota:
+            fin_min = round(inicio_min + completar_min, 1)
+            linea_tiempo[modo] = fin_min
+            if asignadas:
+                fines.append(fin_min)
+                if primer_sector_min is None:
+                    primer_sector_min = fin_min
         viajes_por_vehiculo[modo] = viajes_por_vehiculo.get(modo, 0) + viajes
         if disp and viajes > disp:
             faltantes_veh[modo] = faltantes_veh.get(modo, 0) + (viajes - disp)
@@ -376,6 +608,20 @@ def construir_plan(
         camiones = calc["transporte"]["camiones_jaula"] if calc else 0
         cat_b = sum(calc["transporte"]["vehiculos_categoria_b"].values()) if calc else 0
         camiones_necesarios += camiones
+        asig_animales = [a for a in res_a.asignaciones if a.demanda_id == sid]
+        en_camion = [
+            (min_a[(sid, a.centro_id)], a.cantidad)
+            for a in asig_animales
+            if metodo_a[(sid, a.centro_id)] != METODO_ARREO
+        ]
+        ida_camion = _promedio_ponderado(en_camion)
+        fin_ganado_min: float | None = None
+        if camiones and ida_camion is not None and disp_jaula:
+            rondas_j = math.ceil(camiones / disp_jaula)
+            inicio_j = linea_tiempo.get("camion_jaula", 0.0)
+            fin_ganado_min = round(inicio_j + (2 * rondas_j - 1) * ida_camion, 1)
+            linea_tiempo["camion_jaula"] = fin_ganado_min
+
         advertencias: list[str] = []
         if sin_flota:
             advertencias.append(
@@ -397,11 +643,19 @@ def construir_plan(
             advertencias.append(
                 "Sector aislado: sin accesos transitables (considerar lancha o espera)."
             )
+        if any(metodo_p[(sid, a.centro_id)] == METODO_APROXIMADO for a in asig_centros):
+            advertencias.append(
+                "Tiempo aproximado (línea recta × factor de desvío): no hay ruta por la red vial "
+                "cargada para este sector o la red no está cargada."
+            )
 
         bovinos = calc["bovinos_total"] if calc else 0
         colmenas = i["entrada"].colmenas_vivas
         tipos = cuadrillas.tipos_necesarios(i["personas"] > 0, bovinos, colmenas)
         tipos_cuadrilla.update(tipos)
+        fact = _factibilidad(datos, estado, superficie, fin_min, fin_ganado_min, bovinos > 0)
+        v = fact["personas"]["veredicto"]
+        veredictos[v] = veredictos.get(v, 0) + 1
         detalle.append(
             {
                 "id": sid,
@@ -427,6 +681,7 @@ def construir_plan(
                     "ganaderia": calc,
                 },
                 "ventana": _ventana(datos, estado, bovinos > 0),
+                "factibilidad": fact,
                 "traslado_personas": {
                     "vehiculo": modo,
                     "superficie_acceso": superficie,
@@ -435,18 +690,38 @@ def construir_plan(
                     "rondas": rondas,
                     "sin_flota": sin_flota,
                     "tiempo_ida_min": ida_min,
+                    "tiempo_inicio_min": None if sin_flota else inicio_min,
                     "tiempo_para_completar_min": None if sin_flota else completar_min,
-                    "tiempo_acumulado_min": None if sin_flota else acumulado,
+                    "tiempo_acumulado_min": fin_min,
+                    "metodo_tiempo": sorted({metodo_p[(sid, a.centro_id)] for a in asig_centros}),
+                },
+                "traslado_ganado": {
+                    "camiones_jaula": camiones,
+                    "camiones_disponibles": disp_jaula,
+                    "tiempo_ida_min": ida_camion,
+                    "tiempo_acumulado_min": fin_ganado_min,
+                    "metodo_tiempo": sorted({metodo_a[(sid, a.centro_id)] for a in asig_animales}),
                 },
                 "asignacion_personas": [
-                    {"centro_id": a.centro_id, "centro": a.centro_nombre, "cantidad": a.cantidad}
+                    {
+                        "centro_id": a.centro_id,
+                        "centro": a.centro_nombre,
+                        "cantidad": a.cantidad,
+                        "tiempo_ida_min": min_p[(sid, a.centro_id)],
+                        "metodo_tiempo": metodo_p[(sid, a.centro_id)],
+                    }
                     for a in asig_centros
                 ],
                 "personas_sin_lugar": res_p.sin_lugar.get(sid, 0),
                 "asignacion_animales": [
-                    {"centro_id": a.centro_id, "centro": a.centro_nombre, "cantidad": a.cantidad}
-                    for a in res_a.asignaciones
-                    if a.demanda_id == sid
+                    {
+                        "centro_id": a.centro_id,
+                        "centro": a.centro_nombre,
+                        "cantidad": a.cantidad,
+                        "tiempo_ida_min": min_a[(sid, a.centro_id)],
+                        "metodo_tiempo": metodo_a[(sid, a.centro_id)],
+                    }
+                    for a in asig_animales
                 ],
                 "animales_sin_cupo": res_a.sin_lugar.get(sid, 0),
                 "camiones_jaula": camiones,
@@ -458,7 +733,6 @@ def construir_plan(
             }
         )
 
-    disp_jaula = datos.recursos.get("camion_jaula", {}).get("cantidad", 0)
     roles_faltantes = {
         t: cuadrillas.roles_faltantes(t, datos.roles_cuadrillas.get(t, []))
         for t in sorted(tipos_cuadrilla)
@@ -474,9 +748,17 @@ def construir_plan(
         "viajes_por_vehiculo": viajes_por_vehiculo,
         "camiones_jaula_necesarios": camiones_necesarios,
         "tiempo_primer_sector_min": primer_sector_min,
-        "tiempo_total_min": acumulado,
+        "tiempo_total_min": max(fines, default=0.0),
         "accesos_vulnerables_usados": vulnerables,
         "sectores_por_lancha": aislados_lancha,
+        "sectores_no_alcanzan": veredictos.get(factibilidad.NO_ALCANZA, 0),
+        "sectores_justos": veredictos.get(factibilidad.JUSTO, 0),
+        "sectores_ya_comprometidos": veredictos.get(factibilidad.YA_COMPROMETIDO, 0),
+        "veredictos": veredictos,
+        "metodo_tiempos": metodos_usados,
+        "personas_minuto": round(
+            sum(min_p[(a.demanda_id, a.centro_id)] * a.cantidad for a in res_p.asignaciones), 1
+        ),
         "faltantes": {
             "vehiculos_por_viajes_en_una_ronda": faltantes_veh,
             "camiones_jaula": max(camiones_necesarios - disp_jaula, 0),
@@ -486,9 +768,14 @@ def construir_plan(
         },
         "cupo_personas_total_centros": cupo_personas_total,
     }
+    nombres = {c.id: c.nombre for c in datos.centros}
     return {
         "orden_sectores": orden,
         "centros_excluidos": sorted(excluidos),
+        "centros_descartados": [
+            {"id": cid, "nombre": nombres.get(cid), "motivo": motivo}
+            for cid, motivo in sorted(datos.centros_descartados.items())
+        ],
         "metricas": metricas,
         "sectores": detalle,
         "cupos_restantes_centros": {str(k): v for k, v in res_p.cupos_restantes.items()},
@@ -500,6 +787,9 @@ def _entrada_dict(datos: DatosPlan, caminos: set[int]) -> dict:
         "altura_formosa_m": datos.altura_m,
         "lluvia_mm": datos.lluvia_mm,
         "caminos_cerrados": sorted(caminos),
+        "pronostico_lluvia": None
+        if datos.pronostico is None
+        else {"mm": datos.pronostico.mm, "horas": datos.pronostico.horas, "categoria": "SIMULADO"},
     }
 
 
@@ -511,8 +801,9 @@ def recomendar(
     prioridad: str = "riesgo",
     sectores: list[str] | None = None,
     humedad_suelo: float | None = None,
+    pronostico: Pronostico | None = None,
 ) -> dict:
-    datos = cargar_datos(db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo)
+    datos = cargar_datos(db, altura_m, lluvia_mm, caminos_cerrados, humedad_suelo, pronostico)
     orden = orden_por(datos, prioridad, sectores)
     plan = construir_plan(datos, orden)
     return {
@@ -523,8 +814,11 @@ def recomendar(
         "limites": [
             "Población: la de K10 más las familias registradas es SIMULADA; no hay padrón real.",
             "Capacidad de centros, vehículos y camiones son SIMULADO.",
-            "Los tiempos usan velocidades y factor de desvío SUPUESTO; no son recorridos reales.",
+            *limites_tiempos(datos),
             ascenso.SUPUESTO_LINEAL,
+            "El veredicto de factibilidad compara el tiempo de traslado con el plazo del río (rango "
+            "de tasas observadas) y, si se informa, con la lluvia prevista SIMULADA: no es un "
+            "pronóstico ni una orden.",
         ],
         "categoria": "SIMULADO",
         "fuente": FUENTE,
@@ -539,9 +833,31 @@ ETIQUETAS_METRICAS = {
     "animales_sin_cupo": "Animales sin cupo",
     "camiones_jaula_necesarios": "Camiones jaula necesarios",
     "tiempo_primer_sector_min": "Minutos hasta completar el primer sector",
-    "tiempo_total_min": "Minutos totales (flota compartida, sectores en secuencia)",
+    "tiempo_total_min": "Minutos totales (cada tipo de vehículo en secuencia; tipos en paralelo)",
     "accesos_vulnerables_usados": "Sectores que usan accesos de ripio o tierra",
+    "sectores_no_alcanzan": "Sectores que no alcanzan a evacuarse a tiempo",
+    "sectores_justos": "Sectores que llegan justo (sin holgura)",
+    "personas_minuto": "Personas × minutos de viaje (menor es mejor)",
 }
+
+
+def limites_tiempos(datos: DatosPlan) -> list[str]:
+    """Cómo se calcularon los tiempos de viaje en este escenario."""
+    con_red = any(datos.tiempos_red.values())
+    textos = [
+        "Las velocidades por superficie y el factor de desvío son SUPUESTO.",
+    ]
+    if con_red:
+        textos.append(
+            "Los tiempos con método 'red_vial' salen de la red vial de OpenStreetMap (DOCUMENTO DE "
+            "REFERENCIA) con pgRouting; los 'aproximado' usan línea recta × factor de desvío."
+        )
+    else:
+        textos.append(
+            "No hay red vial cargada: todos los tiempos son aproximados (línea recta × factor de "
+            "desvío); no son recorridos reales."
+        )
+    return textos
 
 
 def comparar(datos: DatosPlan, caminos: set[int], editable: dict | None) -> list[dict]:
