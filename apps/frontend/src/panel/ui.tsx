@@ -1,7 +1,8 @@
-import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, Button, Center, Flex, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, Button, Flex, Heading, Text } from "@chakra-ui/react";
 import type { Categoria } from "@evacuaciones/shared";
 import type { ReactNode } from "react";
 
+import { EstadoCargando } from "../components/EstadoCargando";
 import { AlertaError } from "../components/Formulario";
 import { ESTADOS } from "../estilo/estados";
 import { Insignia } from "../components/Insignia";
@@ -109,11 +110,7 @@ export function Cargando<T>({
   esVacio?: (d: T) => boolean;
 }) {
   if (carga.estado === "cargando") {
-    return (
-      <Center py={8} role="status" aria-label="Cargando" gap={3} color="textoSuave">
-        <Spinner />
-      </Center>
-    );
+    return <EstadoCargando />;
   }
   if (carga.estado === "error") {
     return (

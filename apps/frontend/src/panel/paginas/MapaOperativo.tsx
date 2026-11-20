@@ -243,12 +243,12 @@ function RampaRelieve({ local, cuenca }: { local: [number, string][]; cuenca: [n
   const redondo = (n: number) => Math.round(n);
   return (
     <Box ml={6} my={1} aria-label="Escala de color del relieve" role="group">
-      <Text fontSize="11px" color="textoSuave">
+      <Text fontSize="xs" color="textoSuave">
         Corredor de los sectores: {redondo(local[0][0])} m
         <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(local) }} />
         {redondo(local[local.length - 1][0])} m
       </Text>
-      <Text fontSize="11px" color="textoSuave">
+      <Text fontSize="xs" color="textoSuave">
         Cuenca (vista general): {redondo(cuenca[1][0])} m
         <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(cuenca.slice(1)) }} />
         {redondo(cuenca[cuenca.length - 2][0])}+ m
@@ -271,13 +271,13 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
           </Checkbox>
           <Flex ml={6} gap={2} align="center" wrap="wrap">
             <Insignia categoria={c.categoria} />
-            <Text fontSize="11px" color="textoSuave">
+            <Text fontSize="xs" color="textoSuave">
               Fuente: {c.nombre_fuente}. Fecha de actualización: {fmtFecha(c.fecha_actualizacion)}. {c.licencia.split(".")[0]}.
             </Text>
           </Flex>
           {c.id === "relieve" && c.rampa_local && c.rampa_cuenca && <RampaRelieve local={c.rampa_local} cuenca={c.rampa_cuenca} />}
           {c.nota && (
-            <Text ml={6} fontSize="11px" color="pizarra.700">
+            <Text ml={6} fontSize="xs" color="pizarra.700">
               {c.nota}
             </Text>
           )}
@@ -286,7 +286,7 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
       <Checkbox size="sm" isChecked={osm} onChange={(e) => setOsm(e.target.checked)}>
         Fondo OpenStreetMap (requiere internet)
       </Checkbox>
-      <Text ml={6} fontSize="11px" color="textoSuave">
+      <Text ml={6} fontSize="xs" color="textoSuave">
         Sin conexión el mapa usa fondo liso y las capas incluidas en el repositorio. © colaboradores de OpenStreetMap (ODbL).
       </Text>
     </Box>

@@ -1,6 +1,7 @@
-import { Alert, AlertIcon, Badge, Box, Flex, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, Badge, Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { CATEGORIAS } from "@evacuaciones/shared";
 
+import { EstadoCargando } from "../../components/EstadoCargando";
 import { Insignia } from "../../components/Insignia";
 import { ApiError, solicitar } from "../../lib/api";
 import { fechaCorta, fechaHora } from "../../lib/etiquetas";
@@ -57,11 +58,7 @@ export function EstadoSector() {
         </Heading>
         <Insignia categoria={CATEGORIAS.SIMULADO} />
       </Flex>
-      {carga.estado === "cargando" && (
-        <Text display="flex" alignItems="center" gap={2}>
-          <Spinner size="sm" /> Cargando…
-        </Text>
-      )}
+      {carga.estado === "cargando" && <EstadoCargando py={4} />}
       {carga.estado === "error" && (
         <Alert status={carga.error instanceof ApiError && carga.error.estado === 404 ? "info" : "error"} fontSize="sm" role="alert">
           <AlertIcon />
