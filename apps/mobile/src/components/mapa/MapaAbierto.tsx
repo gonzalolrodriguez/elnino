@@ -8,6 +8,7 @@ import { BASE_URL_MAPA, construirHtml } from "@/lib/mapaHtml";
 import {
   parsearMensajeDelMapa,
   TEXTO_MAPA_SIN_INTERNET,
+  type LineaCapa,
   type MensajeAlMapa,
   type Par,
   type PuntoCapa,
@@ -24,6 +25,8 @@ type Props = {
   alto?: number | "lleno";
   sectores?: SectorMapa[];
   puntos?: PuntoCapa[];
+  /** Trazos (p. ej. el desvío del operativo), dibujados sobre el fondo y debajo de los puntos. */
+  lineas?: LineaCapa[];
   /** Puntos que deben quedar a la vista. Sin esto el mapa queda en Formosa. */
   encuadre?: Par[];
   zoomMax?: number;
@@ -71,6 +74,7 @@ export function MapaAbierto({
   alto,
   sectores,
   puntos,
+  lineas,
   encuadre,
   zoomMax,
   seleccion,
@@ -111,13 +115,13 @@ export function MapaAbierto({
   }, []);
 
   // Cada prop se vuelve a enviar solo cuando cambia su contenido (se compara por JSON, no por identidad).
-  const claveCapas = JSON.stringify([sectores ?? [], puntos ?? []]);
+  const claveCapas = JSON.stringify([sectores ?? [], puntos ?? [], lineas ?? []]);
   const claveEncuadre = JSON.stringify([encuadre ?? null, zoomMax ?? null]);
   const claveSeleccion = JSON.stringify([seleccion ?? null, !!alElegir]);
   const claveRuta = JSON.stringify([ruta ?? null, vehiculo, reducido]);
 
   useEffect(() => {
-    mandar({ t: "capas", sectores: sectores ?? [], puntos: puntos ?? [] });
+    mandar({ t: "capas", sectores: sectores ?? [], puntos: puntos ?? [], lineas: lineas ?? [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claveCapas, mandar, intento]);
   useEffect(() => {

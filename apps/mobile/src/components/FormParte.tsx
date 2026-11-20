@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Image, Text, View } from "react-native";
 
 import { Boton, Campo, ErrorCaja, FilaBotones, Insignia, Opcion, Opciones, Subtitulo, Tarjeta, Texto } from "@/components/ui";
+import { formatearBytes, MAX_ADJUNTOS_PARTE, validarAdjunto, type AdjuntoLocal } from "@/lib/adjuntos";
 import { useCola } from "@/lib/ColaContext";
+import { elegirAdjunto } from "@/lib/dispositivo";
 import {
   armarParte,
   etiquetaResultadoParte,
@@ -49,12 +51,36 @@ export function FormParte({
   const [observacion, setObservacion] = useState("");
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [final, setFinal] = useState<{ enviada: boolean } | null>(null);
+  const [final, setFinal] = useState<{ enviada: boolean; archivosPendientes: boolean } | null>(null);
+  const [adjuntos, setAdjuntos] = useState<AdjuntoLocal[]>([]);
+  const [errorAdjunto, setErrorAdjunto] = useState<string | null>(null);
+  const [eligiendo, setEligiendo] = useState(false);
 
   const obligatoria = exigeObservacion(tipo, tipo === "resultado" ? resultado : null);
 
+  const agregar = async (fuente: "camara" | "galeria") => {
+    setErrorAdjunto(null);
+    setEligiendo(true);
+    try {
+      const r = await elegirAdjunto(fuente);
+      if (!r.ok) {
+        if (r.motivo === "permiso") setErrorAdjunto("Sin permiso de cámara. Habilitalo en los ajustes del teléfono.");
+        else if (r.motivo === "error") setErrorAdjunto("No se pudo obtener el archivo. Probá de nuevo.");
+        return;
+      }
+      const v = validarAdjunto(r.adjunto, adjuntos.length);
+      if (!v.ok) {
+        setErrorAdjunto(v.mensaje);
+        return;
+      }
+      setAdjuntos((l) => (l.length < MAX_ADJUNTOS_PARTE ? [...l, r.adjunto] : l));
+    } finally {
+      setEligiendo(false);
+    }
+  };
+
   const mandar = async () => {
-    const r = armarParte({ tareaId, tipo, resultado, observacion });
+    const r = armarParte({ tareaId, tipo, resultado, observacion, adjuntos });
     if (!r.ok) {
       setError(r.mensaje);
       return;
@@ -73,7 +99,7 @@ export function FormParte({
         setError(`El servidor no aceptó el parte: ${envio.rechazada}`);
         return;
       }
-      setFinal({ enviada: envio.enviadaYa });
+      setFinal({ enviada: envio.enviadaYa, archivosPendientes: envio.fotoPendiente });
       alEnviado(envio.enviadaYa);
     } catch {
       setError("No se pudo guardar el parte en el teléfono.");
@@ -89,7 +115,9 @@ export function FormParte({
         <Texto>
           {final.enviada
             ? "El operador ya lo tiene."
-            : "Pendiente de envío: se manda solo cuando haya conexión; no hace falta cargarlo de nuevo."}
+            : final.archivosPendientes
+              ? "El parte ya llegó. Las fotos y los videos esperan su turno y se suben solos cuando haya conexión."
+              : "Pendiente de envío: se manda solo cuando haya conexión; no hace falta cargarlo de nuevo."}
         </Texto>
         <Insignia categoria="SIMULADO" />
         <Boton titulo="Listo" variante="secundario" onPress={alCerrar} />
@@ -119,6 +147,42 @@ export function FormParte({
         maxLength={OBSERVACION_MAX}
         style={{ minHeight: 80, textAlignVertical: "top" }}
       />
+
+      <Text style={{ fontWeight: "600" }}>
+        Evidencia: fotos o videos ({adjuntos.length} de {MAX_ADJUNTOS_PARTE})
+      </Text>
+      <Texto suave pequeno>
+        Foto hasta 5 MB o video MP4 hasta 20 MB. No saques fotos de caras ni de menores. Se suben después del parte, solas, cuando haya conexión.
+      </Texto>
+      {adjuntos.map((a, i) => (
+        <View key={a.uri} style={{ gap: 6 }}>
+          {a.tipo === "imagen" ? (
+            <Image
+              source={{ uri: a.uri }}
+              style={{ width: "100%", aspectRatio: 4 / 3, maxHeight: 180, borderRadius: 12 }}
+              resizeMode="cover"
+              accessibilityLabel={`Foto ${i + 1}`}
+            />
+          ) : null}
+          <Texto>
+            {a.tipo === "video" ? "Video" : "Foto"} {i + 1}
+            {a.bytes !== null ? ` · ${formatearBytes(a.bytes)}` : ""}
+          </Texto>
+          <Boton
+            titulo={`Quitar ${a.tipo === "video" ? "video" : "foto"} ${i + 1}`}
+            variante="secundario"
+            onPress={() => setAdjuntos((l) => l.filter((x) => x.uri !== a.uri))}
+          />
+        </View>
+      ))}
+      {adjuntos.length < MAX_ADJUNTOS_PARTE ? (
+        <FilaBotones>
+          <Boton titulo="Sacar foto o video" variante="secundario" onPress={() => void agregar("camara")} deshabilitado={eligiendo || trabajando} />
+          <Boton titulo="Elegir de la galería" variante="secundario" onPress={() => void agregar("galeria")} deshabilitado={eligiendo || trabajando} />
+        </FilaBotones>
+      ) : null}
+      {errorAdjunto ? <ErrorCaja mensaje={errorAdjunto} /> : null}
+
       {error ? <ErrorCaja mensaje={error} /> : null}
       <FilaBotones>
         <Boton titulo="Enviar parte" onPress={() => void mandar()} cargando={trabajando} />

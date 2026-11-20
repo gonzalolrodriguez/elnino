@@ -2,7 +2,9 @@ import { Image } from "react-native";
 
 import { ErrorApi, peticion } from "@/lib/api";
 import { canonicaRespuesta } from "@/lib/respuestas";
-import { esCierre, esConfirmacion, esParte, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosParte, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
+import { nombreParaSubir } from "@/lib/adjuntos";
+import { esAvisoLeido, esCierre, esConfirmacion, esParte, type DatosAvisoLeido, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosParte, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
+import type { AvisoCuadrilla, CuadrillaDetalle } from "@/lib/cuadrillas";
 import { cuerpoParte, type ParteTarea } from "@/lib/partes";
 
 export type { ParteTarea, ResultadoParte, TipoParte } from "@/lib/partes";
@@ -215,6 +217,8 @@ export type Tarea = {
   sector_id: string | null;
   checklist: ItemChecklist[] | null;
   actualizado_en: string;
+  /** Cuadrilla asignada: de acá sale la cuadrilla del integrante (ausente en backends anteriores). */
+  cuadrilla_id?: number | null;
   /** Una tarea que volvió a `pendiente` tras un parte parcial, no realizado o reprogramado. */
   requiere_atencion?: boolean;
   ultimo_parte?: ParteTarea | null;
@@ -403,6 +407,17 @@ export async function enviarParte(datos: DatosParte, clave: string): Promise<Res
   }
 }
 
+/** Marca un aviso del operativo como leído. Un 409 (ya estaba leído) cuenta como hecho. */
+export async function enviarAvisoLeido(datos: DatosAvisoLeido): Promise<ResultadoEnvio> {
+  try {
+    await peticion<unknown>(`/avisos/${datos.aviso_id}/leido`, { metodo: "POST" });
+    return { ok: true, servidorId: datos.aviso_id };
+  } catch (e) {
+    if (e instanceof ErrorApi && e.estado === 409) return { ok: true, servidorId: datos.aviso_id };
+    return clasificar(e);
+  }
+}
+
 /** Respuesta del evacuado: 201 la primera vez, 200 repetida; otra respuesta distinta da 409 (rechazo). */
 export async function enviarConfirmacion(datos: DatosConfirmacion): Promise<ResultadoEnvio> {
   try {
@@ -425,6 +440,7 @@ export function enviarItem(datos: DatosCola, clave: string): Promise<ResultadoEn
   if (esCierre(datos)) return enviarCierre(datos, clave);
   if (esConfirmacion(datos)) return enviarConfirmacion(datos);
   if (esParte(datos)) return enviarParte(datos, clave);
+  if (esAvisoLeido(datos)) return enviarAvisoLeido(datos);
   return enviarSolicitud(datos, clave);
 }
 
@@ -458,19 +474,33 @@ export async function subirFotoSolicitud(servidorId: number, fotoUri: string): P
 
 /** Despacha la subida de la foto: a la solicitud o a la constancia del cierre (`servidorId` = tarea). */
 export function subirFotoItem(servidorId: number, fotoUri: string, datos: DatosCola): Promise<ResultadoFoto> {
+  if (esParte(datos)) {
+    // `servidorId` es el id del parte. La evidencia puede ser foto o video (hasta 5 por parte).
+    const a = (datos.adjuntos ?? []).find((x) => x.uri === fotoUri);
+    return subirFotoA(`/tareas/${datos.tarea_id}/partes/${servidorId}/adjuntos`, fotoUri, {
+      name: nombreParaSubir({ tipo: a?.tipo ?? "imagen" }),
+      type: a?.mime ?? "image/jpeg",
+      esVideo: a?.tipo === "video",
+    });
+  }
   return subirFotoA(esCierre(datos) ? `/tareas/${servidorId}/cierre/adjuntos` : `/solicitudes/${servidorId}/adjuntos`, fotoUri);
 }
 
-async function subirFotoA(ruta: string, fotoUri: string): Promise<ResultadoFoto> {
+async function subirFotoA(
+  ruta: string,
+  fotoUri: string,
+  archivo: { name: string; type: string; esVideo?: boolean } = { name: "foto.jpg", type: "image/jpeg" },
+): Promise<ResultadoFoto> {
   try {
     const form = new FormData();
     // En React Native un archivo local se adjunta como { uri, name, type }.
-    form.append("archivo", { uri: fotoUri, name: "foto.jpg", type: "image/jpeg" } as unknown as Blob);
+    form.append("archivo", { uri: fotoUri, name: archivo.name, type: archivo.type } as unknown as Blob);
     await peticion<unknown>(ruta, { metodo: "POST", cuerpo: form });
     return { ok: true };
   } catch (e) {
     const falla = clasificar(e);
-    if (falla.tipo === "red" && !(await archivoExiste(fotoUri))) {
+    // `Image.getSize` no sirve para un video: ahí solo se reintenta (y se abandona tras los intentos máximos).
+    if (falla.tipo === "red" && !archivo.esVideo && !(await archivoExiste(fotoUri))) {
       return { ok: false, tipo: "rechazo", mensaje: "la foto ya no está en el teléfono" };
     }
     return falla;
@@ -499,6 +529,8 @@ export const api = {
   centros: () => peticion<{ centros: Centro[] }>("/centros"),
   sectoresGeo: () => peticion<GeoSectores>("/sectores", { auth: false }),
   tareas: () => peticion<{ tareas: Tarea[] }>("/tareas"),
+  cuadrilla: (id: number) => peticion<CuadrillaDetalle>(`/cuadrillas/${id}`),
+  avisosCuadrilla: (id: number) => peticion<{ items: AvisoCuadrilla[] }>(`/cuadrillas/${id}/avisos`),
   partesDeTarea: (id: number) => peticion<{ items: ParteTarea[] }>(`/tareas/${id}/partes`),
   actualizarTarea: (
     id: number,
