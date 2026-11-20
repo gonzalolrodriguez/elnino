@@ -23,7 +23,12 @@
 - `GET /mi/pedidos`: cada ítem agrega `"novedad": null | { "tipo": "demora|dificultad|parcial|no_realizada|reprogramada", "en" }` (la última novedad relevante, sin el texto de la observación).
 - Migración `0010`.
 
-## Tareas
+## Contrato del recorrido animado (lo implementa R1; R2 lo consume)
+
+- En `GET /mi/pedidos`, `seguimiento` agrega `"ruta": null | { "coordenadas": [[lon, lat], ...], "distancia_km", "llegada_estimada_min", "metodo": "red_vial|aproximado", "simulada": bool, "progreso": 0..1, "velocidad_kmh", "calculada_en" }`. `distancia_km` y `llegada_estimada_min` de `seguimiento` pasan a calcularse sobre la ruta cuando hay red vial.
+- Ruta por pgRouting sobre `red_vial` desde la posición de la cuadrilla hasta el pedido, excluyendo caminos cerrados y anegados del escenario vigente; si no hay red, línea recta × factor de desvío (`metodo: aproximado`).
+- Modo demostración (`seguimiento_demo` en `supuestos.yaml`, SIMULADO): con la tarea `en_curso` y sin posición real fresca, el servidor ubica al móvil sobre la ruta según el tiempo transcurrido desde el inicio de la tarea y la velocidad supuesta, saliendo de una base SIMULADA; `simulada: true`.
+
 
 | ID | Tarea | Agente y archivos | Estado |
 |---|---|---|---|
@@ -32,6 +37,8 @@
 | K3 | Web: página de la cuadrilla con partes (avance, dificultad, resultado) e historial; novedad en Mi cuenta | web-cuadrilla | Pendiente |
 | K4 | App: partes en el modo cuadrilla; novedad en Mis pedidos | app | Pendiente |
 | K5 | Rediseño visual del panel (layout, primitivas, Tablero) | web-panel-visual | Pendiente |
+| R1 | Backend: ruta de la cuadrilla al pedido por la red vial y modo demostración | backend-ruta | Pendiente |
+| R2 | Web: mapa animado estilo seguimiento de vehículo en Mi cuenta | web-ruta | Pendiente |
 | K6 | Integración: merges, insertar `NovedadesCuadrillas` en el Tablero, tests, capturas, PR | coordinador | Pendiente |
 
 Reglas para no pisarse: cada agente toca solo sus archivos; nadie edita `src/test/utils.ts` ni este archivo (solo el coordinador); `docs/` solo K1.
