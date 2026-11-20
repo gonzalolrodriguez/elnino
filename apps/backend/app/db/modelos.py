@@ -376,6 +376,8 @@ class Cuadrilla(Base):
     nombre: Mapped[str] = mapped_column(String(120))
     tipo_incidente: Mapped[str] = mapped_column(String(40))  # humana|ganadera|apicola
     estado: Mapped[str] = mapped_column(String(20), default="disponible")
+    # SIMULADO: 4x4|camion_jaula|colectivo|lancha|moto; NULL = sin vehículo asignado
+    vehiculo: Mapped[str | None] = mapped_column(String(20))
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 
@@ -467,9 +469,8 @@ class ConfirmacionEvacuado(Base):
     )
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     canal: Mapped[str | None] = mapped_column(String(20))  # app|sms_sim|whatsapp_sim|ivr_sim
-    respuesta: Mapped[str | None] = mapped_column(
-        String(10)
-    )  # si|no|problema; NULL = sin responder
+    # completa|parcial|no_encontraron|no_vinieron|otro_problema; NULL = sin responder
+    respuesta: Mapped[str | None] = mapped_column(String(20))
     comentario: Mapped[str | None] = mapped_column(Text)
     codigo: Mapped[str] = mapped_column(String(8), unique=True)
     creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)

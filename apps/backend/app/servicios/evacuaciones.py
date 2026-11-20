@@ -51,6 +51,8 @@ PROTOTIPO = "[PROTOTIPO: no es una herramienta oficial]"
 TEXTO_MOTIVO = {
     dom.MOTIVO_NO: "el evacuado dice que no llegó",
     dom.MOTIVO_PROBLEMA: "el evacuado reportó un problema",
+    dom.MOTIVO_PARCIAL: "el evacuado dice que la asistencia fue parcial",
+    dom.MOTIVO_NO_ENCONTRARON: "el evacuado dice que la cuadrilla no lo encontró",
     dom.MOTIVO_LEJOS: "el destino registrado queda lejos del centro elegido",
 }
 
@@ -302,7 +304,7 @@ def _notificar_confirmacion(
             mensaje=(
                 f"¿Llegaste a {destino}? La cuadrilla registró tu traslado (pedido "
                 f"#{solicitud.id}). Respondé en la app o por SMS desde tu teléfono registrado: "
-                f"SI {codigo}, NO {codigo} o PROBLEMA {codigo} y el detalle. {PROTOTIPO}"
+                f"SI {codigo}, PARCIAL {codigo}, NO {codigo} o PROBLEMA {codigo} y el detalle. {PROTOTIPO}"
             ),
             datos={
                 "tarea_id": tarea_id,
@@ -413,8 +415,10 @@ def registrar_confirmacion(
         .with_for_update()
         .execution_options(populate_existing=True)
     ).scalar_one()
+    respuesta = dom.normalizar_respuesta(respuesta) or respuesta
     if k.respuesta is not None:
-        return ("repetida" if k.respuesta == respuesta else "conflicto"), k, Resultado()
+        previa = dom.normalizar_respuesta(k.respuesta)
+        return ("repetida" if previa == respuesta else "conflicto"), k, Resultado()
     tarea = db.get(Tarea, k.tarea_id)
     constancia = db.execute(
         select(ConstanciaTarea).where(ConstanciaTarea.tarea_id == k.tarea_id)

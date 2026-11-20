@@ -3,6 +3,7 @@
 - ``POST /cuadrillas/mi-posicion``: la cuadrilla comparte su posición mientras tiene una tarea en
   curso (rate limit por cuadrilla).
 - ``GET /mi/seguimiento``: la ciudadanía y los productores ven la cuadrilla de SUS pedidos en curso.
+- ``GET /mi/pedidos``: los pedidos propios con su línea de tiempo (ver ``app.servicios.pedidos``).
 - ``GET /cuadrillas/posiciones``: los roles operativos ven dónde está cada cuadrilla.
 
 Privacidad (Ley 25.326): se guarda solo la última posición, solo mientras hay una tarea en curso, y
@@ -22,6 +23,7 @@ from app.core.rbac import ip_cliente, requiere_rol
 from app.core.tiempo import hoy_ar
 from app.db.modelos import Usuario
 from app.db.sesion import get_db
+from app.servicios import pedidos
 from app.servicios import seguimiento as srv
 
 router = APIRouter(tags=["seguimiento"])
@@ -81,6 +83,15 @@ def mi_seguimiento(
         "fuente": srv.FUENTE,
         "fecha_dato": hoy_ar().isoformat(),
     }
+
+
+@router.get("/mi/pedidos")
+def mis_pedidos(
+    usuario: Usuario = Depends(requiere_rol("ciudadano", "productor")),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Pedidos propios con línea de tiempo, cuadrilla (por rol), vehículo, seguimiento y centro."""
+    return {"categoria": pedidos.CATEGORIA, "items": pedidos.pedidos_de(db, usuario.id)}
 
 
 @router.get("/cuadrillas/posiciones")
