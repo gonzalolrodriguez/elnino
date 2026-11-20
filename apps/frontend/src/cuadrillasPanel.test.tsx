@@ -193,7 +193,7 @@ describe("Operación: partes por tarea", () => {
       "PATCH /partes/3": ok({ ...PARTE_DIFICULTAD, resuelta: true }),
     });
     renderRuta("/comando/operacion");
-    const fila = (await screen.findByText("Evacuar familia")).closest("tr") as HTMLElement;
+    const fila = (await screen.findByText("Evacuar familia")).closest("li") as HTMLElement;
     expect(within(fila).getByTestId("requiere-atencion")).toBeInTheDocument();
     fireEvent.click(within(fila).getByRole("button", { name: "Ver partes de la tarea 7" }));
     const historial = await screen.findByTestId("partes-tarea-7");
