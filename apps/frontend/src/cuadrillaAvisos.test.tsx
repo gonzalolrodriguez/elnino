@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contarNoLeidos, coordenadasDesvio, ordenarAvisos, type Aviso } from "./lib/avisos";
@@ -56,7 +56,10 @@ class FakeWS {
   onopen: (() => void) | null = null;
   onmessage: ((m: { data: string }) => void) | null = null;
   onclose: ((c: { code: number }) => void) | null = null;
-  constructor(public url: string) {}
+  static instancias: FakeWS[] = [];
+  constructor(public url: string) {
+    FakeWS.instancias.push(this);
+  }
   send() {}
   close() {}
 }
@@ -98,14 +101,15 @@ function conSesion(extra: Rutas = {}) {
     "GET /tareas/7/partes": ok({ items: [] }),
     "GET /mi/notificaciones": ok({ notificaciones: [], no_leidas: 0 }),
     "GET /cuadrillas/1/avisos": ok({ items: AVISOS }),
-    "GET /cuadrillas/1": ok({
+    "GET /mi/cuadrilla": ok({
       id: 1,
+      avisos_sin_leer: 2,
       nombre: "Cuadrilla ganadera 1",
       tipo_operativo: "productores_ganado",
-      vehiculo: "Camión jaula",
+      vehiculo: "camion_jaula",
       equipamiento: ["Mangas portátiles", "Linternas"],
       integrantes: [
-        { id: 10, usuario_id: 5, rol_operativo: "zootecnista", profesion: "zootecnia", es_encargado: true, nombre_visible: "Nombre Ficticio" },
+        { id: 10, usuario_id: 5, rol_operativo: "zootecnista", profesion: "zootecnia", es_encargado: true, nombre_visible: null },
         { id: 11, usuario_id: null, rol_operativo: "policia", profesion: "policia", es_encargado: false, nombre_visible: null },
       ],
     }),
@@ -119,6 +123,7 @@ beforeEach(() => {
   fijarToken(null);
   mocks.mapas.length = 0;
   mocks.marcadores.length = 0;
+  FakeWS.instancias.length = 0;
   vi.stubGlobal("WebSocket", FakeWS);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -219,6 +224,25 @@ describe("avisos del operativo (pantalla)", () => {
     expect(within(resumen).getByTestId("integrante-10")).toHaveTextContent("encargado");
     expect(resumen).not.toHaveTextContent("Nombre Ficticio");
   });
+
+  it("sin cuadrilla (404 de /mi/cuadrilla) muestra el estado vacío y no pide avisos", async () => {
+    const f = conSesion({ "GET /mi/cuadrilla": () => ({ estado: 404, json: { error: { codigo: "no_encontrado", mensaje: "No integrás ninguna cuadrilla", detalle: [] } } }) });
+    renderRuta("/cuadrilla");
+    expect(await screen.findByText(/Todavía no integrás ninguna cuadrilla/)).toBeInTheDocument();
+    expect(screen.queryByTestId("mi-cuadrilla")).not.toBeInTheDocument();
+    expect(await screen.findByText("El operativo no te mandó avisos por ahora.")).toBeInTheDocument();
+    expect(llamadas(f, "GET /cuadrillas/1/avisos")).toHaveLength(0);
+  });
+
+  it("el evento aviso_cuadrilla del tiempo real vuelve a pedir los avisos", async () => {
+    const f = conSesion();
+    renderRuta("/cuadrilla");
+    await screen.findByTestId("aviso-3");
+    const antes = llamadas(f, "GET /cuadrillas/1/avisos").length;
+    const ws = FakeWS.instancias[FakeWS.instancias.length - 1];
+    act(() => ws.onmessage?.({ data: JSON.stringify({ tipo: "aviso_cuadrilla", datos: { id: 9, cuadrilla_id: 1, tipo: "desvio", accion: "creado" } }) }));
+    await waitFor(() => expect(llamadas(f, "GET /cuadrillas/1/avisos").length).toBeGreaterThan(antes));
+  });
 });
 
 describe("evidencia en los partes", () => {
@@ -234,6 +258,10 @@ describe("evidencia en los partes", () => {
     expect(validarAdjunto(foto("a.mp4", "video/mp4", 21 * 1024 * 1024))).toMatch(/20 MB/);
     expect(validarAdjunto(foto("a.png", "image/png", 6 * 1024 * 1024))).toMatch(/5 MB/);
     expect(validarAdjunto(foto("a.pdf", "application/pdf"))).toMatch(/solo se aceptan/);
+    // Los videos de iPhone (.mov) se aceptan, también cuando el navegador no informa su tipo.
+    expect(validarAdjunto(foto("a.mov", "video/quicktime", 10 * 1024 * 1024))).toBeNull();
+    expect(validarAdjunto(foto("b.MOV", "", 10 * 1024 * 1024))).toBeNull();
+    expect(validarAdjunto(foto("a.mov", "video/quicktime", 21 * 1024 * 1024))).toMatch(/20 MB/);
     const r = sumarAdjuntos([1, 2, 3, 4].map((i) => foto(`f${i}.jpg`)), [foto("f5.jpg"), foto("f6.jpg")]);
     expect(r.lista).toHaveLength(5);
     expect(r.errores).toHaveLength(1);

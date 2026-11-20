@@ -1,8 +1,9 @@
 import { Box, Button, Checkbox, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { AlertaError } from "../components/Formulario";
+import { ApiError } from "../lib/api";
 import { IconoCamion, IconoTriangulo } from "../components/iconos/Iconos";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
@@ -22,7 +23,7 @@ import { AvisosOperativo, InsigniaAvisos } from "./cuadrilla/AvisosOperativo";
 import { HistorialPartes } from "./cuadrilla/HistorialPartes";
 import { MiCuadrilla } from "./cuadrilla/MiCuadrilla";
 import { useAvisos } from "./cuadrilla/useAvisos";
-import { contarNoLeidos } from "../lib/avisos";
+import { contarNoLeidos, miCuadrilla } from "../lib/avisos";
 
 const ESTADOS_WS = { conectado: "Tiempo real conectado", conectando: "Conectando tiempo real…", desconectado: "Tiempo real desconectado" } as const;
 
@@ -155,11 +156,20 @@ export default function Cuadrilla() {
   const { token } = useAuth();
   const tareas = useCarga(() => api.tareas().then((r) => r.tareas));
   const avisos = useCarga(() => api.notificaciones().then((r) => r.notificaciones));
+  // La cuadrilla del usuario sale de `GET /mi/cuadrilla`; un 404 es «todavía no integrás ninguna» (estado vacío, no error).
+  const cuadrilla = useCarga(() =>
+    miCuadrilla().catch((e: unknown) => {
+      if (e instanceof ApiError && e.estado === 404) return null;
+      throw e;
+    }),
+  );
+  const [senalAvisos, setSenalAvisos] = useState(0);
   const [locales, setLocales] = useState<Record<number, Tarea>>({});
   const [leidas, setLeidas] = useState<number[]>([]);
   const [errorAviso, setErrorAviso] = useState<unknown>(null);
   const { recargar: recargarTareas } = tareas;
   const { recargar: recargarAvisos } = avisos;
+  const { recargar: recargarCuadrilla } = cuadrilla;
 
   const alEvento = useCallback(
     (e: EventoTiempoReal) => {
@@ -167,17 +177,18 @@ export default function Cuadrilla() {
         setLocales({});
         recargarTareas();
       } else if (e.tipo === "orden") recargarAvisos();
+      else if (e.tipo === "aviso_cuadrilla") {
+        setSenalAvisos((n) => n + 1);
+        recargarCuadrilla();
+      }
     },
-    [recargarTareas, recargarAvisos],
+    [recargarTareas, recargarAvisos, recargarCuadrilla],
   );
   const ws = useTiempoReal(token, alEvento);
 
-  // La cuadrilla (o cuadrillas) del usuario sale de sus tareas; los avisos y el resumen se piden por id.
-  const cuadrillaIds = useMemo(
-    () => [...new Set((tareas.datos ?? []).map((t) => t.cuadrilla_id).filter((x): x is number => typeof x === "number"))].sort((x, y) => x - y),
-    [tareas.datos],
-  );
-  const avisosOp = useAvisos(cuadrillaIds);
+  const propia = cuadrilla.estado === "ok" ? cuadrilla.datos : null;
+  const cuadrillaIds = propia ? [propia.id] : [];
+  const avisosOp = useAvisos(cuadrillaIds, senalAvisos);
   const noLeidos = contarNoLeidos(avisosOp.avisos);
 
   async function marcar(id: number) {
@@ -240,15 +251,14 @@ export default function Cuadrilla() {
         />
       </Seccion>
 
-      {cuadrillaIds.length > 0 && (
-        <Seccion titulo="Mi cuadrilla" categoria="SIMULADO" id="sec-mi-cuadrilla">
-          <Stack spacing={4}>
-            {cuadrillaIds.map((id) => (
-              <MiCuadrilla key={id} cuadrillaId={id} />
-            ))}
-          </Stack>
-        </Seccion>
-      )}
+      <Seccion titulo="Mi cuadrilla" categoria="SIMULADO" id="sec-mi-cuadrilla">
+        <Cargando
+          carga={cuadrilla}
+          esVacio={(d) => d === null}
+          vacio="Todavía no integrás ninguna cuadrilla. Cuando la administración te sume a una, la vas a ver acá."
+          hijos={(d) => (d ? <MiCuadrilla cuadrilla={d} /> : null)}
+        />
+      </Seccion>
 
       <Seccion titulo="Mi ubicación" categoria="SIMULADO" id="sec-ubicacion">
         <CompartirUbicacion hayTareaEnCurso={(tareas.datos ?? []).some((t) => (locales[t.id] ?? t).estado === "en_curso")} />

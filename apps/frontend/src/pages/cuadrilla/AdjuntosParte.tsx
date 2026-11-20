@@ -2,7 +2,7 @@ import { Box, Button, Flex, FormControl, FormHelperText, FormLabel, Text } from 
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { IconoCaja, IconoMas } from "../../components/iconos/Iconos";
-import { ACEPTA_ADJUNTOS, descargarAdjuntoParte, esVideo, formatearBytes, MAX_ADJUNTOS_PARTE, sumarAdjuntos, type AdjuntoParte } from "../../lib/partes";
+import { ACEPTA_ADJUNTOS, descargarAdjuntoParte, esVideo, formatearBytes, MAX_ADJUNTOS_PARTE, sumarAdjuntos, tipoEfectivo, type AdjuntoParte } from "../../lib/partes";
 
 export type EstadoArchivo = "pendiente" | "subiendo" | "ok" | "error";
 export type ProgresoArchivo = { estado: EstadoArchivo; mensaje?: string };
@@ -18,7 +18,7 @@ function urlLocal(f: File): string | null {
 /** Vista previa local de un archivo elegido. */
 function Previa({ archivo, url }: { archivo: File; url: string | null }) {
   if (!url) return <Flex align="center" justify="center" w="4rem" h="4rem" borderRadius="md" bg="pizarra.100" aria-hidden="true"><IconoCaja tam="1.5rem" /></Flex>;
-  return esVideo(archivo.type) ? (
+  return esVideo(tipoEfectivo(archivo)) ? (
     <Box as="video" src={url} muted preload="metadata" w="4rem" h="4rem" objectFit="cover" borderRadius="md" aria-label={`Vista previa del video ${archivo.name}`} />
   ) : (
     <Box as="img" src={url} alt={`Vista previa de ${archivo.name}`} w="4rem" h="4rem" objectFit="cover" borderRadius="md" />
@@ -63,7 +63,7 @@ export function SelectorAdjuntos({ idBase, archivos, alCambiar, progreso, bloque
       </Flex>
       <input ref={refCamara} id={`adj-cam-${idBase}`} type="file" accept={ACEPTA_ADJUNTOS} capture="environment" hidden onChange={agregar} aria-label="Sacar foto o video con la cámara" />
       <input ref={refGaleria} id={`adj-gal-${idBase}`} type="file" accept={ACEPTA_ADJUNTOS} multiple hidden onChange={agregar} aria-label="Elegir fotos o videos de la galería" />
-      <FormHelperText>Imágenes JPEG, PNG o WebP de hasta 5 MB; videos MP4 de hasta 20 MB. No filmes ni fotografíes caras ni menores de edad.</FormHelperText>
+      <FormHelperText>Imágenes JPEG, PNG o WebP de hasta 5 MB; videos MP4 o MOV de hasta 20 MB. No filmes ni fotografíes caras ni menores de edad.</FormHelperText>
 
       {errores.length > 0 && (
         <Box mt={2} role="alert" fontSize="sm" color="evacuacion.700" data-testid="errores-adjuntos">

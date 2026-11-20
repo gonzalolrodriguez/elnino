@@ -14,6 +14,7 @@ export type Aviso = {
   geometria?: GeometriaAviso | null;
   tarea_id?: number | null;
   creado_en: string;
+  creado_por_rol?: string | null;
   leido_en?: string | null;
   leido_por_rol?: string | null;
 };
@@ -29,6 +30,8 @@ export type CuadrillaPropia = {
   vehiculo?: string | null;
   equipamiento?: string[] | null;
   integrantes?: IntegranteVista[];
+  /** `GET /mi/cuadrilla` informa cuántos avisos de la cuadrilla nadie leyó todavía. */
+  avisos_sin_leer?: number;
 };
 
 export const ETIQUETA_TIPO_AVISO: Record<TipoAviso, string> = {
@@ -65,18 +68,12 @@ export const ETIQUETA_PROFESION: Record<string, string> = {
 
 const a = { autenticado: true } as const;
 
-/** Acepta `[...]`, `{ items }` o `{ avisos }`: el contrato no fija el sobre de la lista. */
-function comoLista<T>(r: unknown, clave: string): T[] {
-  if (Array.isArray(r)) return r as T[];
-  const o = r as Record<string, unknown> | null;
-  if (o && Array.isArray(o[clave])) return o[clave] as T[];
-  if (o && Array.isArray(o.items)) return o.items as T[];
-  return [];
-}
-
-export const avisosDeCuadrilla = (cuadrillaId: number) => solicitar<unknown>(`/cuadrillas/${cuadrillaId}/avisos`, a).then((r) => comoLista<Aviso>(r, "avisos"));
+/** `GET /cuadrillas/{id}/avisos` responde `{ items: [...] }`. */
+export const avisosDeCuadrilla = (cuadrillaId: number) => solicitar<{ items: Aviso[] }>(`/cuadrillas/${cuadrillaId}/avisos`, a).then((r) => r.items ?? []);
+/** Idempotente: si ya estaba leído devuelve el aviso con la primera lectura. */
 export const marcarAvisoLeido = (avisoId: number) => solicitar<Partial<Aviso>>(`/avisos/${avisoId}/leido`, { ...a, cuerpo: {} });
-export const detalleCuadrilla = (cuadrillaId: number) => solicitar<CuadrillaPropia>(`/cuadrillas/${cuadrillaId}`, a);
+/** La cuadrilla del usuario (rol `cuadrilla`), sin nombres de personas. 404 si todavía no integra ninguna. */
+export const miCuadrilla = () => solicitar<CuadrillaPropia>("/mi/cuadrilla", a);
 
 /** Sin leer primero; dentro de cada grupo, del más nuevo al más viejo. */
 export function ordenarAvisos(avisos: Aviso[]): Aviso[] {
