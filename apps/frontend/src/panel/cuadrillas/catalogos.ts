@@ -30,7 +30,7 @@ export const PROFESIONES: Record<string, string> = {
 };
 export const etiquetaProfesion = (p: string | null | undefined): string => (p ? (PROFESIONES[p] ?? p.replace(/_/g, " ")) : "Sin profesión");
 
-/** Respaldo cuando `GET /cuadrillas/plantillas` no responde. SUPUESTO: el servidor es la fuente (`supuestos.yaml`). */
+/** Solo respaldo SIN CONEXIÓN: la fuente es `GET /cuadrillas/plantillas` (`supuestos.yaml`, SUPUESTO); se usa lo que responde el servidor. */
 export const PLANTILLAS_RESPALDO: Required<Plantillas> = {
   personas: { equipamiento: ["Chalecos salvavidas", "Botiquín", "Linternas", "Bidones de agua"], profesiones: ["medicina", "enfermeria", "defensa_civil", "chofer"] },
   familias: { equipamiento: ["Botiquín", "Bidones de agua", "Lonas", "Chalecos salvavidas", "Linternas"], profesiones: ["trabajo_social", "enfermeria", "defensa_civil", "chofer"] },

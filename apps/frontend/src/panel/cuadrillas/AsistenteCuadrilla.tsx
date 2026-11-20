@@ -143,6 +143,12 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
     return {};
   }
 
+  // Tras un intento fallido, cada cambio revalida el paso actual: un error desaparece apenas el campo queda bien.
+  useEffect(() => {
+    setErrores((e) => (hayErrores(e) ? validar(paso) : e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [b, paso]);
+
   function siguiente() {
     const e = validar(paso);
     setErrores(e);
@@ -180,8 +186,9 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
         alGuardar(c);
       } else {
         const ant = original.current as CuadrillaCompleta;
-        await api.editarCuadrilla(ant.id, cuerpo);
+        // Primero los integrantes (el servidor sube `cantidad_integrantes` al sumar y la baja al quitar) y después los datos.
         await sincronizarIntegrantes(ant, b);
+        await api.editarCuadrilla(ant.id, cuerpo);
         toast({ title: "Cambios guardados", description: cuerpo.nombre, status: "success", duration: 3000 });
         alGuardar(null);
       }
@@ -514,20 +521,32 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
   );
 }
 
-/** Lleva los integrantes del servidor a lo que quedó en el borrador: el encargado nuevo primero, después bajas, cambios y altas. */
-async function sincronizarIntegrantes(ant: CuadrillaCompleta, b: Borrador): Promise<void> {
+/**
+ * Lleva los integrantes del servidor a lo que quedó en el borrador. Las bajas usan el id del INTEGRANTE (no el del
+ * usuario). Orden: primero el encargado nuevo (alta o cambio), para que la baja del anterior no choque con el 409
+ * «es el encargado»; después bajas, cambios y altas.
+ */
+export async function sincronizarIntegrantes(ant: CuadrillaCompleta, b: Borrador): Promise<void> {
   const conId = new Set(b.integrantes.filter((f) => f.id !== null).map((f) => f.id));
   const previos = new Map(ant.integrantes.map((i) => [i.id, i]));
   const cambios = b.integrantes.filter((f) => {
     const p = f.id !== null ? previos.get(f.id) : undefined;
     return p && (p.rol_operativo !== f.rol_operativo || p.profesion !== f.profesion || p.usuario_id !== f.usuario_id || p.es_encargado !== f.es_encargado);
   });
-  cambios.sort((x, y) => Number(y.es_encargado) - Number(x.es_encargado));
   const bajas = ant.integrantes.filter((i) => !conId.has(i.id));
   const nuevos = b.integrantes.filter((f) => f.id === null);
   const cuerpo = (f: FilaIntegrante) => ({ usuario_id: f.usuario_id, rol_operativo: f.rol_operativo, profesion: f.profesion, es_encargado: f.es_encargado });
-  if (cambios.length && cambios[0].es_encargado) await api.editarIntegrante(ant.id, cambios[0].id as number, cuerpo(cambios[0]));
+  const encargadoNuevo = nuevos.find((f) => f.es_encargado);
+  const encargadoCambiado = cambios.find((f) => f.es_encargado);
+  const hechos = new Set<FilaIntegrante>();
+  if (encargadoNuevo) {
+    await api.sumarIntegrante(ant.id, cuerpo(encargadoNuevo));
+    hechos.add(encargadoNuevo);
+  } else if (encargadoCambiado) {
+    await api.editarIntegrante(ant.id, encargadoCambiado.id as number, cuerpo(encargadoCambiado));
+    hechos.add(encargadoCambiado);
+  }
   for (const i of bajas) await api.borrarIntegrante(ant.id, i.id);
-  for (const f of cambios.slice(cambios[0]?.es_encargado ? 1 : 0)) await api.editarIntegrante(ant.id, f.id as number, cuerpo(f));
-  for (const f of nuevos) await api.sumarIntegrante(ant.id, cuerpo(f));
+  for (const f of cambios) if (!hechos.has(f)) await api.editarIntegrante(ant.id, f.id as number, cuerpo(f));
+  for (const f of nuevos) if (!hechos.has(f)) await api.sumarIntegrante(ant.id, cuerpo(f));
 }
