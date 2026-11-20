@@ -8,6 +8,7 @@ import { IconoBandeja, IconoCaja, IconoCamion, IconoEscudo, IconoGota, IconoHist
 import { IconoChevron, IconoTablero } from "./iconos";
 import { describirEvento, useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { AvisoEscenario } from "./AvisoEscenario";
+import { NotaCategorias } from "./NotaCategorias";
 import { EscenarioProvider } from "./EscenarioContext";
 import { TiempoRealContext } from "./TiempoRealContext";
 import { etiquetaRol, etiquetaRolOperativo } from "../lib/etiquetas";
@@ -216,6 +217,7 @@ export function PanelLayout() {
             </Flex>
           </Box>
           <Box flex="1" minW={0} px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }}>
+            <NotaCategorias />
             <AvisoEscenario />
             <TiempoRealContext.Provider value={senal}>
               <Outlet />

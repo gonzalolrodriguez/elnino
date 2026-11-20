@@ -106,7 +106,7 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
           <Heading as="h2" id="mi-pedido" size="md" color="oscuro.fg">
             Mi pedido activo
           </Heading>
-          <Insignia categoria={CATEGORIAS.SIMULADO} />
+          <Insignia categoria={CATEGORIAS.SIMULADO} onDark />
         </Flex>
         <Text color="oscuro.suave" fontSize="sm" mb={5}>
           Pedido n.º {p.id} · {etiquetaTipoSolicitud(p.tipo)}
@@ -138,7 +138,6 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
                         {vehiculo}
                       </Flex>
                     )}
-                    <Insignia categoria={CATEGORIAS.SIMULADO} />
                   </Flex>
                 </Box>
               </Flex>
@@ -156,7 +155,6 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
                   <Text fontSize="sm" color="textoSuave">
                     Centro de destino: <strong>{p.centro.nombre}</strong>
                   </Text>
-                  <Insignia categoria={CATEGORIAS.SIMULADO} />
                 </Box>
               </Flex>
             )}

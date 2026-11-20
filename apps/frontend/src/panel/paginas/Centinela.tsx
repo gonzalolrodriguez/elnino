@@ -6,7 +6,7 @@ import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { IconoEscudo } from "../../components/iconos/Iconos";
 import { CabeceraPagina } from "../CabeceraPagina";
-import { Cargando, Seccion } from "../ui";
+import { Cargando, categoriaComun, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 const COLOR_VEREDICTO: Record<string, string> = {
@@ -74,13 +74,19 @@ export default function Centinela() {
             <Text fontSize="sm" mb={3}>
               {d.informe}. {d.nota}
             </Text>
+            {categoriaComun(d.afirmaciones.map((a) => a.categoria)) && (
+              <Flex align="center" gap={2} mb={3} data-testid="k6-categoria-comun">
+                <Text fontSize="sm">Categoría de las afirmaciones:</Text>
+                <Insignia categoria={d.afirmaciones[0].categoria} />
+              </Flex>
+            )}
             <Flex direction="column" gap={3}>
               {d.afirmaciones.map((a) => (
                 <Box key={a.id} borderLeft="3px solid" borderColor={a.veredicto.startsWith("REFUTADA") ? "red.500" : "pizarra.200"} pl={3} data-testid={`k6-${a.id}`}>
                   <Flex gap={2} align="center" wrap="wrap" mb={1}>
                     <strong>{a.id}</strong>
                     <Veredicto v={a.veredicto} />
-                    <Insignia categoria={a.categoria} />
+                    {!categoriaComun(d.afirmaciones.map((x) => x.categoria)) && <Insignia categoria={a.categoria} />}
                   </Flex>
                   <Text fontSize="sm">{a.afirmacion}</Text>
                   <Text fontSize="sm" color="pizarra.700">
@@ -102,6 +108,12 @@ export default function Centinela() {
             <Text fontSize="sm" mb={3}>
               {d.esquema}. {d.nota}
             </Text>
+            {categoriaComun(d.relaciones.map((r) => r.categoria)) && (
+              <Flex align="center" gap={2} mb={3} data-testid="k7-categoria-comun">
+                <Text fontSize="sm">Categoría de lo verificado:</Text>
+                <Insignia categoria={d.relaciones[0].categoria} />
+              </Flex>
+            )}
             <TablaDesplazable etiqueta="Relaciones de K7">
               <Table size="sm" aria-label="Relaciones de K7">
                 <Thead>
@@ -130,9 +142,11 @@ export default function Centinela() {
                       </Td>
                       <Td whiteSpace="normal">
                         {r.verificado_con}
-                        <Box mt={1}>
-                          <Insignia categoria={r.categoria} />
-                        </Box>
+                        {!categoriaComun(d.relaciones.map((x) => x.categoria)) && (
+                          <Box mt={1}>
+                            <Insignia categoria={r.categoria} />
+                          </Box>
+                        )}
                       </Td>
                     </Tr>
                   ))}
