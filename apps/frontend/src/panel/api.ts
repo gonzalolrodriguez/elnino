@@ -22,6 +22,8 @@ import type {
   Orden,
   Puesto,
   Recomendacion,
+  RespuestaPosiciones,
+  RespuestaSeguimiento,
   ResumenAdmin,
   ResumenPanel,
   RelacionK7,
@@ -94,6 +96,9 @@ export const api = {
     solicitar<{ repetida: boolean; evacuacion: { estado: string } }>(`/tareas/${tareaId}/cierre`, { ...a, cuerpo: c, cabeceras: { "Idempotency-Key": claveIdempotencia } }),
   reabrirConfirmacion: (tareaId: number, motivo?: string) =>
     solicitar<{ tarea_id: number; estado: string; respuesta_previa: string | null; reabierta: boolean; nota: string }>(`/evacuaciones/${tareaId}/confirmacion/reabrir`, { ...a, cuerpo: motivo ? { motivo } : {} }),
+  miSeguimiento: () => solicitar<RespuestaSeguimiento>("/mi/seguimiento", a),
+  posicionesCuadrillas: () => solicitar<RespuestaPosiciones>("/cuadrillas/posiciones", a),
+  compartirPosicion: (p: { lat: number; lon: number; precision_m?: number }) => solicitar<{ cuadrillas: number[] }>("/cuadrillas/mi-posicion", { ...a, cuerpo: p }),
   misConfirmaciones: () => solicitar<{ confirmaciones: ConsultaConfirmacion[]; pendientes: number }>("/mi/confirmaciones", a),
   responderConfirmacion: (c: { solicitud_id?: number; codigo?: string; respuesta: "si" | "no" | "problema"; comentario?: string }) =>
     solicitar<{ respuesta: string; repetida: boolean; nota: string }>("/mi/confirmaciones", { ...a, cuerpo: c }),

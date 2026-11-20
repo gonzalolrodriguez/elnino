@@ -7,6 +7,7 @@ import { ApiError, solicitar } from "../lib/api";
 import { etiquetaEstadoUsuario, etiquetaRol, etiquetaRolOperativo, fechaHora } from "../lib/etiquetas";
 import { EditarGrupo, type Grupo } from "./micuenta/EditarGrupo";
 import { ConfirmarTraslado } from "./micuenta/ConfirmarTraslado";
+import { CuadrillaEnCamino } from "./micuenta/CuadrillaEnCamino";
 import { EstadoSector } from "./micuenta/EstadoSector";
 import { PedirAyuda } from "./micuenta/PedirAyuda";
 
@@ -203,6 +204,7 @@ export default function MiCuenta() {
 
       <Box maxW="80rem">
         <EstadoSector key={versionSector} />
+        <CuadrillaEnCamino />
         <ConfirmarTraslado />
         <PedirAyuda esProductor={esProductor} />
       </Box>

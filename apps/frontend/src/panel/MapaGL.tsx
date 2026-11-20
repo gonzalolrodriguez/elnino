@@ -27,11 +27,15 @@ export type PropsMapa = {
   origenRuta: { lon: number; lat: number } | null;
   /** Traslados de evacuaciones ya cerradas (origen del pedido a destino marcado). Opcional y solo para roles operativos. */
   traslados?: Traslado[];
+  /** Última posición de las cuadrillas con tarea en curso. Opcional y solo para roles operativos. */
+  cuadrillas?: PuntoCuadrilla[];
   onAcceso: (a: AccesoProps) => void;
   onPunto: (lon: number, lat: number) => void;
 };
 
 export type Traslado = { id: number; origen: [number, number]; destino: [number, number]; estado: string };
+
+export type PuntoCuadrilla = { id: number; posicion: [number, number]; vieja: boolean };
 
 type RGBA = [number, number, number, number];
 
@@ -334,6 +338,22 @@ export default function MapaGL(props: PropsMapa) {
           getLineColor: BLANCO,
           stroked: true,
           lineWidthMinPixels: 2,
+        }),
+      );
+    }
+    if (props.cuadrillas && props.cuadrillas.length > 0) {
+      out.push(
+        new ScatterplotLayer<PuntoCuadrilla>({
+          id: "cuadrillas",
+          data: props.cuadrillas,
+          getPosition: (c) => c.posicion,
+          getRadius: 9,
+          radiusUnits: "pixels",
+          // Posición vieja: relleno ámbar; vigente: verde. El texto de la lista del panel repite el estado.
+          getFillColor: (c) => (c.vieja ? rgbaDe("umbral.alerta") : rgbaDe("confirmacion")),
+          getLineColor: BLANCO,
+          stroked: true,
+          lineWidthMinPixels: 3,
         }),
       );
     }
