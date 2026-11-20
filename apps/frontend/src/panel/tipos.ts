@@ -314,6 +314,8 @@ export type Tarea = {
   checklist?: { item: string; hecho: boolean }[] | null;
   creado_en: string;
   actualizado_en?: string;
+  requiere_atencion?: boolean;
+  ultimo_parte?: ParteTarea | null;
 };
 
 export type Notificacion = {
@@ -531,7 +533,7 @@ export type ResumenAdmin = BloqueResumen & {
 };
 
 /** Constancias de evacuación (ver docs/contrato_api.md, "Constancias de evacuación"). */
-export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro";
+export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "evacuado_parcial" | "evacuado_no_encontraron" | "destino_lejos_del_centro";
 
 export type Constancia = {
   id: number;
@@ -544,8 +546,11 @@ export type Constancia = {
   creada_en: string;
 };
 
+/** Respuestas de la persona evacuada. `si`, `no` y `problema` son los valores históricos (SMS y datos viejos). */
+export type RespuestaConfirmacion = "completa" | "parcial" | "no_encontraron" | "no_vinieron" | "otro_problema" | "si" | "no" | "problema";
+
 export type ConfirmacionEvacuado = {
-  respuesta: "si" | "no" | "problema";
+  respuesta: RespuestaConfirmacion;
   canal: string;
   comentario: string | null;
   solicitada_en: string;
@@ -589,7 +594,7 @@ export type ConsultaConfirmacion = {
   codigo: string;
   centro_nombre: string | null;
   respondida: boolean;
-  respuesta: "si" | "no" | "problema" | null;
+  respuesta: RespuestaConfirmacion | null;
   comentario: string | null;
   solicitada_en: string;
   respondida_en: string | null;
@@ -635,4 +640,34 @@ export type RespuestaPosiciones = {
   fuente: string;
   fecha_dato: string;
   supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+};
+
+/** Parte de una cuadrilla sobre una tarea. Sin nombres de personas: el autor se identifica por su rol operativo. */
+export type TipoParte = "avance" | "dificultad" | "resultado";
+export type ResultadoParte = "completa" | "parcial" | "no_realizada" | "reprogramada";
+export type ParteTarea = {
+  id: number;
+  tarea_id: number;
+  cuadrilla_id: number;
+  tipo: TipoParte;
+  resultado: ResultadoParte | null;
+  observacion: string | null;
+  autor_rol: string | null;
+  creado_en: string;
+  /** Solo aplica a las dificultades. */
+  resuelta: boolean | null;
+};
+
+export type ParteReciente = ParteTarea & { sector_id: string | null; solicitud_id: number | null; cuadrilla_nombre: string; tarea_estado: string };
+
+export type CuadrillaResumen = {
+  id: number;
+  nombre: string;
+  tipo_incidente: string;
+  vehiculo: string | null;
+  estado: string;
+  integrantes: { usuario_id: number; rol_operativo: string; es_encargado: boolean }[];
+  tarea_actual: { id: number; estado: string; solicitud_id: number | null; sector_id: string | null; requiere_atencion: boolean } | null;
+  ultimo_parte: ParteTarea | null;
+  dificultades_abiertas: number;
 };

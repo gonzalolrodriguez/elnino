@@ -48,6 +48,26 @@ export async function leerCache<T>(clave: string): Promise<Entrada<T> | null> {
   }
 }
 
+/**
+ * Única entrada sin datos de una persona: la lista pública de centros que usa la brújula sin sesión
+ * (`claveBrujula(null)`). Todas las demás claves llevan el id de la cuenta.
+ */
+export const PREFIJO_CACHE_PUBLICA = "brujula:anonimo:";
+
+/**
+ * Borra lo personal de la caché (pedidos, ayuda rápida, sector, confirmaciones, destinos con el centro
+ * asignado, panel) y conserva solo la lista pública de centros. Se llama cuando la sesión termina por
+ * cualquier motivo, también cuando el servidor rechaza el refresh (401/403), no solo al cerrar sesión.
+ */
+export async function borrarCachePersonal(): Promise<void> {
+  try {
+    const d = await db();
+    await d.runAsync("DELETE FROM cache_json WHERE substr(clave, 1, ?) <> ?", PREFIJO_CACHE_PUBLICA.length, PREFIJO_CACHE_PUBLICA);
+  } catch {
+    // nada que borrar
+  }
+}
+
 /** Borra la caché (al cerrar sesión: contiene datos del sector de la persona). */
 export async function borrarCache(): Promise<void> {
   try {

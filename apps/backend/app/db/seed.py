@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from geoalchemy2 import WKTElement
@@ -36,6 +36,7 @@ from app.db.modelos import (
     IntegranteCuadrilla,
     LecturaHidrometrica,
     Notificacion,
+    ParteTarea,
     PuestoPluviometrico,
     RecursoSimulado,
     RolOperativo,
@@ -312,9 +313,16 @@ def sembrar_cuadrillas(db: Session) -> int:
     datos = _json(SIMULADO / "cuadrillas.json")
     nuevas = 0
     for c in datos["cuadrillas"]:
-        if db.execute(select(Cuadrilla.id).where(Cuadrilla.nombre == c["nombre"])).first():
+        existente = db.execute(
+            select(Cuadrilla).where(Cuadrilla.nombre == c["nombre"])
+        ).scalar_one_or_none()
+        if existente is not None:
+            if existente.vehiculo is None and c.get("vehiculo"):
+                existente.vehiculo = c["vehiculo"]  # bases sembradas antes de la migración 0009
             continue
-        cuadrilla = Cuadrilla(nombre=c["nombre"], tipo_incidente=c["tipo_incidente"])
+        cuadrilla = Cuadrilla(
+            nombre=c["nombre"], tipo_incidente=c["tipo_incidente"], vehiculo=c.get("vehiculo")
+        )
         db.add(cuadrilla)
         db.flush()
         for i in c["integrantes"]:
@@ -452,6 +460,155 @@ def sembrar_constancias_demo(db: Session) -> int:
     return nuevas
 
 
+# Partes de demostración (SIMULADO): tarea, tipo de cuadrilla, estado de la tarea, requiere atención
+# y partes (tipo, resultado, observación, rol del autor).
+CASOS_PARTES = (
+    (
+        "[DEMO] Traslado de rodeo · camino anegado",
+        "ganadera",
+        "pendiente",
+        False,
+        (
+            (
+                "avance",
+                None,
+                "Cargamos el primer camión jaula; seguimos con el segundo.",
+                "transporte",
+            ),
+            (
+                "dificultad",
+                None,
+                "El camino de tierra al cargadero está anegado; esperamos indicación de ruta.",
+                "veterinario",
+            ),
+        ),
+    ),
+    (
+        "[DEMO] Asistencia a familias · acceso cortado",
+        "humana",
+        "pendiente",
+        True,
+        (
+            (
+                "resultado",
+                "parcial",
+                "Se trasladaron dos de tres familias; la tercera quedó pendiente por el acceso.",
+                "encargado_cuadrilla",
+            ),
+        ),
+    ),
+)
+
+
+def sembrar_partes_demo(db: Session) -> int:
+    """Dos tareas abiertas con partes de ejemplo (una dificultad sin resolver y un parcial).
+
+    SIMULADO: sin personas reales; el autor figura por su rol operativo. Idempotente por el título.
+    """
+    nuevos = 0
+    for titulo, tipo, estado, atencion, partes in CASOS_PARTES:
+        if db.execute(select(Tarea.id).where(Tarea.titulo == titulo)).first():
+            continue
+        cuadrilla = (
+            db.execute(
+                select(Cuadrilla).where(Cuadrilla.tipo_incidente == tipo).order_by(Cuadrilla.id)
+            )
+            .scalars()
+            .first()
+        )
+        if cuadrilla is None:
+            continue
+        tarea = Tarea(
+            cuadrilla_id=cuadrilla.id,
+            sector_id="S4",
+            titulo=titulo,
+            descripcion="Tarea de demostración con partes de la cuadrilla (SIMULADO)",
+            estado=estado,
+            requiere_atencion=atencion,
+        )
+        db.add(tarea)
+        db.flush()
+        for tipo_parte, resultado, observacion, rol in partes:
+            db.add(
+                ParteTarea(
+                    tarea_id=tarea.id,
+                    cuadrilla_id=cuadrilla.id,
+                    tipo=tipo_parte,
+                    resultado=resultado,
+                    observacion=observacion,
+                    autor_rol=rol,
+                    resuelta=False if tipo_parte == "dificultad" else None,
+                    categoria="SIMULADO",
+                )
+            )
+            nuevos += 1
+    db.flush()
+    return nuevos
+
+
+def sembrar_recorrido_demo(db: Session) -> int:
+    """Un pedido de demostración con la tarea en curso para ver al vehículo avanzar (SIMULADO).
+
+    Es el pedido de ``productor2`` atendido por la cuadrilla ganadera de demo. La posición la simula
+    el servidor (``seguimiento_demo``); cada vez que se corre el seed la tarea vuelve a "recién
+    salió", así la demo puede reiniciarse. Idempotente por el título de la tarea.
+    """
+    usuario = db.execute(
+        select(Usuario).where(Usuario.email == "productor2@demo.evacuaciones.invalid")
+    ).scalar_one_or_none()
+    cuadrilla = (
+        db.execute(
+            select(Cuadrilla).where(Cuadrilla.tipo_incidente == "ganadera").order_by(Cuadrilla.id)
+        )
+        .scalars()
+        .first()
+    )
+    est = (
+        db.execute(select(Establecimiento).where(Establecimiento.productor_id == usuario.id))
+        .scalars()
+        .first()
+        if usuario is not None
+        else None
+    )
+    if usuario is None or cuadrilla is None or est is None:
+        return 0
+    titulo = "[DEMO] Traslado en camino · productor2"
+    inicio = ahora() - timedelta(minutes=3)
+    tarea = db.execute(select(Tarea).where(Tarea.titulo == titulo)).scalar_one_or_none()
+    if tarea is not None:
+        if tarea.estado == "en_curso":
+            tarea.actualizado_en = inicio  # reinicia el recorrido simulado
+        return 0
+    origen = to_shape(est.geom_tranquera)
+    solicitud = SolicitudAsistencia(
+        solicitante_id=usuario.id,
+        origen="app",
+        tipo="ganado",
+        personas=0,
+        animales=25,
+        texto="Pedido de demostración (SIMULADO)",
+        geom=_punto(origen.x, origen.y),
+        sector_id=sector_de_punto(db, origen.x, origen.y),
+        estado="en_curso",
+        detalle={"demo": "recorrido"},
+    )
+    db.add(solicitud)
+    db.flush()
+    db.add(
+        Tarea(
+            cuadrilla_id=cuadrilla.id,
+            solicitud_id=solicitud.id,
+            sector_id=solicitud.sector_id,
+            titulo=titulo,
+            descripcion="Traslado de demostración en camino (SIMULADO)",
+            estado="en_curso",
+            actualizado_en=inicio,
+        )
+    )
+    db.flush()
+    return 1
+
+
 def sembrar_todo(db: Session) -> dict[str, int]:
     """Carga los datos base; los usuarios y cuadrillas de demo solo con ``SEED_DEMO=true``."""
     demo = get_settings().seed_demo
@@ -468,6 +625,9 @@ def sembrar_todo(db: Session) -> dict[str, int]:
         "cuadrillas_nuevas": sembrar_cuadrillas(db) if demo else 0,
     }
     resultado["constancias_demo_nuevas"] = sembrar_constancias_demo(db) if demo else 0
+    resultado["partes_demo_nuevos"] = sembrar_partes_demo(db) if demo else 0
+
+    resultado["recorrido_demo_nuevo"] = sembrar_recorrido_demo(db) if demo else 0
     db.commit()
     return resultado
 

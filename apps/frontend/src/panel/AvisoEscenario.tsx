@@ -1,6 +1,7 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import { useState } from "react";
 
+import { IconoOlas } from "../components/iconos/Iconos";
 import { Insignia } from "../components/Insignia";
 import { useEscenario } from "./EscenarioContext";
 import { fmtM, fmtNum } from "./ui";
@@ -43,7 +44,10 @@ export function AvisoEscenario() {
       borderRadius="lg"
     >
       <Flex align="center" gap={3} wrap="wrap" role="status" data-testid={escenarioSimulado ? "aviso-escenario" : "resumen-escenario"}>
-        <Text fontSize="sm" fontWeight={600}>
+        <Box aria-hidden="true" display="inline-flex" color={escenarioSimulado ? "cat.simulado.fg" : "primario"}>
+          <IconoOlas tam="1.25rem" />
+        </Box>
+        <Text fontSize="sm" fontWeight={700}>
           {escenarioSimulado ? "Escenario activo" : "Escenario"}: {fmtM(entrada.altura_formosa_m)}
           {entrada.lluvia_mm > 0 ? ` con ${entrada.lluvia_mm.toLocaleString("es-AR")} mm de lluvia` : ""}
         </Text>

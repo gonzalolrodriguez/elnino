@@ -31,12 +31,13 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
-import { etiquetaCanalConfirmacion, etiquetaMotivoDiscrepancia, etiquetaRespuestaConfirmacion, etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
+import { etiquetaCanalConfirmacion, etiquetaMotivoDiscrepancia, etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { api, fotoCierre } from "../api";
 import type { Centro, Evacuacion } from "../tipos";
 import { fmtNum } from "../ui";
 import { ChipEvacuacion } from "./ChipEvacuacion";
 import { MiniMapaDestino } from "./MiniMapaDestino";
+import { RespuestaConfirmacionTexto } from "./RespuestaConfirmacion";
 
 /** Fotos de la constancia: se piden con la sesión y se muestran como imagen local; se liberan al cerrar. */
 function Fotos({ tareaId, adjuntos }: { tareaId: number; adjuntos: { n: number; mime: string }[] }) {
@@ -235,7 +236,7 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
               </Heading>
               {e.confirmacion && e.confirmacion.respuesta ? (
                 <Box data-testid="confirmacion">
-                  <Dato etiqueta="Respondió">{etiquetaRespuestaConfirmacion(e.confirmacion.respuesta)}</Dato>
+                  <Dato etiqueta="Respondió"><RespuestaConfirmacionTexto respuesta={e.confirmacion.respuesta} /></Dato>
                   <Dato etiqueta="Por qué canal">{etiquetaCanalConfirmacion(e.confirmacion.canal)}</Dato>
                   <Dato etiqueta="Comentario">{e.confirmacion.comentario ?? "sin comentario"}</Dato>
                   <Dato etiqueta="Fecha">{fechaHora(e.confirmacion.respondida_en)}</Dato>

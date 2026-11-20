@@ -29,7 +29,7 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
   const arrastrando = useRef(false);
   const [estado, setEstado] = useState<Pick<EstadoRecorrido, "modo" | "reproduciendo">>({ modo: "intro", reproduciendo: false });
   const [cercano, setCercano] = useState<IdHito | null>(null);
-  // En pantallas angostas los controles quedan plegados para que el texto y la escena no queden lejos del inicio.
+  // Los controles quedan plegados en todos los anchos; el botón «Recorrer el río» los abre.
   const [abierto, setAbierto] = useState(false);
 
   const aplicar = useCallback((e: EstadoRecorrido) => {
@@ -89,25 +89,23 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
       style={{ backdropFilter: "blur(10px)" }}
     >
       <Flex align="center" gap={3} wrap="wrap">
-        <Text id="recorrido-titulo" fontWeight={700} fontSize="sm">
-          Recorrer el río
-        </Text>
         <Button
           type="button"
           size="sm"
           variant="sobreOscuro"
-          display={{ base: "inline-flex", lg: "none" }}
           minH={MINIMO}
-          ml="auto"
           aria-expanded={abierto}
           aria-controls="recorrido-contenido"
           onClick={() => setAbierto((v) => !v)}
           data-testid="recorrido-alternar"
         >
-          {abierto ? "Ocultar controles" : "Mostrar controles"}
+          <span id="recorrido-titulo">Recorrer el río</span>
+          <span aria-hidden="true" style={{ marginLeft: "0.5rem" }}>
+            {abierto ? "▴" : "▾"}
+          </span>
         </Button>
         {disponible3D && (
-          <Box display={{ base: abierto ? "flex" : "none", lg: "contents" }} w={{ base: "100%", lg: "auto" }} alignItems="center" gap={3} flexWrap="wrap">
+          <Box display={abierto ? "flex" : "none"} w="100%" alignItems="center" gap={3} flexWrap="wrap">
             <Button
               type="button"
               size="sm"
@@ -161,7 +159,7 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
         )}
       </Flex>
 
-      <Box id="recorrido-contenido" display={{ base: abierto ? "block" : "none", lg: "block" }}>
+      <Box id="recorrido-contenido" display={abierto ? "block" : "none"}>
         <Flex gap={2} wrap="wrap" mt={2} role="group" aria-label="Ir a un punto del recorrido">
           {CHIPS_RECORRIDO.map((c) => (
             <Button

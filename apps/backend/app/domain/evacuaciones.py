@@ -5,8 +5,9 @@ cierre y de la confirmación del evacuado; nunca se guarda:
 
 - ``pendiente`` / ``en_curso``: la tarea todavía no se cerró.
 - ``cerrada_cuadrilla``: la cuadrilla cerró con constancia y nadie contradijo nada (sin confirmar).
-- ``verificada``: el evacuado confirmó (``si``) y el destino está cerca del centro elegido.
-- ``con_discrepancia``: el evacuado dijo ``no`` o reportó un ``problema``, o el destino quedó a más
+- ``verificada``: el evacuado confirmó (``completa``) y el destino está cerca del centro elegido.
+- ``con_discrepancia``: el evacuado respondió otra cosa (``parcial``, ``no_encontraron``,
+  ``no_vinieron`` u ``otro_problema``; antes ``no`` o ``problema``), o el destino quedó a más
   de ``distancia_max_destino_m`` del centro elegido. Es una marca para revisar, no una acusación.
 """
 
@@ -18,11 +19,28 @@ import unicodedata
 from dataclasses import dataclass
 
 ESTADOS = ("pendiente", "en_curso", "cerrada_cuadrilla", "verificada", "con_discrepancia")
-RESPUESTAS = ("si", "no", "problema")
+RESPUESTAS = ("completa", "parcial", "no_encontraron", "no_vinieron", "otro_problema")
+# Valores anteriores (SMS y datos viejos): se normalizan al valor canónico.
+RESPUESTAS_LEGADO = {"si": "completa", "no": "no_vinieron", "problema": "otro_problema"}
 
 MOTIVO_NO = "evacuado_dice_no"
 MOTIVO_PROBLEMA = "evacuado_reporta_problema"
+MOTIVO_PARCIAL = "evacuado_parcial"
+MOTIVO_NO_ENCONTRARON = "evacuado_no_encontraron"
 MOTIVO_LEJOS = "destino_lejos_del_centro"
+_MOTIVO_POR_RESPUESTA = {
+    "no_vinieron": MOTIVO_NO,
+    "otro_problema": MOTIVO_PROBLEMA,
+    "parcial": MOTIVO_PARCIAL,
+    "no_encontraron": MOTIVO_NO_ENCONTRARON,
+}
+
+
+def normalizar_respuesta(respuesta: str | None) -> str | None:
+    """Valor canónico de una respuesta (acepta los valores anteriores ``si|no|problema``)."""
+    if respuesta is None:
+        return None
+    return RESPUESTAS_LEGADO.get(respuesta, respuesta)
 
 # Sin vocales ni 0/1/O/I/L: el código no forma palabras y se dicta sin confusión.
 _LETRAS = "BCDFGHJKMNPQRSTVWXYZ"
@@ -46,10 +64,9 @@ def motivos_discrepancia(
     respuesta: str | None, distancia_m: float | None, distancia_max_m: float
 ) -> list[str]:
     motivos: list[str] = []
-    if respuesta == "no":
-        motivos.append(MOTIVO_NO)
-    elif respuesta == "problema":
-        motivos.append(MOTIVO_PROBLEMA)
+    motivo = _MOTIVO_POR_RESPUESTA.get(normalizar_respuesta(respuesta) or "")
+    if motivo:
+        motivos.append(motivo)
     if distancia_m is not None and distancia_m > distancia_max_m:
         motivos.append(MOTIVO_LEJOS)
     return motivos
@@ -71,7 +88,7 @@ def estado_evacuacion(
     motivos = motivos_discrepancia(respuesta, distancia_m, distancia_max_m)
     if motivos:
         return "con_discrepancia", motivos
-    if respuesta == "si":
+    if normalizar_respuesta(respuesta) == "completa":
         return "verificada", []
     return "cerrada_cuadrilla", []
 
@@ -87,7 +104,8 @@ class RespuestaSMS:
 
 
 _SMS = re.compile(
-    rf"^\s*(si|no|problema)\s+((?=[a-z]*\d)[a-z0-9]{{{LARGO_CODIGO}}})(?:\s+(.*))?$", re.DOTALL
+    rf"^\s*(si|no|problema|parcial)\s+((?=[a-z]*\d)[a-z0-9]{{{LARGO_CODIGO}}})(?:\s+(.*))?$",
+    re.DOTALL,
 )
 
 
@@ -102,7 +120,9 @@ def parsear_respuesta_sms(texto: str) -> RespuestaSMS | None:
     if m is None:
         return None
     comentario = texto[m.start(3) : m.end(3)].strip() if m.group(3) else ""
-    return RespuestaSMS(m.group(1), m.group(2).upper(), comentario[:500] or None)
+    return RespuestaSMS(
+        normalizar_respuesta(m.group(1)) or m.group(1), m.group(2).upper(), comentario[:500] or None
+    )
 
 
 # ---- teléfonos --------------------------------------------

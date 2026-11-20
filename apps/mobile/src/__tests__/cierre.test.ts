@@ -190,12 +190,28 @@ describe("servicios: cierre y confirmación", () => {
 
   it("la confirmación va a /mi/confirmaciones y un 409 es rechazo", async () => {
     mockPeticion.mockResolvedValueOnce({ id: 4, repetida: true });
-    const r = await servicios.enviarItem({ clase: "confirmacion", solicitud_id: 12, respuesta: "problema", comentario: "faltó agua" }, "k");
+    const r = await servicios.enviarItem({ clase: "confirmacion", solicitud_id: 12, respuesta: "otro_problema", comentario: "faltó agua" }, "k");
     expect(mockPeticion.mock.calls[0][0]).toBe("/mi/confirmaciones");
-    expect(mockPeticion.mock.calls[0][1].cuerpo).toEqual({ solicitud_id: 12, respuesta: "problema", comentario: "faltó agua" });
+    expect(mockPeticion.mock.calls[0][1].cuerpo).toEqual({ solicitud_id: 12, respuesta: "otro_problema", comentario: "faltó agua" });
     expect(r).toMatchObject({ ok: true, servidorId: 4, resultado: { repetida: true } });
     mockPeticion.mockRejectedValueOnce(new ErrorApi(409, "conflicto", "Ya respondiste"));
-    expect(await servicios.enviarItem({ clase: "confirmacion", solicitud_id: 12, respuesta: "no" }, "k")).toMatchObject({ ok: false, tipo: "rechazo" });
+    expect(await servicios.enviarItem({ clase: "confirmacion", solicitud_id: 12, respuesta: "no_vinieron" }, "k")).toMatchObject({ ok: false, tipo: "rechazo" });
+  });
+
+  it.each([
+    ["completa", "completa"],
+    ["parcial", "parcial"],
+    ["no_encontraron", "no_encontraron"],
+    ["no_vinieron", "no_vinieron"],
+    ["otro_problema", "otro_problema"],
+    // Valores viejos que pudieron quedar en la cola del teléfono antes de esta versión.
+    ["si", "completa"],
+    ["no", "no_vinieron"],
+    ["problema", "otro_problema"],
+  ] as const)("envía %s como %s", async (guardada, enviada) => {
+    mockPeticion.mockResolvedValueOnce({ id: 5 });
+    await servicios.enviarItem({ clase: "confirmacion", solicitud_id: 12, respuesta: guardada }, "k");
+    expect(mockPeticion.mock.calls[0][1].cuerpo).toEqual({ solicitud_id: 12, respuesta: enviada });
   });
 });
 
@@ -237,5 +253,15 @@ describe("texto del SMS de confirmación", () => {
     expect(textoSMSConfirmacion("no", "K7M2QX", "ignorado")).toBe("NO K7M2QX");
     expect(textoSMSConfirmacion("problema", "K7M2QX", "  faltó\nagua ")).toBe("PROBLEMA K7M2QX faltó agua");
     expect(textoSMSConfirmacion("problema", "K7M2QX")).toBe("PROBLEMA K7M2QX");
+  });
+
+  it("las respuestas nuevas usan la palabra del canal vigente y llevan el motivo", () => {
+    expect(textoSMSConfirmacion("completa", "K7M2QX")).toBe("SI K7M2QX");
+    expect(textoSMSConfirmacion("no_vinieron", "K7M2QX")).toBe("NO K7M2QX");
+    expect(textoSMSConfirmacion("parcial", "K7M2QX")).toBe("PROBLEMA K7M2QX Me asistieron en parte.");
+    expect(textoSMSConfirmacion("no_encontraron", "K7M2QX", "estaba en el fondo")).toBe(
+      "PROBLEMA K7M2QX Vinieron pero no me encontraron. estaba en el fondo",
+    );
+    expect(textoSMSConfirmacion("otro_problema", "K7M2QX", "faltó agua")).toBe("PROBLEMA K7M2QX faltó agua");
   });
 });

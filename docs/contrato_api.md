@@ -324,9 +324,9 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | GET | `/cuadrillas` | mandos | Cuadrillas con integrantes, plantilla sugerida y `roles_faltantes` |
-| POST | `/cuadrillas` | mandos | `{ "nombre", "tipo_incidente": "humana|ganadera|apicola", "integrantes": [{"rol_operativo"}] }` (201) |
-| GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }` |
-| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última |
+| POST | `/cuadrillas` | mandos | `{ "nombre", "tipo_incidente": "humana|ganadera|apicola", "vehiculo"?: "4x4|camion_jaula|colectivo|lancha|moto", "integrantes": [{"rol_operativo"}] }` (201). `vehiculo` es opcional y `SIMULADO` (otro valor: 422); `GET /cuadrillas` lo devuelve (`null` si no tiene) |
+| GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }`; cada tarea trae `requiere_atencion` (bool) y `ultimo_parte` (parte o `null`, ver "Partes de las cuadrillas y panel de cuadrillas") |
+| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última. Si un operador (no la cuadrilla) cambia el `estado` o reasigna la tarea, se limpia `requiere_atencion`. La respuesta incluye `requiere_atencion` y `ultimo_parte` |
 | POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201). **Idempotente** con `Idempotency-Key: <UUID>` (mismo decisor y clave: 200 con la orden original y `"repetida": true`, sin duplicar notificaciones ni tareas). Las tareas se reparten entre las cuadrillas del tipo con menos tareas abiertas |
 | GET | `/ordenes` | autenticado | Mandos ven todas; ciudadanía y productores, las de su sector |
 | GET | `/solicitudes` | ciudadanía y productores (las propias) y mandos | Filtros `estado`, `sector_id`; paginación `limite` (100, máx. 500) y `offset`; responde `{ "solicitudes", "total", "limite", "offset" }` |
@@ -337,6 +337,94 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | PATCH | `/solicitudes/{id}` | mandos | Siguiente estado: `verificada`, `asignada` (con `cuadrilla_id` opcional, crea la tarea), `en_curso`, `resuelta`; saltar estados da 409 |
 
 `POST /ordenes` registra al emisor (rol), crea notificaciones para quienes viven o producen en los sectores, tareas por cuadrilla (no en una simple `alerta`) y un **borrador** de bitácora K8; responde `{ "id", "notificaciones_creadas", "tareas_creadas", "bitacora_borrador_id", ... }`.
+
+## Partes de las cuadrillas y panel de cuadrillas
+
+La cuadrilla informa al sistema cómo va cada tarea con **partes**: `avance`, `dificultad` o `resultado`. El autor figura por su **rol operativo** (`autor_rol`), nunca por nombre. Todo es `SIMULADO` en la demo. Estos endpoints llevan el mismo tope por persona que `/mi/*` (`RATE_LIMIT_USUARIO`, 429 con `Retry-After`).
+
+Parte (`ParteTarea`):
+
+```json
+{ "id": 7, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "dificultad", "resultado": null,
+  "observacion": "El camino de tierra hacia el cargadero está anegado.",
+  "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": false }
+```
+
+- `tipo`: `avance | dificultad | resultado`. `resultado` solo se informa con `tipo=resultado` (`completa | parcial | no_realizada | reprogramada`); en otro tipo: 422.
+- `observacion`: de 3 a 1000 caracteres; **obligatoria** si `tipo` es `dificultad` o si es `resultado` distinto de `completa` (422). En `avance` y en `completa` es opcional.
+- `resuelta`: solo en `dificultad` (nace en `false`); en los demás tipos es `null`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/tareas/{id}/partes` | `cuadrilla`, solo integrantes de la cuadrilla de esa tarea | `{ "tipo", "resultado"?, "observacion"? }` (cuerpo estricto: un campo extra da 422). 201 con el parte. **Idempotente** con la cabecera opcional `Idempotency-Key: <UUID>` (cola sin conexión de la app): el mismo usuario y la misma clave devuelven el parte original con **200**, sin duplicarlo ni repetir sus efectos (la misma clave en otra tarea: 409; clave que no es UUID: 422). Otra cuadrilla, mandos o ciudadanía: 403; tarea inexistente: 404; tarea `completada` o `cancelada`: 409 |
+| GET | `/tareas/{id}/partes` | mandos e integrantes de esa cuadrilla | `{ "items": [parte...] }`, más nuevo primero (máx. 200). Otra cuadrilla o ciudadanía: 403 |
+| PATCH | `/partes/{id}` | mandos | `{ "resuelta": true }`: marca la dificultad como resuelta (otro tipo de parte: 409; `false` u otro campo: 422) |
+| GET | `/partes/recientes?limite=20` | mandos | `{ "items": [parte + { "sector_id", "solicitud_id", "cuadrilla_nombre", "tarea_estado" }] }` (`limite` 1 a 100). Primero lo que pide atención (dificultades sin resolver y resultados no completos de tareas con `requiere_atencion`), después por fecha |
+| GET | `/cuadrillas/resumen` | mandos | Cuadrillas con sus designados, la tarea actual y el último parte (abajo) |
+| POST | `/cuadrillas/{id}/integrantes` | `operador`, `admin` | `{ "usuario_id", "rol_operativo" }` (201 con el ítem de resumen de la cuadrilla). Solo usuarios **activos con rol `cuadrilla`** y roles del catálogo (422); ya integrante: 409; cuadrilla inexistente: 404. Si la cuadrilla tiene una vacante sin persona con ese rol, se cubre |
+| DELETE | `/cuadrillas/{id}/integrantes/{usuario_id}` | `operador`, `admin` | Quita al integrante; 200 con el ítem de resumen actualizado; 404 si no integraba la cuadrilla |
+
+**Efectos sobre la tarea**
+
+| Parte | Efecto |
+|---|---|
+| `resultado=completa` | La tarea pasa a `completada` y se limpia `requiere_atencion`. Si la tarea es de evacuación (nace de una orden o de un pedido `evacuacion`/`ganado`) responde **409** `"Cerrá la tarea con constancia"`: se cierra con `POST /tareas/{id}/cierre`, que además deja su propio parte `resultado=completa` |
+| `parcial`, `no_realizada`, `reprogramada` | La tarea vuelve a `pendiente` con `requiere_atencion=true`; si el pedido figuraba `en_curso` o `resuelta`, vuelve a `asignada` |
+| `avance`, `dificultad` | No cambian el estado de la tarea |
+
+`requiere_atencion` se limpia cuando un operador cambia el estado o reasigna la tarea (`PATCH /tareas/{id}`), o cuando llega un parte `completa`.
+
+`GET /cuadrillas/resumen` devuelve `{ "items": [...] }`, un ítem por cuadrilla (sin nombres de personas, solo `usuario_id` y rol operativo):
+
+```json
+{ "id": 1, "nombre": "Cuadrilla humana SIMULADA 1", "tipo_incidente": "humana", "vehiculo": "4x4",
+  "estado": "ocupada",
+  "integrantes": [
+    { "usuario_id": 4, "rol_operativo": "encargado_cuadrilla", "es_encargado": true },
+    { "usuario_id": null, "rol_operativo": "sipec", "es_encargado": false } ],
+  "tarea_actual": { "id": 12, "estado": "pendiente", "solicitud_id": null, "sector_id": "S4", "requiere_atencion": true },
+  "ultimo_parte": { "id": 8, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "resultado", "resultado": "parcial",
+    "observacion": "Se trasladaron dos de tres familias; la tercera quedó pendiente por el acceso.",
+    "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": null },
+  "dificultades_abiertas": 0 }
+```
+
+`tarea_actual` es la tarea abierta más relevante (en curso, luego las que requieren atención, luego la última) o `null`. `usuario_id: null` es un rol del catálogo todavía sin persona designada.
+
+**Mis pedidos:** cada ítem de `GET /mi/pedidos` agrega `"novedad": null | { "tipo": "demora|dificultad|parcial|no_realizada|reprogramada", "en": "<ISO>" }`: la última novedad relevante, **sin el texto de la observación**. `dificultad` mientras no esté resuelta; `parcial`/`no_realizada`/`reprogramada` mientras la tarea siga con `requiere_atencion`; `demora` cuando la tarea está en curso y la última posición compartida venció (`posicion_vencida_minutos`). Los avances no se informan a la ciudadanía.
+
+**Tiempo real:** el evento `parte_tarea` `{ "tarea_id", "cuadrilla_id", "tipo", "resultado" }` llega solo a `operador`, `decisor` y `admin` (nunca la observación; el panel la consulta con `GET /partes/recientes`). Se emite al crear un parte, al resolver una dificultad y al cerrar con constancia.
+
+Auditoría: `parte_tarea_creado`, `parte_tarea_resuelto`, `cuadrilla_integrante_agregado` y `cuadrilla_integrante_quitado` quedan en la bitácora de accesos (el detalle del parte guarda solo `tipo[:resultado]`, no la observación).
+
+```bash
+# La cuadrilla informa una dificultad en su tarea 12 (H_CUADRILLA = cabecera Authorization de un integrante)
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H 'Content-Type: application/json' \
+  -d '{"tipo":"dificultad","observacion":"El camino de tierra hacia el cargadero está anegado."}'
+
+# Reintento seguro desde la cola sin conexión: misma Idempotency-Key -> 200 con el parte original
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H "Idempotency-Key: $(uuidgen)" -H 'Content-Type: application/json' \
+  -d '{"tipo":"avance","observacion":"En camino"}'
+
+# Resultado parcial: la tarea vuelve a pendiente y queda con requiere_atencion
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H 'Content-Type: application/json' \
+  -d '{"tipo":"resultado","resultado":"parcial","observacion":"Quedó una familia sin trasladar."}'
+
+# El operador ve lo que pide atención, resuelve la dificultad y mira el panel de cuadrillas
+curl -s "$API/partes/recientes?limite=20" -H "$H_OPERADOR"
+curl -s -X PATCH $API/partes/7 -H "$H_OPERADOR" -H 'Content-Type: application/json' -d '{"resuelta":true}'
+curl -s $API/cuadrillas/resumen -H "$H_OPERADOR"
+
+# Designar a un usuario con rol cuadrilla (cubre la vacante del rol si existe) y quitarlo
+curl -s -X POST $API/cuadrillas/1/integrantes -H "$H_OPERADOR" -H 'Content-Type: application/json' \
+  -d '{"usuario_id":9,"rol_operativo":"sipec"}'
+curl -s -X DELETE $API/cuadrillas/1/integrantes/9 -H "$H_OPERADOR"
+
+# Casos inválidos: dificultad sin observación -> 422; completa en una tarea de evacuación -> 409 "Cerrá la tarea con constancia";
+# parte de una cuadrilla ajena o de un ciudadano -> 403; tarea inexistente -> 404; PATCH de un avance -> 409
+```
+
+Prueba automática: `tests/test_partes.py`.
 
 ## Ciudadanía y productores (`/mi/*`)
 
@@ -414,16 +502,18 @@ La respuesta **solo tiene efecto** si (1) el código existe, (2) no venció y (3
   "actualizado_en": "...", "categoria": "SIMULADO", "fuente": "..." }
 ```
 
-`origen.tipo` es `solicitud` (coordenadas del pedido) o `sector` (centro del sector, para tareas de una orden o pedidos sin coordenadas). `constancia`, `confirmacion` y `origen` pueden ser `null`. `discrepancia` es `{ "motivos": ["evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro"] }` o `null`.
+`origen.tipo` es `solicitud` (coordenadas del pedido) o `sector` (centro del sector, para tareas de una orden o pedidos sin coordenadas). `constancia`, `confirmacion` y `origen` pueden ser `null`. `discrepancia` es `{ "motivos": ["evacuado_dice_no" | "evacuado_reporta_problema" | "evacuado_parcial" | "evacuado_no_encontraron" | "destino_lejos_del_centro"] }` o `null`.
 
-`POST /mi/confirmaciones`, cuerpo `{ "solicitud_id": 12 | "codigo": "K7M2QXV4", "respuesta": "si|no|problema", "comentario"?: "hasta 500 caracteres" }`; respuesta `{ "id", "tarea_id", "solicitud_id", "respuesta", "comentario", "canal": "app", "respondida_en", "repetida", "nota" }`. No revela el estado derivado ni ubicaciones. `GET /mi/confirmaciones` lista las consultas propias.
+**Respuestas del evacuado.** Valores canónicos (los únicos que se guardan y se devuelven): `completa` (verifica el traslado), `parcial`, `no_encontraron` (la cuadrilla no lo encontró), `no_vinieron` y `otro_problema` (cualquiera de estas cuatro marca la evacuación `con_discrepancia`; `parcial` y `no_encontraron` agregan los motivos `evacuado_parcial` y `evacuado_no_encontraron`). Por compatibilidad con SMS y datos viejos se siguen aceptando `si` → `completa`, `no` → `no_vinieron` y `problema` → `otro_problema` (se normalizan al recibirlas; la migración `0009` convirtió las filas existentes). Por SMS: `SI|PARCIAL|NO|PROBLEMA <código> [texto]`. Repetir la misma respuesta (aunque sea con el alias anterior) es 200; una distinta, 409.
+
+`POST /mi/confirmaciones`, cuerpo `{ "solicitud_id": 12 | "codigo": "K7M2QXV4", "respuesta": "completa|parcial|no_encontraron|no_vinieron|otro_problema", "comentario"?: "hasta 500 caracteres" }`; respuesta `{ "id", "tarea_id", "solicitud_id", "respuesta", "comentario", "canal": "app", "respondida_en", "repetida", "nota" }`. No revela el estado derivado ni ubicaciones. `GET /mi/confirmaciones` lista las consultas propias.
 
 **Notificación que recibe el solicitante** al cerrarse la tarea (solo si el pedido tiene solicitante), en `GET /mi/notificaciones`:
 
 ```json
 { "id": 9, "orden_id": null, "tipo": "confirmacion_evacuacion", "leida": false, "creada_en": "...",
   "mensaje": "¿Llegaste a <centro>? ... Respondé en la app o por SMS desde tu teléfono registrado: SI K7M2QXV4, NO K7M2QXV4 o PROBLEMA K7M2QXV4 y el detalle. [PROTOTIPO: no es una herramienta oficial]",
-  "datos": { "tarea_id": 7, "solicitud_id": 12, "codigo": "K7M2QXV4", "centro_nombre": "...", "respuestas": ["si", "no", "problema"] } }
+  "datos": { "tarea_id": 7, "solicitud_id": 12, "codigo": "K7M2QXV4", "centro_nombre": "...", "respuestas": ["completa", "parcial", "no_encontraron", "no_vinieron", "otro_problema"] } }
 ```
 
 Los operadores reciben `tipo: "discrepancia"` con `datos: { "tarea_id", "sector_id", "motivos" }`. Eventos WebSocket `constancia` (`{ "tarea_id", "sector_id", "estado", "personas_trasladadas"?, "motivo": "cierre|confirmacion" }`) y `discrepancia` (`{ "tarea_id", "sector_id", "motivos" }`): solo para mandos y cuadrilla, sin ubicaciones.
@@ -433,7 +523,7 @@ Ejemplo reproducible (con `$H_CUADRILLA` y `$H_CIUDADANO` con su `Authorization`
 ```bash
 curl -s -X POST $API/tareas/7/cierre -H "$H_CUADRILLA" -H "Idempotency-Key: $(uuidgen)" -H 'Content-Type: application/json' \
   -d '{"lat":-26.18,"lon":-58.139,"centro_id":1,"personas_trasladadas":3,"nota":"Llegaron al centro."}'
-curl -s -X POST $API/mi/confirmaciones -H "$H_CIUDADANO" -H 'Content-Type: application/json' -d '{"solicitud_id":12,"respuesta":"si"}'
+curl -s -X POST $API/mi/confirmaciones -H "$H_CIUDADANO" -H 'Content-Type: application/json' -d '{"solicitud_id":12,"respuesta":"completa"}'
 # Casos inválidos: sin Idempotency-Key -> 422; "lat": 95 -> 422; ciudadano en /tareas/7/cierre -> 403; cuadrilla ajena -> 403
 ```
 
@@ -445,6 +535,7 @@ Cuando una tarea ligada a un pedido de asistencia está `en_curso`, la cuadrilla
 |---|---|---|---|
 | POST | `/cuadrillas/mi-posicion` | `cuadrilla` | Cuerpo `{ "lat": -90..90, "lon": -180..180, "precision_m"?: >= 0 }`. Guarda (pisa) la última posición de las cuadrillas del usuario que tengan alguna tarea `en_curso`. Sin tarea en curso: 409 "No tenés ninguna tarea en curso...". Menos de `intervalo_min_posicion_s` (10 s, SUPUESTO) desde la anterior: 429 con `Retry-After`. Coordenadas fuera de rango o `precision_m` negativa: 422. Otros roles: 403. Respuesta `{ "cuadrillas": [id], "categoria": "SIMULADO" }`. Emite el evento WebSocket `posicion_cuadrilla` |
 | GET | `/mi/seguimiento` | `ciudadano`, `productor` | Un ítem por cada pedido **propio** con tarea en curso (los de otras personas nunca aparecen). Otros roles: 403 |
+| GET | `/mi/pedidos` | `ciudadano`, `productor` | Pedidos **propios** (máximo 100, del más nuevo al más viejo) con línea de tiempo, tarea, cuadrilla por rol y vehículo, seguimiento, confirmación y centro. Otros roles: 403; sin sesión: 401 |
 | GET | `/cuadrillas/posiciones` | `operador`, `decisor`, `admin` | Última posición de cada cuadrilla con tarea en curso. Auditado (`lectura_ubicacion_cuadrillas`) |
 
 Ítem de `GET /mi/seguimiento` (`seguimientos[]`):
@@ -461,11 +552,35 @@ Cuando una tarea ligada a un pedido de asistencia está `en_curso`, la cuadrilla
 ```
 
 - `estado`: `en_camino` (hay posición) o `asignada_sin_posicion` (todavía no llegó ninguna; `posicion`, `distancia_m` y `llegada_estimada_min` son `null`).
-- `distancia_m` = recta entre la cuadrilla y el pedido por `factor_desvio` (1,3); `llegada_estimada_min` = distancia / `velocidad_cuadrilla_kmh` (40 km/h), redondeada hacia arriba. Si el pedido no tiene coordenadas, ambos son `null`.
+- `distancia_m` y `llegada_estimada_min` salen de la `ruta` (ver "Recorrido animado"): metros y minutos que **faltan**; la llegada es distancia / `velocidad_cuadrilla_kmh` (40 km/h), redondeada hacia arriba. Sin red vial equivalen a la recta por `factor_desvio` (1,3). Si el pedido no tiene coordenadas, ambos son `null`.
 - `posicion_vieja` es `true` si pasaron más de `posicion_vieja_minutos` (5 min) desde `actualizada_en`.
 - La cuadrilla se identifica por tipo y roles del catálogo, nunca por personas.
 
-Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
+#### Recorrido animado (`seguimiento.ruta`)
+
+Cada ítem de seguimiento (en `GET /mi/seguimiento` y dentro de `seguimiento` de `GET /mi/pedidos`) suma `ruta` y `simulada`. `ruta` es `null` si todavía no hay posición (y el modo demostración está apagado) o el pedido no tiene coordenadas.
+
+```json
+{ "solicitud_id": 12, "tarea_id": 7, "tipo_cuadrilla": "ganadera", "roles": ["encargado_cuadrilla", "veterinario"],
+  "estado": "en_camino",
+  "posicion": { "lat": -26.1884, "lon": -58.1752, "precision_m": null },
+  "actualizada_en": "2026-11-20T15:05:11-03:00", "posicion_vieja": false,
+  "distancia_m": 3120, "llegada_estimada_min": 5,
+  "ruta": {
+    "coordenadas": [[-58.176, -26.2], [-58.1752, -26.1884], [-58.1811, -26.1703], [-58.1875, -26.156]],
+    "distancia_km": 3.12, "llegada_estimada_min": 5, "metodo": "red_vial", "simulada": true,
+    "progreso": 0.2814, "velocidad_kmh": 40, "calculada_en": "2026-11-20T15:02:12-03:00" },
+  "simulada": true, "categoria": "SIMULADO", "fuente": "Posición SIMULADA por el servidor (modo demostración): ...",
+  "supuestos": { "...": "..." }, "nota": "Modo demostración (SIMULADO): ..." }
+```
+
+- `coordenadas`: `[[lon, lat], ...]` (hasta 300 puntos) desde la posición de la cuadrilla (o la base simulada) hasta el pedido, en el sentido del viaje. `distancia_km` y `llegada_estimada_min`: lo que **falta** (a `velocidad_kmh`). `progreso` 0..1: fracción ya recorrida de la ruta (con posición real la ruta parte del vehículo y vale 0; con la simulada llega a 1 y la llegada a 0). `calculada_en`: cuándo se calculó el trazado (se reusa ~60 s por origen redondeado a ~50 m).
+- `metodo`: `red_vial` (pgRouting sobre `red_vial`, perfil del vehículo de la cuadrilla: el camión jaula solo pavimento y ripio; excluye los caminos que el operador marcó no transitables y los tramos dentro de sectores comprometidos según la última lectura de Puerto Formosa) o `aproximado` (sin red o sin ruta: recta por `factor_desvio`; la lancha va siempre en recta a `velocidad_lancha_kmh`). La ruta es una guía de demostración, no un recorrido garantizado.
+- `simulada: true` (en `ruta` y en el ítem): la posición la puso el servidor (**modo demostración**). Con `seguimiento_demo: true` (`supuestos.yaml`, SIMULADO), la tarea `en_curso` y **ninguna posición real vigente**, el vehículo sale de `base_cuadrillas_simulada` (SUPUESTO) en el instante de inicio de la tarea y avanza por la ruta a `velocidad_kmh`; en `posicion` va el punto simulado (`precision_m: null`). Una posición real siempre gana: si la cuadrilla comparte la suya, `simulada` es `false`. Para apagarlo: `seguimiento_demo: false`.
+- Control de acceso sin cambios: solo quien hizo el pedido lo ve; la ruta no revela más que el punto de ese pedido y la posición de su cuadrilla.
+- Los mandos (`GET /cuadrillas/posiciones`) ven también las posiciones simuladas, marcadas `simulada: true`.
+
+Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "simulada", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
 
 Evento WebSocket `posicion_cuadrilla` (`{ "cuadrillas": [id] }`): solo `operador`, `decisor` y `admin`; lleva ids sin coordenadas y el panel consulta `GET /cuadrillas/posiciones`.
 
@@ -475,7 +590,39 @@ curl -s $API/mi/seguimiento -H "$H_CIUDADANO"
 # Casos inválidos: "lat": 95 -> 422; sin tarea en curso -> 409; dos envíos en menos de 10 s -> 429; ciudadano en /cuadrillas/mi-posicion -> 403
 ```
 
-Prueba automática: `tests/test_seguimiento.py`.
+### Mis pedidos (`GET /mi/pedidos`)
+
+Respuesta `{ "categoria": "SIMULADO", "items": [...] }`, hasta 100 pedidos **propios** del más nuevo al más viejo (nunca los de otra persona). Cada ítem:
+
+```json
+{ "id": 4, "tipo": "evacuacion", "personas": 3, "estado": "asignada", "origen": "web",
+  "creada_en": "2026-11-20T18:01:13.169859+00:00", "lat": -26.18, "lon": -58.139, "sector_id": "S4",
+  "linea_tiempo": [
+    { "estado": "recibida",  "en": "2026-11-20T18:01:13.169859+00:00", "alcanzado": true },
+    { "estado": "verificada", "en": "2026-11-20T18:01:14.158137+00:00", "alcanzado": true },
+    { "estado": "asignada",  "en": "2026-11-20T18:01:14.560747+00:00", "alcanzado": true },
+    { "estado": "en_curso",  "en": null, "alcanzado": true },
+    { "estado": "resuelta",  "en": "2026-11-20T18:01:15.823719+00:00", "alcanzado": true } ],
+  "tarea": { "id": 4, "estado": "completada",
+    "cuadrilla": { "id": 1, "tipo_incidente": "humana", "rol_encargado": "encargado_cuadrilla", "vehiculo": "4x4" },
+    "iniciada_en": null, "cerrada_en": "2026-11-20T18:01:15.823719+00:00" },
+  "seguimiento": null,
+  "confirmacion": { "solicitud_id": 4, "codigo": "K7M2Q9XA", "respondida": true, "respuesta": "parcial", "comentario": null },
+  "centro": { "id": 1, "nombre": "Centro de recepción SIMULADO 1", "lat": -26.17, "lon": -58.165 } }
+```
+
+- `linea_tiempo` siempre trae los 5 estados en orden. `alcanzado` dice si el estado ya se cumplió; `en` es la hora **solo si el sistema la registró** (si no, `null`, también con `alcanzado: true`). Se toma de: alta del pedido (`recibida`); la bitácora de cambios de estado de la solicitud (`verificada`, `asignada`, `en_curso`, `resuelta`); la hora de creación de la tarea (`asignada`, de respaldo); la última actualización de la tarea mientras está `en_curso`; y la constancia de cierre o el cierre de la tarea (`resuelta`, de respaldo). Si la tarea va más adelantada que la solicitud (p. ej. tarea `completada`), esos estados cuentan como alcanzados.
+- `tarea` es la tarea vigente (la más nueva no cancelada) o `null`. `cuadrilla` se identifica por tipo, `rol_encargado` (rol del catálogo si la cuadrilla tiene encargado; nunca un nombre) y `vehiculo` (`SIMULADO`, puede ser `null`). `iniciada_en` y `cerrada_en` son `null` si no hay hora registrada.
+- `seguimiento`: el mismo ítem que devuelve `GET /mi/seguimiento` para ese pedido (solo con la tarea `en_curso`), si no `null`. Una posición de más de `posicion_vencida_minutos` (30 min, SUPUESTO) no se devuelve: el ítem queda `asignada_sin_posicion` con `posicion_vieja: true`.
+- `confirmacion`: la consulta del traslado (`respuesta` canónica, ver "Respuestas del evacuado") o `null` si todavía no se pidió. Incluye `codigo` (el mismo que `GET /mi/confirmaciones`) para que la persona también pueda responder por SMS (`SI <código>`, `PARCIAL <código>`, `NO <código>` o `PROBLEMA <código> <texto>`); solo lo ve la dueña del pedido.
+- `centro`: el centro de recepción registrado en la constancia de cierre (`null` antes del cierre o sin centro). No es la sugerencia de `GET /mi/sector`.
+- Otros roles: 403; sin sesión: 401. No se registra en la bitácora de accesos (son datos propios de quien consulta, igual que `/mi/seguimiento`).
+
+```bash
+curl -s $API/mi/pedidos -H "$H_CIUDADANO"
+```
+
+Prueba automática: `tests/test_seguimiento.py`, `tests/test_ruta_seguimiento.py` y `tests/test_pedidos.py`.
 
 ## Lluvia
 
@@ -527,7 +674,7 @@ Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de l
 
 ## Tiempo real
 
-`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
+`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla|parte_tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla` y `parte_tarea`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
 
 La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
@@ -577,12 +724,10 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (63 rutas y 73 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (70 rutas y 81 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
-python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='
-').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'
-')"
+python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='\n').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'\n')"
 ```
 
 Con el backend en marcha, el mismo esquema se sirve en `GET /openapi.json` y la interfaz interactiva en `GET /docs`.

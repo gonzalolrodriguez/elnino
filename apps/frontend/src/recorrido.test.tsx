@@ -56,6 +56,8 @@ function montar(opciones: { disponible3D?: boolean; reducido?: boolean } = {}) {
   const ref = createRef<ControlCuenca | null>() as React.MutableRefObject<ControlCuenca | null>;
   ref.current = c;
   render(<Montar control={ref} {...opciones} />);
+  // Los controles arrancan plegados: se abren con «Recorrer el río».
+  fireEvent.click(screen.getByRole("button", { name: /Recorrer el río/ }));
   return { c, emitir };
 }
 

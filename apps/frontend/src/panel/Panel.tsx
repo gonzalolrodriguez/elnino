@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { PanelLayout } from "./PanelLayout";
 import Bitacora from "./paginas/Bitacora";
 import Centinela from "./paginas/Centinela";
+import Cuadrillas from "./paginas/Cuadrillas";
 import Evacuaciones from "./paginas/Evacuaciones";
 import Limites from "./paginas/Limites";
 import Lluvia from "./paginas/Lluvia";
@@ -25,6 +26,7 @@ export default function Panel() {
         <Route path="recomendacion" element={<Recomendacion />} />
         <Route path="produccion" element={<Produccion />} />
         <Route path="operacion" element={<Operacion />} />
+        <Route path="cuadrillas" element={<Cuadrillas />} />
         <Route path="lluvia" element={<Lluvia />} />
         <Route path="evacuaciones" element={<Evacuaciones />} />
         <Route path="ordenes" element={<Ordenes />} />

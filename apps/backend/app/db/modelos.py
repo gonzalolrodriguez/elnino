@@ -14,6 +14,7 @@ from geoalchemy2 import Geometry
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -376,6 +377,8 @@ class Cuadrilla(Base):
     nombre: Mapped[str] = mapped_column(String(120))
     tipo_incidente: Mapped[str] = mapped_column(String(40))  # humana|ganadera|apicola
     estado: Mapped[str] = mapped_column(String(20), default="disponible")
+    # SIMULADO: 4x4|camion_jaula|colectivo|lancha|moto; NULL = sin vehículo asignado
+    vehiculo: Mapped[str | None] = mapped_column(String(20))
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 
@@ -402,8 +405,51 @@ class Tarea(Base):
     descripcion: Mapped[str | None] = mapped_column(Text)
     estado: Mapped[str] = mapped_column(String(20), default="pendiente")
     checklist: Mapped[list | None] = mapped_column(JSONB)
+    # Marca para el panel: un parte parcial, no realizado o reprogramado devolvió la tarea a
+    # pendiente y un operador todavía no la reasignó ni la actualizó.
+    requiere_atencion: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
     creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+
+
+class ParteTarea(Base):
+    """Parte de una cuadrilla sobre una tarea: avance, dificultad o resultado.
+
+    Privacidad: el autor se identifica por su rol operativo; la observación es texto libre de la
+    cuadrilla y solo la leen los mandos y la propia cuadrilla (nunca la ciudadanía ni el WebSocket).
+    """
+
+    __tablename__ = "partes_tarea"
+    __table_args__ = (
+        Index(
+            "uq_parte_idempotencia",
+            "autor_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+        CheckConstraint("tipo IN ('avance','dificultad','resultado')", name="ck_parte_tipo"),
+        CheckConstraint(
+            "resultado IS NULL "
+            "OR resultado IN ('completa','parcial','no_realizada','reprogramada')",
+            name="ck_parte_resultado",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tarea_id: Mapped[int] = mapped_column(ForeignKey("tareas.id", ondelete="CASCADE"), index=True)
+    cuadrilla_id: Mapped[int | None] = mapped_column(ForeignKey("cuadrillas.id"), index=True)
+    tipo: Mapped[str] = mapped_column(String(12))  # avance|dificultad|resultado
+    resultado: Mapped[str | None] = mapped_column(String(14))
+    observacion: Mapped[str | None] = mapped_column(Text)
+    autor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    autor_rol: Mapped[str | None] = mapped_column(String(60))
+    resuelta: Mapped[bool | None] = mapped_column(Boolean)  # solo dificultades
+    idempotency_key: Mapped[str | None] = mapped_column(String(36))
+    categoria: Mapped[str] = mapped_column(String(30), default="SIMULADO")
+    creado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora, index=True)
 
 
 class PosicionCuadrilla(Base):
@@ -467,9 +513,8 @@ class ConfirmacionEvacuado(Base):
     )
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     canal: Mapped[str | None] = mapped_column(String(20))  # app|sms_sim|whatsapp_sim|ivr_sim
-    respuesta: Mapped[str | None] = mapped_column(
-        String(10)
-    )  # si|no|problema; NULL = sin responder
+    # completa|parcial|no_encontraron|no_vinieron|otro_problema; NULL = sin responder
+    respuesta: Mapped[str | None] = mapped_column(String(20))
     comentario: Mapped[str | None] = mapped_column(Text)
     codigo: Mapped[str] = mapped_column(String(8), unique=True)
     creada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)

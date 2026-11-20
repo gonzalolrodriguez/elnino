@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
@@ -8,6 +8,9 @@ import { Insignia } from "../../components/Insignia";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
+import { AvisoAtencion } from "../cuadrillas/TarjetaCuadrilla";
+import { HistorialPartes } from "../cuadrillas/HistorialPartes";
+import { ChipParte } from "../cuadrillas/partes";
 import { Cargando, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 import { etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
@@ -102,6 +105,10 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
   const carga = useCarga(() => api.tareas());
   const toast = useToast();
   const [error, setError] = useState<unknown>(null);
+  // `?tarea=N` (enlace desde «Cuadrillas») deja abierto el historial de partes de esa tarea.
+  const [params] = useSearchParams();
+  const [abiertas, setAbiertas] = useState<number[]>(() => (params.get("tarea") ? [Number(params.get("tarea"))] : []));
+  const alternar = (id: number) => setAbiertas((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
 
   async function cambiar(t: Tarea, c: { estado?: string; cuadrilla_id?: number }) {
     setError(null);
@@ -126,15 +133,21 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                 <Th>Estado</Th>
                 <Th>Cuadrilla</Th>
                 <Th>Acciones</Th>
+                <Th>Partes</Th>
               </Tr>
             </Thead>
             <Tbody>
               {d.tareas.map((t) => (
-                <Tr key={t.id}>
+                <Fragment key={t.id}>
+                <Tr>
                   <Td whiteSpace="normal">{t.titulo}</Td>
                   <Td>{t.sector_id ?? "—"}</Td>
-                  <Td>
-                    <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
+                  <Td whiteSpace="normal">
+                    <Flex direction="column" align="flex-start" gap={1}>
+                      <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
+                      {t.requiere_atencion && <AvisoAtencion />}
+                      {t.ultimo_parte && <ChipParte parte={t.ultimo_parte} />}
+                    </Flex>
                   </Td>
                   <Td>
                     <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
@@ -154,7 +167,20 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                       ))}
                     </Flex>
                   </Td>
+                  <Td>
+                    <Button size="xs" variant="outline" aria-expanded={abiertas.includes(t.id)} aria-controls={`partes-tarea-${t.id}`} onClick={() => alternar(t.id)} aria-label={`${abiertas.includes(t.id) ? "Ocultar" : "Ver"} partes de la tarea ${t.id}`}>
+                      {abiertas.includes(t.id) ? "Ocultar partes" : "Ver partes"}
+                    </Button>
+                  </Td>
                 </Tr>
+                {abiertas.includes(t.id) && (
+                  <Tr>
+                    <Td colSpan={6} whiteSpace="normal">
+                      <HistorialPartes tareaId={t.id} requiereAtencion={t.requiere_atencion === true} alCambiar={carga.recargar} />
+                    </Td>
+                  </Tr>
+                )}
+                </Fragment>
               ))}
             </Tbody>
           </Table>

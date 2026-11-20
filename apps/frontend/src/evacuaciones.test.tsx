@@ -132,7 +132,7 @@ describe("página Evacuaciones", () => {
     expect(within(detalle).getByRole("img", { name: /Esquema sin escala/ })).toBeInTheDocument();
     expect(within(detalle).getByText("Encargado de cuadrilla", { exact: false })).toBeInTheDocument();
     const conf = within(detalle).getByTestId("confirmacion");
-    expect(conf).toHaveTextContent("No llegó");
+    expect(conf).toHaveTextContent("No vinieron");
     expect(conf).toHaveTextContent("SMS (simulado)");
     expect(conf).toHaveTextContent("Nos dejaron en otro lado");
   });
@@ -245,7 +245,10 @@ describe("cierre con constancia (cuadrilla)", () => {
       "POST /tareas/7/cierre/adjuntos": () => ({ estado: 201, json: { n: 1 } }),
     });
     renderRuta("/cuadrilla");
-    fireEvent.click(await screen.findByRole("button", { name: "Cerrar con constancia" }));
+    // «Terminar tarea» → «Completa» en una evacuación lleva al cierre con constancia.
+    fireEvent.click(await screen.findByRole("button", { name: "Terminar tarea" }));
+    fireEvent.click(screen.getByLabelText(/Completa/));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con la constancia" }));
     const form = await screen.findByRole("form", { name: /Constancia de la tarea 7/ });
 
     // Sin datos no se llama al backend.
@@ -275,59 +278,20 @@ describe("cierre con constancia (cuadrilla)", () => {
     await waitFor(() => expect(llamadas(f, "POST /tareas/7/cierre/adjuntos")).toHaveLength(1));
   });
 
-  it("una tarea que no es evacuación sigue con el botón Completar", async () => {
+  it("una tarea que no es evacuación se termina con un parte, sin constancia", async () => {
     conSesion("cuadrilla", { ...base, "GET /tareas": ok({ tareas: [{ ...TAREA, solicitud_id: null, orden_id: null }] }) });
     renderRuta("/cuadrilla");
-    expect(await screen.findByRole("button", { name: "Completar" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cerrar con constancia" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Terminar tarea" }));
+    fireEvent.click(screen.getByLabelText(/Completa/));
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continuar con la constancia" })).not.toBeInTheDocument();
   });
 });
 
-describe("confirmación del evacuado en Mi cuenta", () => {
-  const CONSULTAS = {
-    confirmaciones: [
-      { id: 5, tarea_id: 7, solicitud_id: 12, codigo: "K7M2QX9R", centro_nombre: "Escuela de referencia", respondida: false, respuesta: null, comentario: null, solicitada_en: "2026-11-19T15:00:00Z", respondida_en: null },
-      { id: 4, tarea_id: 6, solicitud_id: 11, codigo: "B3C4D5F6", centro_nombre: "Club vecinal", respondida: true, respuesta: "si", comentario: null, solicitada_en: "2026-11-18T15:00:00Z", respondida_en: "2026-11-18T16:00:00Z" },
-    ],
-    pendientes: 1,
-  };
-
-  it("muestra la consulta pendiente con copy neutral y envía la respuesta con el comentario", async () => {
-    const f = conSesion("ciudadano", {
-      "GET /mi/confirmaciones": ok(CONSULTAS),
-      "GET /mi/grupo-familiar": ok(null),
-      "POST /mi/confirmaciones": () => ({ estado: 201, json: { id: 5, respuesta: "problema", repetida: false, nota: "Gracias. Tu respuesta ayuda a verificar el traslado; no es una acusación." } }),
-    });
-    renderRuta("/mi-cuenta");
-    const tarjeta = await screen.findByTestId("confirmacion-5");
-    expect(tarjeta).toHaveTextContent("¿Llegaste a Escuela de referencia?");
-    expect(tarjeta).toHaveTextContent("No es una denuncia");
-    expect(tarjeta).toHaveTextContent("por SMS desde tu teléfono registrado");
-    expect(tarjeta).toHaveTextContent("SI K7M2QX9R");
-    expect(screen.getByTestId("confirmar-traslado")).toHaveTextContent("respondiste «Sí, llegó»");
-    fireEvent.change(within(tarjeta).getByLabelText(/Comentario/), { target: { value: "El camión se quedó en el barro" } });
-    fireEvent.click(within(tarjeta).getByRole("button", { name: "Hubo un problema" }));
-    expect(await screen.findByTestId("confirmacion-gracias-5")).toHaveTextContent("no es una acusación");
-    const [, init] = llamadas(f, "POST /mi/confirmaciones")[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toEqual({ solicitud_id: 12, respuesta: "problema", comentario: "El camión se quedó en el barro" });
-  });
-
-  it("si ya respondió otra cosa muestra el error del servidor", async () => {
-    conSesion("ciudadano", {
-      "GET /mi/confirmaciones": ok(CONSULTAS),
-      "GET /mi/grupo-familiar": ok(null),
-      "POST /mi/confirmaciones": () => ({ estado: 409, json: { error: { codigo: "conflicto", mensaje: "Ya respondiste esta consulta con otra opción.", detalle: [] } } }),
-    });
-    renderRuta("/mi-cuenta");
-    const tarjeta = await screen.findByTestId("confirmacion-5");
-    fireEvent.click(within(tarjeta).getByRole("button", { name: "No llegué" }));
-    expect(await within(tarjeta).findByText("Ya respondiste esta consulta con otra opción.")).toBeInTheDocument();
-  });
-
-  it("sin consultas no muestra el bloque", async () => {
-    conSesion("ciudadano", { "GET /mi/confirmaciones": ok({ confirmaciones: [], pendientes: 0 }), "GET /mi/grupo-familiar": ok(null) });
-    renderRuta("/mi-cuenta");
-    await screen.findByRole("heading", { name: "Mi cuenta" });
-    await waitFor(() => expect(screen.queryByTestId("confirmar-traslado")).not.toBeInTheDocument());
+describe("motivos de discrepancia nuevos", () => {
+  it("tienen texto legible (parcial y no_encontraron)", async () => {
+    const { etiquetaMotivoDiscrepancia } = await import("./lib/etiquetas");
+    expect(etiquetaMotivoDiscrepancia("evacuado_parcial")).toContain("solo en parte");
+    expect(etiquetaMotivoDiscrepancia("evacuado_no_encontraron")).toContain("no la encontró");
   });
 });

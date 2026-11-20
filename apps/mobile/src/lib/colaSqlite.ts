@@ -153,6 +153,15 @@ export class RepositorioSqlite implements RepositorioCola {
     await db.runAsync("DELETE FROM cola_solicitudes WHERE usuario_id <> ?", usuarioId);
   }
 
+  /**
+   * Borra los ítems ya resueltos (enviados o rechazados) de todas las cuentas: ya no se van a enviar y
+   * guardan ubicación y texto. Los pendientes se conservan para no perder un pedido de ayuda sin enviar.
+   */
+  async borrarNoPendientes(): Promise<void> {
+    const db = await this.db();
+    await db.runAsync("DELETE FROM cola_solicitudes WHERE estado <> 'pendiente'");
+  }
+
   async borrarDeUsuario(usuarioId: number): Promise<void> {
     const db = await this.db();
     await db.runAsync("DELETE FROM cola_solicitudes WHERE usuario_id = ?", usuarioId);

@@ -2,7 +2,11 @@
 PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial · Entrega: viernes 20/11/2026, 18 h
 
 **Nombre de la herramienta:** Plataforma de Gestión de Evacuaciones (Operación Agua)
-**Equipo · institución · integrantes y rol de cada uno:** Equipo 3 · Instituto Politécnico Formosa (IPF) · Gonzalo Rodríguez, Franco Villalba, Dylan Cabrera y Javier Martínez. Reparto de roles (propuesta, a confirmar por el equipo): (1) backend, datos y seguridad; (2) panel operativo web; (3) landing 3D y registro web; (4) app móvil. La asignación de cada integrante a cada rol la confirma el equipo antes de la entrega.
+**Equipo · institución · integrantes y rol de cada uno:** Equipo 3 · Instituto Politécnico Formosa (IPF).
+- Gonzalo Rodríguez: backend (API, datos, base PostGIS y seguridad).
+- Dylan Cabrera: frontend web.
+- Javier Martínez: frontend web.
+- Franco Villalba: app móvil.
 **Reto:** 2 Simulador (Desafío 06 · Evacuaciones)
 
 ## Usuario y pregunta
@@ -15,6 +19,10 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 - **Simulador de escenario** (`POST /simulacion/escenario`): con 7,60 m y 40 mm, S4 queda comprometido y aislado, S1 y S3 en riesgo, S2 normal y el río normal a 0,20 m de la alerta; una altura de 13 m se rechaza con 422. Verificado en un backend real y con pruebas.
 - **Caminos no transitables:** el operador marca un acceso como cerrado con su motivo y el escenario lo recalcula (`PATCH /accesos/{id}`). El cierre también excluye los tramos de la red vial asociados a ese acceso en el ruteo con pgRouting (probado con pruebas del backend).
 - **Recomendador y comparador de alternativas:** personas por sector (K10 más familias registradas en el polígono), asignación a centros por capacidad con quiénes quedan sin lugar, viajes por vehículo y tres alternativas lado a lado. Es una recomendación, no una orden.
+  - Tiempos de viaje por la red vial real (OpenStreetMap), con la lluvia cerrando tramos de tierra y ripio.
+  - Veredicto "¿alcanza el tiempo?" por sector, con holgura del 25 % y el ganado 48 h antes (supuestos), y lluvia prevista SIMULADA opcional para la ventana seca.
+  - Las familias nunca se separan entre centros ni entre viajes. Hay un set aparte de hogares SIMULADOS para probarlo.
+  - Desde la recomendación, "Preparar orden con estos sectores" abre Órdenes con los sectores marcados; la orden la sigue emitiendo el decisor.
 - **Ruteo** vehicular, de camión jaula y de arreo con pgRouting sobre la red OSM del corredor; sin red cargada, estimación aproximada con su limitación a la vista.
 - **Arca Productiva** (calculadora ganadera): reproduce el caso de control (150 m², 1 camión con divisiones, 58,4 kg de maíz y 5,5 kg de pellet por día).
 - **Órdenes y bitácora K8:** solo el rol `decisor` emite órdenes; cada una crea notificaciones, tareas de cuadrilla y un borrador de bitácora con los seis campos obligatorios, exportable a Markdown.
@@ -25,18 +33,26 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Landing con el relieve real de la cuenca en 3D (SRTM, curvas de nivel, departamentos) y alternativa 2D.
   - El recorrido del agua desde el Pantanal hasta la confluencia con el Paraná se puede explorar: arrastrar, zoom y una barra para recorrer el río por sus hitos.
   - Página Información (El Niño, serie K1, sectores y fuentes).
-  - Registro de ciudadanía y de productores con consentimiento y ubicación del dispositivo.
-  - Área "mi cuenta" con el estado del sector, pedido de ayuda y edición del grupo familiar.
+  - Franja "Cómo estamos hoy" en lenguaje llano, con "Emergencia: 103" visible. Con sesión iniciada, la landing muestra el acceso de cada rol en lugar del selector de perfil.
+  - Registro de ciudadanía y de productores con consentimiento. La ubicación se toma del GPS, se marca en un mapa (con los sectores K10) o se escribe a mano.
+  - **Mi cuenta como panel personal:**
+    - Estado del sector en una frase, con el río frente a la altura de compromiso.
+    - El pedido activo como seguimiento de envío: recibido, verificado, cuadrilla asignada (por rol y vehículo), en camino, asistido y confirmado.
+    - Avisos por gravedad, centro asignado, historial de pedidos y grupo familiar.
+    - Al cerrar la tarea, el ciudadano confirma con cinco opciones: por completo, en parte, no me encontraron, no vinieron u otro problema. También puede hacerlo por SMS.
   - Diseño accesible: tipografía para baja visión, 320 px a 4K y navegadores antiguos.
 - **Tablero de decisión** (`/comando`):
   - Para el decisor: río frente a umbrales con tendencia y tiempo restante con su supuesto, estado de los cuatro sectores, pedidos por estado, sector y canal, ocupación de centros, cuadrillas, órdenes, lluvia por origen y antigüedad de cada dato.
   - Para el operador, la cola de pedidos va primero.
+  - Menú ordenado por el flujo de trabajo: Situación, Decidir, Ejecutar y Respaldo y registro. La altura del río y la lluvia del escenario se cambian desde cualquier página.
+  - **Cuadrillas:** una página con cada cuadrilla, sus integrantes por rol (sin nombres), vehículo, tarea actual, último parte y dificultades abiertas. El operador asigna integrantes.
   - Para el administrador: usuarios, cuentas bloqueadas, integridad de la bitácora de accesos y estado del servicio.
 - **Constancias y validación cruzada de evacuaciones:**
   - La cuadrilla cierra cada tarea con una constancia: destino por GPS, centro, personas y animales trasladados, fotos, nota y rol firmante. Funciona sin conexión desde la app.
   - El evacuado confirma "¿llegaste a X?" por la app o por SMS desde su teléfono registrado.
   - Cada evacuación queda pendiente, en curso, cerrada por la cuadrilla, verificada o con discrepancia. Una discrepancia es una marca para revisar, no una acusación.
   - Esta información se ve en el tablero, en una página propia y como capa de traslados en el mapa.
+- **Partes de la cuadrilla:** desde la web o la app (con cola sin señal), la cuadrilla informa avances, dificultades y el resultado de cada tarea: completa, a medias, no realizada o reprogramada. La observación es obligatoria si no fue completa. Una tarea a medias vuelve a pendiente marcada "requiere atención" para que el operador la reasigne. El ciudadano ve que hubo una novedad, sin el texto de la observación.
 - **Sin datos móviles:**
   - Desde la app y sin cuenta: "Llamar al 103" y "Pedir ayuda por SMS", con el mensaje armado con el GPS del teléfono, que funciona sin datos.
   - Guía "Qué hacer" offline con los números 103, 106, 911 y 105.
@@ -52,6 +68,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Idempotencia en pedidos, órdenes y constancias.
   - Cuotas blandas sin CAPTCHA.
   - Mapeo a OWASP Top 10:2025 y Mobile Top 10 2024 en `docs/seguridad.md`.
+  - Auditoría del 20/11/2026 sobre lo agregado: límites por usuario, vencimiento de posiciones, borrado de datos guardados en el teléfono al vencer la sesión, política de seguridad de contenido (CSP) en la web y FastAPI/Starlette actualizados (`pip-audit` sin hallazgos).
 - **App móvil (Expo):**
   - Registro, login y perfil.
   - Pedido de asistencia con cola offline: envío en dos tiempos, idempotencia y reintentos acotados.
@@ -59,14 +76,23 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Modo cuadrilla con cierre con constancia.
   - Pestaña Monitor para mandos.
   - Pantalla de conexión aparte de login y registro.
-- **Distintivos SAPUKAY (rama `dev-gonzalo`, 20/11/2026):**
+  - "Necesito ayuda ahora": un toque, cuenta regresiva cancelable de 5 s, GPS automático y envío por la cola sin conexión.
+  - Barra fija en todas las pantallas con el 103, el estado de conexión y los pedidos pendientes.
+  - Mis pedidos con línea de tiempo, cuadrilla, vehículo y llegada estimada.
+- **Distintivos SAPUKAY:**
   - **Tres relojes:** río (DATO OBSERVADO, distancia a la alerta y rango de días con supuesto lineal), barro (SUPUESTO: la tierra se corta con 30 mm y S4 se compromete 30 cm antes de la alerta) y El Niño (DOCUMENTO DE REFERENCIA, CFS v2). Están en la landing y en el tablero.
-  - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web, y el solicitante ve la distancia y una llegada estimada (supuesto de velocidad y desvío). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea y solo la ven el solicitante y los roles operativos.
+  - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web. El solicitante ve en un mapa el recorrido por la red vial (evitando caminos cerrados), el vehículo avanzando y la llegada estimada (supuesto de velocidad). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea, vence a los 30 minutos y solo la ven el solicitante y los roles operativos. Para la demostración, sin un teléfono real, el servidor mueve al vehículo por la ruta desde una base SIMULADA, rotulado "SIMULADO · recorrido de demostración".
   - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.
   - **Lámina de agua ilustrativa:** en el simulador, cada sector se cubre según cuánto supera el río su altura de compromiso (K10). Los accesos cortados se ven discontinuos y hay un botón "Reproducir subida". No es un modelo hidráulico.
-- **Pruebas automáticas al 20/11/2026 (rama `dev-gonzalo`):** backend 320, web 232, app 250. El APK de `main` generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
+- **Pruebas automáticas al 20/11/2026:** backend 426, web 329 y app 314, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
-No se pudo comprobar todavía en pantalla y con sesión real el tablero, las constancias y el panel. Hay pruebas automáticas con datos simulados. Tampoco se comprobó la fluidez del 3D en distintos equipos ni el uso completo de la app en campo: cámara, GPS y cola sin señal. De los distintivos SAPUKAY, los tres relojes se vieron en un navegador; la brújula, la cuadrilla en camino y la lámina de agua solo tienen pruebas automáticas.
+Se vieron en un navegador, contra el backend real, la landing (con y sin sesión), Mi cuenta de una ciudadana de prueba con su pedido y el mapa de OpenStreetMap, y los tres relojes. El panel rediseñado, la página de cuadrillas y el recorrido animado se revisaron con capturas sobre datos simulados.
+
+No se comprobó todavía:
+- El uso completo de la app en un teléfono: GPS, cámara, cola sin señal, llamada al 103 y SMS.
+- La fluidez del 3D en distintos equipos.
+- La política de seguridad de contenido (CSP) en la versión compilada de la web.
+- La brújula y la lámina de agua, que solo tienen pruebas automáticas.
 
 ## Qué falta para que la mesa la use
 - **Datos reales de la autoridad:** qué edificios son centros de recepción y su capacidad (hoy `SIMULADO`; las escuelas del Mapa Educativo son solo candidatas), recursos disponibles, responsables por rol y sectores definitivos (K10 es simulado y está "a validar por la mesa"). Dependen de Defensa Civil y del comité.
@@ -89,7 +115,7 @@ No se pudo comprobar todavía en pantalla y con sesión real el tablero, las con
   Estimación del equipo: varias semanas de trabajo sostenido y la participación de la autoridad. No hay una cifra confirmada.
 
 ## Cómo está hecha
-- **Backend:** Python 3.12 (probado con 3.13), FastAPI 0.115, Pydantic 2, SQLAlchemy 2 + GeoAlchemy2, Alembic, PostgreSQL 16 con PostGIS y pgRouting (imagen `pgrouting/pgrouting:16-3.4-3.6.1`), Argon2, PyJWT, `cryptography`, slowapi, openpyxl, pytest y ruff.
+- **Backend:** Python 3.12 (probado con 3.13), FastAPI 0.165 (Starlette 1.10), Pydantic 2, SQLAlchemy 2 + GeoAlchemy2, Alembic, PostgreSQL 16 con PostGIS y pgRouting (imagen `pgrouting/pgrouting:16-3.4-3.6.1`), Argon2, PyJWT, `cryptography`, slowapi, openpyxl, pytest y ruff.
 - **Web:** React 18, TypeScript, Vite 6, Chakra UI 2, Framer Motion, React Three Fiber y Drei (landing), MapLibre GL 6 y Deck.gl (mapa), tipografía Atkinson Hyperlegible Next, `@vitejs/plugin-legacy` (navegadores antiguos), vitest.
 - **App móvil:** Expo SDK 58, React Native 0.88, expo-router, expo-sqlite, expo-secure-store, expo-location, react-native-maps, jest-expo; APK con EAS Build (perfil `preview`).
 - **Monorepo:** pnpm 10 con workspaces; Node 24.

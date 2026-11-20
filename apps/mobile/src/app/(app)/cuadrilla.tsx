@@ -3,6 +3,8 @@ import { Pressable, Switch, Text, View } from "react-native";
 
 import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { FormCierre } from "@/components/FormCierre";
+import { FormParte } from "@/components/FormParte";
+import { HistorialPartes } from "@/components/HistorialPartes";
 import { SoloRol } from "@/components/SoloRol";
 import {
   Boton,
@@ -19,18 +21,26 @@ import {
   Titulo,
   Vacio,
 } from "@/components/ui";
-import { esCierre } from "@/lib/cola";
+import { esCierre, esParte } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { useCompartirPosicion } from "@/lib/compartirPosicion";
 import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
+import { descripcionParte, exigeConstancia, type TipoParte } from "@/lib/partes";
 import { api, type Tarea } from "@/lib/servicios";
 
 function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar: (t: Tarea) => void; alCerrada: () => void }) {
-  const { items } = useCola();
+  const { items, descartar } = useCola();
   const [cerrando, setCerrando] = useState(false);
+  const [parte, setParte] = useState<TipoParte | null>(null);
+  const [verPartes, setVerPartes] = useState(false);
+  const [versionPartes, setVersionPartes] = useState(0);
   // Cierre ya guardado en el teléfono que todavía no llegó al servidor.
   const cierreLocal = items.find((i) => esCierre(i.datos) && i.datos.tarea_id === tarea.id && i.estado === "pendiente");
+  // Partes guardados en el teléfono: pendientes de envío o rechazados por el servidor.
+  const partesLocales = items.filter((i) => esParte(i.datos) && i.datos.tarea_id === tarea.id && i.estado !== "enviada");
+  const pendientesParte = partesLocales.filter((i) => i.estado === "pendiente");
+  const rechazadosParte = partesLocales.filter((i) => i.estado === "rechazada");
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
@@ -61,6 +71,13 @@ function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar
         {etiquetaEstadoTarea(tarea.estado)}
         {tarea.sector_id ? ` · sector ${tarea.sector_id}` : ""}
       </Text>
+      {tarea.requiere_atencion ? (
+        <View accessibilityRole="alert" style={{ backgroundColor: COLOR.avisoFondo, borderRadius: 8, padding: 10 }}>
+          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>
+            ⚠ Requiere atención: la tarea volvió a pendiente y el operador la va a reprogramar.
+          </Text>
+        </View>
+      ) : null}
       {tarea.descripcion ? <Texto>{tarea.descripcion}</Texto> : null}
 
       {(tarea.checklist ?? []).map((c, i) => (
@@ -89,12 +106,61 @@ function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar
       {cierreLocal ? (
         <Texto>Cierre con constancia guardado en el teléfono: se envía solo cuando haya conexión.</Texto>
       ) : null}
+      {pendientesParte.map((i) => (
+        <Texto key={i.id} suave>
+          Pendiente de envío: {i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "parte"}. Se manda solo cuando haya conexión.
+        </Texto>
+      ))}
+      {rechazadosParte.map((i) => (
+        <View key={i.id} style={{ gap: 6 }}>
+          <Text style={{ fontWeight: "600" }}>
+            {i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "Parte"}: rechazado por el servidor
+          </Text>
+          {i.ultimoError ? <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text> : null}
+          <FilaBotones>
+            {exigeConstancia(i.ultimoError) ? (
+              <Boton
+                titulo="Cerrar con constancia"
+                onPress={() => {
+                  void descartar(i.id);
+                  setCerrando(true);
+                }}
+              />
+            ) : null}
+            <Boton titulo="Descartar parte" variante="peligro" onPress={() => void descartar(i.id)} />
+          </FilaBotones>
+        </View>
+      ))}
+      {!cerrada && !parte && !cerrando ? (
+        <FilaBotones>
+          <Boton titulo="Informar avance" variante="secundario" onPress={() => setParte("avance")} />
+          <Boton titulo="Informar dificultad" variante="secundario" onPress={() => setParte("dificultad")} />
+          <Boton titulo="Terminar tarea" variante="secundario" onPress={() => setParte("resultado")} />
+        </FilaBotones>
+      ) : null}
+      {parte ? (
+        <FormParte
+          tareaId={tarea.id}
+          tipo={parte}
+          alEnviado={() => setVersionPartes((v) => v + 1)}
+          alCerrar={() => {
+            setParte(null);
+            alCerrada();
+          }}
+          alPedirConstancia={() => {
+            setParte(null);
+            setCerrando(true);
+          }}
+        />
+      ) : null}
       {!cerrada && !cierreLocal && !cerrando ? (
         <Boton titulo="Cerrar con constancia" variante="secundario" onPress={() => setCerrando(true)} />
       ) : null}
       {cerrando ? (
         <FormCierre tareaId={tarea.id} alEnviado={alCerrada} alCerrar={() => setCerrando(false)} />
       ) : null}
+      <Enlace titulo={verPartes ? "Ocultar partes" : "Ver partes de la tarea"} onPress={() => setVerPartes((v) => !v)} />
+      {verPartes ? <HistorialPartes tareaId={tarea.id} version={versionPartes} /> : null}
       <Insignia categoria="SIMULADO" />
     </Tarjeta>
   );
@@ -162,8 +228,8 @@ function ListaTareas() {
       <Titulo>Tareas de la cuadrilla</Titulo>
       <EnlaceBrujula />
       <Texto suave>
-        Los cambios de estado requieren conexión. El cierre con constancia se puede cargar sin
-        conexión: queda en el teléfono y se envía solo.
+        Los cambios de estado requieren conexión. Los partes y el cierre con constancia se pueden cargar
+        sin conexión: quedan en el teléfono y se envían solos.
       </Texto>
       {error ? <ErrorCaja mensaje={error} onReintentar={cargar} /> : null}
       {!error && tareas === null ? <Cargando texto="Cargando tareas…" /> : null}

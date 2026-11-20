@@ -57,6 +57,22 @@ export const theme = extendTheme({
   textStyles: {
     cifra: { fontFamily: "heading", fontWeight: 700, fontVariantNumeric: "tabular-nums lining-nums", lineHeight: 1.1, letterSpacing: "-0.02em" },
     nota: { fontSize: "sm", color: "textoSuave" },
+    // Panel personal: saludo, cifras grandes (tabulares) y rótulos chicos de datos.
+    pantalla: { fontFamily: "heading", fontWeight: 700, fontSize: "clamp(2rem, 1.3rem + 2.6vw, 3.25rem)", lineHeight: 1.05, letterSpacing: "-0.03em" },
+    cifraGrande: {
+      fontFamily: "heading",
+      fontWeight: 700,
+      fontSize: "clamp(2.5rem, 1.6rem + 3vw, 3.75rem)",
+      lineHeight: 1,
+      letterSpacing: "-0.035em",
+      fontVariantNumeric: "tabular-nums lining-nums",
+    },
+    cifraMedia: { fontFamily: "heading", fontWeight: 700, fontSize: "1.75rem", lineHeight: 1.1, letterSpacing: "-0.025em", fontVariantNumeric: "tabular-nums lining-nums" },
+    rotulo: { fontSize: "0.8125rem", fontWeight: 600, lineHeight: 1.3, color: "textoSuave" },
+    // Panel operativo: título de página y de bloque (escala fija, no fluida) y dato menudo con numerales tabulares.
+    titularPagina: { fontFamily: "heading", fontWeight: 700, fontSize: "1.75rem", lineHeight: 1.15, letterSpacing: "-0.03em" },
+    tituloBloque: { fontFamily: "heading", fontWeight: 700, fontSize: "1.125rem", lineHeight: 1.25, letterSpacing: "-0.02em" },
+    microdato: { fontSize: "0.8125rem", lineHeight: 1.4, color: "textoSuave", fontVariantNumeric: "tabular-nums" },
   },
   styles: {
     global: {

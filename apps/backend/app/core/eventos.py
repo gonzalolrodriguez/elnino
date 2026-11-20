@@ -13,6 +13,8 @@ conexión recibe solo lo que su rol puede ver:
 - ``constancia`` y ``discrepancia``: solo ``mandos``; la ciudadanía no las recibe.
 - ``posicion_cuadrilla``: solo operador, decisor y admin (ni otras cuadrillas ni ciudadanía); lleva
   solo ids, sin coordenadas: el panel consulta ``GET /cuadrillas/posiciones``.
+- ``parte_tarea``: solo operador, decisor y admin; lleva ids, tipo y resultado, nunca la
+  observación de la cuadrilla (el panel consulta ``GET /partes/recientes``).
 
 Cada envío es concurrente y tiene su propio plazo (``PLAZO_ENVIO_S``): un cliente lento o colgado no
 retrasa a los demás ni al hilo que publicó; si no responde a tiempo se lo desconecta.
@@ -97,7 +99,7 @@ class Difusor:
             conexiones = list(self._conexiones)
         elegidos = []
         for c in conexiones:
-            if tipo == "posicion_cuadrilla":  # ubicación de cuadrillas: solo roles operativos
+            if tipo in ("posicion_cuadrilla", "parte_tarea"):  # solo roles operativos
                 if c.rol in ROLES_OPERATIVOS:
                     elegidos.append(c)
             elif (

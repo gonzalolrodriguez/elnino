@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core import constantes
 from app.core.eventos import difusor
+from app.core.limitador import limite_por_usuario, limite_simulacion
 from app.core.rbac import requiere_rol
 from app.core.tiempo import hoy_ar
 from app.db.modelos import Alternativa, Usuario
@@ -18,8 +19,9 @@ from app.domain import ruteo as dom_ruteo
 from app.servicios import contexto, recomendacion
 from app.servicios import ruteo as srv_ruteo
 
-router = APIRouter(prefix="/simulacion", tags=["simulacion"])
-router_ruteo = APIRouter(tags=["simulacion"])
+_LIMITE = [Depends(limite_por_usuario("simulacion", limite_simulacion))]
+router = APIRouter(prefix="/simulacion", tags=["simulacion"], dependencies=_LIMITE)
+router_ruteo = APIRouter(tags=["simulacion"], dependencies=_LIMITE)
 
 _MANDOS = ("operador", "decisor", "admin")
 ORIGENES_LLUVIA = ("simulado", "manual", "parte_policial", "planilla_upca")

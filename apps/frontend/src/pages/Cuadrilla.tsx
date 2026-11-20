@@ -1,17 +1,21 @@
 import { Badge, Box, Button, Checkbox, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactElement } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { AlertaError } from "../components/Formulario";
+import { IconoAlerta, IconoCamion, IconoReloj, IconoTilde, IconoTriangulo } from "../components/iconos/Iconos";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
+import type { TareaConPartes } from "../lib/partes";
 import { useCarga } from "../lib/useCarga";
 import { useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { api } from "../panel/api";
 import type { Notificacion, Tarea } from "../panel/tipos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
+import { AccionesParte } from "./cuadrilla/AccionesParte";
 import { CerrarConConstancia } from "./cuadrilla/CerrarConConstancia";
 import { CompartirUbicacion } from "./cuadrilla/CompartirUbicacion";
+import { HistorialPartes } from "./cuadrilla/HistorialPartes";
 
 const ETIQUETA: Record<Tarea["estado"], string> = {
   pendiente: "Pendiente",
@@ -22,13 +26,22 @@ const ETIQUETA: Record<Tarea["estado"], string> = {
 const COLOR: Record<Tarea["estado"], string> = { pendiente: "yellow", en_curso: "blue", completada: "green", cancelada: "gray" };
 const ESTADOS_WS = { conectado: "Tiempo real conectado", conectando: "Conectando tiempo real…", desconectado: "Tiempo real desconectado" } as const;
 
-function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: Tarea; alCambiar: (t: Tarea) => void; alRecargar: () => void }) {
+const ICONO_ESTADO: Record<Tarea["estado"], ReactElement> = {
+  pendiente: <IconoReloj tam="0.9rem" />,
+  en_curso: <IconoCamion tam="0.9rem" />,
+  completada: <IconoTilde tam="0.9rem" />,
+  cancelada: <IconoAlerta tam="0.9rem" />,
+};
+
+function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes; alCambiar: (t: Tarea) => void; alRecargar: () => void }) {
   const [cerrando, setCerrando] = useState(false);
-  // Las tareas de una orden o de un pedido son evacuaciones: se cierran con constancia, no con un simple "Completar".
+  // Las tareas de una orden o de un pedido son evacuaciones: se cierran con constancia, no con un simple «Completa».
   const esEvacuacion = tarea.solicitud_id !== null || tarea.orden_id !== null;
   const [error, setError] = useState<unknown>(null);
   const [trabajando, setTrabajando] = useState(false);
+  const [versionPartes, setVersionPartes] = useState(0);
   const cerrada = tarea.estado === "completada" || tarea.estado === "cancelada";
+  const requiereAtencion = tarea.requiere_atencion === true && tarea.estado === "pendiente";
 
   async function aplicar(cambios: Parameters<typeof api.actualizarTarea>[1]) {
     setError(null);
@@ -48,12 +61,13 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: Tarea; alCambia
   }
 
   return (
-    <Box as="article" aria-label={`Tarea ${tarea.id}`} layerStyle="tarjeta" p={4}>
+    <Box as="article" aria-label={`Tarea ${tarea.id}`} layerStyle="tarjeta" p={{ base: 3, md: 4 }}>
       <Flex gap={2} align="center" wrap="wrap" mb={1}>
         <Heading as="h3" size="sm">
           {tarea.titulo}
         </Heading>
-        <Badge colorScheme={COLOR[tarea.estado]} data-testid={`estado-${tarea.id}`}>
+        <Badge colorScheme={COLOR[tarea.estado]} data-testid={`estado-${tarea.id}`} display="inline-flex" alignItems="center" gap={1}>
+          {ICONO_ESTADO[tarea.estado]}
           {ETIQUETA[tarea.estado]}
         </Badge>
         <Insignia categoria="SIMULADO" />
@@ -69,8 +83,43 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: Tarea; alCambia
           .join(" · ")}
       </Text>
       {tarea.descripcion && <Text fontSize="sm" mb={2}>{tarea.descripcion}</Text>}
+
+      {requiereAtencion && (
+        <Flex align="flex-start" gap={2} mb={3} p={3} borderRadius="xl" bg="alerta.50" border="1px solid" borderColor="alerta.200" color="alerta.900" fontSize="sm" role="status" data-testid={`atencion-${tarea.id}`}>
+          <Box aria-hidden="true" display="flex" mt="2px" color="alerta.700">
+            <IconoTriangulo tam="1rem" />
+          </Box>
+          <Text>
+            <strong>Requiere atención.</strong> La tarea volvió a pendiente porque no se completó. El operador la va a reprogramar; mientras tanto podés informar novedades.
+          </Text>
+        </Flex>
+      )}
+
+      {tarea.estado === "pendiente" && (
+        <Button size="lg" w={{ base: "full", sm: "auto" }} mb={3} isLoading={trabajando} leftIcon={<IconoCamion />} onClick={() => void aplicar({ estado: "en_curso" })}>
+          Iniciar
+        </Button>
+      )}
+
+      {!cerrada && (
+        <Box mb={3}>
+          <AccionesParte tareaId={tarea.id} exigeConstancia={esEvacuacion} alEnviado={() => { setVersionPartes((v) => v + 1); alRecargar(); }} alConstancia={() => setCerrando(true)} />
+        </Box>
+      )}
+      {cerrando && !cerrada && (
+        <CerrarConConstancia
+          tareaId={tarea.id}
+          alCancelar={() => setCerrando(false)}
+          alTerminar={() => {
+            setCerrando(false);
+            setVersionPartes((v) => v + 1);
+            alRecargar();
+          }}
+        />
+      )}
+
       {(tarea.checklist ?? []).length > 0 && (
-        <Stack role="group" aria-label={`Checklist de la tarea ${tarea.id}`} spacing={1} mb={3}>
+        <Stack role="group" aria-label={`Checklist de la tarea ${tarea.id}`} spacing={1} my={3}>
           {(tarea.checklist ?? []).map((c, i) => (
             <Checkbox key={`${tarea.id}-${i}`} isChecked={c.hecho} isDisabled={trabajando || cerrada} onChange={() => alternar(i)}>
               {c.item}
@@ -79,37 +128,14 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: Tarea; alCambia
         </Stack>
       )}
       {error !== null && <AlertaError error={error} />}
-      <Flex gap={2}>
-        {tarea.estado === "pendiente" && (
-          <Button size="sm" isLoading={trabajando} onClick={() => void aplicar({ estado: "en_curso" })}>
-            Iniciar
-          </Button>
-        )}
-        {tarea.estado === "en_curso" && !esEvacuacion && (
-          <Button size="sm" isLoading={trabajando} onClick={() => void aplicar({ estado: "completada" })}>
-            Completar
-          </Button>
-        )}
-        {tarea.estado === "en_curso" && esEvacuacion && !cerrando && (
-          <Button size="sm" onClick={() => setCerrando(true)}>
-            Cerrar con constancia
-          </Button>
-        )}
-        {!cerrada && (
-          <Button size="sm" variant="outline" isDisabled={trabajando} onClick={() => void aplicar({ estado: "cancelada" })}>
-            Cancelar tarea
-          </Button>
-        )}
-      </Flex>
-      {cerrando && tarea.estado === "en_curso" && (
-        <CerrarConConstancia
-          tareaId={tarea.id}
-          alCancelar={() => setCerrando(false)}
-          alTerminar={() => {
-            setCerrando(false);
-            alRecargar();
-          }}
-        />
+
+      <Box mt={4} pt={3} borderTop="1px solid" borderColor="borde">
+        <HistorialPartes tareaId={tarea.id} refresco={versionPartes} />
+      </Box>
+      {!cerrada && (
+        <Button mt={3} size="xs" variant="ghost" isDisabled={trabajando} onClick={() => void aplicar({ estado: "cancelada" })}>
+          Cancelar tarea
+        </Button>
       )}
     </Box>
   );
@@ -186,7 +212,7 @@ export default function Cuadrilla() {
               {d.map((t) => (
                 <TarjetaTarea
                   key={t.id}
-                  tarea={locales[t.id] ?? t}
+                  tarea={{ ...t, ...(locales[t.id] ?? {}) }}
                   alCambiar={(n) => setLocales((l) => ({ ...l, [n.id]: n }))}
                   alRecargar={() => {
                     setLocales({});

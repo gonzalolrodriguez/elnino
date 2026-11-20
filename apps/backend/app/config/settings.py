@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     rate_limit_activo: bool = True
     rate_limit_login: str = "20/minute"
     rate_limit_registro: str = "10/minute"
+    # Por persona autenticada (no por IP): /mi/*, seguimiento de cuadrillas, simulación y ruteo.
+    # Holgados a propósito: la web consulta /mi/pedidos cada 20 s y el demo nunca debe tocarlos.
+    rate_limit_usuario: str = "300/minute"
+    rate_limit_simulacion: str = "120/minute"
     cookie_secure: bool = True
 
     # Entorno: "produccion" oculta /docs y /openapi.json y fuerza la cookie Secure.

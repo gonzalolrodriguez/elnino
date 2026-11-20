@@ -34,6 +34,7 @@ from app.db.modelos import (
     Cuadrilla,
     GrupoFamiliar,
     Notificacion,
+    ParteTarea,
     Sector,
     SolicitudAsistencia,
     Tarea,
@@ -51,6 +52,8 @@ PROTOTIPO = "[PROTOTIPO: no es una herramienta oficial]"
 TEXTO_MOTIVO = {
     dom.MOTIVO_NO: "el evacuado dice que no llegó",
     dom.MOTIVO_PROBLEMA: "el evacuado reportó un problema",
+    dom.MOTIVO_PARCIAL: "el evacuado dice que la asistencia fue parcial",
+    dom.MOTIVO_NO_ENCONTRARON: "el evacuado dice que la cuadrilla no lo encontró",
     dom.MOTIVO_LEJOS: "el destino registrado queda lejos del centro elegido",
 }
 
@@ -302,7 +305,7 @@ def _notificar_confirmacion(
             mensaje=(
                 f"¿Llegaste a {destino}? La cuadrilla registró tu traslado (pedido "
                 f"#{solicitud.id}). Respondé en la app o por SMS desde tu teléfono registrado: "
-                f"SI {codigo}, NO {codigo} o PROBLEMA {codigo} y el detalle. {PROTOTIPO}"
+                f"SI {codigo}, PARCIAL {codigo}, NO {codigo} o PROBLEMA {codigo} y el detalle. {PROTOTIPO}"
             ),
             datos={
                 "tarea_id": tarea_id,
@@ -356,7 +359,20 @@ def cerrar_tarea(
     )
     db.add(constancia)
     tarea.estado = "completada"
+    tarea.requiere_atencion = False
     tarea.actualizado_en = ahora()
+    # El cierre con constancia también queda como parte de resultado "completa" en el historial.
+    db.add(
+        ParteTarea(
+            tarea_id=tarea.id,
+            cuadrilla_id=tarea.cuadrilla_id,
+            tipo="resultado",
+            resultado="completa",
+            autor_id=usuario.id,
+            autor_rol=rol_operativo,
+            categoria=CATEGORIA,
+        )
+    )
     db.flush()
     srv_ordenes.liberar_si_sin_tareas(db, tarea.cuadrilla_id)
 
@@ -388,6 +404,17 @@ def cerrar_tarea(
     r.eventos.append(
         ("tarea", {"id": tarea.id, "estado": tarea.estado, "cuadrilla_id": tarea.cuadrilla_id})
     )
+    r.eventos.append(
+        (
+            "parte_tarea",
+            {
+                "tarea_id": tarea.id,
+                "cuadrilla_id": tarea.cuadrilla_id,
+                "tipo": "resultado",
+                "resultado": "completa",
+            },
+        )
+    )
     return constancia, r
 
 
@@ -413,8 +440,10 @@ def registrar_confirmacion(
         .with_for_update()
         .execution_options(populate_existing=True)
     ).scalar_one()
+    respuesta = dom.normalizar_respuesta(respuesta) or respuesta
     if k.respuesta is not None:
-        return ("repetida" if k.respuesta == respuesta else "conflicto"), k, Resultado()
+        previa = dom.normalizar_respuesta(k.respuesta)
+        return ("repetida" if previa == respuesta else "conflicto"), k, Resultado()
     tarea = db.get(Tarea, k.tarea_id)
     constancia = db.execute(
         select(ConstanciaTarea).where(ConstanciaTarea.tarea_id == k.tarea_id)

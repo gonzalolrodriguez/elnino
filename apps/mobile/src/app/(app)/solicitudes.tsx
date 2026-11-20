@@ -17,28 +17,57 @@ import {
   Titulo,
   Vacio,
 } from "@/components/ui";
-import { esCierre, esSolicitud, hostDeUrl } from "@/lib/cola";
+import { FilaHistorial, TarjetaPedido } from "@/components/MisPedidos";
+import { guardarCache, leerCache } from "@/lib/cacheLocal";
+import { esCierre, esParte, esSolicitud, hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
 import { mensajeError } from "@/lib/errores";
 import { descripcionItemCola, etiquetaEstadoSolicitud, etiquetaOrigen, etiquetaTipoSolicitud, formatearFechaHora } from "@/lib/etiquetas";
-import { api, type Solicitud } from "@/lib/servicios";
+import { esPedidoActivo } from "@/lib/pedidos";
+import { obtenerUrlServidor } from "@/lib/servidor";
+import { api, type PedidoCiudadano, type Solicitud } from "@/lib/servicios";
+import { useUsuario } from "@/lib/SesionContext";
 
 type Carga =
   | { tipo: "cargando" }
   | { tipo: "ok"; filas: Solicitud[] }
   | { tipo: "error"; mensaje: string };
 
+type VistaPedidos = { items: PedidoCiudadano[]; actualizado: number; desdeCache: boolean };
+
 export default function Solicitudes() {
   const { items, otroServidor, reintentar, descartar, sinRed } = useCola();
+  const usuario = useUsuario();
+  const clave = `mis_pedidos:${usuario.id}:${obtenerUrlServidor()}`;
   const [carga, setCarga] = useState<Carga>({ tipo: "cargando" });
+  const [pedidos, setPedidos] = useState<VistaPedidos | null>(null);
+  const [refrescando, setRefrescando] = useState(false);
 
+  // Vista del servidor (`GET /mi/pedidos`); sin conexión, la última copia guardada con su fecha. Si el
+  // servidor no la ofrece (versión anterior) y no hay copia, se usa la lista simple de `/solicitudes`.
   const cargar = useCallback(async () => {
+    setRefrescando(true);
     try {
-      setCarga({ tipo: "ok", filas: (await api.solicitudes()).solicitudes });
-    } catch (e) {
-      setCarga({ tipo: "error", mensaje: mensajeError(e) });
+      const r = await api.misPedidos();
+      const ahora = Date.now();
+      setPedidos({ items: r.items, actualizado: ahora, desdeCache: false });
+      await guardarCache(clave, r.items, ahora);
+    } catch {
+      const guardado = await leerCache<PedidoCiudadano[]>(clave);
+      if (guardado && Array.isArray(guardado.valor)) {
+        setPedidos({ items: guardado.valor, actualizado: guardado.guardadoEn, desdeCache: true });
+      } else {
+        setPedidos(null);
+        try {
+          setCarga({ tipo: "ok", filas: (await api.solicitudes()).solicitudes });
+        } catch (e) {
+          setCarga({ tipo: "error", mensaje: mensajeError(e) });
+        }
+      }
+    } finally {
+      setRefrescando(false);
     }
-  }, []);
+  }, [clave]);
 
   // Se vuelve a consultar cuando cambia la cantidad de ítems o cuando alguno pasa a "enviada"
   // (la longitud de la lista no cambia en esa transición).
@@ -48,10 +77,10 @@ export default function Solicitudes() {
   }, [cargar, items.length, enviadasLocales]);
 
   // Los cierres con constancia pertenecen a la pestaña de la cuadrilla.
-  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !otroServidor.some((o) => o.id === i.id));
+  const locales = items.filter((i) => i.estado !== "enviada" && !esCierre(i.datos) && !esParte(i.datos) && !otroServidor.some((o) => o.id === i.id));
 
   return (
-    <Pantalla dosColumnas>
+    <Pantalla dosColumnas alRefrescar={() => void cargar()} refrescando={refrescando}>
       <Titulo>Mis solicitudes</Titulo>
 
       {locales.length > 0 ? (
@@ -113,13 +142,38 @@ export default function Solicitudes() {
         </>
       ) : null}
 
-      <Subtitulo>Enviadas</Subtitulo>
-      {carga.tipo === "cargando" ? <Cargando texto="Cargando solicitudes…" /> : null}
-      {carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
-      {carga.tipo === "ok" && carga.filas.length === 0 ? (
+      {pedidos ? (
+        <>
+          <Subtitulo>Mis pedidos</Subtitulo>
+          <Texto suave pequeno>
+            {pedidos.desdeCache
+              ? `Sin conexión: se muestra lo último guardado, actualizado el ${formatearFechaHora(pedidos.actualizado)}.`
+              : `Actualizado el ${formatearFechaHora(pedidos.actualizado)}.`}
+          </Texto>
+          {pedidos.items.length === 0 ? <Vacio texto="Todavía no enviaste solicitudes." /> : null}
+          {pedidos.items.filter(esPedidoActivo).map((p) => (
+            <TarjetaPedido key={p.id} pedido={p} />
+          ))}
+          {pedidos.items.some((p) => !esPedidoActivo(p)) ? (
+            <>
+              <Subtitulo>Anteriores</Subtitulo>
+              <Rejilla>
+                {pedidos.items.filter((p) => !esPedidoActivo(p)).map((p) => (
+                  <FilaHistorial key={p.id} pedido={p} />
+                ))}
+              </Rejilla>
+            </>
+          ) : null}
+        </>
+      ) : (
+        <Subtitulo>Enviadas</Subtitulo>
+      )}
+      {!pedidos && carga.tipo === "cargando" ? <Cargando texto="Cargando solicitudes…" /> : null}
+      {!pedidos && carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
+      {!pedidos && carga.tipo === "ok" && carga.filas.length === 0 ? (
         <Vacio texto="Todavía no enviaste solicitudes." />
       ) : null}
-      {carga.tipo === "ok" ? (
+      {!pedidos && carga.tipo === "ok" ? (
         <Rejilla>
           {carga.filas.map((s) => (
             <Tarjeta key={s.id}>

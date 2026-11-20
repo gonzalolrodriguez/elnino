@@ -215,6 +215,10 @@ Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del 
 | Velocidad media de la cuadrilla para estimar la llegada | 40 km/h | Supuesto `velocidad_cuadrilla_kmh` (`supuestos.yaml`); sin fuente pública, mezcla pavimento, ripio y tierra | Simulado (SUPUESTO) | 20/11/2026 |
 | Factor de desvío de la distancia por calle | 1,3 | Supuesto `factor_desvio` (`supuestos.yaml`, ya citado en el ruteo) | Simulado (SUPUESTO) | 20/11/2026 |
 | Minutos para avisar que la posición es vieja | 5 min | Supuesto `posicion_vieja_minutos` (`supuestos.yaml`) | Simulado (SUPUESTO) | 20/11/2026 |
+| Minutos tras los que la posición de la cuadrilla vence (no se muestra y se borra) | 30 min | Supuesto `posicion_vencida_minutos` (`supuestos.yaml`); retención mínima (Ley 25.326) | Simulado (SUPUESTO) | 20/11/2026 |
+| Modo demostración del seguimiento (el servidor simula la posición de la cuadrilla en camino) | activado | Supuesto `seguimiento_demo` (`supuestos.yaml`); rotulado `SIMULADO` en pantalla; la posición real siempre gana; se apaga con `false` | Simulado | 20/11/2026 |
+| Base de salida SIMULADA de las cuadrillas | lon -58,176; lat -26,200 | Supuesto `base_cuadrillas_simulada` (`supuestos.yaml`): punto en el ejido urbano de Formosa, no es una institución real | Simulado (SUPUESTO) | 20/11/2026 |
+| Método de la ruta de la cuadrilla al pedido | `red_vial` o `aproximado` | pgRouting sobre `red_vial` (OSM, ODbL, `DOCUMENTO DE REFERENCIA`) con el perfil del vehículo y los caminos cerrados; sin red, recta por `factor_desvio`; la lancha, recta a `velocidad_lancha_kmh` (15 km/h, SUPUESTO) | Simulado (SUPUESTO) | 20/11/2026 |
 | Intervalo mínimo entre posiciones de una cuadrilla | 10 s | Supuesto `intervalo_min_posicion_s` (`supuestos.yaml`); límite de frecuencia del backend | Simulado (SUPUESTO) | 20/11/2026 |
 | Intervalo de envío de la posición desde la app y de refresco de las pantallas | 30 s (envío) y 20 s (refresco) | Decisión de diseño del equipo, no un dato | Simulado (SUPUESTO) | 20/11/2026 |
 | Distancia y llegada estimada que ve el solicitante ("unos 12 min") | Calculadas con los supuestos anteriores | Posición compartida por la cuadrilla (SIMULADO en la demo); es una estimación, no una promesa | Simulado (SUPUESTO) | 20/11/2026 |
@@ -233,3 +237,20 @@ La lámina no es un modelo hidráulico: dibuja cuánto supera la altura de Puert
 | Hitos de "Reproducir subida" | Dato del corte 5,60 m → compromiso de S4 7,50 m → alerta 7,80 m → evacuación 8,30 m | Corte: K1 (31/10/2026, Observado); 7,50 m: K10; 7,80 y 8,30 m: K3 | Observado (corte y umbrales) y Simulado (la subida) | 31/10/2026 |
 | Duración de "Reproducir subida" | 7 s | Parámetro de visualización del equipo, no un pronóstico de tiempo | Simulado (parámetro de visualización) | 20/11/2026 |
 | Accesos cortados (trazo rojo discontinuo) | Estado del acceso devuelto por `/simulacion/escenario`: tierra desde 30 mm y ripio desde 80 mm de lluvia, cerrado por el operador o anegado | Supuestos de lluvia por superficie ya citados arriba; no se recalculan en el frontend | Simulado (SUPUESTO) | 17/11/2026 |
+
+## Panel personal del ciudadano (pedidos, vehículo y respuestas)
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Vehículo de la cuadrilla en camino | `4x4`, `camion_jaula`, `colectivo`, `lancha` o `moto` (demo: 4x4 para la cuadrilla humana y camión jaula para la ganadera) | `data/simulado/cuadrillas.json`; no hay padrón público de vehículos de emergencia | Simulado | 20/11/2026 |
+| Línea de tiempo de un pedido (recibida, verificada, asignada, en curso, resuelta) | Horas tomadas de los registros del sistema (alta del pedido, bitácora de cambios de estado, tarea y constancia); si un estado se alcanzó sin registro de hora, se muestra sin hora | Base de datos de la plataforma (pedidos de demostración, personas ficticias) | Simulado | 20/11/2026 |
+| Rol de la cuadrilla asignada | `encargado_cuadrilla` u otro rol del catálogo, nunca el nombre de una persona | Catálogo `roles_operativos` (sin funcionarios reales) | Simulado | 20/11/2026 |
+| Respuestas de confirmación del evacuado | `completa`, `parcial`, `no_encontraron`, `no_vinieron`, `otro_problema` | Decisión de diseño del equipo (20/11/2026); es una marca para revisar, no una acusación | Simulado | 20/11/2026 |
+
+## Partes de las cuadrillas y panel de cuadrillas
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Partes de una tarea (avance, dificultad, resultado `completa`, `parcial`, `no_realizada` o `reprogramada`) y su observación | Texto libre de la cuadrilla; el autor figura por su rol operativo, nunca por nombre. Los dos partes de demostración (una dificultad sin resolver y un resultado parcial, en S4) son datos de ejemplo | Base de datos de la plataforma (`data/`, seed `sembrar_partes_demo`); no hay padrón público de partes de campo | Simulado | 20/11/2026 |
+| Cuadrillas, sus designados y la tarea actual | Rol operativo de cada integrante del catálogo `roles_operativos`; `usuario_id: null` es un rol sin persona designada | `data/simulado/cuadrillas.json` y altas hechas desde el panel (usuarios de demostración, sin personas reales) | Simulado | 20/11/2026 |
+| Novedad de un pedido (`demora`, `dificultad`, `parcial`, `no_realizada`, `reprogramada`) | Se deriva de los partes de la tarea; `demora` se activa cuando la última posición compartida supera `posicion_vencida_minutos` (30 min, SUPUESTO) | Partes de la cuadrilla y `apps/backend/app/config/supuestos.yaml` | Simulado (SUPUESTO) | 20/11/2026 |

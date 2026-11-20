@@ -5,6 +5,9 @@
  * y en memoria en las pruebas.
  */
 
+import type { ResultadoParte, TipoParte } from "@/lib/partes";
+import type { RespuestaEvacuado } from "@/lib/servicios";
+
 export type DatosSolicitud = {
   tipo: "evacuacion" | "asistencia" | "ganado" | "logistica" | "otro";
   personas: number;
@@ -49,16 +52,30 @@ export type DatosCierre = {
 export type DatosConfirmacion = {
   clase: "confirmacion";
   solicitud_id: number;
-  respuesta: "si" | "no" | "problema";
+  /** Canónica; los valores viejos (`si/no/problema`) ya encolados se mapean al enviar. */
+  respuesta: RespuestaEvacuado;
   comentario?: string;
   resultado?: { repetida: boolean };
 };
 
+/**
+ * Parte de la cuadrilla sobre una tarea (`POST /tareas/{id}/partes`). Se arma con `armarParte`, que ya
+ * validó la observación. La cuadrilla suele trabajar sin señal: queda en el teléfono y se reintenta.
+ */
+export type DatosParte = {
+  clase: "parte";
+  tarea_id: number;
+  tipo: TipoParte;
+  resultado?: ResultadoParte;
+  observacion?: string;
+};
+
 /** Lo que guarda la cola. Una solicitud no tiene `clase` (formato original, sigue siendo válido). */
-export type DatosCola = DatosSolicitud | DatosCierre | DatosConfirmacion;
+export type DatosCola = DatosSolicitud | DatosCierre | DatosConfirmacion | DatosParte;
 
 export const esCierre = (d: DatosCola): d is DatosCierre => "clase" in d && d.clase === "cierre";
 export const esConfirmacion = (d: DatosCola): d is DatosConfirmacion => "clase" in d && d.clase === "confirmacion";
+export const esParte = (d: DatosCola): d is DatosParte => "clase" in d && d.clase === "parte";
 export const esSolicitud = (d: DatosCola): d is DatosSolicitud => !("clase" in d);
 
 export type EstadoItem = "pendiente" | "enviada" | "rechazada";

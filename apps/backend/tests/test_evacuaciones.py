@@ -165,9 +165,9 @@ def test_parser_sms_y_codigos():
     c = dom.generar_codigo()
     assert len(c) == 8 and any(x.isdigit() for x in c) and any(x.isalpha() for x in c)
     r = dom.parsear_respuesta_sms(f"  Sí {c.lower()} ")
-    assert r and r.respuesta == "si" and r.codigo == c and r.comentario is None
+    assert r and r.respuesta == "completa" and r.codigo == c and r.comentario is None
     r = dom.parsear_respuesta_sms(f"PROBLEMA {c} se cortó el camino")
-    assert r and r.respuesta == "problema" and r.comentario == "se cortó el camino"
+    assert r and r.respuesta == "otro_problema" and r.comentario == "se cortó el camino"
     # Texto libre que empieza con "no" no es una respuesta (el código exige un dígito).
     assert dom.parsear_respuesta_sms("no quedan víveres") is None
     assert dom.parsear_respuesta_sms("SI") is None
@@ -399,9 +399,9 @@ def test_confirmacion_por_la_app_verifica(client, como, db):
         headers=p["h"],
     )
     assert r.status_code == 201, r.text
-    assert r.json()["respuesta"] == "si" and r.json()["canal"] == "app"
+    assert r.json()["respuesta"] == "completa" and r.json()["canal"] == "app"
     e = _estado(client, como, p["tarea_id"])
-    assert e["estado"] == "verificada" and e["confirmacion"]["respuesta"] == "si"
+    assert e["estado"] == "verificada" and e["confirmacion"]["respuesta"] == "completa"
     assert e["discrepancia"] is None
     # Repetir la misma respuesta es inocuo; cambiarla da 409.
     again = client.post(
@@ -705,7 +705,7 @@ def test_operador_reabre_la_confirmacion(client, como, db):
     )
     r = client.post(url, json={"motivo": "Se equivocó al responder"}, headers=como("operador"))
     assert r.status_code == 200, r.text
-    assert r.json()["respuesta_previa"] == "no" and r.json()["estado"] == "cerrada_cuadrilla"
+    assert r.json()["respuesta_previa"] == "no_vinieron" and r.json()["estado"] == "cerrada_cuadrilla"
     assert _estado(client, como, t)["confirmacion"]["respuesta"] is None
     # Recibe un código nuevo y puede corregir su respuesta.
     nuevo = _codigo(client, p["h"])

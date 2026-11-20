@@ -1505,6 +1505,377 @@
         }
       }
     },
+    "/api/v1/tareas/{tarea_id}/partes": {
+      "post": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Crear Parte",
+        "operationId": "crear_parte_api_v1_tareas__tarea_id__partes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tarea_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tarea Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Crear Parte Api V1 Tareas  Tarea Id  Partes Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Listar Partes",
+        "operationId": "listar_partes_api_v1_tareas__tarea_id__partes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tarea_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tarea Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Listar Partes Api V1 Tareas  Tarea Id  Partes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/partes/{parte_id}": {
+      "patch": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Resolver Parte",
+        "operationId": "resolver_parte_api_v1_partes__parte_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "parte_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Parte Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParteResuelta"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Resolver Parte Api V1 Partes  Parte Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/partes/recientes": {
+      "get": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Partes Recientes",
+        "operationId": "partes_recientes_api_v1_partes_recientes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Partes Recientes Api V1 Partes Recientes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cuadrillas/resumen": {
+      "get": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Resumen",
+        "operationId": "resumen_api_v1_cuadrillas_resumen_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Resumen Api V1 Cuadrillas Resumen Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes": {
+      "post": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Agregar Integrante",
+        "operationId": "agregar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntegranteAlta"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Agregar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cuadrillas/{cuadrilla_id}/integrantes/{usuario_id}": {
+      "delete": {
+        "tags": [
+          "partes"
+        ],
+        "summary": "Quitar Integrante",
+        "operationId": "quitar_integrante_api_v1_cuadrillas__cuadrilla_id__integrantes__usuario_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cuadrilla_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cuadrilla Id"
+            }
+          },
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Quitar Integrante Api V1 Cuadrillas  Cuadrilla Id  Integrantes  Usuario Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tareas/{tarea_id}/cierre": {
       "post": {
         "tags": [
@@ -2043,6 +2414,34 @@
                 "schema": {
                   "type": "object",
                   "title": "Response Mi Seguimiento Api V1 Mi Seguimiento Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mi/pedidos": {
+      "get": {
+        "tags": [
+          "seguimiento"
+        ],
+        "summary": "Mis Pedidos",
+        "description": "Pedidos propios con línea de tiempo, cuadrilla (por rol), vehículo, seguimiento y centro.",
+        "operationId": "mis_pedidos_api_v1_mi_pedidos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Mis Pedidos Api V1 Mi Pedidos Get"
                 }
               }
             }
@@ -3684,7 +4083,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Planilla_Precipitaciones_Formosa.xlsx"
           }
@@ -3699,7 +4098,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Imagen JPEG, PNG o WebP"
           }
@@ -3714,7 +4113,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Imagen JPEG, PNG o WebP del lugar o el transporte"
           }
@@ -3916,6 +4315,11 @@
           "respuesta": {
             "type": "string",
             "enum": [
+              "completa",
+              "parcial",
+              "no_encontraron",
+              "no_vinieron",
+              "otro_problema",
               "si",
               "no",
               "problema"
@@ -3958,6 +4362,24 @@
               "apicola"
             ],
             "title": "Tipo Incidente"
+          },
+          "vehiculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "4x4",
+                  "camion_jaula",
+                  "colectivo",
+                  "lancha",
+                  "moto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiculo"
           },
           "integrantes": {
             "items": {
@@ -4141,6 +4563,28 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IntegranteAlta": {
+        "properties": {
+          "usuario_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Usuario Id"
+          },
+          "rol_operativo": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Rol Operativo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "rol_operativo"
+        ],
+        "title": "IntegranteAlta"
       },
       "IntegranteIn": {
         "properties": {
@@ -4359,6 +4803,69 @@
           "fundamento"
         ],
         "title": "OrdenIn"
+      },
+      "ParteIn": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "avance",
+              "dificultad",
+              "resultado"
+            ],
+            "title": "Tipo"
+          },
+          "resultado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "completa",
+                  "parcial",
+                  "no_realizada",
+                  "reprogramada"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resultado"
+          },
+          "observacion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tipo"
+        ],
+        "title": "ParteIn"
+      },
+      "ParteResuelta": {
+        "properties": {
+          "resuelta": {
+            "type": "boolean",
+            "const": true,
+            "title": "Resuelta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resuelta"
+        ],
+        "title": "ParteResuelta"
       },
       "PosicionIn": {
         "properties": {
@@ -5338,6 +5845,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

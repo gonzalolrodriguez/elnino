@@ -9,6 +9,8 @@ import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Alternativas, FactibilidadDetalle, Plan, PlanSector, PronosticoLluvia, Recomendacion, Veredicto } from "../tipos";
 import { MuestraEstado } from "../../components/MuestraEstado";
+import { IconoMira } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { COLOR_ESTADO, fmtDias, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
@@ -468,9 +470,7 @@ export default function PaginaRecomendacion() {
   const [hogares, setHogares] = useState(false);
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Recomendación y alternativas
-      </Heading>
+      <CabeceraPagina titulo="Recomendación y alternativas" icono={<IconoMira tam="1.5rem" />} />
       <BloquePronostico valor={pronostico} onCambio={setPronostico} />
       <Seccion titulo="Familias" categoria="SIMULADO" id="sec-familias">
         <Text fontSize="sm" mb={2}>

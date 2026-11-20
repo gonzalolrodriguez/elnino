@@ -25,7 +25,7 @@ type Valor = {
   otroServidor: ItemCola[];
   sinRed: boolean;
   /** Guarda la solicitud en la cola local y trata de enviarla de inmediato. */
-  enviar: (datos: DatosCola, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean; rechazada: string | null; resultado: DatosCola | null; servidorId?: number | null }>;
+  enviar: (datos: DatosCola, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean; rechazada: string | null; resultado: DatosCola | null; servidorId?: number | null; itemId?: number }>;
   reintentar: () => Promise<VaciadoResultado>;
   descartar: (id: number) => Promise<void>;
   borrarLocal: () => Promise<void>;
@@ -91,6 +91,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
         rechazada: actual?.estado === "rechazada" ? (actual.ultimoError ?? "El servidor no aceptó el envío.") : null,
         resultado: actual?.datos ?? null,
         servidorId: actual?.servidorId ?? null,
+        itemId: item.id,
       };
     },
     [cola, usuario.id, vaciar],

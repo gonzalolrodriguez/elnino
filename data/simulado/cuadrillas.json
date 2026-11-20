@@ -1,12 +1,13 @@
 {
   "categoria": "SIMULADO",
   "fecha": "2026-11-17",
-  "fuente": "SIMULADO · cuadrillas de prueba; composición parcial a propósito para mostrar los roles faltantes",
+  "fuente": "SIMULADO · cuadrillas de prueba (vehículo por tipo de incidente, también SIMULADO); composición parcial a propósito para mostrar los roles faltantes",
   "nota": "Los roles son del catálogo roles_operativos (sin nombres de funcionarios).",
   "cuadrillas": [
     {
       "nombre": "Cuadrilla humana SIMULADA 1",
       "tipo_incidente": "humana",
+      "vehiculo": "4x4",
       "integrantes": [
         {"rol_operativo": "encargado_cuadrilla", "usuario_email": "cuadrilla@demo.evacuaciones.invalid"},
         {"rol_operativo": "sipec"},
@@ -17,6 +18,7 @@
     {
       "nombre": "Cuadrilla ganadera SIMULADA 1",
       "tipo_incidente": "ganadera",
+      "vehiculo": "camion_jaula",
       "integrantes": [
         {"rol_operativo": "encargado_cuadrilla"},
         {"rol_operativo": "veterinario"},
