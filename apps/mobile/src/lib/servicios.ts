@@ -1,6 +1,7 @@
 import { Image } from "react-native";
 
 import { ErrorApi, peticion } from "@/lib/api";
+import { canonicaRespuesta } from "@/lib/respuestas";
 import { esCierre, esConfirmacion, type DatosCierre, type DatosCola, type DatosConfirmacion, type DatosSolicitud, type ResultadoEnvio, type ResultadoFoto } from "@/lib/cola";
 
 /** Tipos de las respuestas de la API que consume la app (contrato: docs/contrato_api.md). */
@@ -44,7 +45,13 @@ export type Notificacion = {
   creada_en: string;
 };
 
-export type RespuestaEvacuado = "si" | "no" | "problema";
+/** Respuestas canónicas de `POST /mi/confirmaciones` (contrato del panel ciudadano). */
+export type RespuestaCanonica = "completa" | "parcial" | "no_encontraron" | "no_vinieron" | "otro_problema";
+
+/** Valores viejos (SMS, cola guardada antes de esta versión, datos previos): el servidor los sigue aceptando. */
+export type RespuestaLegada = "si" | "no" | "problema";
+
+export type RespuestaEvacuado = RespuestaCanonica | RespuestaLegada;
 
 /** Consulta de confirmación propia (`GET /mi/confirmaciones`); nunca trae ubicaciones. */
 export type ConsultaConfirmacion = {
@@ -73,6 +80,32 @@ export type SeguimientoCuadrilla = {
   llegada_estimada_min: number | null;
   categoria: Categoria;
   supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+};
+
+export type VehiculoCuadrilla = "4x4" | "camion_jaula" | "colectivo" | "lancha" | "moto";
+
+/** Un pedido propio con su recorrido (`GET /mi/pedidos`). Sin nombres de personas: la cuadrilla va por rol y tipo. */
+export type PedidoCiudadano = {
+  id: number;
+  tipo: string;
+  personas: number;
+  estado: Solicitud["estado"];
+  origen: string;
+  creada_en: string;
+  lat: number | null;
+  lon: number | null;
+  sector_id: string | null;
+  linea_tiempo: { estado: Solicitud["estado"]; en: string | null }[];
+  tarea: null | {
+    id: number;
+    estado: string;
+    cuadrilla: { id: number; tipo_incidente: string; rol_encargado: string | null; vehiculo: VehiculoCuadrilla | string | null };
+    iniciada_en: string | null;
+    cerrada_en: string | null;
+  };
+  seguimiento: SeguimientoCuadrilla | null;
+  confirmacion: null | { solicitud_id: number; respondida: boolean; respuesta: RespuestaEvacuado | null; comentario: string | null };
+  centro: null | { id: number; nombre: string; lat: number | null; lon: number | null };
 };
 
 export type GrupoFamiliar = {
@@ -336,7 +369,7 @@ export async function enviarConfirmacion(datos: DatosConfirmacion): Promise<Resu
       metodo: "POST",
       cuerpo: {
         solicitud_id: datos.solicitud_id,
-        respuesta: datos.respuesta,
+        respuesta: canonicaRespuesta(datos.respuesta),
         ...(datos.comentario ? { comentario: datos.comentario } : {}),
       },
     });
@@ -416,6 +449,7 @@ export const api = {
     peticion<unknown>(`/mi/establecimientos/${id}/stock`, { metodo: "PUT", cuerpo: { stock } }),
   confirmaciones: () => peticion<{ confirmaciones: ConsultaConfirmacion[]; pendientes: number }>("/mi/confirmaciones"),
   miSector: () => peticion<MiSector>("/mi/sector"),
+  misPedidos: () => peticion<{ categoria: Categoria; items: PedidoCiudadano[] }>("/mi/pedidos"),
   miSeguimiento: () => peticion<{ seguimientos: SeguimientoCuadrilla[] }>("/mi/seguimiento"),
   compartirPosicion: (p: { lat: number; lon: number; precision_m?: number }) =>
     peticion<{ cuadrillas: number[] }>("/cuadrillas/mi-posicion", { metodo: "POST", cuerpo: p }),

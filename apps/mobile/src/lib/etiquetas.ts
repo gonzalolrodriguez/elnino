@@ -1,4 +1,5 @@
 import { esCierre, esConfirmacion, type DatosCola } from "@/lib/cola";
+import { etiquetaRespuesta } from "@/lib/respuestas";
 
 /**
  * Etiquetas legibles (español rioplatense) para los códigos que devuelve la API. Ningún código crudo
@@ -58,12 +59,11 @@ const ROL: Record<string, string> = {
 };
 
 
-const RESPUESTA_EVACUADO: Record<string, string> = { si: "Sí, llegué", no: "No llegué", problema: "Hubo un problema" };
 
 /** Resumen de un ítem de la cola local en palabras simples (solicitud, cierre o respuesta). */
 export function descripcionItemCola(d: DatosCola): string {
   if (esCierre(d)) return `Cierre con constancia de la tarea #${d.tarea_id}`;
-  if (esConfirmacion(d)) return `Tu respuesta sobre el traslado: ${RESPUESTA_EVACUADO[d.respuesta] ?? d.respuesta}`;
+  if (esConfirmacion(d)) return `Tu respuesta sobre el traslado: ${etiquetaRespuesta(d.respuesta)}`;
   return `${etiquetaTipoSolicitud(d.tipo)} · ${d.personas} personas · ${d.animales} animales`;
 }
 
