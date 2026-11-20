@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text } from "react-native";
 
+import { Encabezado } from "@/components/Piezas";
 import { Boton, Campo, ErrorCaja, FilaBotones, Insignia, Tarjeta, Texto } from "@/components/ui";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { abrirSMSConfirmacion, MAX_COMENTARIO } from "@/lib/confirmacion";
@@ -123,7 +123,7 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
   if (respuestaFinal) {
     return (
       <Tarjeta>
-        <Text style={{ fontWeight: "700" }}>¿Llegaste {donde}?</Text>
+        <Encabezado icono="tilde">¿Llegaste {donde}?</Encabezado>
         <Texto>Tu respuesta: {etiquetaRespuesta(respuestaFinal)}. Es una sola y no se puede cambiar.</Texto>
         <Insignia categoria="SIMULADO" />
       </Tarjeta>
@@ -132,7 +132,7 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
 
   return (
     <Tarjeta>
-      <Text style={{ fontWeight: "700", fontSize: 16 }}>¿Llegaste {donde}?</Text>
+      <Encabezado icono="casa">¿Llegaste {donde}?</Encabezado>
       <Texto suave>
         Es solo una consulta para saber si el traslado salió bien. Tu respuesta nos ayuda a ordenar la
         ayuda; no es una evaluación sobre vos.
@@ -154,6 +154,7 @@ export function TarjetaConfirmacion({ solicitudId, codigo, centroNombre, respond
                 key={r}
                 titulo={ETIQUETA_OPCION[r]}
                 variante={elegida === r ? "primario" : "secundario"}
+                icono={elegida === r ? "tilde" : undefined}
                 onPress={() => setElegida(r)}
               />
             ))}

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { EnlaceConexion } from "@/components/EnlaceConexion";
+import { Disco } from "@/components/Piezas";
 import { Boton, Campo, ErrorCaja, Pantalla, Texto, Titulo } from "@/components/ui";
 import { ErrorApi } from "@/lib/api";
 import { esErrorConexion, mensajeError } from "@/lib/errores";
@@ -35,7 +36,9 @@ export default function Login() {
 
   return (
     <Pantalla>
+      <Disco tono="info" icono="persona" tam={48} />
       <Titulo>Ingresar</Titulo>
+      <Texto suave>Con tu cuenta ves el estado de tu sector, tus pedidos y tus alertas.</Texto>
       <Campo
         etiqueta="Correo electrónico"
         value={email}

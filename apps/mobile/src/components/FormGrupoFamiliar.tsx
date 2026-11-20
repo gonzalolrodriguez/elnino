@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
+import { Icono } from "@/components/Icono";
 import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
-import { Boton, Campo, Cargando, COLOR, ErrorCaja, Subtitulo, Tarjeta, Texto } from "@/components/ui";
+import { Contador, Encabezado } from "@/components/Piezas";
+import { Boton, Campo, Cargando, COLOR, ErrorCaja, Tarjeta, Texto } from "@/components/ui";
 import { ErrorApi } from "@/lib/api";
 import { obtenerUbicacion } from "@/lib/dispositivo";
 import { mensajeError } from "@/lib/errores";
 import { validarGrupo } from "@/lib/grupoFamiliar";
 import { api, type GrupoFamiliar } from "@/lib/servicios";
+
+/** Cantidad entera ≥ 0 de un campo de texto; lo que no se puede leer cuenta como 0. */
+const entero = (v: string): number => {
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
 
 export function FormGrupoFamiliar() {
   const [cargando, setCargando] = useState(true);
@@ -84,7 +92,7 @@ export function FormGrupoFamiliar() {
   if (falloCarga) {
     return (
       <Tarjeta>
-        <Subtitulo>Grupo familiar y domicilio</Subtitulo>
+        <Encabezado icono="casa">Grupo familiar y domicilio</Encabezado>
         <ErrorCaja mensaje={`No pudimos cargar tus datos. ${falloCarga}`} onReintentar={() => void cargar()} />
       </Tarjeta>
     );
@@ -92,20 +100,28 @@ export function FormGrupoFamiliar() {
 
   return (
     <Tarjeta>
-      <Subtitulo>Grupo familiar y domicilio</Subtitulo>
-      <Campo etiqueta="Integrantes" value={integrantes} onChangeText={setIntegrantes} keyboardType="number-pad" />
-      <Campo etiqueta="Menores" value={menores} onChangeText={setMenores} keyboardType="number-pad" />
-      <Campo etiqueta="Mayores" value={mayores} onChangeText={setMayores} keyboardType="number-pad" />
-      <Campo etiqueta="Mascotas" value={mascotas} onChangeText={setMascotas} keyboardType="number-pad" />
+      <Encabezado icono="casa">Grupo familiar y domicilio</Encabezado>
+      <View>
+        <Contador etiqueta="Integrantes" icono="personas" valor={entero(integrantes)} min={1} alCambiar={(n) => setIntegrantes(String(n))} />
+        <Contador etiqueta="Menores" icono="persona" valor={entero(menores)} alCambiar={(n) => setMenores(String(n))} />
+        <Contador etiqueta="Mayores" icono="persona" valor={entero(mayores)} alCambiar={(n) => setMayores(String(n))} />
+        <Contador etiqueta="Mascotas" icono="mascota" valor={entero(mascotas)} alCambiar={(n) => setMascotas(String(n))} />
+      </View>
       <Campo etiqueta="Teléfono (se guarda cifrado)" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
-      <Texto suave>
-        Domicilio:{" "}
-        {ubicacion ? `${ubicacion.lat.toFixed(5)}, ${ubicacion.lon.toFixed(5)}` : "sin cargar"}
-        {previo?.sector_id ? ` · sector ${previo.sector_id}` : ""}
-      </Texto>
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+        <View style={{ marginTop: 2 }}>
+          <Icono nombre="punto" tam={20} color={COLOR.primario} />
+        </View>
+        <Texto suave>
+          Domicilio:{" "}
+          {ubicacion ? `${ubicacion.lat.toFixed(5)}, ${ubicacion.lon.toFixed(5)}` : "sin cargar"}
+          {previo?.sector_id ? ` · sector ${previo.sector_id}` : ""}
+        </Texto>
+      </View>
       <Boton
         titulo="Usar mi ubicación como domicilio"
         variante="secundario"
+        icono="punto"
         onPress={async () => {
           const r = await obtenerUbicacion();
           if (r.ok) setUbicacion(r.coordenadas);
@@ -114,7 +130,7 @@ export function FormGrupoFamiliar() {
       />
       <MarcarEnMapa punto={ubicacion} alCambiar={(p) => setUbicacion({ lat: p.lat, lon: p.lon })} titulo="Marcar mi domicilio en el mapa" />
       {error ? <ErrorCaja mensaje={error} /> : null}
-      {guardado ? <Text style={{ color: COLOR.ok }}>{guardado}</Text> : null}
+      {guardado ? <Text style={{ color: COLOR.okTexto, fontWeight: "600" }}>{guardado}</Text> : null}
       <Boton titulo="Guardar" onPress={guardar} cargando={guardando} />
     </Tarjeta>
   );

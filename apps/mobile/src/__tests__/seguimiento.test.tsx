@@ -164,8 +164,8 @@ describe("tarjeta «Cuadrilla en camino»", () => {
   it("con posición: distancia, llegada estimada, hora, estimación y categoría", async () => {
     await ver(seg(), 6900);
     expect(screen.getByText("Cuadrilla en camino")).toBeTruthy();
-    expect(screen.getByText("A 3,5 km de tu pedido")).toBeTruthy();
-    expect(screen.getByText("Llegada estimada: unos 8 min")).toBeTruthy();
+    expect(screen.getByLabelText("Distancia a tu pedido: 3,5 km")).toBeTruthy();
+    expect(screen.getByLabelText("Llegada estimada: unos 8 min")).toBeTruthy();
     expect(screen.getByText("Última posición recibida a las 15:02.")).toBeTruthy();
     expect(screen.getByText(/Es una estimación \(SUPUESTO/)).toBeTruthy();
     expect(screen.getByText("SIMULADO")).toBeTruthy();

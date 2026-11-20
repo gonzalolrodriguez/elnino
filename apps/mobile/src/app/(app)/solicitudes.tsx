@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
+import { Aviso, Chip, Chips, Encabezado } from "@/components/Piezas";
+
 import {
   Boton,
   Cargando,
@@ -11,7 +13,6 @@ import {
   Insignia,
   Pantalla,
   Rejilla,
-  Subtitulo,
   Tarjeta,
   Texto,
   Titulo,
@@ -81,23 +82,29 @@ export default function Solicitudes() {
 
   return (
     <Pantalla dosColumnas alRefrescar={() => void cargar()} refrescando={refrescando}>
-      <Titulo>Mis solicitudes</Titulo>
+      <Titulo>Mis pedidos</Titulo>
 
       {locales.length > 0 ? (
         <>
-          <Subtitulo>En este teléfono ({locales.length})</Subtitulo>
+          <Encabezado icono="reloj">En este teléfono ({locales.length})</Encabezado>
           <Rejilla>
           {locales.map((i) => (
             <Tarjeta key={i.id}>
-              <Text style={{ fontWeight: "600" }}>
-                {i.estado === "pendiente" ? "Pendiente de envío" : "Rechazada por el servidor"}
-              </Text>
+              <Chips>
+                <Chip
+                  tono={i.estado === "pendiente" ? "aviso" : "error"}
+                  icono={i.estado === "pendiente" ? "reloj" : "alerta"}
+                  texto={i.estado === "pendiente" ? "Pendiente de envío" : "Rechazada por el servidor"}
+                />
+              </Chips>
               <Texto>{descripcionItemCola(i.datos)}</Texto>
               {esSolicitud(i.datos) && i.datos.referencia_ubicacion ? (
                 <Texto suave>Referencia: {i.datos.referencia_ubicacion}</Texto>
               ) : null}
               {esSolicitud(i.datos) && i.datos.lat === undefined ? (
-                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+                <Aviso tono="info" icono="punto">
+                  Ubicación aproximada: un operador la va a verificar
+                </Aviso>
               ) : null}
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
@@ -124,7 +131,7 @@ export default function Solicitudes() {
 
       {otroServidor.length > 0 ? (
         <>
-          <Subtitulo>Pendientes para otro servidor ({otroServidor.length})</Subtitulo>
+          <Encabezado icono="info">Pendientes para otro servidor ({otroServidor.length})</Encabezado>
           <Rejilla>
           {otroServidor.map((i) => (
             <Tarjeta key={i.id}>
@@ -144,7 +151,6 @@ export default function Solicitudes() {
 
       {pedidos ? (
         <>
-          <Subtitulo>Mis pedidos</Subtitulo>
           <Texto suave pequeno>
             {pedidos.desdeCache
               ? `Sin conexión: se muestra lo último guardado, actualizado el ${formatearFechaHora(pedidos.actualizado)}.`
@@ -156,7 +162,7 @@ export default function Solicitudes() {
           ))}
           {pedidos.items.some((p) => !esPedidoActivo(p)) ? (
             <>
-              <Subtitulo>Anteriores</Subtitulo>
+              <Encabezado icono="reloj">Anteriores</Encabezado>
               <Rejilla>
                 {pedidos.items.filter((p) => !esPedidoActivo(p)).map((p) => (
                   <FilaHistorial key={p.id} pedido={p} />
@@ -166,7 +172,7 @@ export default function Solicitudes() {
           ) : null}
         </>
       ) : (
-        <Subtitulo>Enviadas</Subtitulo>
+        <Encabezado icono="bandeja">Enviadas</Encabezado>
       )}
       {!pedidos && carga.tipo === "cargando" ? <Cargando texto="Cargando solicitudes…" /> : null}
       {!pedidos && carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
@@ -177,9 +183,10 @@ export default function Solicitudes() {
         <Rejilla>
           {carga.filas.map((s) => (
             <Tarjeta key={s.id}>
-              <Text style={{ fontWeight: "700" }}>
-                #{s.id} · {etiquetaEstadoSolicitud(s.estado)}
-              </Text>
+              <Text style={{ fontWeight: "700", fontSize: 17, color: COLOR.texto }}>#{s.id}</Text>
+              <Chips>
+                <Chip icono={s.estado === "resuelta" ? "tilde" : "reloj"} tono={s.estado === "resuelta" ? "ok" : "info"} texto={etiquetaEstadoSolicitud(s.estado)} />
+              </Chips>
               <Texto>
                 {etiquetaTipoSolicitud(s.tipo)} · {s.personas} personas · {s.animales} animales
                 {s.sector_id ? ` · sector ${s.sector_id}` : ""}
@@ -187,7 +194,9 @@ export default function Solicitudes() {
               {s.texto ? <Texto suave>{s.texto}</Texto> : null}
               {s.referencia_ubicacion ? <Texto suave>Referencia: {s.referencia_ubicacion}</Texto> : null}
               {s.ubicacion_aproximada ? (
-                <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+                <Aviso tono="info" icono="punto">
+                  Ubicación aproximada: un operador la va a verificar
+                </Aviso>
               ) : null}
               {s.requiere_verificacion && !s.ubicacion_aproximada ? (
                 <Texto>Un operador va a verificar este pedido</Texto>

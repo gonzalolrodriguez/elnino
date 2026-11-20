@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Image, Text } from "react-native";
+import { Image, Text, View } from "react-native";
 
 import { AyudaAhora } from "@/components/AyudaAhora";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { EstadoSector } from "@/components/EstadoSector";
 import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { SelectorEspecie } from "@/components/SelectorEspecie";
+import { Aviso, Disco, Encabezado } from "@/components/Piezas";
 import { Boton, Campo, COLOR, ErrorCaja, Insignia, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
 import type { DatosSolicitud } from "@/lib/cola";
@@ -166,6 +167,7 @@ export default function Asistencia() {
       <Boton
         titulo={detalle ? "Ocultar el detalle del pedido" : "Detallar pedido"}
         variante="secundario"
+        icono={detalle ? "menos" : "mas"}
         onPress={() => setDetalle((v) => !v)}
       />
       {detalle ? (
@@ -201,7 +203,7 @@ export default function Asistencia() {
       </Texto>
 
       <Tarjeta>
-        <Subtitulo>Ubicación</Subtitulo>
+        <Encabezado icono="punto">Ubicación</Encabezado>
         {ubicacion ? (
           <Texto>
             {ubicacion.lat.toFixed(5)}, {ubicacion.lon.toFixed(5)}
@@ -212,6 +214,7 @@ export default function Asistencia() {
         <Boton
           titulo={ubicacion ? "Actualizar ubicación" : "Tomar mi ubicación"}
           variante="secundario"
+          icono="punto"
           onPress={cargarUbicacion}
           deshabilitado={trabajando}
         />
@@ -219,7 +222,7 @@ export default function Asistencia() {
       </Tarjeta>
 
       <Tarjeta>
-        <Subtitulo>Foto (opcional)</Subtitulo>
+        <Encabezado icono="camion">Foto (opcional)</Encabezado>
         {foto ? <Image
             source={{ uri: foto }}
             style={{ width: "100%", aspectRatio: 4 / 3, maxHeight: 280, borderRadius: 12 }}
@@ -247,20 +250,29 @@ export default function Asistencia() {
 
       {resultado === "enviada" ? (
         <Tarjeta>
-          <Text style={{ color: COLOR.ok, fontWeight: "700" }}>Solicitud enviada</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Disco tono="ok" icono="tilde" tam={40} />
+            <Text style={{ flex: 1, color: COLOR.okTexto, fontWeight: "700", fontSize: 18 }}>Solicitud enviada</Text>
+          </View>
           <Insignia categoria="SIMULADO" />
-          <Texto suave>Podés seguir su estado en la pestaña Solicitudes.</Texto>
+          <Texto suave>Podés seguir su estado en Mis pedidos.</Texto>
         </Tarjeta>
       ) : null}
       {resultado === "foto_pendiente" ? (
         <Tarjeta>
-          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>Solicitud enviada</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Disco tono="aviso" icono="reloj" tam={40} />
+            <Text style={{ flex: 1, color: COLOR.avisoTexto, fontWeight: "700", fontSize: 18 }}>Solicitud enviada</Text>
+          </View>
           <Texto suave>La foto todavía no se pudo subir; se reintentará sola cuando haya conexión.</Texto>
         </Tarjeta>
       ) : null}
       {resultado === "encolada" ? (
         <Tarjeta>
-          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>Guardada en el teléfono</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Disco tono="aviso" icono="reloj" tam={40} />
+            <Text style={{ flex: 1, color: COLOR.avisoTexto, fontWeight: "700", fontSize: 18 }}>Guardada en el teléfono</Text>
+          </View>
           <Texto suave>
             {sinRed
               ? "No hay conexión. Se enviará sola cuando vuelva la red."
@@ -277,7 +289,9 @@ export default function Asistencia() {
         deshabilitado={!puedeEnviar}
       />
       {!ubicacion && referencia.trim() ? (
-        <Texto>Ubicación aproximada: un operador la va a verificar</Texto>
+        <Aviso tono="info" icono="punto">
+          Ubicación aproximada: un operador la va a verificar
+        </Aviso>
       ) : null}
       {!puedeEnviar ? (
         <Texto suave>
@@ -286,7 +300,7 @@ export default function Asistencia() {
       ) : null}
 
       <Tarjeta>
-        <Subtitulo>Si no tenés internet</Subtitulo>
+        <Encabezado icono="info">Si no tenés internet</Encabezado>
         <Texto suave>
           Si no tenés internet, el pedido se puede mandar como mensaje de texto: usa tu ubicación y lo
           que cargaste arriba. Se abre la app de mensajes con el texto listo; vos lo revisás y lo

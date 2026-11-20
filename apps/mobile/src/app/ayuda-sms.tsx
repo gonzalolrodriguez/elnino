@@ -2,7 +2,8 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { SelectorEspecie } from "@/components/SelectorEspecie";
-import { Boton, Campo, ErrorCaja, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Encabezado } from "@/components/Piezas";
+import { Boton, Campo, ErrorCaja, Opcion, Opciones, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { abrirSMS, leerEntero, textoDestinoSMS, validarCantidades } from "@/lib/ayudaSms";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
 import { ErrorSOS, type EspecieSOS, type PerfilSOS } from "@/lib/sos";
@@ -98,7 +99,7 @@ export default function AyudaSms() {
       />
 
       <Tarjeta>
-        <Subtitulo>Tu ubicación</Subtitulo>
+        <Encabezado icono="punto">Tu ubicación</Encabezado>
         <Texto suave>
           {ubicacion
             ? `${ubicacion.lat.toFixed(5)}, ${ubicacion.lon.toFixed(5)}`
