@@ -12,6 +12,7 @@ import {
   etiquetaEstadoSolicitud,
   etiquetaOrigenSolicitud,
   etiquetaRol,
+  fechaCorta,
   fechaHora,
 } from "./lib/etiquetas";
 import { llamadas, renderRuta, sesion, simularFetch } from "./test/utils";
@@ -61,17 +62,18 @@ function conSesion(rol: string, rutas: Parameters<typeof simularFetch>[0] = {}) 
 }
 
 describe("/mi-cuenta", () => {
-  it("muestra primero el estado del sector, con su categoría, y la altura observada", async () => {
+  it("muestra primero la banda del sector, con su categoría, y la altura observada con su fecha real", async () => {
     conSesion("ciudadano");
     renderRuta("/mi-cuenta");
     const seccion = await screen.findByRole("region", { name: "Estado de tu sector" });
-    expect(await within(seccion).findByText(/S4 · Sector Rural Este/)).toBeInTheDocument();
-    expect(within(seccion).getByText("En riesgo")).toBeInTheDocument();
+    expect(await within(seccion).findByText(/S4 · Sector Rural Este: En riesgo/)).toBeInTheDocument();
     expect(seccion).toHaveTextContent("5,60 m");
+    // La lectura es del 31/10/2026: no debe correrse al 30 por el huso horario.
+    expect(seccion).toHaveTextContent("(31/10/2026)");
     expect(seccion.querySelector('[data-categoria="SIMULADO"]')).not.toBeNull();
     expect(seccion.querySelector('[data-categoria="DATO OBSERVADO"]')).not.toBeNull();
     const titulos = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(titulos[0]).toBe("Estado de tu sector");
+    expect(titulos[0]).toMatch(/Sector Rural Este/);
   });
 
   it("«Pedir ayuda» valida y envía el pedido con la forma que espera el backend y una clave de idempotencia", async () => {
@@ -111,7 +113,7 @@ describe("/mi-cuenta", () => {
   it("las notificaciones muestran fecha y marca de no leída, y se pueden marcar como leídas", async () => {
     const f = conSesion("ciudadano", { "PATCH /mi/notificaciones/5/leida": ok({ id: 5, leida: true }) });
     renderRuta("/mi-cuenta");
-    const seccion = await screen.findByRole("region", { name: "Notificaciones" });
+    const seccion = await screen.findByRole("region", { name: "Avisos y órdenes" });
     expect(await within(seccion).findByText("Nueva")).toBeInTheDocument();
     expect(seccion).toHaveTextContent(/18\/11\/2026/);
     expect(within(seccion).getAllByRole("button", { name: "Marcar como leída" })).toHaveLength(1);
@@ -167,6 +169,14 @@ describe("etiquetas", () => {
 
   it("un código desconocido se humaniza en vez de mostrarse crudo", () => {
     expect(etiquetaEstadoSolicitud("en_revision_externa")).toBe("En revision externa");
+  });
+
+  it("una fecha sin hora es un día de calendario: no se corre un día por el huso horario", () => {
+    expect(fechaCorta("2026-10-31")).toBe("31/10/2026");
+    expect(fechaCorta("2026-01-01")).toBe("01/01/2026");
+    expect(fechaCorta("2026-13-45")).toBe("sin fecha");
+    // Un instante sí se convierte a horario de Argentina (UTC-3).
+    expect(fechaCorta("2026-10-31T01:00:00Z")).toBe("30/10/2026");
   });
 
   it("las fechas salen en formato es-AR y horario de Argentina", () => {

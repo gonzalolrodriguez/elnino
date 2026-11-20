@@ -135,6 +135,14 @@ export function fechaHora(iso: string | null | undefined): string {
 /** Solo la fecha: "19/11/2026". */
 export function fechaCorta(iso: string | null | undefined): string {
   if (!iso) return "sin fecha";
+  // Una fecha sin hora ("2026-10-31") es un día de calendario, no un instante: `new Date` la toma como
+  // medianoche UTC y en horario de Argentina (UTC-3) caería el día anterior. Se formatea sin convertir.
+  const soloFecha = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (soloFecha) {
+    const [, a, m, dia] = soloFecha;
+    if (Number.isNaN(new Date(`${a}-${m}-${dia}T00:00:00Z`).getTime())) return "sin fecha";
+    return `${dia}/${m}/${a}`;
+  }
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "sin fecha";
   return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" }).format(d);
