@@ -60,6 +60,21 @@ export type ConsultaConfirmacion = {
   respondida_en: string | null;
 };
 
+/** Un pedido propio con tarea en curso (`GET /mi/seguimiento`). La cuadrilla se identifica por tipo y roles. */
+export type SeguimientoCuadrilla = {
+  solicitud_id: number;
+  tarea_id: number;
+  tipo_cuadrilla: string;
+  roles: string[];
+  estado: "en_camino" | "asignada_sin_posicion";
+  actualizada_en: string | null;
+  posicion_vieja: boolean | null;
+  distancia_m: number | null;
+  llegada_estimada_min: number | null;
+  categoria: Categoria;
+  supuestos: { factor_desvio: number; velocidad_cuadrilla_kmh: number; posicion_vieja_minutos: number };
+};
+
 export type GrupoFamiliar = {
   integrantes: number;
   menores: number;
@@ -401,6 +416,9 @@ export const api = {
     peticion<unknown>(`/mi/establecimientos/${id}/stock`, { metodo: "PUT", cuerpo: { stock } }),
   confirmaciones: () => peticion<{ confirmaciones: ConsultaConfirmacion[]; pendientes: number }>("/mi/confirmaciones"),
   miSector: () => peticion<MiSector>("/mi/sector"),
+  miSeguimiento: () => peticion<{ seguimientos: SeguimientoCuadrilla[] }>("/mi/seguimiento"),
+  compartirPosicion: (p: { lat: number; lon: number; precision_m?: number }) =>
+    peticion<{ cuadrillas: number[] }>("/cuadrillas/mi-posicion", { metodo: "POST", cuerpo: p }),
   panelResumen: () => peticion<PanelResumen>("/panel/resumen"),
   centros: () => peticion<{ centros: Centro[] }>("/centros"),
   sectoresGeo: () => peticion<GeoSectores>("/sectores", { auth: false }),
