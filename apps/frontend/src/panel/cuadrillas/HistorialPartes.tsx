@@ -6,6 +6,7 @@ import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { Cargando, Chip } from "../ui";
+import { GaleriaEvidencia } from "./GaleriaEvidencia";
 import { AvisoAtencion, ChipParte, TACTIL } from "./partes";
 
 /** Historial de partes de una tarea (más nuevo primero), con la acción de resolver dificultades. */
@@ -65,6 +66,7 @@ export function HistorialPartes({ tareaId, requiereAtencion, alCambiar }: { tare
                       {p.observacion}
                     </Text>
                   )}
+                  {p.adjuntos && p.adjuntos.length > 0 && <GaleriaEvidencia tareaId={tareaId} parteId={p.id} adjuntos={p.adjuntos} />}
                   {abierta && (
                     <Button size="sm" {...TACTIL} variant="outline" mt={2} onClick={() => void resolver(p.id)}>
                       Marcar dificultad como resuelta

@@ -1,12 +1,12 @@
-import { Box, Button, Flex, FormControl, FormLabel, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
+import { Box, Button, Flex, FormControl, FormLabel, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
 import { Fragment, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { IconoBandeja, IconoCamion, IconoPersonas, IconoTilde, IconoReloj } from "../../components/iconos/Iconos";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
-import { etiquetaEstadoSolicitud, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
+import { etiquetaEstadoSolicitud, etiquetaOrigenSolicitud, etiquetaTipoSolicitud } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { CabeceraPagina } from "../CabeceraPagina";
@@ -15,7 +15,6 @@ import { HistorialPartes } from "../cuadrillas/HistorialPartes";
 import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
 import { APILAR, Cargando, Chip, fmtNum, Seccion, type TonoChip } from "../ui";
 
-const TIPO_INCIDENTE = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" } as const;
 const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
   pendiente: [
     { estado: "en_curso", texto: "Iniciar" },
@@ -33,84 +32,16 @@ const APILAR_PANEL = {
 } as const;
 const TONO_SOLICITUD: Record<string, TonoChip> = { recibida: "aviso", verificada: "info", asignada: "info", en_curso: "info", resuelta: "ok" };
 
-function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadrillas: Cuadrilla[] }>> }) {
-  const toast = useToast();
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState<keyof typeof TIPO_INCIDENTE>("humana");
-  const [error, setError] = useState<unknown>(null);
-
-  async function crear() {
-    setError(null);
-    try {
-      await api.crearCuadrilla({ nombre: nombre.trim(), tipo_incidente: tipo });
-      toast({ title: "Cuadrilla creada", description: nombre, status: "success", duration: 3000 });
-      setNombre("");
-      carga.recargar();
-    } catch (e) {
-      setError(e);
-    }
-  }
-
+/** Las cuadrillas se arman, editan y siguen en su propio módulo; acá quedan las tareas y las solicitudes. */
+function BloqueCuadrillas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
   return (
     <Seccion titulo="Cuadrillas" categoria="SIMULADO" id="sec-cuadrillas" icono={<IconoPersonas tam="1.25rem" />}>
-      <Cargando carga={carga} esVacio={(d) => d.cuadrillas.length === 0} vacio="Todavía no hay cuadrillas. Creá una abajo." hijos={(d) => (
-        <TablaDesplazable etiqueta="Cuadrillas" mb={4}>
-          <Table size="sm" aria-label="Cuadrillas" sx={APILAR_PANEL}>
-            <Thead>
-              <Tr>
-                <Th>Cuadrilla</Th>
-                <Th>Tipo</Th>
-                <Th>Integrantes (rol)</Th>
-                <Th>Roles que faltan en la plantilla</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {d.cuadrillas.map((c) => (
-                <Tr key={c.id}>
-                  <Td>{c.nombre}</Td>
-                  <Td data-etiqueta="Tipo">{TIPO_INCIDENTE[c.tipo_incidente as keyof typeof TIPO_INCIDENTE] ?? c.tipo_incidente}</Td>
-                  <Td whiteSpace="normal" data-etiqueta="Integrantes (rol)">{c.integrantes.map((i) => etiquetaRolOperativo(i.rol_operativo)).join(", ") || "sin integrantes"}</Td>
-                  <Td whiteSpace="normal" data-etiqueta="Roles que faltan en la plantilla">{c.roles_faltantes.map((r) => etiquetaRolOperativo(r)).join(", ") || "plantilla completa"}</Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TablaDesplazable>
-      )} />
-      <Box as="form" onSubmit={(e: React.FormEvent) => { e.preventDefault(); if (nombre.trim().length >= 2) void crear(); }} borderTop="1px solid" borderColor="borde" pt={4}>
-        <Text fontWeight={700} mb={2}>
-          Crear una cuadrilla
-        </Text>
-        <Text textStyle="microdato" mb={3}>
-          El nombre lleva al menos 2 letras y no incluye nombres de personas.
-        </Text>
-        <Flex gap={3} align="flex-end" wrap="wrap">
-          <FormControl w={{ base: "full", sm: "16rem" }}>
-            <FormLabel htmlFor="cuadrilla-nombre" fontSize="sm" mb={1}>
-              Nombre de la cuadrilla
-            </FormLabel>
-            <Input id="cuadrilla-nombre" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </FormControl>
-          <FormControl w={{ base: "full", sm: "14rem" }}>
-            <FormLabel htmlFor="cuadrilla-tipo" fontSize="sm" mb={1}>
-              Tipo de incidente
-            </FormLabel>
-            <Select id="cuadrilla-tipo" bg="superficie" value={tipo} onChange={(e) => setTipo(e.target.value as keyof typeof TIPO_INCIDENTE)}>
-              {Object.entries(TIPO_INCIDENTE).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-          <Button type="submit" w={{ base: "full", sm: "auto" }} isDisabled={nombre.trim().length < 2}>
-            Crear cuadrilla
-          </Button>
-        </Flex>
-      </Box>
-      <Box mt={2}>
-        <AlertaError error={error} />
-      </Box>
+      <Text fontSize="sm" mb={3}>
+        Hay {cuadrillas.length} {cuadrillas.length === 1 ? "cuadrilla" : "cuadrillas"} cargadas. Para crear una, editar su equipo, equipamiento y vehículo, seguir su recorrido o mandarle avisos, usá el módulo de cuadrillas.
+      </Text>
+      <Button as={RouterLink} to="/comando/cuadrillas" size="sm" {...TACTIL}>
+        Ir a gestión de cuadrillas
+      </Button>
     </Seccion>
   );
 }
@@ -350,7 +281,7 @@ export default function Operacion() {
       />
       <BloqueSolicitudes cuadrillas={lista} />
       <BloqueTareas cuadrillas={lista} />
-      <BloqueCuadrillas carga={cuadrillas} />
+      <BloqueCuadrillas cuadrillas={lista} />
     </>
   );
 }
