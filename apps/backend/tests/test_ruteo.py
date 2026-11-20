@@ -92,6 +92,13 @@ def test_loader_parte_lineas_que_se_cruzan_y_acepta_nodos_de_osm(db):
     db.commit()
 
 
+@pytest.mark.parametrize("sid", ["S1\n", "S1'--", "S1 OR 1=1", "", "S" * 11])
+def test_consulta_aristas_rechaza_ids_de_sector_no_canonicos(sid):
+    # fullmatch: "S1\n" pasaba con match + "$" (el "$" admite un salto de línea final).
+    with pytest.raises(ValueError):
+        srv._consulta_aristas("vehicular", [sid], [])
+
+
 def test_inferir_superficie():
     assert red_vial.inferir_superficie({"surface": "gravel"}) == "ripio"
     assert red_vial.inferir_superficie({"highway": "primary"}) == "pavimento"
