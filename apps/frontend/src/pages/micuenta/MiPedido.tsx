@@ -169,7 +169,7 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
 
         {pideConfirmacion(p) && (
           <Box mt={6}>
-            <ConfirmacionPedido solicitudId={p.id} alResponder={alResponder} />
+            <ConfirmacionPedido solicitudId={p.id} codigo={p.confirmacion?.codigo} alResponder={alResponder} />
           </Box>
         )}
       </Box>

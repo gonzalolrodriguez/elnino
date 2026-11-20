@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.esquemas import StockIn
 from app.core import auditoria, datos_personales
 from app.core.eventos import difusor
+from app.core.limitador import limite_por_usuario, limite_usuario
 from app.core.rbac import ip_cliente, requiere_rol, usuario_actual
 from app.db.base import SRID, ahora
 from app.db.consultas import sector_de_punto
@@ -31,7 +32,11 @@ from app.domain import ganaderia, ruteo
 from app.servicios import contexto, recomendacion
 from app.servicios.mi import sectores_de_usuario
 
-router = APIRouter(prefix="/mi", tags=["mi-cuenta"])
+router = APIRouter(
+    prefix="/mi",
+    tags=["mi-cuenta"],
+    dependencies=[Depends(limite_por_usuario("usuario", limite_usuario))],
+)
 _CIUDADANIA = ("ciudadano", "productor")
 
 

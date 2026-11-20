@@ -3712,7 +3712,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Planilla_Precipitaciones_Formosa.xlsx"
           }
@@ -3727,7 +3727,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Imagen JPEG, PNG o WebP"
           }
@@ -3742,7 +3742,7 @@
         "properties": {
           "archivo": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Archivo",
             "description": "Imagen JPEG, PNG o WebP del lugar o el transporte"
           }
@@ -5389,6 +5389,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

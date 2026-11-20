@@ -119,3 +119,6 @@ posicion_vieja_minutos:
 intervalo_min_posicion_s:
   valor: 10
   fuente: SUPUESTO (segundos mínimos entre dos posiciones de una misma cuadrilla; antes se responde 429)
+posicion_vencida_minutos:
+  valor: 30
+  fuente: SUPUESTO (pasado este tiempo sin recibir la posición de la cuadrilla, la posición se considera vencida, no se muestra a nadie y se borra en la siguiente lectura o envío. Retención mínima, Ley 25.326)

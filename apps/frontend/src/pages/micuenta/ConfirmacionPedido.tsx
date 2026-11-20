@@ -7,7 +7,7 @@ import { OPCIONES_ASISTENCIA, type RespuestaAsistencia } from "../../lib/confirm
 import { solicitar } from "../../lib/api";
 
 /** «¿Te asistieron?»: cinco respuestas para que la persona cuente qué pasó. No es una denuncia: marca el pedido para que lo revisen. */
-export function ConfirmacionPedido({ solicitudId, alResponder }: { solicitudId: number; alResponder: () => void }) {
+export function ConfirmacionPedido({ solicitudId, codigo, alResponder }: { solicitudId: number; codigo?: string | null; alResponder: () => void }) {
   const [respuesta, setRespuesta] = useState<RespuestaAsistencia | "">("");
   const [comentario, setComentario] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -75,6 +75,12 @@ export function ConfirmacionPedido({ solicitudId, alResponder }: { solicitudId: 
         </FormLabel>
         <Textarea id={`conf-comentario-${solicitudId}`} size="sm" bg="superficie" rows={3} maxLength={500} value={comentario} onChange={(e) => setComentario(e.target.value)} />
       </FormControl>
+      {codigo && (
+        <Text fontSize="sm" mt={3} data-testid="confirmacion-sms">
+          También podés responder por SMS: <Text as="strong" fontFamily="mono">SI {codigo}</Text> si te asistieron, o{" "}
+          <Text as="strong" fontFamily="mono">PARCIAL {codigo}</Text> si faltó alguien o algo. Solo vale desde el teléfono que registraste.
+        </Text>
+      )}
       <Button mt={3} minH="2.75rem" isDisabled={!respuesta} isLoading={enviando} onClick={() => void enviar()}>
         Enviar respuesta
       </Button>

@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.operacion import _cuadrillas_de
 from app.core import auditoria
 from app.core.eventos import difusor
+from app.core.limitador import limite_por_usuario, limite_usuario
 from app.core.rbac import ip_cliente, requiere_rol
 from app.core.tiempo import hoy_ar
 from app.db.modelos import Usuario
@@ -26,7 +27,10 @@ from app.db.sesion import get_db
 from app.servicios import pedidos
 from app.servicios import seguimiento as srv
 
-router = APIRouter(tags=["seguimiento"])
+router = APIRouter(
+    tags=["seguimiento"],
+    dependencies=[Depends(limite_por_usuario("usuario", limite_usuario))],
+)
 _MANDOS = ("operador", "decisor", "admin")
 
 
@@ -77,8 +81,11 @@ def mi_seguimiento(
     usuario: Usuario = Depends(requiere_rol("ciudadano", "productor")),
     db: Session = Depends(get_db),
 ) -> dict:
+    seguimientos = srv.seguimiento_de(db, usuario.id)
+    srv.purgar_vencidas(db)
+    db.commit()
     return {
-        "seguimientos": srv.seguimiento_de(db, usuario.id),
+        "seguimientos": seguimientos,
         "categoria": srv.CATEGORIA,
         "fuente": srv.FUENTE,
         "fecha_dato": hoy_ar().isoformat(),
@@ -91,7 +98,10 @@ def mis_pedidos(
     db: Session = Depends(get_db),
 ) -> dict:
     """Pedidos propios con línea de tiempo, cuadrilla (por rol), vehículo, seguimiento y centro."""
-    return {"categoria": pedidos.CATEGORIA, "items": pedidos.pedidos_de(db, usuario.id)}
+    items = pedidos.pedidos_de(db, usuario.id)
+    srv.purgar_vencidas(db)
+    db.commit()
+    return {"categoria": pedidos.CATEGORIA, "items": items}
 
 
 @router.get("/cuadrillas/posiciones")
@@ -101,6 +111,7 @@ def posiciones(
     db: Session = Depends(get_db),
 ) -> dict:
     items = srv.posiciones_operativas(db)
+    srv.purgar_vencidas(db)
     auditoria.registrar(
         db, "lectura_ubicacion_cuadrillas", "cuadrillas/posiciones", usuario.id, ip_cliente(request)
     )

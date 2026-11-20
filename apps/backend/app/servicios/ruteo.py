@@ -21,7 +21,7 @@ from app.domain import escenario as esc
 from app.domain import ruteo as dom
 from app.servicios import contexto
 
-_ID = re.compile(r"^[A-Za-z0-9_]{1,10}$")
+_ID = re.compile(r"[A-Za-z0-9_]{1,10}")
 
 NOTA_CATEGORIA = (
     "Resultado calculado con velocidades SUPUESTO; las capas de origen se indican en 'capas'."
@@ -113,7 +113,7 @@ def _consulta_aristas(
     permitidas = ", ".join(f"'{s}'" for s in vel if s not in cerradas) or "NULL"
     afectados = [s for s in comprometidos if s not in exentos]
     for sid in afectados:
-        if not _ID.match(sid):
+        if not _ID.fullmatch(sid):
             raise ValueError(f"Identificador de sector inválido: {sid}")
     zona = (
         "(SELECT ST_Union(geom) FROM sectores WHERE id IN ("

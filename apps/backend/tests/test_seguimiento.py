@@ -253,3 +253,126 @@ def test_posiciones_operativas_y_auditoria(client, como, db, pedido_en_curso):
         .all()
     )
     assert "lectura_ubicacion_cuadrillas" in acc
+
+
+# ---- vencimiento de la posición (retención mínima) ---------------------------------------------
+
+
+def test_posicion_vencida_no_se_muestra_a_nadie_y_se_purga(client, como, db, pedido_en_curso):
+    cid = pedido_en_curso["cuadrilla_id"]
+    db.execute(PosicionCuadrilla.__table__.delete().where(PosicionCuadrilla.cuadrilla_id == cid))
+    db.commit()
+    assert (
+        client.post(
+            "/api/v1/cuadrillas/mi-posicion", json=POS, headers=como("cuadrilla")
+        ).status_code
+        == 200
+    )
+    _envejecer(db, cid, 31 * 60)  # más que posicion_vencida_minutos (30, SUPUESTO)
+
+    s = client.get("/api/v1/mi/seguimiento", headers=pedido_en_curso["h"]).json()
+    item = next(
+        i for i in s["seguimientos"] if i["solicitud_id"] == pedido_en_curso["solicitud_id"]
+    )
+    assert item["estado"] == "asignada_sin_posicion" and item["posicion"] is None
+    assert item["posicion_vieja"] is True and item["actualizada_en"] is None
+    assert item["distancia_m"] is None and item["llegada_estimada_min"] is None
+    assert item["supuestos"]["posicion_vencida_minutos"] == 30
+
+    # La lectura purgó la fila: ni el pedido ni el panel la vuelven a ver.
+    db.expire_all()
+    assert db.get(PosicionCuadrilla, cid) is None
+    pedidos = client.get("/api/v1/mi/pedidos", headers=pedido_en_curso["h"]).json()["items"]
+    p = next(i for i in pedidos if i["id"] == pedido_en_curso["solicitud_id"])
+    assert p["seguimiento"]["posicion"] is None
+    r = client.get("/api/v1/cuadrillas/posiciones", headers=como("operador")).json()
+    assert all(x["cuadrilla_id"] != cid for x in r["posiciones"])
+
+
+def test_el_panel_no_recibe_coordenadas_vencidas_aunque_no_se_hayan_purgado(
+    client, como, db, pedido_en_curso
+):
+    from app.servicios import seguimiento as srv
+
+    cid = pedido_en_curso["cuadrilla_id"]
+    client.post("/api/v1/cuadrillas/mi-posicion", json=POS, headers=como("cuadrilla"))
+    _envejecer(db, cid, 31 * 60)
+    assert all(x["cuadrilla_id"] != cid for x in srv.posiciones_operativas(db))
+    db.rollback()
+
+
+def test_primera_posicion_simultanea_no_da_500(db, pedido_en_curso):
+    """Dos primeros envíos a la vez: uno guarda y el otro recibe la espera (no IntegrityError)."""
+    import threading
+
+    from app.db.sesion import get_sessionmaker
+    from app.servicios import seguimiento as srv
+
+    cid = pedido_en_curso["cuadrilla_id"]
+    db.execute(PosicionCuadrilla.__table__.delete().where(PosicionCuadrilla.cuadrilla_id == cid))
+    db.commit()
+    fabrica = get_sessionmaker()
+    resultado: dict = {}
+
+    def segunda() -> None:
+        with fabrica() as otra:
+            try:
+                resultado["espera"] = srv.registrar_posicion(otra, cid, -26.2, -58.2, None)
+                otra.commit()
+            except Exception as exc:  # pragma: no cover - es lo que la prueba descarta
+                resultado["error"] = exc
+
+    with fabrica() as primera:
+        assert srv.registrar_posicion(primera, cid, -26.18, -58.14, None) is None
+        # La segunda no ve la fila sin confirmar y su INSERT espera a que la primera confirme.
+        hilo = threading.Thread(target=segunda)
+        hilo.start()
+        hilo.join(0.5)
+        primera.commit()
+    hilo.join(10)
+    assert "error" not in resultado, resultado
+    assert resultado["espera"] is not None and resultado["espera"] >= 1
+    db.expire_all()
+    assert db.get(PosicionCuadrilla, cid) is not None
+
+
+# ---- límite por persona (no por IP) ------------------------------------------------------------
+
+
+def test_limite_por_persona_en_mi_pedidos(client, como, monkeypatch):
+    from app.config.settings import get_settings
+    from app.core.limitador import limiter
+
+    monkeypatch.setattr(get_settings(), "rate_limit_usuario", "2/minute")
+    limiter.reset()
+    limiter.enabled = True
+    try:
+        h = como("ciudadano1")
+        rs = [client.get("/api/v1/mi/pedidos", headers=h) for _ in range(3)]
+        otra = client.get("/api/v1/mi/pedidos", headers=como("productor1"))
+        sin_sesion = client.get("/api/v1/mi/pedidos")
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+    assert [r.status_code for r in rs] == [200, 200, 429]
+    assert int(rs[2].headers["Retry-After"]) >= 1
+    assert rs[2].json()["error"]["codigo"] == "demasiados_intentos"
+    assert otra.status_code == 200  # es por persona: la misma IP con otra cuenta no se frena
+    assert sin_sesion.status_code == 401
+
+
+def test_limite_por_persona_en_simulacion(client, como, monkeypatch):
+    from app.config.settings import get_settings
+    from app.core.limitador import limiter
+
+    monkeypatch.setattr(get_settings(), "rate_limit_simulacion", "1/minute")
+    limiter.reset()
+    limiter.enabled = True
+    cuerpo = {"altura_formosa_m": 5.6, "lluvia_mm": 0, "caminos_cerrados": []}
+    try:
+        h = como("operador")
+        rs = [client.post("/api/v1/simulacion/escenario", json=cuerpo, headers=h) for _ in range(2)]
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+    assert [r.status_code for r in rs] == [200, 429]

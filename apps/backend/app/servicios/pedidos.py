@@ -197,6 +197,9 @@ def pedidos_de(db: Session, usuario_id: int) -> list[dict]:
                 "confirmacion": (
                     {
                         "solicitud_id": s.id,
+                        # Código para responder por SMS (SI/PARCIAL/NO/PROBLEMA <código>); ya se
+                        # entrega en /mi/confirmaciones y solo a la persona dueña del pedido.
+                        "codigo": k.codigo,
                         "respondida": k.respuesta is not None,
                         "respuesta": k.respuesta,
                         "comentario": k.comentario,
