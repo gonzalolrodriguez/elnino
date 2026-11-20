@@ -140,7 +140,7 @@ describe("evaluarFrescura", () => {
 
 describe("navegación del panel", () => {
   it("agrupa las secciones por tarea con nombres corrientes y mantiene las rutas", () => {
-    expect(GRUPOS_NAVEGACION.map((g) => g.titulo)).toEqual(["Situación", "Respuesta", "Análisis", "Registro"]);
+    expect(GRUPOS_NAVEGACION.map((g) => g.titulo)).toEqual(["Situación", "Decidir", "Ejecutar", "Respaldo y registro"]);
     const textos = GRUPOS_NAVEGACION.flatMap((g) => g.secciones.map((s) => s.texto));
     expect(textos).toContain("Tablero");
     expect(textos).toContain("Río y lluvia");
@@ -156,7 +156,7 @@ describe("navegación del panel", () => {
     conSesion("decisor", { "GET /panel/resumen": ok(RESUMEN) });
     renderRuta("/comando");
     const nav = await screen.findByRole("navigation", { name: "Secciones del panel operativo" });
-    for (const g of ["Situación", "Respuesta", "Análisis", "Registro"]) expect(within(nav).getByText(g)).toBeInTheDocument();
+    for (const g of ["Situación", "Decidir", "Ejecutar", "Respaldo y registro"]) expect(within(nav).getByText(g)).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Producción y ganado" })).toHaveAttribute("href", "/comando/produccion");
   });
 });

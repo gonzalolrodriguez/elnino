@@ -20,30 +20,30 @@ export const GRUPOS_NAVEGACION: { id: string; titulo: string; secciones: Seccion
     secciones: [
       { to: "/comando", fin: true, texto: "Tablero" },
       { to: "/comando/rio", texto: "Río y lluvia" },
-      { to: "/comando/mapa", texto: "Mapa y simulador" },
       { to: "/comando/lluvia", texto: "Partes de lluvia" },
+      { to: "/comando/mapa", texto: "Mapa y simulador" },
     ],
   },
   {
-    id: "respuesta",
-    titulo: "Respuesta",
+    id: "decidir",
+    titulo: "Decidir",
     secciones: [
-      { to: "/comando/operacion", texto: "Solicitudes y cuadrillas" },
-      { to: "/comando/evacuaciones", texto: "Evacuaciones" },
+      { to: "/comando/recomendacion", texto: "Recomendación" },
+      { to: "/comando/produccion", texto: "Producción y ganado" },
       { to: "/comando/ordenes", texto: "Órdenes" },
     ],
   },
   {
-    id: "analisis",
-    titulo: "Análisis",
+    id: "ejecutar",
+    titulo: "Ejecutar",
     secciones: [
-      { to: "/comando/recomendacion", texto: "Recomendación" },
-      { to: "/comando/produccion", texto: "Producción y ganado" },
+      { to: "/comando/operacion", texto: "Solicitudes y cuadrillas" },
+      { to: "/comando/evacuaciones", texto: "Evacuaciones" },
     ],
   },
   {
     id: "registro",
-    titulo: "Registro",
+    titulo: "Respaldo y registro",
     secciones: [
       { to: "/comando/bitacora", texto: "Bitácora de decisiones" },
       { to: "/comando/centinela", texto: "Auditoría de datos (Centinela)" },
