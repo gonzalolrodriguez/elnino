@@ -1,16 +1,13 @@
-import { Box, Heading, Link, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr, UnorderedList } from "@chakra-ui/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Box, Heading, Link, ListItem, Text, UnorderedList } from "@chakra-ui/react";
+import { useEffect, type ReactNode } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
-import { TablaDesplazable } from "../components/TablaDesplazable";
-import { MarcasUmbral } from "../components/MarcasUmbral";
-import { MuestraEstado } from "../components/MuestraEstado";
-import { K10_FECHA, MARGEN_RIESGO_M, SECTORES_K10, UMBRAL_ALERTA } from "../datos/kit";
-import { estadoSector, MapaSectores } from "../informacion/MapaSectores";
+import { UMBRAL_ALERTA } from "../datos/kit";
+import { SectoresInundacion } from "../informacion/SectoresInundacion";
 import { SerieK1 } from "../informacion/SerieK1";
-import { fmt, fmtMiles } from "../lib/entorno";
+import { fmt } from "../lib/entorno";
 import { useSerieFormosa } from "../lib/serie";
 
 const TEMAS = [
@@ -85,7 +82,6 @@ function Indice() {
 
 export default function Informacion() {
   const { hash } = useLocation();
-  const [altura, setAltura] = useState(5.6);
   const { serie } = useSerieFormosa();
 
   useEffect(() => {
@@ -164,58 +160,7 @@ export default function Informacion() {
       </Seccion>
 
       <Seccion id="sectores" titulo="Sectores de evaluación">
-        <Box display="flex" gap={2} alignItems="center" mb={3} flexWrap="wrap">
-          <Insignia categoria="SIMULADO" />
-          <Text fontSize="sm">K10 v1.0 · {K10_FECHA}. No son barrios ni parajes reales.</Text>
-        </Box>
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "minmax(0, 22rem) minmax(0, 1fr)" }} gap={8} alignItems="start">
-          <Box>
-            <MapaSectores altura={altura} />
-            <Box mt={3}>
-              <label htmlFor="altura-sim" style={{ fontSize: "0.875rem", fontWeight: 600, display: "block", marginBottom: "0.25rem" }}>
-                Altura simulada de Puerto Formosa: {fmt(altura)} m
-              </label>
-              <input id="altura-sim" type="range" min={0} max={12} step={0.1} value={altura} onChange={(e) => setAltura(Number(e.target.value))} style={{ width: "100%", minHeight: "2rem" }} />
-              <MarcasUmbral />
-              <Text fontSize="xs" color="textoSuave">
-                Escenario SIMULADO. En riesgo: a menos de {fmt(MARGEN_RIESGO_M)} m de la altura de compromiso (SUPUESTO). El 5,60 m es el valor
-                observado al corte.
-              </Text>
-            </Box>
-          </Box>
-          <Box minW={0}>
-            <TablaDesplazable etiqueta="Sectores de evaluación K10">
-            <Table size="sm" variant="simple" aria-label="Sectores de evaluación K10">
-              <Thead>
-                <Tr>
-                  <Th>Sector</Th>
-                  <Th isNumeric>Compromiso</Th>
-                  <Th isNumeric>Población</Th>
-                  <Th>Estado</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {SECTORES_K10.map((s) => (
-                  <Tr key={s.id}>
-                    <Td>
-                      <strong>{s.id}</strong> {s.nombre}
-                      <Text fontSize="xs" color="textoSuave">
-                        {s.acceso}
-                      </Text>
-                    </Td>
-                    <Td isNumeric>{fmt(s.compromiso_m)} m</Td>
-                    <Td isNumeric>{fmtMiles(s.poblacion)}</Td>
-                    <Td><MuestraEstado estado={estadoSector(s, altura)} /></Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-            </TablaDesplazable>
-            <Text fontSize="xs" color="textoSuave" mt={2}>
-              S4 se compromete 0,30 m antes del nivel de alerta: a 1,90 m del valor observado al corte.
-            </Text>
-          </Box>
-        </Box>
+        <SectoresInundacion />
       </Seccion>
 
       <Seccion id="que-hacer" titulo="Qué hacer">
