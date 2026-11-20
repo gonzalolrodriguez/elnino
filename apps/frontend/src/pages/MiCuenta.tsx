@@ -1,15 +1,20 @@
-import { Alert, AlertIcon, Badge, Box, Button, Heading, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, Button, Flex, Heading, Link, Text } from "@chakra-ui/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { useAuth, type Usuario } from "../auth/AuthContext";
 import { EstadoCargando } from "../components/EstadoCargando";
 import { Layout } from "../components/Layout";
+import { Plegable } from "../components/Plegable";
 import { ApiError, solicitar } from "../lib/api";
 import { etiquetaEstadoUsuario, etiquetaRol, etiquetaRolOperativo, fechaHora } from "../lib/etiquetas";
+import { misPedidos, pedidoActivo } from "../lib/pedidos";
+import { useCarga } from "../lib/useCarga";
+import { useCargaViva } from "../lib/vivo";
+import { Notificaciones, OrdenesVigentes, MiCentro, type Dic } from "./micuenta/Avisos";
 import { EditarGrupo, type Grupo } from "./micuenta/EditarGrupo";
-import { ConfirmarTraslado } from "./micuenta/ConfirmarTraslado";
-import { CuadrillaEnCamino } from "./micuenta/CuadrillaEnCamino";
-import { EstadoSector } from "./micuenta/EstadoSector";
+import { BandaSector, type MiSector } from "./micuenta/EstadoSector";
+import { MiPedido } from "./micuenta/MiPedido";
+import { PedidosAnteriores } from "./micuenta/PedidosAnteriores";
 import { PedirAyuda } from "./micuenta/PedirAyuda";
 
 type Recurso<T> =
@@ -64,19 +69,9 @@ const listaDe = (clave: string) => (r: unknown): Dic[] => {
   return Array.isArray(lista) ? (lista as Dic[]) : [];
 };
 
-function Bloque<T>({
-  titulo,
-  recurso,
-  vacio,
-  children,
-}: {
-  titulo: string;
-  recurso: Recurso<T>;
-  vacio: string;
-  children: (datos: T) => ReactNode;
-}) {
+function Bloque<T>({ titulo, recurso, vacio, children }: { titulo: string; recurso: Recurso<T>; vacio: string; children: (datos: T) => ReactNode }) {
   return (
-    <Box as="section" py={5} borderTop="1px solid" borderColor="borde" aria-label={titulo}>
+    <Box as="section" py={4} borderTop="1px solid" borderColor="borde" aria-label={titulo}>
       <Heading as="h2" size="md" mb={3}>
         {titulo}
       </Heading>
@@ -99,8 +94,6 @@ function Bloque<T>({
   );
 }
 
-type Dic = Record<string, unknown>;
-
 type Par = [string, string, ((v: unknown) => string)?];
 
 function Pares({ d, claves }: { d: Dic; claves: Par[] }) {
@@ -122,57 +115,10 @@ function Pares({ d, claves }: { d: Dic; claves: Par[] }) {
   );
 }
 
-function Notificaciones({ lista, alCambiar }: { lista: Dic[]; alCambiar: () => void }) {
-  const [trabajando, setTrabajando] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  async function marcar(id: number) {
-    setTrabajando(id);
-    setError(null);
-    try {
-      await solicitar(`/mi/notificaciones/${id}/leida`, { autenticado: true, metodo: "PATCH", cuerpo: {} });
-      alCambiar();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo marcar como leída.");
-    } finally {
-      setTrabajando(null);
-    }
-  }
-  return (
-    <>
-      {error && (
-        <Alert status="error" fontSize="sm" role="alert" mb={2}>
-          <AlertIcon />
-          {error}
-        </Alert>
-      )}
-      <Box as="ul" listStyleType="none" m={0} p={0}>
-        {lista.map((n, i) => {
-          const id = typeof n.id === "number" ? n.id : null;
-          const leida = n.leida === true;
-          return (
-            <Box as="li" key={String(n.id ?? i)} py={2} borderBottom="1px solid" borderColor="borde" display="flex" gap={3} alignItems="flex-start" flexWrap="wrap">
-              <Box flex="1 1 14rem" minW={0}>
-                <Text fontWeight={leida ? 400 : 700} overflowWrap="anywhere">
-                  {!leida && <Badge colorScheme="blue" mr={2}>Nueva</Badge>}
-                  {String(n.mensaje ?? n.titulo ?? "Notificación")}
-                </Text>
-                <Text fontSize="xs" color="textoSuave">
-                  {fechaHora(typeof n.creada_en === "string" ? n.creada_en : null)}
-                </Text>
-              </Box>
-              {!leida && id !== null && (
-                <Button size="sm" variant="outline" minH="2.75rem" isLoading={trabajando === id} onClick={() => void marcar(id)}>
-                  Marcar como leída
-                </Button>
-              )}
-            </Box>
-          );
-        })}
-      </Box>
-    </>
-  );
-}
+const REFRESCO_ACTIVO_MS = 20_000;
+const REFRESCO_REPOSO_MS = 120_000;
 
+/** Mi cuenta: panel personal. Estado de mi sector, mi pedido activo con su línea de tiempo, avisos, centro, historial y datos. */
 export default function MiCuenta() {
   const { usuario } = useAuth();
   const yo = useRecurso<Usuario>("/auth/yo");
@@ -180,75 +126,154 @@ export default function MiCuenta() {
   // Contrato real (apps/backend/app/api/v1/mi.py): el grupo familiar es un objeto plano y responde 404 si
   // todavía no se cargó; establecimientos y notificaciones vienen envueltos en un objeto.
   const familia = useRecurso<Dic>("/mi/grupo-familiar", { vacioSi404: true });
-  const estabs = useRecurso<Dic[], unknown>("/mi/establecimientos", {
-    extraer: listaDe("establecimientos"),
-    activo: esProductor,
-  });
+  const estabs = useRecurso<Dic[], unknown>("/mi/establecimientos", { extraer: listaDe("establecimientos"), activo: esProductor });
   const notifs = useRecurso<Dic[], unknown>("/mi/notificaciones", { extraer: listaDe("notificaciones") });
   const [versionSector, setVersionSector] = useState(0);
+  const sector = useCarga(() => solicitar<MiSector>("/mi/sector", { autenticado: true }), [versionSector]);
+
+  // Mientras hay un pedido sin resolver se consulta cada ~20 s; sin pedido activo, con calma.
+  const [cadaMs, setCadaMs] = useState(REFRESCO_ACTIVO_MS);
+  const pedidos = useCargaViva(misPedidos, { cadaMs });
+  const lista = pedidos.datos?.items ?? [];
+  const activo = pedidoActivo(lista);
+  const enCurso = activo !== null && activo.estado !== "resuelta";
+  useEffect(() => {
+    if (pedidos.datos === null) return;
+    setCadaMs(enCurso ? REFRESCO_ACTIVO_MS : REFRESCO_REPOSO_MS);
+  }, [pedidos.datos, enCurso]);
+  const anteriores = lista.filter((p) => p !== activo);
+
   const recargarFamilia = familia.recargar;
   const alGuardarGrupo = useCallback(() => {
     recargarFamilia();
     setVersionSector((n) => n + 1);
   }, [recargarFamilia]);
 
+  // Lleva al editor del grupo familiar y lo despliega (viene plegado cuando ya hay un grupo cargado).
+  const marcarDomicilio = useCallback(() => {
+    const seccion = document.getElementById("mi-grupo-familiar");
+    const editor = seccion?.querySelector("details");
+    if (editor) editor.open = true;
+    seccion?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const recargarPedidos = pedidos.recargar;
+  const alEnviarPedido = useCallback(() => {
+    window.setTimeout(recargarPedidos, 800);
+  }, [recargarPedidos]);
+
   return (
     <Layout titulo="Mi cuenta">
-      <Heading as="h1" size="xl" mb={1}>
-        Mi cuenta
-      </Heading>
-      <Text mb={4}>Hola, {usuario?.nombre_visible}.</Text>
+      <Box maxW="64rem">
+        <Flex justify="space-between" align="flex-start" gap={4} wrap="wrap" mb={5}>
+          <Box minW={0}>
+            <Heading as="h1" size="sm" color="textoSuave" fontWeight={600}>
+              Mi cuenta
+            </Heading>
+            <Text as="p" textStyle="cifra" fontSize={{ base: "2xl", md: "3xl" }} overflowWrap="anywhere" data-testid="saludo">
+              Hola, {usuario?.nombre_visible}
+            </Text>
+          </Box>
+          <Button as={Link} href="tel:103" variant="solid" colorScheme="red" minH="2.75rem" _hover={{ textDecoration: "none" }} aria-label="Emergencia: llamar al 103">
+            Emergencia: 103
+          </Button>
+        </Flex>
 
-      <Box maxW="80rem">
-        <EstadoSector key={versionSector} />
-        <CuadrillaEnCamino />
-        <ConfirmarTraslado />
-        <PedirAyuda esProductor={esProductor} />
-      </Box>
+        <BandaSector carga={sector} alMarcarDomicilio={marcarDomicilio} />
 
-      <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "repeat(2, minmax(0, 1fr))" }} columnGap={10} alignItems="start" maxW="80rem">
-        <Bloque titulo="Notificaciones" recurso={notifs} vacio="No tenés notificaciones.">
-          {(lista) => <Notificaciones lista={lista} alCambiar={notifs.recargar} />}
-        </Bloque>
+        {pedidos.cargando && (
+          <Box mb={5}>
+            <EstadoCargando py={4} />
+          </Box>
+        )}
+        {pedidos.datos === null && pedidos.error !== null && (
+          <Alert status={pedidos.error instanceof ApiError && pedidos.error.estado === 404 ? "info" : "error"} fontSize="sm" role="alert" mb={5} data-testid="pedidos-error">
+            <AlertIcon />
+            {pedidos.error instanceof ApiError && pedidos.error.estado === 404
+              ? "El seguimiento de pedidos todavía no está disponible en el servidor."
+              : "No pudimos consultar tus pedidos. Vamos a reintentar solos; si es urgente, llamá al 103."}
+          </Alert>
+        )}
+        {pedidos.datos !== null && pedidos.error !== null && (
+          <Text fontSize="xs" color="textoSuave" role="status" mb={2} data-testid="pedidos-sin-actualizar">
+            No pudimos actualizar tus pedidos; te mostramos lo último que recibimos.
+          </Text>
+        )}
+        {activo && <MiPedido pedido={activo} alResponder={pedidos.recargar} />}
 
-        <Bloque titulo="Mis datos" recurso={yo} vacio="Sin datos.">
-          {(u) => (
-            <Pares
-              d={u as unknown as Dic}
-              claves={[
-                ["nombre_visible", "Nombre"],
-                ["email", "Correo"],
-                ["rol", "Rol", (r) => etiquetaRol(String(r))],
-                ["rol_operativo", "Rol operativo", (r) => etiquetaRolOperativo(String(r))],
-                ["estado", "Estado", (r) => etiquetaEstadoUsuario(String(r))],
-                ["creado_en", "Alta", (r) => fechaHora(String(r))],
-                ["ultimo_login", "Último ingreso", (r) => fechaHora(String(r))],
-              ]}
-            />
+        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "repeat(2, minmax(0, 1fr))" }} columnGap={10} alignItems="start">
+          <Box as="section" aria-label="Avisos y órdenes" py={4} borderTop="1px solid" borderColor="borde">
+            <Heading as="h2" size="md" mb={3}>
+              Avisos y órdenes
+            </Heading>
+            {sector.estado === "ok" ? <OrdenesVigentes sectores={sector.datos.sectores} /> : <Text color="textoSuave">Se muestran cuando cargue el estado de tu sector.</Text>}
+            <Box mt={4}>
+              <Heading as="h3" size="sm" mb={2}>
+                Notificaciones
+              </Heading>
+              {notifs.estado === "cargando" && <EstadoCargando py={3} />}
+              {notifs.estado === "vacio" && <Text>No tenés notificaciones.</Text>}
+              {notifs.estado === "no_disponible" && <Text>Esta función todavía no está disponible en el servidor.</Text>}
+              {notifs.estado === "error" && (
+                <Alert status="error" fontSize="sm" role="alert">
+                  <AlertIcon />
+                  No se pudo cargar: {notifs.mensaje}
+                </Alert>
+              )}
+              {notifs.estado === "ok" && <Notificaciones lista={notifs.datos} alCambiar={notifs.recargar} />}
+            </Box>
+          </Box>
+
+          <Box as="section" aria-label="Mi centro asignado" py={4} borderTop="1px solid" borderColor="borde">
+            <Heading as="h2" size="md" mb={3}>
+              Mi centro asignado
+            </Heading>
+            {sector.estado === "ok" ? <MiCentro d={sector.datos} /> : <Text color="textoSuave">Se muestra cuando cargue el estado de tu sector.</Text>}
+          </Box>
+        </Box>
+
+        <PedidosAnteriores pedidos={anteriores} />
+
+        {!pedidos.cargando && (
+          <Box as="section" aria-label="Nuevo pedido" py={3} borderTop="1px solid" borderColor="borde" data-testid="nuevo-pedido">
+            <Plegable key={activo ? "con-pedido" : "sin-pedido"} titulo={<Heading as="h2" size="md">Nuevo pedido</Heading>} abiertoInicial={activo === null}>
+              <Box pt={2}>
+                <PedirAyuda esProductor={esProductor} alEnviar={alEnviarPedido} />
+              </Box>
+            </Plegable>
+          </Box>
+        )}
+
+        <Box id="mi-grupo-familiar" as="section" aria-label="Mi grupo familiar" py={4} borderTop="1px solid" borderColor="borde">
+          <Heading as="h2" size="md" mb={3}>
+            Mi grupo familiar
+          </Heading>
+          {familia.estado === "cargando" && <EstadoCargando py={3} />}
+          {familia.estado === "ok" && (
+            <Box mb={3}>
+              <Pares
+                d={familia.datos}
+                claves={[
+                  ["integrantes", "Integrantes"],
+                  ["menores", "Menores"],
+                  ["mayores", "Personas mayores"],
+                  ["mascotas", "Mascotas"],
+                  ["sector_id", "Sector (K10, SIMULADO)"],
+                  ["actualizado_en", "Actualizado", (r) => fechaHora(String(r))],
+                ]}
+              />
+            </Box>
           )}
-        </Bloque>
-
-        <Bloque titulo="Grupo familiar" recurso={familia} vacio="Todavía no cargaste tu grupo familiar.">
-          {(g) => (
-            <Pares
-              d={g}
-              claves={[
-                ["integrantes", "Integrantes"],
-                ["menores", "Menores"],
-                ["mayores", "Personas mayores"],
-                ["mascotas", "Mascotas"],
-                ["sector_id", "Sector (K10, SIMULADO)"],
-                ["actualizado_en", "Actualizado", (r) => fechaHora(String(r))],
-              ]}
-            />
-          )}
-        </Bloque>
+          {familia.estado === "vacio" && <Text mb={3}>Todavía no cargaste tu grupo familiar.</Text>}
+          {/* El editor ya viene plegado cuando hay grupo cargado. */}
+          {familia.estado !== "cargando" && <EditarGrupo key={familia.estado === "ok" ? String(familia.datos.actualizado_en ?? "ok") : familia.estado} grupo={familia.estado === "ok" ? (familia.datos as Grupo) : null} alGuardar={alGuardarGrupo} />}
+        </Box>
 
         {esProductor && (
           <Bloque titulo="Mis establecimientos" recurso={estabs} vacio="Todavía no registraste establecimientos.">
-            {(lista) => (
+            {(l) => (
               <Box as="ul" listStyleType="none" m={0} p={0}>
-                {lista.map((e, i) => (
+                {l.map((e, i) => (
                   <Box as="li" key={String(e.id ?? i)} mb={3}>
                     <Pares
                       d={e}
@@ -266,11 +291,35 @@ export default function MiCuenta() {
           </Bloque>
         )}
 
-        {familia.estado !== "cargando" && (
-          <Box gridColumn={{ lg: "1 / -1" }} borderTop="1px solid" borderColor="borde" py={3} maxW="48rem">
-            <EditarGrupo key={familia.estado === "ok" ? String(familia.datos.actualizado_en ?? "ok") : familia.estado} grupo={familia.estado === "ok" ? (familia.datos as Grupo) : null} alGuardar={alGuardarGrupo} />
-          </Box>
-        )}
+        <Box as="section" aria-label="Mis datos" py={3} borderTop="1px solid" borderColor="borde">
+          <Plegable titulo={<Heading as="h2" size="md">Mis datos</Heading>}>
+            <Box pt={2}>
+              {yo.estado === "cargando" && <EstadoCargando py={3} />}
+              {yo.estado === "vacio" && <Text>Sin datos.</Text>}
+              {yo.estado === "no_disponible" && <Text>Esta función todavía no está disponible en el servidor.</Text>}
+              {yo.estado === "error" && (
+                <Alert status="error" fontSize="sm" role="alert">
+                  <AlertIcon />
+                  No se pudo cargar: {yo.mensaje}
+                </Alert>
+              )}
+              {yo.estado === "ok" && (
+                <Pares
+                  d={yo.datos as unknown as Dic}
+                  claves={[
+                    ["nombre_visible", "Nombre"],
+                    ["email", "Correo"],
+                    ["rol", "Rol", (r) => etiquetaRol(String(r))],
+                    ["rol_operativo", "Rol operativo", (r) => etiquetaRolOperativo(String(r))],
+                    ["estado", "Estado", (r) => etiquetaEstadoUsuario(String(r))],
+                    ["creado_en", "Alta", (r) => fechaHora(String(r))],
+                    ["ultimo_login", "Último ingreso", (r) => fechaHora(String(r))],
+                  ]}
+                />
+              )}
+            </Box>
+          </Plegable>
+        </Box>
       </Box>
     </Layout>
   );
