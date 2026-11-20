@@ -4,14 +4,14 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 
-import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
-import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
-import { ElegirEnMapa } from "../components/ElegirEnMapa";
+import { AvisoFueraDeFormosa } from "../components/BotonUbicacion";
+import { Contador } from "../components/Contador";
+import { AlertaError, Campo, Consentimiento, GrupoCampos } from "../components/Formulario";
+import { IconoMascota, IconoMayor, IconoMenor, IconoPersonas } from "../components/iconos/Iconos";
 import { Layout } from "../components/Layout";
-import { Plegable } from "../components/Plegable";
 import { BloqueApoyo, PaginaFormulario, ResumenSectores } from "../components/PaginaFormulario";
+import { SelectorUbicacion } from "../components/SelectorUbicacion";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
-import { sectorDe } from "../datos/kit";
 import { solicitar } from "../lib/api";
 import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
@@ -41,9 +41,9 @@ export default function RegistroCiudadano() {
   const lon = decimal(v.lon);
   const lat = decimal(v.lat);
   const puntoValido = lon !== null && lat !== null && !Number.isNaN(lon) && !Number.isNaN(lat);
-  const sector = puntoValido ? sectorDe(lon, lat) : null;
 
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
+  const poner = (k: keyof typeof v) => (t: string) => setV((x) => ({ ...x, [k]: t }));
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -127,14 +127,14 @@ export default function RegistroCiudadano() {
         aside={
           <>
             <BloqueApoyo titulo="Para qué usamos tus datos">
-              <Box as="ul" m={0} pl={5} fontSize="sm">
+              <Box as="ul" m={0} pl={5} color="textoSuave">
                 <li>Ubicarte en un sector de evaluación a partir de tu domicilio.</li>
                 <li>Avisarte cuando tu sector esté en riesgo o se emita una orden.</li>
                 <li>Organizar tu traslado y asignarte un centro de recepción.</li>
               </Box>
             </BloqueApoyo>
             <BloqueApoyo titulo="Tus derechos">
-              <Text fontSize="sm">
+              <Text color="textoSuave">
                 Podés pedir el acceso, la rectificación y la supresión de tus datos (Ley 25.326). El teléfono se guarda cifrado y la
                 ubicación solo se usa para ubicarte en un sector.
               </Text>
@@ -144,56 +144,56 @@ export default function RegistroCiudadano() {
         }
       >
         <TarjetaFormulario maxW="none">
-        <form onSubmit={enviar} noValidate aria-label="Registro de ciudadanía">
-          <VStack spacing={4} align="stretch">
-            <AlertaError error={errorApi} />
-            <Campo id="nombre_visible" etiqueta="Nombre para mostrar" value={v.nombre_visible} onChange={set("nombre_visible")} error={errores.nombre_visible} autoComplete="nickname" isRequired />
-            <Campo id="email" etiqueta="Correo electrónico" type="email" value={v.email} onChange={set("email")} error={errores.email} autoComplete="email" isRequired />
-            <Campo id="password" etiqueta="Contraseña" type="password" value={v.password} onChange={set("password")} error={errores.password} ayuda="Al menos 10 caracteres." autoComplete="new-password" isRequired />
-            <Heading as="h2" size="sm" pt={2}>
-              Grupo familiar
-            </Heading>
-            <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4}>
-              <Campo id="integrantes" etiqueta="Integrantes" inputMode="numeric" value={v.integrantes} onChange={set("integrantes")} error={errores.integrantes} />
-              <Campo id="mascotas" etiqueta="Mascotas" inputMode="numeric" value={v.mascotas} onChange={set("mascotas")} error={errores.mascotas} />
-              <Campo id="menores" etiqueta="Menores" inputMode="numeric" value={v.menores} onChange={set("menores")} error={errores.menores} />
-              <Campo id="mayores" etiqueta="Personas mayores" inputMode="numeric" value={v.mayores} onChange={set("mayores")} error={errores.mayores} />
-            </Box>
-            <Campo id="telefono" etiqueta="Teléfono (opcional)" type="tel" value={v.telefono} onChange={set("telefono")} error={errores.telefono} ayuda="Se guarda cifrado." autoComplete="tel" />
-            <Heading as="h2" size="sm" pt={2}>
-              Domicilio (opcional)
-            </Heading>
-            <BotonUbicacion primario onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
-            <ElegirEnMapa lon={v.lon} lat={v.lat} onChange={(p) => setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }))} />
-            <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
-              <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
-                <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,183" />
-                <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,183" />
+          <form onSubmit={enviar} noValidate aria-label="Registro de ciudadanía">
+            <VStack spacing={8} align="stretch">
+              <AlertaError error={errorApi} />
+              <GrupoCampos leyenda="Tus datos de acceso">
+                <Campo id="nombre_visible" etiqueta="Nombre para mostrar" value={v.nombre_visible} onChange={set("nombre_visible")} error={errores.nombre_visible} autoComplete="nickname" isRequired />
+                <Campo id="email" etiqueta="Correo electrónico" type="email" value={v.email} onChange={set("email")} error={errores.email} autoComplete="email" isRequired />
+                <Campo id="password" etiqueta="Contraseña" type="password" value={v.password} onChange={set("password")} error={errores.password} ayuda="Al menos 10 caracteres." autoComplete="new-password" isRequired />
+              </GrupoCampos>
+              <GrupoCampos leyenda="Grupo familiar">
+                <Box display="grid" gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" }} gap={4} alignItems="end">
+                  <Contador id="integrantes" etiqueta="Integrantes" icono={<IconoPersonas />} min={1} max={40} value={v.integrantes} onChange={poner("integrantes")} error={errores.integrantes} />
+                  <Contador id="menores" etiqueta="Menores" icono={<IconoMenor />} max={40} value={v.menores} onChange={poner("menores")} error={errores.menores} />
+                  <Contador id="mayores" etiqueta="Personas mayores" icono={<IconoMayor />} max={40} value={v.mayores} onChange={poner("mayores")} error={errores.mayores} />
+                  <Contador id="mascotas" etiqueta="Mascotas" icono={<IconoMascota />} max={100} value={v.mascotas} onChange={poner("mascotas")} error={errores.mascotas} />
+                </Box>
+                <Box maxW="22rem">
+                  <Campo id="telefono" etiqueta="Teléfono (opcional)" type="tel" value={v.telefono} onChange={set("telefono")} error={errores.telefono} ayuda="Se guarda cifrado." autoComplete="tel" />
+                </Box>
+              </GrupoCampos>
+              <GrupoCampos leyenda="Domicilio (opcional)" ayuda="Con tu domicilio sabemos en qué sector estás y a qué centro te corresponde ir.">
+                <SelectorUbicacion
+                  idBase="domicilio"
+                  lon={v.lon}
+                  lat={v.lat}
+                  errorLon={errores.lon}
+                  errorLat={errores.lat}
+                  onPunto={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))}
+                  onTexto={(campo, valor) => setV((x) => ({ ...x, [campo]: valor }))}
+                />
+                <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
+              </GrupoCampos>
+              <Box display="grid" rowGap={4}>
+                <Consentimiento marcado={consentimiento} onChange={setConsentimiento} error={errores.consentimiento} />
+                <Button type="submit" isLoading={enviando} loadingText="Registrando" w={{ base: "100%", sm: "auto" }} justifySelf="start">
+                  Crear cuenta
+                </Button>
+                <Text color="textoSuave">
+                  ¿Tenés cuenta?{" "}
+                  <Link as={RouterLink} to="/login">
+                    Ingresá
+                  </Link>
+                  . ¿Tenés un establecimiento?{" "}
+                  <Link as={RouterLink} to="/registro/productor">
+                    Registrate como productor
+                  </Link>
+                  .
+                </Text>
               </Box>
-            </Plegable>
-            <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
-            {puntoValido && sector && (
-              <Text fontSize="sm" role="status">
-                Cae en el sector {sector.id} · {sector.nombre} (SIMULADO).
-              </Text>
-            )}
-            <Consentimiento marcado={consentimiento} onChange={setConsentimiento} error={errores.consentimiento} />
-            <Button type="submit" isLoading={enviando} loadingText="Registrando">
-              Crear cuenta
-            </Button>
-            <Text fontSize="sm">
-              ¿Tenés cuenta?{" "}
-              <Link as={RouterLink} to="/login">
-                Ingresá
-              </Link>
-              . ¿Tenés un establecimiento?{" "}
-              <Link as={RouterLink} to="/registro/productor">
-                Registrate como productor
-              </Link>
-              .
-            </Text>
-          </VStack>
-        </form>
+            </VStack>
+          </form>
         </TarjetaFormulario>
       </PaginaFormulario>
     </Layout>

@@ -72,7 +72,7 @@ describe("ubicación del dispositivo", () => {
     geolocalizacion((ok) => ok(posicion({ lat: -26.18, lon: -58.139, precision: 8 })));
     await abrir("/registro/productor");
     fireEvent.click(screen.getByRole("button", BOTON));
-    expect(await screen.findByText(/Cae en el sector S4/)).toBeInTheDocument();
+    expect(await screen.findByText(/dentro del Sector S4/)).toBeInTheDocument();
     expect(valor(/^Longitud/)).toBe("-58,139");
   });
 
@@ -126,7 +126,7 @@ describe("aviso de ubicación fuera de Formosa", () => {
     fireEvent.change(screen.getByLabelText(/^Latitud/), { target: { value: "-26,18" } });
     fireEvent.change(screen.getByLabelText(/^Longitud/), { target: { value: "-58,18" } });
     await waitFor(() => expect(f.mock.calls.some(([u]) => String(u).includes("provincia_contorno"))).toBe(true));
-    await waitFor(() => expect(screen.getByText(/Cae en el sector/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/dentro del Sector/)).toBeInTheDocument());
     expect(screen.queryByText(/fuera de la provincia/)).not.toBeInTheDocument();
   });
 });
