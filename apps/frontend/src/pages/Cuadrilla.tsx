@@ -1,5 +1,5 @@
 import { Box, Button, Checkbox, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { AlertaError } from "../components/Formulario";
@@ -18,7 +18,11 @@ import { Cargando, fmtFecha, Seccion } from "../panel/ui";
 import { AccionesParte } from "./cuadrilla/AccionesParte";
 import { CerrarConConstancia } from "./cuadrilla/CerrarConConstancia";
 import { CompartirUbicacion } from "./cuadrilla/CompartirUbicacion";
+import { AvisosOperativo, InsigniaAvisos } from "./cuadrilla/AvisosOperativo";
 import { HistorialPartes } from "./cuadrilla/HistorialPartes";
+import { MiCuadrilla } from "./cuadrilla/MiCuadrilla";
+import { useAvisos } from "./cuadrilla/useAvisos";
+import { contarNoLeidos } from "../lib/avisos";
 
 const ESTADOS_WS = { conectado: "Tiempo real conectado", conectando: "Conectando tiempo real…", desconectado: "Tiempo real desconectado" } as const;
 
@@ -168,6 +172,14 @@ export default function Cuadrilla() {
   );
   const ws = useTiempoReal(token, alEvento);
 
+  // La cuadrilla (o cuadrillas) del usuario sale de sus tareas; los avisos y el resumen se piden por id.
+  const cuadrillaIds = useMemo(
+    () => [...new Set((tareas.datos ?? []).map((t) => t.cuadrilla_id).filter((x): x is number => typeof x === "number"))].sort((x, y) => x - y),
+    [tareas.datos],
+  );
+  const avisosOp = useAvisos(cuadrillaIds);
+  const noLeidos = contarNoLeidos(avisosOp.avisos);
+
   async function marcar(id: number) {
     setErrorAviso(null);
     try {
@@ -188,11 +200,20 @@ export default function Cuadrilla() {
           ayuda="Tus tareas, las novedades que informás y las alertas que recibís. Los datos son de demostración."
           actualizado={<span role="status">{ESTADOS_WS[ws]}</span>}
           acciones={
-            <Button size="sm" {...TACTIL} variant="outline" onClick={recargarTareas} leftIcon={<IconoActualizar tam="1.125rem" />}>
-              Actualizar
-            </Button>
+            <Flex gap={2} wrap="wrap" align="center">
+              <InsigniaAvisos noLeidos={noLeidos} />
+              <Button size="sm" {...TACTIL} variant="outline" onClick={recargarTareas} leftIcon={<IconoActualizar tam="1.125rem" />}>
+                Actualizar
+              </Button>
+            </Flex>
           }
         />
+      </Box>
+
+      <Box maxW="90rem">
+        <Seccion titulo="Avisos del operativo" categoria="SIMULADO" id="sec-avisos">
+          <AvisosOperativo avisos={avisosOp.avisos} estado={avisosOp.estado} error={avisosOp.error} alMarcar={avisosOp.marcar} alReintentar={() => void avisosOp.recargar()} />
+        </Seccion>
       </Box>
 
       <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 3fr) minmax(0, 2fr)" }} columnGap={6} alignItems="start" maxW="90rem">
@@ -218,6 +239,16 @@ export default function Cuadrilla() {
           )}
         />
       </Seccion>
+
+      {cuadrillaIds.length > 0 && (
+        <Seccion titulo="Mi cuadrilla" categoria="SIMULADO" id="sec-mi-cuadrilla">
+          <Stack spacing={4}>
+            {cuadrillaIds.map((id) => (
+              <MiCuadrilla key={id} cuadrillaId={id} />
+            ))}
+          </Stack>
+        </Seccion>
+      )}
 
       <Seccion titulo="Mi ubicación" categoria="SIMULADO" id="sec-ubicacion">
         <CompartirUbicacion hayTareaEnCurso={(tareas.datos ?? []).some((t) => (locales[t.id] ?? t).estado === "en_curso")} />
