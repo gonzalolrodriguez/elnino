@@ -177,6 +177,9 @@ export type Metricas = {
   sectores_justos?: number;
   sectores_ya_comprometidos?: number;
   personas_minuto?: number;
+  familias_juntas?: number;
+  familias_sin_lugar_entero?: number;
+  personas_en_familias_sin_lugar?: number;
   metodo_tiempos?: Record<string, number>;
   faltantes: Record<string, unknown>;
 };
@@ -220,6 +223,16 @@ export type PlanSector = {
     supuesto: string;
   } & Record<string, unknown>;
   factibilidad?: Factibilidad;
+  familias?: {
+    registradas: number;
+    hogares_simulados: number;
+    personas_en_familias: number;
+    juntas: number;
+    sin_lugar_entero: number;
+    personas_en_familias_sin_lugar: number;
+    tamanos_sin_lugar: number[];
+    nota: string;
+  };
   traslado_personas: {
     vehiculo: string;
     superficie_acceso: string;

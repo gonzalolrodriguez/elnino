@@ -124,6 +124,15 @@ function TarjetaSector({ s }: { s: PlanSector }) {
         {s.personas_sin_lugar > 0 ? ` Sin lugar: ${fmtNum(s.personas_sin_lugar)} personas.` : ""}
         {s.animales_sin_cupo > 0 ? ` Sin cupo: ${fmtNum(s.animales_sin_cupo)} animales.` : ""}
       </Text>
+      {s.familias && s.familias.registradas + s.familias.hogares_simulados > 0 && (
+        <Text fontSize="sm" data-testid={`familias-${s.id}`}>
+          <strong>Familias:</strong> {fmtNum(s.familias.juntas)} viajan y se alojan juntas
+          {s.familias.hogares_simulados > 0 ? ` (${fmtNum(s.familias.registradas)} registradas y ${fmtNum(s.familias.hogares_simulados)} hogares SIMULADOS)` : ""}.
+          {s.familias.sin_lugar_entero > 0
+            ? ` ${fmtNum(s.familias.sin_lugar_entero)} no entran enteras en ningún centro (${fmtNum(s.familias.personas_en_familias_sin_lugar)} personas): no se las separa.`
+            : ""}
+        </Text>
+      )}
       <Text fontSize="sm">
         <strong>Cuadrillas sugeridas:</strong> {s.cuadrillas_sugeridas.map((q) => q.tipo).join(", ") || "ninguna"}.
       </Text>
@@ -152,6 +161,12 @@ function ResumenPlan({ p }: { p: Plan }) {
       {m.sectores_justos !== undefined && (
         <Text>
           Sectores que llegan justo: <strong>{fmtNum(m.sectores_justos)}</strong>
+        </Text>
+      )}
+      {m.familias_juntas !== undefined && (
+        <Text>
+          Familias juntas: <strong>{fmtNum(m.familias_juntas)}</strong>
+          {m.familias_sin_lugar_entero ? ` · sin lugar entero: ${fmtNum(m.familias_sin_lugar_entero)}` : ""}
         </Text>
       )}
       <Text>
@@ -242,7 +257,7 @@ function BloquePronostico({ valor, onCambio }: { valor: PronosticoLluvia | null;
   );
 }
 
-function BloqueRecomendacion({ pronostico }: { pronostico: PronosticoLluvia | null }) {
+function BloqueRecomendacion({ pronostico, hogares }: { pronostico: PronosticoLluvia | null; hogares: boolean }) {
   const { entrada } = useEscenario();
   const [prioridad, setPrioridad] = useState<"riesgo" | "poblacion">("riesgo");
   const [r, setR] = useState<Recomendacion | null>(null);
@@ -253,7 +268,7 @@ function BloqueRecomendacion({ pronostico }: { pronostico: PronosticoLluvia | nu
     setCargando(true);
     setError(null);
     try {
-      setR(await api.recomendacion(entrada, prioridad, pronostico ?? undefined));
+      setR(await api.recomendacion(entrada, prioridad, pronostico ?? undefined, hogares));
     } catch (e) {
       setError(e);
     } finally {
@@ -321,7 +336,7 @@ function BloqueRecomendacion({ pronostico }: { pronostico: PronosticoLluvia | nu
   );
 }
 
-function BloqueComparador({ pronostico }: { pronostico: PronosticoLluvia | null }) {
+function BloqueComparador({ pronostico, hogares }: { pronostico: PronosticoLluvia | null; hogares: boolean }) {
   const { entrada } = useEscenario();
   const centros = useCarga(() => api.centros());
   const [nombre, setNombre] = useState("");
@@ -340,7 +355,7 @@ function BloqueComparador({ pronostico }: { pronostico: PronosticoLluvia | null 
         .map((x) => x.trim().toUpperCase())
         .filter(Boolean);
       setRes(
-        await api.alternativas(entrada, { nombre: nombre.trim() || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: excluidos }, pronostico ?? undefined),
+        await api.alternativas(entrada, { nombre: nombre.trim() || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: excluidos }, pronostico ?? undefined, hogares),
       );
     } catch (e) {
       setError(e);
@@ -439,14 +454,23 @@ function BloqueComparador({ pronostico }: { pronostico: PronosticoLluvia | null 
 
 export default function PaginaRecomendacion() {
   const [pronostico, setPronostico] = useState<PronosticoLluvia | null>(null);
+  const [hogares, setHogares] = useState(false);
   return (
     <>
       <Heading as="h1" size="lg" mb={4}>
         Recomendación y alternativas
       </Heading>
       <BloquePronostico valor={pronostico} onCambio={setPronostico} />
-      <BloqueRecomendacion pronostico={pronostico} />
-      <BloqueComparador pronostico={pronostico} />
+      <Seccion titulo="Familias" categoria="SIMULADO" id="sec-familias">
+        <Text fontSize="sm" mb={2}>
+          El plan nunca separa a una familia: viaja y se aloja entera. Si no entra en ningún centro, se avisa y decide una persona con rol autorizado. La población de K10 no tiene hogares; para probar el criterio con toda la población se puede usar el set separado de hogares SIMULADOS (tamaños SUPUESTO).
+        </Text>
+        <Checkbox size="sm" isChecked={hogares} onChange={(e) => setHogares(e.target.checked)}>
+          Usar hogares SIMULADOS para la población de K10
+        </Checkbox>
+      </Seccion>
+      <BloqueRecomendacion pronostico={pronostico} hogares={hogares} />
+      <BloqueComparador pronostico={pronostico} hogares={hogares} />
     </>
   );
 }

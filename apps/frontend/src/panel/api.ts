@@ -62,12 +62,20 @@ export const api = {
     solicitar<unknown>(`/accesos/${id}`, { ...a, metodo: "PATCH", cuerpo: { transitable, motivo: transitable ? null : motivo } }),
   centros: () => solicitar<{ centros: Centro[] }>("/centros", a),
   escenario: (e: EntradaEscenario) => solicitar<Escenario>("/simulacion/escenario", { ...a, cuerpo: e }),
-  recomendacion: (e: EntradaEscenario, prioridad: "riesgo" | "poblacion", pronostico?: PronosticoLluvia) =>
-    solicitar<Recomendacion>("/simulacion/recomendacion", { ...a, cuerpo: { ...e, prioridad, ...(pronostico ? { pronostico_lluvia: pronostico } : {}) } }),
-  alternativas: (e: EntradaEscenario, editable?: EditableAlternativa, pronostico?: PronosticoLluvia) =>
+  recomendacion: (e: EntradaEscenario, prioridad: "riesgo" | "poblacion", pronostico?: PronosticoLluvia, hogares = false) =>
+    solicitar<Recomendacion>("/simulacion/recomendacion", {
+      ...a,
+      cuerpo: { ...e, prioridad, ...(pronostico ? { pronostico_lluvia: pronostico } : {}), ...(hogares ? { poblacion_k10_en_hogares: true } : {}) },
+    }),
+  alternativas: (e: EntradaEscenario, editable?: EditableAlternativa, pronostico?: PronosticoLluvia, hogares = false) =>
     solicitar<Alternativas>("/simulacion/alternativas", {
       ...a,
-      cuerpo: { ...e, ...(editable ? { editable } : {}), ...(pronostico ? { pronostico_lluvia: pronostico } : {}) },
+      cuerpo: {
+        ...e,
+        ...(editable ? { editable } : {}),
+        ...(pronostico ? { pronostico_lluvia: pronostico } : {}),
+        ...(hogares ? { poblacion_k10_en_hogares: true } : {}),
+      },
     }),
   ruteo: (c: ConsultaRuta) => solicitar<Ruta>("/ruteo", { ...a, cuerpo: c }),
   ganaderia: (c: unknown) => solicitar<CalculoGanadero>("/ganaderia/calculo", { ...a, cuerpo: c }),

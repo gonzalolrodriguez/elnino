@@ -86,6 +86,16 @@ const RECOMENDACION = {
         animales_sin_cupo: 0,
         camiones_jaula: 0,
         cuadrillas_sugeridas: [{ tipo: "humana", roles: [] }],
+        familias: {
+          registradas: 2,
+          hogares_simulados: 340,
+          personas_en_familias: 1207,
+          juntas: 330,
+          sin_lugar_entero: 12,
+          personas_en_familias_sin_lugar: 40,
+          tamanos_sin_lugar: [5, 4],
+          nota: "",
+        },
         advertencias: [],
       },
     ],
@@ -107,6 +117,7 @@ describe("recomendador: factibilidad y ventana seca", () => {
     renderRuta("/comando/recomendacion");
 
     fireEvent.click(await screen.findByLabelText("Simular lluvia prevista"));
+    fireEvent.click(screen.getByLabelText("Usar hogares SIMULADOS para la población de K10"));
     fireEvent.change(screen.getByLabelText("Milímetros"), { target: { value: "100" } });
     fireEvent.change(screen.getByLabelText("Dentro de (horas)"), { target: { value: "6" } });
     fireEvent.click(screen.getByRole("button", { name: "Generar recomendación" }));
@@ -118,8 +129,11 @@ describe("recomendador: factibilidad y ventana seca", () => {
     expect(tarjeta).toHaveTextContent("por la red vial (OSM)");
     expect(screen.getByTestId("centros-descartados")).toHaveTextContent("Escuela de prueba");
     expect(screen.getByText(/Sectores que no alcanzan/)).toBeInTheDocument();
+    expect(screen.getByTestId("familias-S1")).toHaveTextContent("330 viajan y se alojan juntas");
+    expect(screen.getByTestId("familias-S1")).toHaveTextContent("no se las separa");
 
     await waitFor(() => expect(cuerpoEnviado(f)?.pronostico_lluvia).toEqual({ mm: 100, horas: 6 }));
+    expect(cuerpoEnviado(f)?.poblacion_k10_en_hogares).toBe(true);
   });
 
   it("no manda la lluvia prevista si está desactivada o es inválida", async () => {
@@ -137,5 +151,6 @@ describe("recomendador: factibilidad y ventana seca", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generar recomendación" }));
     await screen.findByTestId("plan-S1");
     expect(cuerpoEnviado(f)).not.toHaveProperty("pronostico_lluvia");
+    expect(cuerpoEnviado(f)).not.toHaveProperty("poblacion_k10_en_hogares");
   });
 });
