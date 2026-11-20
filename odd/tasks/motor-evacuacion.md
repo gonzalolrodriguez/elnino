@@ -81,3 +81,29 @@ Commits en `dev-cabrera`: `5acff00` (lluvia en la red), `2ef4911` (matriz de tie
 - Los tiempos no incluyen carga y descarga ni el regreso de la última ronda (igual que antes).
 - La lancha va en línea recta y no tiene flota limitada por tipo de embarcación más allá de `recursos`.
 - El reparto trabaja con la población agregada del sector: una familia registrada puede quedar repartida entre dos centros.
+
+## M7 · Familias que no se separan (pedido del 19/11/2026)
+
+**Criterio humano:** en una catástrofe, separar a una familia agrava el daño. El plan nunca debe partir un grupo familiar entre centros, aunque eso cueste minutos de viaje. Si una familia no entra entera en ningún centro, se informa como "sin lugar entero"; partirla es decisión explícita de una persona con rol autorizado, no del algoritmo.
+
+**Alcance acordado:** solo familias indivisibles. Sin cohesión de sector (vecinos al mismo centro) ni mascotas por ahora.
+
+**Qué es una familia en los datos:**
+- Familias registradas (`grupos_familiares`): unidades reales del sistema, con integrantes, menores y mayores. Siempre indivisibles.
+- Población de K10: es un total simulado sin estructura de hogares. Por defecto se sigue repartiendo como total. Para probar el algoritmo con toda la población en hogares hay un **set aparte**, `data/simulado/hogares_k10.json`, que divide la población de cada sector en hogares SIMULADOS. Se activa por pedido con `poblacion_k10_en_hogares: true`. No cambia K10 (D8) ni la demo.
+- Tamaño de los hogares: no se pudo obtener del Censo 2022 la distribución de hogares por cantidad de personas de Formosa. Los cuadros provisionales de INDEC (`cnphv2022_resultados_provisionales.xlsx`, `cnphv2022_condiciones_habitacionales.xlsx`) traen viviendas y población, pero no hogares por tamaño. La página de resultados definitivos de Formosa (censo.gob.ar) no se pudo abrir: certificado TLS incompleto. La distribución usada es SUPUESTO y figura en el archivo, en `supuestos.yaml` y en la ficha de fuentes. Cuando se consiga el cuadro definitivo, se regenera el set con el mismo script.
+
+**Algoritmo (dos etapas):**
+1. **Cupos por sector:** el flujo de costo mínimo de M5 decide cuántos lugares de cada centro le tocan a cada sector, con la prioridad y el tiempo total como antes.
+2. **Familias dentro de los cupos:** dentro de cada sector, las familias se ubican enteras. Primero las que tienen menores o mayores; después las más grandes, porque son las más difíciles de ubicar. Cada familia va al centro más rápido cuyo cupo para ese sector la contiene. Si no entra en ningún cupo, puede usar lugar libre de un centro que no se haya asignado a nadie. Si tampoco entra, queda "sin lugar entero". El resto de la población, la que no está en familias, ocupa lo que queda.
+
+**Traslado:** los viajes se cuentan sin partir familias entre vehículos (empaquetado por tamaño de familia). Una familia más grande que un vehículo viaja en vehículos del mismo convoy, en la misma ronda.
+
+**Salida:** por sector y en las métricas, `familias_juntas`, `familias_sin_lugar_entero` y `personas_en_familias_sin_lugar`. En el comparador, "Familias sin lugar entero". No se exponen identificadores de familias.
+
+| ID | Tarea | Estado |
+|---|---|---|
+| M7.1 | Set separado de hogares SIMULADOS para K10 y script reproducible | Pendiente |
+| M7.2 | Asignación con familias indivisibles y viajes sin partir familias | Pendiente |
+| M7.3 | Recomendador, API (`poblacion_k10_en_hogares`), web y pruebas | Pendiente |
+| M7.4 | Contrato, decisiones y ficha de fuentes | Pendiente |
