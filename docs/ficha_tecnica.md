@@ -59,9 +59,14 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Modo cuadrilla con cierre con constancia.
   - Pestaña Monitor para mandos.
   - Pantalla de conexión aparte de login y registro.
-- **Pruebas automáticas al 19/11/2026:** backend 290, web 192, app 220. El APK generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
+- **Distintivos SAPUKAY (rama `dev-gonzalo`, 20/11/2026):**
+  - **Tres relojes:** río (DATO OBSERVADO, distancia a la alerta y rango de días con supuesto lineal), barro (SUPUESTO: la tierra se corta con 30 mm y S4 se compromete 30 cm antes de la alerta) y El Niño (DOCUMENTO DE REFERENCIA, CFS v2). Están en la landing y en el tablero.
+  - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web, y el solicitante ve la distancia y una llegada estimada (supuesto de velocidad y desvío). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea y solo la ven el solicitante y los roles operativos.
+  - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.
+  - **Lámina de agua ilustrativa:** en el simulador, cada sector se cubre según cuánto supera el río su altura de compromiso (K10). Los accesos cortados se ven discontinuos y hay un botón "Reproducir subida". No es un modelo hidráulico.
+- **Pruebas automáticas al 20/11/2026 (rama `dev-gonzalo`):** backend 320, web 232, app 250. El APK de `main` generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
-No se pudo comprobar todavía en pantalla y con sesión real el tablero, las constancias y el panel. Hay pruebas automáticas con datos simulados. Tampoco se comprobó la fluidez del 3D en distintos equipos ni el uso completo de la app en campo: cámara, GPS y cola sin señal.
+No se pudo comprobar todavía en pantalla y con sesión real el tablero, las constancias y el panel. Hay pruebas automáticas con datos simulados. Tampoco se comprobó la fluidez del 3D en distintos equipos ni el uso completo de la app en campo: cámara, GPS y cola sin señal. De los distintivos SAPUKAY, los tres relojes se vieron en un navegador; la brújula, la cuadrilla en camino y la lámina de agua solo tienen pruebas automáticas.
 
 ## Qué falta para que la mesa la use
 - **Datos reales de la autoridad:** qué edificios son centros de recepción y su capacidad (hoy `SIMULADO`; las escuelas del Mapa Educativo son solo candidatas), recursos disponibles, responsables por rol y sectores definitivos (K10 es simulado y está "a validar por la mesa"). Dependen de Defensa Civil y del comité.
