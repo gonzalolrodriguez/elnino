@@ -323,8 +323,8 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/cuadrillas` | mandos | Cuadrillas con integrantes, plantilla sugerida y `roles_faltantes` |
-| POST | `/cuadrillas` | mandos | `{ "nombre", "tipo_incidente": "humana|ganadera|apicola", "vehiculo"?: "4x4|camion_jaula|colectivo|lancha|moto", "integrantes": [{"rol_operativo"}] }` (201). `vehiculo` es opcional y `SIMULADO` (otro valor: 422); `GET /cuadrillas` lo devuelve (`null` si no tiene) |
+| GET | `/cuadrillas` | mandos | Cuadrillas con integrantes, plantilla sugerida y `roles_faltantes` (ver "Gestión de cuadrillas") |
+| POST | `/cuadrillas` | `operador`, `admin` | Alta de una cuadrilla con equipo interdisciplinario (ver "Gestión de cuadrillas"); el alta anterior `{ "nombre", "tipo_incidente", "vehiculo"?, "integrantes": [{"rol_operativo"}] }` sigue valiendo (201) |
 | GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }`; cada tarea trae `requiere_atencion` (bool) y `ultimo_parte` (parte o `null`, ver "Partes de las cuadrillas y panel de cuadrillas") |
 | PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última. Si un operador (no la cuadrilla) cambia el `estado` o reasigna la tarea, se limpia `requiere_atencion`. La respuesta incluye `requiere_atencion` y `ultimo_parte` |
 | POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201). **Idempotente** con `Idempotency-Key: <UUID>` (mismo decisor y clave: 200 con la orden original y `"repetida": true`, sin duplicar notificaciones ni tareas). Las tareas se reparten entre las cuadrillas del tipo con menos tareas abiertas |
@@ -347,9 +347,11 @@ Parte (`ParteTarea`):
 ```json
 { "id": 7, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "dificultad", "resultado": null,
   "observacion": "El camino de tierra hacia el cargadero está anegado.",
-  "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": false }
+  "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": false,
+  "adjuntos": [ { "n": 1, "tipo": "imagen", "mime": "image/jpeg", "bytes": 184233 } ] }
 ```
 
+- `adjuntos`: evidencia multimedia del parte (`[]` si no tiene); se sube aparte, ver "Evidencia multimedia en los partes".
 - `tipo`: `avance | dificultad | resultado`. `resultado` solo se informa con `tipo=resultado` (`completa | parcial | no_realizada | reprogramada`); en otro tipo: 422.
 - `observacion`: de 3 a 1000 caracteres; **obligatoria** si `tipo` es `dificultad` o si es `resultado` distinto de `completa` (422). En `avance` y en `completa` es opcional.
 - `resuelta`: solo en `dificultad` (nace en `false`); en los demás tipos es `null`.
@@ -361,8 +363,7 @@ Parte (`ParteTarea`):
 | PATCH | `/partes/{id}` | mandos | `{ "resuelta": true }`: marca la dificultad como resuelta (otro tipo de parte: 409; `false` u otro campo: 422) |
 | GET | `/partes/recientes?limite=20` | mandos | `{ "items": [parte + { "sector_id", "solicitud_id", "cuadrilla_nombre", "tarea_estado" }] }` (`limite` 1 a 100). Primero lo que pide atención (dificultades sin resolver y resultados no completos de tareas con `requiere_atencion`), después por fecha |
 | GET | `/cuadrillas/resumen` | mandos | Cuadrillas con sus designados, la tarea actual y el último parte (abajo) |
-| POST | `/cuadrillas/{id}/integrantes` | `operador`, `admin` | `{ "usuario_id", "rol_operativo" }` (201 con el ítem de resumen de la cuadrilla). Solo usuarios **activos con rol `cuadrilla`** y roles del catálogo (422); ya integrante: 409; cuadrilla inexistente: 404. Si la cuadrilla tiene una vacante sin persona con ese rol, se cubre |
-| DELETE | `/cuadrillas/{id}/integrantes/{usuario_id}` | `operador`, `admin` | Quita al integrante; 200 con el ítem de resumen actualizado; 404 si no integraba la cuadrilla |
+| POST/PATCH/DELETE | `/cuadrillas/{id}/integrantes[/{integrante_id}]` | `operador`, `admin` | Alta, cambio y baja de integrantes: ver "Gestión de cuadrillas". **Cambio respecto de la versión anterior:** el `DELETE` se hace por el `id` del integrante (no por `usuario_id`) y las respuestas devuelven la cuadrilla completa |
 
 **Efectos sobre la tarea**
 
@@ -415,16 +416,139 @@ curl -s "$API/partes/recientes?limite=20" -H "$H_OPERADOR"
 curl -s -X PATCH $API/partes/7 -H "$H_OPERADOR" -H 'Content-Type: application/json' -d '{"resuelta":true}'
 curl -s $API/cuadrillas/resumen -H "$H_OPERADOR"
 
-# Designar a un usuario con rol cuadrilla (cubre la vacante del rol si existe) y quitarlo
+# Designar a un usuario con rol cuadrilla (cubre la vacante del rol si existe) y quitarlo (por id de integrante)
 curl -s -X POST $API/cuadrillas/1/integrantes -H "$H_OPERADOR" -H 'Content-Type: application/json' \
   -d '{"usuario_id":9,"rol_operativo":"sipec"}'
-curl -s -X DELETE $API/cuadrillas/1/integrantes/9 -H "$H_OPERADOR"
+curl -s -X DELETE $API/cuadrillas/1/integrantes/17 -H "$H_OPERADOR"
 
 # Casos inválidos: dificultad sin observación -> 422; completa en una tarea de evacuación -> 409 "Cerrá la tarea con constancia";
 # parte de una cuadrilla ajena o de un ciudadano -> 403; tarea inexistente -> 404; PATCH de un avance -> 409
 ```
 
 Prueba automática: `tests/test_partes.py`.
+
+## Gestión de cuadrillas
+
+Armar una cuadrilla es un módulo completo: tipo de operativo, cantidad de integrantes, **profesión de cada integrante** (equipo interdisciplinario), un **encargado**, vehículo, equipamiento y base. Todo es `SIMULADO` (`categoria`). Las personas figuran por **rol operativo y profesión**; el `nombre_visible` de un integrante vinculado a una cuenta institucional aparece **solo en las respuestas para `operador`, `decisor` y `admin`** (todos los endpoints de esta sección son de esos roles o de la propia cuadrilla), nunca en `/mi/*` ni para la ciudadanía. Escriben `operador` y `admin`; el `decisor` lee. Mismo tope por persona que `/mi/*` (429 con `Retry-After`).
+
+Cuadrilla (`GET /cuadrillas/{id}`, `POST` y `PATCH` devuelven lo mismo):
+
+```json
+{ "id": 4, "nombre": "Equipo interdisciplinario SIMULADO A", "tipo_operativo": "familias",
+  "tipo_incidente": "humana", "cantidad_integrantes": 5, "vehiculo": "colectivo",
+  "equipamiento": ["botiquín de primeros auxilios", "chalecos salvavidas", "linternas"],
+  "estado": "disponible", "base": { "lat": -26.185, "lon": -58.183 },
+  "notas": "SIMULADO · asistencia y traslado de familias de los sectores del casco urbano",
+  "integrantes": [
+    { "id": 11, "usuario_id": null, "rol_operativo": "encargado_cuadrilla", "profesion": "trabajo_social",
+      "es_encargado": true, "nombre_visible": null },
+    { "id": 12, "usuario_id": 7, "rol_operativo": "sipec", "profesion": "medicina",
+      "es_encargado": false, "nombre_visible": "Integrante SIMULADO 1" } ],
+  "creado_en": "2026-11-20T23:10:41.120394+00:00", "avisos_sin_leer": 0,
+  "plantilla_sugerida": ["encargado_cuadrilla", "sipec", "trabajo_social", "policia", "transporte", "prefectura", "tecnico_energia"],
+  "roles_faltantes": ["policia", "prefectura", "tecnico_energia"], "categoria": "SIMULADO" }
+```
+
+- `tipo_operativo`: `personas | familias | productores_ganado | apicola | bienes | traslado_mixto`. `tipo_incidente` (`humana | ganadera | apicola`) se mantiene porque reparte las órdenes y define la plantilla de roles; se **deriva** del tipo operativo (`personas`, `familias`, `bienes` y `traslado_mixto` son `humana`; `productores_ganado`, `ganadera`; `apicola`, `apicola`). Si se envían los dos y no corresponden: 422. Con solo `tipo_incidente` (alta anterior) el tipo operativo se deduce (`humana` → `personas`).
+- `profesion`: `medicina | enfermeria | veterinaria | zootecnia | trabajo_social | policia | bomberos | defensa_civil | prefectura | chofer | tecnico_energia | logistica | otra`. El `rol_operativo` (catálogo) y la profesión se deducen uno del otro si falta alguno (SUPUESTO: medicina y enfermería → `sipec`, veterinaria → `veterinario`, chofer → `transporte`, logística → `coordinador_sector`, etc.); con la profesión `otra` hay que indicar el rol (422).
+- **Exactamente un encargado** por cuadrilla con integrantes: al crear, un solo `es_encargado: true` (sin ninguna marca, vale el único integrante con rol `encargado_cuadrilla`; si no, 422). `PATCH` con `es_encargado: true` traspasa el cargo; dejarla sin encargado (`false` sobre el encargado) o quitarlo con otros integrantes presentes: 409. El primer integrante de una cuadrilla vacía queda como encargado.
+- `cantidad_integrantes` (0 a 50): tamaño declarado del equipo; no puede ser menor que los integrantes cargados (422). Al agregar integrantes la cantidad sube sola; al quitar al último cargado baja con él.
+- `vehiculo`: `4x4 | camion_jaula | colectivo | lancha | moto | null` (SIMULADO). `equipamiento`: hasta 40 ítems de 2 a 80 caracteres, sin repetidos. `base`: `{ "lat", "lon" }` o `null`; punto de salida SIMULADO (modo demostración del seguimiento). `notas`: hasta 500 caracteres.
+- `estado`: `disponible | ocupada | baja`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| GET | `/cuadrillas?incluir_bajas=false` | mandos | `{ "cuadrillas": [cuadrilla...], "plantillas": {...roles por tipo de incidente} }`. Las bajas se ocultan salvo `incluir_bajas=true` |
+| GET | `/cuadrillas/plantillas` | mandos | Equipamiento y profesiones sugeridos por tipo operativo (abajo) |
+| POST | `/cuadrillas` | `operador`, `admin` | `{ "nombre", "tipo_operativo", "cantidad_integrantes"?, "vehiculo"?, "equipamiento"?, "base"?, "notas"?, "integrantes"?: [{ "profesion"?, "rol_operativo"?, "es_encargado"?, "usuario_id"? }] }` → 201 con la cuadrilla. 422: sin tipo, sin encargado o con dos, cantidad menor que los integrantes, profesión o rol desconocido, vehículo inválido, `base` fuera de rango, campo extra |
+| GET | `/cuadrillas/{id}` | mandos; `cuadrilla` solo la propia | La cuadrilla (también si está de baja); 404 si no existe. Un integrante (`cuadrilla`) solo puede pedir **su** cuadrilla (otra: 403) y recibe a los integrantes **sin `nombre_visible`** (por rol y profesión) |
+| GET | `/mi/cuadrilla` | `cuadrilla` | La cuadrilla activa del usuario (la de menor id si integra varias), misma forma que `GET /cuadrillas/{id}` con `nombre_visible: null` en todos los integrantes y `avisos_sin_leer`. 404 si no integra ninguna; otros roles: 403 |
+| PATCH | `/cuadrillas/{id}` | `operador`, `admin` | Cualquiera de `nombre`, `tipo_operativo`, `tipo_incidente`, `cantidad_integrantes`, `vehiculo`, `equipamiento`, `base`, `notas` (`null` borra `vehiculo`, `base` y `notas`) y `estado: "disponible"` solo para **reactivar** una baja. Una cuadrilla de baja no admite otros cambios (409) |
+| DELETE | `/cuadrillas/{id}` | `operador`, `admin` | **409** si tiene una tarea `en_curso`. Con historial (tareas, partes o avisos): **baja lógica** (`estado: "baja"`; sus tareas pendientes quedan sin cuadrilla y con `requiere_atencion`, para que un operador las reasigne; sale del reparto de órdenes, del resumen y del panel). Sin historial: se elimina. Responde `{ "id", "estado": "baja\|eliminada", "eliminada": bool, "tareas_sin_cuadrilla": n }` |
+| POST | `/cuadrillas/{id}/integrantes` | `operador`, `admin` | `{ "profesion"?, "rol_operativo"?, "es_encargado"?, "usuario_id"? }` (hace falta al menos la profesión o el rol; 201 con la cuadrilla). `usuario_id` (opcional; sin él es un puesto por cubrir) debe ser un usuario **activo con rol `cuadrilla`** (422) que no integre ya la cuadrilla (409). Si hay una vacante del mismo rol y se da `usuario_id`, se cubre. Cuadrilla de baja: 409 |
+| PATCH | `/cuadrillas/{id}/integrantes/{integrante_id}` | `operador`, `admin` | `rol_operativo`, `profesion`, `es_encargado`, `usuario_id` (`null` vacía el puesto). 404 si el integrante es de otra cuadrilla |
+| DELETE | `/cuadrillas/{id}/integrantes/{integrante_id}` | `operador`, `admin` | Quita al integrante (200 con la cuadrilla); el encargado no se quita mientras haya otros integrantes (409) |
+
+`GET /cuadrillas/plantillas` (SUPUESTO en `supuestos.yaml`; el operador confirma la composición real):
+
+```json
+{ "plantillas": {
+    "productores_ganado": { "profesiones": ["veterinaria", "zootecnia", "chofer", "policia", "logistica"],
+      "equipamiento": ["jaulas", "mangas portátiles", "bebederos", "forraje", "sogas", "ruedas de auxilio", "cadenas", "palas", "lonas", "linternas", "generador"] },
+    "personas": { "profesiones": ["medicina", "enfermeria", "trabajo_social", "policia", "chofer", "defensa_civil"],
+      "equipamiento": ["botiquín de primeros auxilios", "chalecos salvavidas", "linternas", "bidones de agua", "ruedas de auxilio", "cadenas", "sogas", "palas", "lonas", "radio portátil", "generador"] } },
+  "tipos_operativos": ["personas", "familias", "productores_ganado", "apicola", "bienes", "traslado_mixto"],
+  "profesiones": ["medicina", "enfermeria", "veterinaria", "..."], "vehiculos": ["4x4", "camion_jaula", "colectivo", "lancha", "moto"],
+  "categoria": "SIMULADO", "fuente": "SUPUESTO (ver supuestos.yaml): el operador confirma la composición real" }
+```
+
+(Se muestran dos de los seis tipos.)
+
+### Avisos del operativo a la cuadrilla
+
+Un aviso es un desvío de camino, una lista de qué llevar, una instrucción o una advertencia de seguridad. Lo crean `operador` y `admin`; lo leen los operativos y **los integrantes de esa cuadrilla** (otra cuadrilla o la ciudadanía: 403). Quien lo lee lo marca como leído.
+
+```json
+{ "id": 3, "cuadrilla_id": 1, "tarea_id": null, "tipo": "desvio",
+  "texto": "Camino de tierra anegado hacia el Sector Rural Este: tomen el desvío marcado (SIMULADO).",
+  "items": [], "geometria": { "type": "LineString", "coordinates": [[-58.151, -26.176], [-58.145, -26.179], [-58.139, -26.1825]] },
+  "creado_en": "2026-11-20T23:40:02.771003+00:00", "creado_por_rol": "coordinador_sector",
+  "leido_en": null, "leido_por_rol": null, "categoria": "SIMULADO" }
+```
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/cuadrillas/{id}/avisos` | `operador`, `admin` | `{ "tipo": "desvio\|equipamiento\|instruccion\|seguridad", "texto": 3-500, "items"?: [texto 1-80, máx. 30], "geometria"?: GeoJSON, "tarea_id"?: int }` → 201. `desvio` exige `geometria`; `equipamiento` exige `items`. `geometria` es un `Point` o un `LineString` (2 a 500 puntos) con `[lon, lat]` en grados; cualquier otra cosa: 422. `tarea_id` debe ser una tarea de esa cuadrilla (422). Cuadrilla de baja: 409; inexistente: 404 |
+| GET | `/cuadrillas/{id}/avisos?solo_sin_leer=false&limite=100` | operativos e integrantes de esa cuadrilla | `{ "items": [aviso...] }`, el más nuevo primero. Integrante de otra cuadrilla: 403 |
+| POST | `/avisos/{id}/leido` | `cuadrilla`, integrante de esa cuadrilla | Marca el aviso como leído: `leido_en` y `leido_por_rol` (el primero que lo lee; repetir devuelve lo mismo). Otra cuadrilla u otro rol: 403; inexistente: 404 |
+
+**Tiempo real:** evento `aviso_cuadrilla` `{ "id", "cuadrilla_id", "tarea_id", "tipo", "accion": "creado|leido" }` para `operador`, `decisor`, `admin` y los integrantes de la cuadrilla avisada (nunca el texto; se consulta `GET /cuadrillas/{id}/avisos`). Auditoría: `cuadrilla_creada`, `cuadrilla_actualizada`, `cuadrilla_baja`, `cuadrilla_eliminada`, `cuadrilla_integrante_agregado|actualizado|quitado`, `aviso_cuadrilla_creado` y `aviso_cuadrilla_leido`.
+
+### Evidencia multimedia en los partes
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/tareas/{id}/partes/{parte_id}/adjuntos` | `cuadrilla`, integrantes de esa cuadrilla | `multipart/form-data`, campo `archivo`: foto `image/jpeg`, `image/png` o `image/webp` (hasta **5 MB**) o video `video/mp4` o `video/quicktime` (`.mov` de iPhone, caja `ftyp` con marca `qt  `; hasta **20 MB**). Se valida el **contenido real** por sus primeros bytes (firma JPEG/PNG/WebP; en MP4 la caja `ftyp`) y no solo el `Content-Type`: tipo declarado no permitido, contenido que no coincide con lo declarado o con un formato permitido: 415; vacío: 422; sobre el tope: 413; **más de 5 por parte: 409**; otra cuadrilla, mandos o ciudadanía: 403; tarea o parte inexistentes (o de otra tarea): 404. 201 `{ "n", "tipo": "imagen\|video", "mime", "bytes", "parte_id" }`; el mismo archivo reenviado (SHA-256 repetido; cola sin señal) responde 200 con el `n` original y `"duplicado": true`. El servidor genera el nombre (`<n>.<ext>`) y lo guarda en `ADJUNTOS_DIR/partes/<tarea>/<parte>/` |
+| GET | `/tareas/{id}/partes/{parte_id}/adjuntos/{n}` | mandos e integrantes de esa cuadrilla | Bytes con su `Content-Type` (`image/*`, `video/mp4` o `video/quicktime`; admite `Range`), `Cache-Control: private, no-store` y `X-Content-Type-Options: nosniff`. Cada lectura queda auditada (`lectura_datos_personales`). 404 si no existe |
+
+Cada parte trae `adjuntos: [{ "n", "tipo", "mime", "bytes" }]` en todos los listados (`/tareas/{id}/partes`, `/partes/recientes`, `ultimo_parte` de `/tareas` y de `/cuadrillas/resumen`). Los topes salen de `adjuntos_parte` en `supuestos.yaml` (SUPUESTO).
+
+```bash
+# Alta de un equipo interdisciplinario (operador): el encargado es el único con es_encargado=true
+curl -s -X POST $API/cuadrillas -H "$H_OPERADOR" -H 'Content-Type: application/json' -d '{
+  "nombre":"Equipo interdisciplinario SIMULADO D","tipo_operativo":"traslado_mixto","cantidad_integrantes":4,
+  "vehiculo":"4x4","equipamiento":["ruedas de auxilio","palas","cadenas"],"base":{"lat":-26.19,"lon":-58.18},
+  "integrantes":[{"profesion":"logistica","es_encargado":true},{"profesion":"medicina"},
+                 {"profesion":"veterinaria"},{"profesion":"chofer"}]}'
+
+# Plantillas, detalle, cambio de encargado, baja
+curl -s $API/cuadrillas/plantillas -H "$H_OPERADOR"
+curl -s $API/cuadrillas/5 -H "$H_OPERADOR"
+curl -s -X PATCH $API/cuadrillas/5/integrantes/21 -H "$H_OPERADOR" -H 'Content-Type: application/json' -d '{"es_encargado":true}'
+curl -s -X DELETE $API/cuadrillas/5 -H "$H_OPERADOR"      # 409 con tarea en curso; baja lógica con historial
+
+# Avisos: desvío dibujado y qué llevar; la cuadrilla los lee y los marca como leídos
+curl -s -X POST $API/cuadrillas/1/avisos -H "$H_OPERADOR" -H 'Content-Type: application/json' \
+  -d '{"tipo":"desvio","texto":"Camino anegado: tomen el desvío","geometria":{"type":"LineString","coordinates":[[-58.151,-26.176],[-58.139,-26.1825]]}}'
+curl -s -X POST $API/cuadrillas/1/avisos -H "$H_OPERADOR" -H 'Content-Type: application/json' \
+  -d '{"tipo":"equipamiento","texto":"Qué llevar","items":["ruedas de auxilio","palas","cadenas"]}'
+curl -s "$API/cuadrillas/1/avisos?solo_sin_leer=true" -H "$H_CUADRILLA"
+curl -s -X POST $API/avisos/3/leido -H "$H_CUADRILLA"
+
+# Seguimiento de todas las cuadrillas con su ruta y destino (operativos)
+curl -s $API/cuadrillas/posiciones -H "$H_OPERADOR"
+
+# Evidencia: una foto y un video al parte 7 de la tarea 12 (cuadrilla)
+curl -s -X POST $API/tareas/12/partes/7/adjuntos -H "$H_CUADRILLA" -F "archivo=@camino.jpg;type=image/jpeg"
+curl -s -X POST $API/tareas/12/partes/7/adjuntos -H "$H_CUADRILLA" -F "archivo=@tramo.mp4;type=video/mp4"
+curl -s $API/tareas/12/partes/7/adjuntos/1 -H "$H_OPERADOR" -o evidencia.jpg
+
+# Casos inválidos: sin encargado -> 422; dos encargados -> 422; cantidad menor que los integrantes -> 422;
+# desvío sin geometría -> 422; equipamiento sin ítems -> 422; baja con tarea en curso -> 409; decisor que escribe -> 403;
+# MP4 falso (contenido de texto) -> 415; más de 5 adjuntos en un parte -> 409; adjunto de una cuadrilla ajena -> 403
+```
+
+Pruebas automáticas: `tests/test_gestion_cuadrillas.py`.
 
 ## Ciudadanía y productores (`/mi/*`)
 
@@ -580,7 +704,10 @@ Cada ítem de seguimiento (en `GET /mi/seguimiento` y dentro de `seguimiento` de
 - Control de acceso sin cambios: solo quien hizo el pedido lo ve; la ruta no revela más que el punto de ese pedido y la posición de su cuadrilla.
 - Los mandos (`GET /cuadrillas/posiciones`) ven también las posiciones simuladas, marcadas `simulada: true`.
 
-Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "simulada", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
+Ítem de `GET /cuadrillas/posiciones` (`posiciones[]`): `{ "cuadrilla_id", "nombre", "tipo_incidente", "tipo_operativo", "vehiculo", "roles", "lat", "lon", "precision_m", "actualizada_en", "posicion_vieja", "tareas_en_curso", "simulada", "destino", "ruta", "categoria" }`, más `supuestos` y `fecha_dato` en el nivel superior.
+
+- `destino`: `{ "lat", "lon", "tarea_id", "solicitud_id", "sector_id" }`, el pedido de la tarea `en_curso` más reciente de la cuadrilla; `null` si esa tarea no tiene un pedido ubicado (p. ej. una tarea de orden).
+- `ruta`: **misma forma que `seguimiento.ruta` de `/mi/pedidos`** (`coordenadas`, `distancia_km`, `llegada_estimada_min`, `metodo`, `simulada`, `progreso`, `velocidad_kmh`, `calculada_en`), de la posición de la cuadrilla al `destino`; `null` si no hay destino. Con posición real, `progreso` es 0 y la ruta sale del punto actual; en modo demostración (`simulada: true`) parte de la `base` propia de la cuadrilla (`cuadrillas.base`) o, si no tiene, de `base_cuadrillas_simulada`, y el punto `lat`/`lon` está sobre la ruta según `progreso`. La ciudadanía ve la misma ruta en `/mi/pedidos`.
 
 Evento WebSocket `posicion_cuadrilla` (`{ "cuadrillas": [id] }`): solo `operador`, `decisor` y `admin`; lleva ids sin coordenadas y el panel consulta `GET /cuadrillas/posiciones`.
 
@@ -674,7 +801,7 @@ Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de l
 
 ## Tiempo real
 
-`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla|parte_tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla` y `parte_tarea`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
+`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla|parte_tarea|aviso_cuadrilla", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla` y `parte_tarea`, solo para operador, decisor y admin, y `aviso_cuadrilla`, solo para operador, decisor, admin y **los integrantes de la cuadrilla avisada**); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
 
 La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
@@ -724,7 +851,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (70 rutas y 81 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (77 rutas y 92 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='\n').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'\n')"
