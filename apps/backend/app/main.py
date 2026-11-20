@@ -13,6 +13,7 @@ from app.api.v1 import (
     auth,
     canales,
     centinela,
+    cuadrillas,
     datos,
     evacuaciones,
     lluvia,
@@ -137,6 +138,7 @@ def crear_app() -> FastAPI:
         partes,
         evacuaciones,
         seguimiento,
+        cuadrillas,  # después de partes y seguimiento: sus /cuadrillas/<fija> ganan a /{id}
         solicitudes,
         mi,
         centinela,

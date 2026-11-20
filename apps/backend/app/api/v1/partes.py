@@ -2,29 +2,37 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.v1.operacion import _cuadrillas_de
+from app.config.settings import get_settings
 from app.core import auditoria
 from app.core.eventos import difusor
 from app.core.limitador import limite_por_usuario, limite_usuario
 from app.core.rbac import ip_cliente, requiere_rol
-from app.db.modelos import (
-    Cuadrilla,
-    IntegranteCuadrilla,
-    ParteTarea,
-    RolOperativo,
-    Tarea,
-    Usuario,
-)
+from app.db.base import ahora
+from app.db.modelos import ParteTarea, Tarea, Usuario
 from app.db.sesion import get_db
+from app.servicios import adjuntos_parte as adj
 from app.servicios import partes as srv
 
 router = APIRouter(
@@ -239,102 +247,121 @@ def resumen(_: Usuario = Depends(requiere_rol(*_MANDOS)), db: Session = Depends(
     return {"items": srv.resumen_cuadrillas(db)}
 
 
-def _item(db: Session, cuadrilla_id: int) -> dict:
-    return next(i for i in srv.resumen_cuadrillas(db) if i["id"] == cuadrilla_id)
+# ---- evidencia multimedia de un parte -----------------------------------------------------------
 
 
-class IntegranteAlta(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    usuario_id: int = Field(ge=1)
-    rol_operativo: str = Field(min_length=2, max_length=60)
-
-
-@router.post("/cuadrillas/{cuadrilla_id}/integrantes", status_code=201)
-def agregar_integrante(
-    cuadrilla_id: int,
-    datos: IntegranteAlta,
+@router.post("/tareas/{tarea_id}/partes/{parte_id}/adjuntos", status_code=201)
+def subir_adjunto_parte(
+    tarea_id: int,
+    parte_id: int,
     request: Request,
-    usuario: Usuario = Depends(requiere_rol(*_GESTION)),
+    response: Response,
+    archivo: UploadFile = File(..., description="Foto JPEG, PNG o WebP (5 MB) o video MP4 (20 MB)"),
+    usuario: Usuario = Depends(requiere_rol("cuadrilla")),
     db: Session = Depends(get_db),
 ) -> dict:
-    cuadrilla = db.execute(
-        select(Cuadrilla).where(Cuadrilla.id == cuadrilla_id).with_for_update()
+    tarea = db.get(Tarea, tarea_id)
+    if tarea is None:
+        raise HTTPException(404, "Tarea no encontrada")
+    if not _es_integrante(db, usuario, tarea):
+        raise HTTPException(403, "La tarea es de otra cuadrilla")
+    # Fila bloqueada: dos subidas simultáneas no pueden tomar el mismo número de adjunto.
+    parte = db.execute(
+        select(ParteTarea)
+        .where(ParteTarea.id == parte_id, ParteTarea.tarea_id == tarea.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     ).scalar_one_or_none()
-    if cuadrilla is None:
-        raise HTTPException(404, "Cuadrilla no encontrada")
-    if db.get(RolOperativo, datos.rol_operativo) is None:
-        raise HTTPException(422, f"rol_operativo desconocido: {datos.rol_operativo}")
-    nuevo = db.get(Usuario, datos.usuario_id)
-    if nuevo is None or nuevo.rol != "cuadrilla":
-        raise HTTPException(422, "Solo se pueden designar usuarios con rol cuadrilla")
-    if nuevo.estado != "activo":
-        raise HTTPException(422, "El usuario no está activo")
-    ya = db.execute(
-        select(IntegranteCuadrilla.id).where(
-            IntegranteCuadrilla.cuadrilla_id == cuadrilla_id,
-            IntegranteCuadrilla.usuario_id == nuevo.id,
+    if parte is None:
+        raise HTTPException(404, "Parte no encontrado")
+    declarado = (archivo.content_type or "").lower()
+    if declarado not in adj.TIPOS:
+        raise HTTPException(
+            415, "Tipo de archivo no permitido: image/jpeg, image/png, image/webp o video/mp4"
         )
-    ).first()
-    if ya:
-        raise HTTPException(409, "El usuario ya integra esta cuadrilla")
-    # Una vacante del mismo rol (sin persona designada) se cubre en vez de duplicar el rol.
-    vacante = (
-        db.execute(
-            select(IntegranteCuadrilla)
-            .where(
-                IntegranteCuadrilla.cuadrilla_id == cuadrilla_id,
-                IntegranteCuadrilla.rol_operativo == datos.rol_operativo,
-                IntegranteCuadrilla.usuario_id.is_(None),
-            )
-            .order_by(IntegranteCuadrilla.id)
+    contenido = archivo.file.read(adj.VIDEO_MAX_BYTES + 1)
+    if len(contenido) > adj.VIDEO_MAX_BYTES:
+        raise HTTPException(413, f"El archivo supera el máximo de {adj.VIDEO_MAX_BYTES} bytes")
+    if not contenido:
+        raise HTTPException(422, "El archivo está vacío")
+    mime = adj.tipo_por_firma(contenido)
+    if mime is None or adj.TIPOS[mime][1] != adj.TIPOS[declarado][1]:
+        raise HTTPException(
+            415, "El contenido no es una foto JPEG, PNG o WebP ni un video MP4 válido"
         )
-        .scalars()
-        .first()
-    )
-    if vacante is not None:
-        vacante.usuario_id = nuevo.id
-    else:
-        db.add(
-            IntegranteCuadrilla(
-                cuadrilla_id=cuadrilla_id, usuario_id=nuevo.id, rol_operativo=datos.rol_operativo
-            )
-        )
+    extension, tipo = adj.TIPOS[mime]
+    if tipo == "imagen" and len(contenido) > adj.IMAGEN_MAX_BYTES:
+        raise HTTPException(413, f"La foto supera el máximo de {adj.IMAGEN_MAX_BYTES} bytes")
+    existentes = list(parte.adjuntos or [])
+    huella = hashlib.sha256(contenido).hexdigest()
+    repetido = next((a for a in existentes if a.get("sha256") == huella), None)
+    if repetido is not None:  # el mismo archivo reenviado (reintento de la cola sin señal)
+        response.status_code = 200
+        return {**adj.adjunto_publico(repetido), "parte_id": parte.id, "duplicado": True}
+    if len(existentes) >= adj.MAX_POR_PARTE:
+        raise HTTPException(409, f"Máximo de {adj.MAX_POR_PARTE} adjuntos por parte")
+    n = max((a["n"] for a in existentes), default=0) + 1
+    nombre = f"{n}.{extension}"  # nombre generado por el servidor
+    carpeta = get_settings().adjuntos_ruta / "partes" / str(tarea.id) / str(parte.id)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / nombre).write_bytes(contenido)
+    nuevo = {
+        "n": n,
+        "tipo": tipo,
+        "mime": mime,
+        "bytes": len(contenido),
+        "sha256": huella,
+        "archivo": nombre,
+        "subido_por": usuario.id,
+        "subido_en": ahora().isoformat(),
+    }
+    parte.adjuntos = [*existentes, nuevo]
     auditoria.registrar(
         db,
-        "cuadrilla_integrante_agregado",
-        f"cuadrillas/{cuadrilla_id}/integrantes/{nuevo.id}",
+        "adjunto_subido",
+        f"tareas/{tarea.id}/partes/{parte.id}/adjuntos/{n}",
         usuario.id,
         ip_cliente(request),
-        datos.rol_operativo,
     )
     db.commit()
-    return _item(db, cuadrilla_id)
+    return {**adj.adjunto_publico(nuevo), "parte_id": parte.id}
 
 
-@router.delete("/cuadrillas/{cuadrilla_id}/integrantes/{usuario_id}")
-def quitar_integrante(
-    cuadrilla_id: int,
-    usuario_id: int,
+@router.get("/tareas/{tarea_id}/partes/{parte_id}/adjuntos/{n}")
+def descargar_adjunto_parte(
+    tarea_id: int,
+    parte_id: int,
+    n: int,
     request: Request,
-    usuario: Usuario = Depends(requiere_rol(*_GESTION)),
+    usuario: Usuario = Depends(requiere_rol("cuadrilla", *_MANDOS)),
     db: Session = Depends(get_db),
-) -> dict:
-    if db.get(Cuadrilla, cuadrilla_id) is None:
-        raise HTTPException(404, "Cuadrilla no encontrada")
-    borrados = db.execute(
-        delete(IntegranteCuadrilla).where(
-            IntegranteCuadrilla.cuadrilla_id == cuadrilla_id,
-            IntegranteCuadrilla.usuario_id == usuario_id,
-        )
-    ).rowcount
-    if not borrados:
-        raise HTTPException(404, "El usuario no integra esta cuadrilla")
+) -> FileResponse:
+    tarea = db.get(Tarea, tarea_id)
+    if tarea is None:
+        raise HTTPException(404, "Tarea no encontrada")
+    if usuario.rol == "cuadrilla" and not _es_integrante(db, usuario, tarea):
+        raise HTTPException(403, "La tarea es de otra cuadrilla")
+    parte = db.execute(
+        select(ParteTarea).where(ParteTarea.id == parte_id, ParteTarea.tarea_id == tarea.id)
+    ).scalar_one_or_none()
+    meta = next((a for a in ((parte.adjuntos if parte else None) or []) if a["n"] == n), None)
+    if parte is None or meta is None:
+        raise HTTPException(404, "Adjunto no encontrado")
+    ruta = (
+        get_settings().adjuntos_ruta / "partes" / str(tarea.id) / str(parte.id) / meta["archivo"]
+    )
+    if not ruta.is_file():
+        raise HTTPException(404, "Adjunto no encontrado")
     auditoria.registrar(
         db,
-        "cuadrilla_integrante_quitado",
-        f"cuadrillas/{cuadrilla_id}/integrantes/{usuario_id}",
+        "lectura_datos_personales",
+        f"tareas/{tarea.id}/partes/{parte.id}/adjuntos/{n}",
         usuario.id,
         ip_cliente(request),
     )
     db.commit()
-    return _item(db, cuadrilla_id)
+    return FileResponse(
+        ruta,
+        media_type=meta["mime"],
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )

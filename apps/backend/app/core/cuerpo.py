@@ -16,11 +16,16 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.config.settings import get_settings
 
 _ADJUNTO = re.compile(r"^/api/v1/(?:solicitudes/\d+/adjuntos|tareas/\d+/cierre/adjuntos)/?$")
+_ADJUNTO_PARTE = re.compile(r"^/api/v1/tareas/\d+/partes/\d+/adjuntos/?$")
 _HOLGURA = 64 * 1024  # encabezados multipart y demás
 
 
 def tope_para(ruta: str) -> int:
     cfg = get_settings()
+    if _ADJUNTO_PARTE.match(ruta):  # evidencia de un parte: foto (5 MB) o video MP4 (20 MB)
+        from app.servicios.adjuntos_parte import VIDEO_MAX_BYTES
+
+        return VIDEO_MAX_BYTES + _HOLGURA
     if _ADJUNTO.match(ruta):
         return cfg.adjunto_max_bytes + _HOLGURA
     if ruta.rstrip("/") == "/api/v1/lluvia/importar-planilla":

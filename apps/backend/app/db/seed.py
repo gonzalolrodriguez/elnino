@@ -27,6 +27,7 @@ from app.db.base import SRID, ahora
 from app.db.consultas import sector_de_punto
 from app.db.modelos import (
     Acceso,
+    AvisoCuadrilla,
     CentroRecepcion,
     ConfirmacionEvacuado,
     Cuadrilla,
@@ -47,6 +48,7 @@ from app.db.modelos import (
     Usuario,
 )
 from app.db.sesion import get_sessionmaker
+from app.domain import cuadrillas as dom_cuadrillas
 from app.ingest import limpieza_k1
 
 KIT = DATA_DIR / "kit"
@@ -320,27 +322,74 @@ def sembrar_cuadrillas(db: Session) -> int:
             if existente.vehiculo is None and c.get("vehiculo"):
                 existente.vehiculo = c["vehiculo"]  # bases sembradas antes de la migración 0009
             continue
+        operativo = c.get("tipo_operativo") or dom_cuadrillas.operativo_de(c["tipo_incidente"])
         cuadrilla = Cuadrilla(
-            nombre=c["nombre"], tipo_incidente=c["tipo_incidente"], vehiculo=c.get("vehiculo")
+            nombre=c["nombre"],
+            tipo_operativo=operativo,
+            tipo_incidente=c.get("tipo_incidente") or dom_cuadrillas.incidente_de(operativo),
+            cantidad_integrantes=c.get("cantidad_integrantes", len(c["integrantes"])),
+            vehiculo=c.get("vehiculo"),
+            equipamiento=c.get("equipamiento", []),
+            base=_punto(c["base"]["lon"], c["base"]["lat"]) if c.get("base") else None,
+            notas=c.get("notas"),
         )
         db.add(cuadrilla)
         db.flush()
+        hay_encargado = False
         for i in c["integrantes"]:
             usuario_id = None
             if i.get("usuario_email"):
                 usuario_id = db.execute(
                     select(Usuario.id).where(Usuario.email == i["usuario_email"])
                 ).scalar_one_or_none()
+            rol = i.get("rol_operativo") or dom_cuadrillas.rol_de_profesion(i["profesion"])
+            es_encargado = i.get("es_encargado", rol == dom_cuadrillas.ROL_ENCARGADO)
+            es_encargado = bool(es_encargado) and not hay_encargado  # uno solo por cuadrilla
+            hay_encargado = hay_encargado or es_encargado
             db.add(
                 IntegranteCuadrilla(
                     cuadrilla_id=cuadrilla.id,
                     usuario_id=usuario_id,
-                    rol_operativo=i["rol_operativo"],
+                    rol_operativo=rol,
+                    profesion=i.get("profesion") or dom_cuadrillas.profesion_de_rol(rol),
+                    es_encargado=es_encargado,
                 )
             )
         nuevas += 1
     db.flush()
     return nuevas
+
+
+def sembrar_avisos_demo(db: Session) -> int:
+    """Avisos de demostración a una cuadrilla (SIMULADO): un desvío cerca de S4 y qué llevar.
+
+    Idempotente por cuadrilla y texto: no repite un aviso que ya existe (ni revive uno leído).
+    """
+    nuevos = 0
+    for a in _json(SIMULADO / "cuadrillas.json").get("avisos", []):
+        cuadrilla = db.execute(
+            select(Cuadrilla).where(Cuadrilla.nombre == a["cuadrilla"])
+        ).scalar_one_or_none()
+        if cuadrilla is None or db.execute(
+            select(AvisoCuadrilla.id).where(
+                AvisoCuadrilla.cuadrilla_id == cuadrilla.id, AvisoCuadrilla.texto == a["texto"]
+            )
+        ).first():
+            continue
+        db.add(
+            AvisoCuadrilla(
+                cuadrilla_id=cuadrilla.id,
+                tipo=a["tipo"],
+                texto=a["texto"],
+                items=a.get("items", []),
+                geometria=a.get("geometria"),
+                creado_por_rol="coordinador_sector",
+                categoria=CAT_SIMULADO,
+            )
+        )
+        nuevos += 1
+    db.flush()
+    return nuevos
 
 
 # Casos de demostración de constancias (SIMULADO): (usuario demo, tipo de pedido, desvío del destino
@@ -628,6 +677,7 @@ def sembrar_todo(db: Session) -> dict[str, int]:
     resultado["partes_demo_nuevos"] = sembrar_partes_demo(db) if demo else 0
 
     resultado["recorrido_demo_nuevo"] = sembrar_recorrido_demo(db) if demo else 0
+    resultado["avisos_demo_nuevos"] = sembrar_avisos_demo(db) if demo else 0
     db.commit()
     return resultado
 

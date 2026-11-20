@@ -179,7 +179,7 @@ def roles_de_cuadrillas(db: Session) -> dict[str, list[str]]:
     for tipo in cuadrillas.TIPOS:
         c = db.execute(
             select(Cuadrilla)
-            .where(Cuadrilla.tipo_incidente == tipo)
+            .where(Cuadrilla.tipo_incidente == tipo, Cuadrilla.estado != "baja")
             .order_by((Cuadrilla.estado != "disponible"), Cuadrilla.id)
             .limit(1)
         ).scalar_one_or_none()
