@@ -1,8 +1,9 @@
-import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, Radio, RadioGroup, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, RadioGroup, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
 import { IconoPersonas } from "../../components/iconos/Iconos";
+import { Opcion } from "../../components/Opcion";
 import { OPCIONES_ASISTENCIA, type RespuestaAsistencia } from "../../lib/confirmacion";
 import { solicitar } from "../../lib/api";
 
@@ -56,16 +57,7 @@ export function ConfirmacionPedido({ solicitudId, codigo, alResponder }: { solic
       <RadioGroup value={respuesta} onChange={(v) => setRespuesta(v as RespuestaAsistencia)}>
         <Stack spacing={2} role="radiogroup" aria-label="Cómo te fue con la asistencia">
           {OPCIONES_ASISTENCIA.map((o) => (
-            <Box key={o.valor} layerStyle="tarjeta" px={3.5} py={2.5} borderColor={respuesta === o.valor ? "primario" : "borde"} bg={respuesta === o.valor ? "agua.50" : "superficie"} boxShadow={respuesta === o.valor ? "0 0 0 1px var(--chakra-colors-primario)" : undefined} transition="background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out)" minH="2.75rem" display="flex" alignItems="center">
-              <Radio value={o.valor} size="lg" alignItems="flex-start">
-                <Text fontWeight={600} lineHeight={1.3}>
-                  {o.etiqueta}
-                </Text>
-                <Text fontSize="sm" color="textoSuave">
-                  {o.ayuda}
-                </Text>
-              </Radio>
-            </Box>
+            <Opcion key={o.valor} tipo="radio" valor={o.valor} etiqueta={o.etiqueta} ayuda={o.ayuda} />
           ))}
         </Stack>
       </RadioGroup>

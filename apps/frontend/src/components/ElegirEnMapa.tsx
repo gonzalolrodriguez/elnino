@@ -7,6 +7,19 @@ import { decimal } from "../lib/validacion";
 import { IconoMapa } from "./iconos/Iconos";
 import { Insignia } from "./Insignia";
 
+/**
+ * Controles de MapLibre (zoom y atribución) a 44 px en pantallas táctiles (DESIGN.md, Mapas). Se aplica con `sx` al
+ * contenedor del mapa; en puntero fino quedan los 29 px de la biblioteca.
+ */
+export const CONTROLES_MAPA_TACTIL = {
+  "@media (pointer: coarse)": {
+    ".maplibregl-ctrl-group button": { width: "44px", height: "44px" },
+    ".maplibregl-ctrl-attrib.maplibregl-compact": { minHeight: "44px", minWidth: "44px", borderRadius: "22px" },
+    ".maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button": { width: "44px", height: "44px", backgroundSize: "24px" },
+    ".maplibregl-ctrl-attrib.maplibregl-compact-show": { paddingRight: "44px" },
+  },
+} as const;
+
 const MapaGL = lazy(() => import("./ElegirEnMapaGL"));
 
 type Props = {
@@ -42,7 +55,7 @@ export function MapaUbicacion({ lon, lat, onChange, alto = "20rem", leyenda = tr
         <Insignia categoria="SIMULADO" />
         <Text fontSize="xs">Sectores K10. Tocá el mapa o arrastrá el marcador.</Text>
       </Box>
-      <Box borderWidth="1px" borderRadius="xl" overflow="hidden">
+      <Box borderWidth="1px" borderRadius="xl" overflow="hidden" sx={CONTROLES_MAPA_TACTIL}>
         <Suspense fallback={<Skeleton height={alto} />}>
           <MapaGL lon={lonN} lat={latN} onChange={onChange} onFallo={() => setFallo(true)} alto={alto} />
         </Suspense>
