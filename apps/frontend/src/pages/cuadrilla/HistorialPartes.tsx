@@ -7,6 +7,7 @@ import { IconoAlerta, IconoHistorial, IconoReloj, IconoRumbo, IconoTilde, IconoT
 import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { ETIQUETA_RESULTADO, partesDeTarea, type Parte } from "../../lib/partes";
 import { useCarga } from "../../lib/useCarga";
+import { TACTIL } from "../../panel/cuadrillas/partes";
 
 const VISIBLES = 5;
 
@@ -42,7 +43,7 @@ function FilaParte({ p }: { p: Parte }) {
           <Text as="span" fontSize="sm" fontWeight={700} px={2} borderRadius="full" bg={v.fondo} color={v.color}>
             {v.etiqueta}
           </Text>
-          <Text as="time" fontSize="xs" color="textoSuave" dateTime={p.creado_en}>
+          <Text as="time" textStyle="microdato" dateTime={p.creado_en}>
             {fechaHora(p.creado_en)}
             {p.autor_rol ? ` · ${etiquetaRolOperativo(p.autor_rol)}` : ""}
           </Text>
@@ -66,7 +67,7 @@ export function HistorialPartes({ tareaId, refresco }: { tareaId: number; refres
     <Box data-testid={`historial-${tareaId}`}>
       <Flex align="center" gap={2} mb={2} color="textoSuave">
         <IconoHistorial tam="1rem" />
-        <Text as="h4" fontSize="sm" fontWeight={700}>
+        <Text as="h4" fontSize="sm" fontWeight={700} color="texto">
           Historial de partes
         </Text>
       </Flex>
@@ -74,7 +75,7 @@ export function HistorialPartes({ tareaId, refresco }: { tareaId: number; refres
       {carga.estado === "error" && (
         <Box>
           <AlertaError error={carga.error} />
-          <Button mt={2} size="sm" variant="outline" onClick={carga.recargar}>
+          <Button mt={2} size="sm" {...TACTIL} variant="outline" onClick={carga.recargar}>
             Reintentar
           </Button>
         </Box>
@@ -92,7 +93,7 @@ export function HistorialPartes({ tareaId, refresco }: { tareaId: number; refres
             ))}
           </Flex>
           {carga.datos.length > VISIBLES && (
-            <Button mt={2} size="sm" variant="ghost" onClick={() => setTodos((t) => !t)}>
+            <Button mt={2} size="sm" {...TACTIL} variant="ghost" onClick={() => setTodos((t) => !t)}>
               {todos ? "Ver menos" : `Ver los ${carga.datos.length} partes`}
             </Button>
           )}
