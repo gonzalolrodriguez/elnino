@@ -1,5 +1,6 @@
-import { Alert, AlertDescription, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Spinner, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, SimpleGrid, Spinner, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
@@ -32,18 +33,58 @@ export default function Evacuaciones() {
   const filas = useMemo(() => todas.filter((x) => (!cuadrilla || String(x.cuadrilla_id) === cuadrilla) && (!soloDiscrepancias || x.estado === "con_discrepancia")), [todas, cuadrilla, soloDiscrepancias]);
   const seleccionada: Evacuacion | null = todas.find((x) => x.tarea_id === elegida) ?? null;
   const discrepancias = todas.filter((x) => x.estado === "con_discrepancia").length;
+  const verificadas = todas.filter((x) => x.estado === "verificada").length;
+  const cerradasSinConfirmar = todas.filter((x) => x.estado === "cerrada_cuadrilla").length;
+  const personasConConstancia = todas.reduce((acc, x) => acc + (x.constancia?.personas_trasladadas ?? 0), 0);
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={1}>
-        Evacuaciones
-      </Heading>
-      <Flex align="center" gap={2} mb={4} wrap="wrap">
-        <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="textoSuave">
-          Qué cerró cada cuadrilla y qué confirmó la persona evacuada. La ubicación es solo para roles operativos y cada consulta queda registrada.
-        </Text>
+      <Flex justify="space-between" align="flex-start" wrap="wrap" gap={3} mb={4}>
+        <Box>
+          <Heading as="h1" size="lg" mb={1}>
+            Evacuaciones
+          </Heading>
+          <Flex align="center" gap={2} wrap="wrap">
+            <Insignia categoria="SIMULADO" />
+            <Text fontSize="sm" color="textoSuave">
+              Qué cerró cada cuadrilla y qué confirmó la persona evacuada. La ubicación es solo para roles operativos y cada consulta queda registrada.
+            </Text>
+          </Flex>
+        </Box>
+        <Flex gap={2} wrap="wrap">
+          <Button as={RouterLink} to="/comando/recomendacion" size="xs" variant="outline">
+            Ver opciones y alternativas de evacuación
+          </Button>
+          <Button as={RouterLink} to="/comando/ordenes" size="xs" variant="outline">
+            Órdenes de evacuación
+          </Button>
+        </Flex>
       </Flex>
+
+      {todas.length > 0 && (
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={4}>
+          <Box layerStyle="tarjeta" p={3}>
+            <Text fontSize="xs" color="textoSuave">Traslados registrados</Text>
+            <Text textStyle="cifra" fontSize="xl">{fmtNum(todas.length)}</Text>
+            <Text fontSize="xs" color="textoSuave">{fmtNum(personasConConstancia)} personas en constancias</Text>
+          </Box>
+          <Box layerStyle="tarjeta" p={3}>
+            <Text fontSize="xs" color="textoSuave">Verificadas por evacuado</Text>
+            <Text textStyle="cifra" fontSize="xl" color="confirmacion">{fmtNum(verificadas)}</Text>
+            <Text fontSize="xs" color="textoSuave">Confirmadas por app o SMS</Text>
+          </Box>
+          <Box layerStyle="tarjeta" p={3}>
+            <Text fontSize="xs" color="textoSuave">Cerradas sin confirmar</Text>
+            <Text textStyle="cifra" fontSize="xl">{fmtNum(cerradasSinConfirmar)}</Text>
+            <Text fontSize="xs" color="textoSuave">Pendientes de respuesta</Text>
+          </Box>
+          <Box layerStyle="tarjeta" p={3}>
+            <Text fontSize="xs" color="textoSuave">Con discrepancia a revisar</Text>
+            <Text textStyle="cifra" fontSize="xl" color={discrepancias > 0 ? "umbral.textoEvacuacion" : "texto"}>{fmtNum(discrepancias)}</Text>
+            <Text fontSize="xs" color="textoSuave">Marca para revisar, no acusación</Text>
+          </Box>
+        </SimpleGrid>
+      )}
 
       <Seccion titulo="Lista de evacuaciones" categoria="SIMULADO" id="sec-evacuaciones" derecha={<Text fontSize="xs" color="textoSuave">{carga.actualizadoEn === null ? "" : `Actualizado ${hace(ahora - carga.actualizadoEn)}`}</Text>}>
         <Flex gap={3} wrap="wrap" mb={3} align="flex-end">

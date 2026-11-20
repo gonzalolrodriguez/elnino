@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, SimpleGrid, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
@@ -10,6 +11,34 @@ import type { Alternativas, Plan, PlanSector, Recomendacion } from "../tipos";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import { COLOR_ESTADO, fmtDias, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
+
+const ESCENARIOS_EVACUACION = [
+  { etiqueta: "Ventana Seca S4 (7,50 m · 0 mm)", altura: 7.5, lluvia: 0 },
+  { etiqueta: "Caso §8.1 · S4 Aislado (7,60 m · 40 mm)", altura: 7.6, lluvia: 40 },
+  { etiqueta: "Alerta K3 · S4 y S3 (7,80 m · 60 mm)", altura: 7.8, lluvia: 60 },
+  { etiqueta: "Evacuación K3 (8,30 m · 85 mm)", altura: 8.3, lluvia: 85 },
+] as const;
+
+const OPCIONES_ALTERNATIVAS = [
+  {
+    etiqueta: "Opción 1 · Ventana Seca Rural (S4 → S3 → S1 → S2)",
+    nombre: "Prioridad Ventana Seca Rural (S4 primero)",
+    orden: "S4, S3, S1, S2",
+    excluidos: [] as number[],
+  },
+  {
+    etiqueta: "Opción 2 · Prioridad Vial Tierra/Ripio (S4 → S1 → S3 → S2)",
+    nombre: "Prioridad accesos únicos tierra y ripio (S4 y S1)",
+    orden: "S4, S1, S3, S2",
+    excluidos: [] as number[],
+  },
+  {
+    etiqueta: "Opción 3 · Contingencia sin Centro 1 (S4 → S3 → S1)",
+    nombre: "Contingencia con Centro 1 excluido",
+    orden: "S4, S3, S1, S2",
+    excluidos: [1],
+  },
+] as const;
 
 /** Muestra valores heterogéneos de la comparación (números, listas y diccionarios). */
 export function fmtValor(v: unknown): string {
@@ -84,17 +113,18 @@ function ResumenPlan({ p }: { p: Plan }) {
 }
 
 function BloqueRecomendacion() {
-  const { entrada } = useEscenario();
+  const { entrada, fijarAltura, fijarLluvia } = useEscenario();
   const [prioridad, setPrioridad] = useState<"riesgo" | "poblacion">("riesgo");
   const [r, setR] = useState<Recomendacion | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [cargando, setCargando] = useState(false);
 
-  async function generar() {
+  async function generar(override?: { altura_formosa_m: number; lluvia_mm: number }) {
     setCargando(true);
     setError(null);
     try {
-      setR(await api.recomendacion(entrada, prioridad));
+      const escenarioEntrada = override ? { ...entrada, ...override } : entrada;
+      setR(await api.recomendacion(escenarioEntrada, prioridad));
     } catch (e) {
       setError(e);
     } finally {
@@ -110,8 +140,30 @@ function BloqueRecomendacion() {
           RECOMENDACIÓN, no una orden: la orden la emite una persona con rol autorizado (sección Órdenes) y queda registrada.
         </AlertDescription>
       </Alert>
+      <Box layerStyle="suave" p={3} mb={3}>
+        <Text fontSize="xs" fontWeight={700} mb={1.5}>
+          Probar escenarios de evacuación en 1 clic (SIMULADO):
+        </Text>
+        <Flex gap={1.5} wrap="wrap">
+          {ESCENARIOS_EVACUACION.map((esc) => (
+            <Button
+              key={esc.etiqueta}
+              size="xs"
+              variant={Math.abs(entrada.altura_formosa_m - esc.altura) < 0.03 && entrada.lluvia_mm === esc.lluvia ? "solid" : "outline"}
+              type="button"
+              onClick={() => {
+                fijarAltura(esc.altura);
+                fijarLluvia(esc.lluvia);
+                void generar({ altura_formosa_m: esc.altura, lluvia_mm: esc.lluvia });
+              }}
+            >
+              {esc.etiqueta}
+            </Button>
+          ))}
+        </Flex>
+      </Box>
       <Text fontSize="sm" mb={2}>
-        Escenario: {fmtM(entrada.altura_formosa_m)} en Puerto Formosa, {fmtNum(entrada.lluvia_mm)} mm ({entrada.lluvia_origen}), {entrada.caminos_cerrados.length} caminos cerrados. Se cambian en Mapa y simulador.
+        Escenario: {fmtM(entrada.altura_formosa_m)} en Puerto Formosa, {fmtNum(entrada.lluvia_mm)} mm ({entrada.lluvia_origen}), {entrada.caminos_cerrados.length} caminos cerrados. Se cambian acá o en Mapa y simulador.
       </Text>
       <Flex gap={3} align="flex-end" mb={3} wrap="wrap">
         <FormControl w="auto">
@@ -130,11 +182,23 @@ function BloqueRecomendacion() {
       <AlertaError error={error} />
       {r && (
         <Box data-testid="recomendacion">
-          <Flex gap={2} align="center" mb={2}>
-            <Heading as="h3" size="xs">
-              {r.etiqueta}
-            </Heading>
-            <Insignia categoria={r.categoria} />
+          <Flex gap={2} align="center" justify="space-between" wrap="wrap" mb={2}>
+            <Flex gap={2} align="center">
+              <Heading as="h3" size="xs">
+                {r.etiqueta}
+              </Heading>
+              <Insignia categoria={r.categoria} />
+            </Flex>
+            {r.recomendacion.sectores.length > 0 && (
+              <Button
+                as={RouterLink}
+                to={`/comando/ordenes?sectores=${r.recomendacion.sectores.map((s) => s.id).join(",")}&tipo=evacuacion_preventiva`}
+                size="xs"
+                variant="outline"
+              >
+                Preparar orden de evacuación para {r.recomendacion.sectores.map((s) => s.id).join(", ")} →
+              </Button>
+            )}
           </Flex>
           <ResumenPlan p={r.recomendacion} />
           {r.recomendacion.sectores.length === 0 ? (
@@ -172,15 +236,18 @@ function BloqueComparador() {
   const [error, setError] = useState<unknown>(null);
   const [cargando, setCargando] = useState(false);
 
-  async function comparar() {
+  async function comparar(override?: { nombre: string; orden: string; excluidos: number[] }) {
     setCargando(true);
     setError(null);
     try {
-      const ids = orden
+      const nom = (override ? override.nombre : nombre).trim();
+      const ord = override ? override.orden : orden;
+      const exc = override ? override.excluidos : excluidos;
+      const ids = ord
         .split(/[\s,]+/)
         .map((x) => x.trim().toUpperCase())
         .filter(Boolean);
-      setRes(await api.alternativas(entrada, { nombre: nombre.trim() || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: excluidos }));
+      setRes(await api.alternativas(entrada, { nombre: nom || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: exc }));
     } catch (e) {
       setError(e);
     } finally {
@@ -191,8 +258,31 @@ function BloqueComparador() {
   return (
     <Seccion titulo="Comparador de alternativas" categoria="SIMULADO" id="sec-comp">
       <Text fontSize="sm" mb={3}>
-        Se generan dos alternativas (prioridad por riesgo y por población) y una tercera editable: indicá el orden de los sectores y los centros que no se usarían.
+        Se generan dos alternativas (prioridad por riesgo y por población) y una tercera editable: indicá el orden de los sectores y los centros que no se usarían, o elegí una estrategia preconfigurada.
       </Text>
+      <Box layerStyle="suave" p={3} mb={3}>
+        <Text fontSize="xs" fontWeight={700} mb={1.5}>
+          Opciones estratégicas de evacuación para la 3.ª alternativa editable:
+        </Text>
+        <Flex gap={1.5} wrap="wrap">
+          {OPCIONES_ALTERNATIVAS.map((op) => (
+            <Button
+              key={op.etiqueta}
+              size="xs"
+              variant={nombre === op.nombre && orden === op.orden ? "solid" : "outline"}
+              type="button"
+              onClick={() => {
+                setNombre(op.nombre);
+                setOrden(op.orden);
+                setExcluidos([...op.excluidos]);
+                void comparar({ nombre: op.nombre, orden: op.orden, excluidos: [...op.excluidos] });
+              }}
+            >
+              {op.etiqueta}
+            </Button>
+          ))}
+        </Flex>
+      </Box>
       <Flex gap={3} wrap="wrap" mb={3} align="flex-end">
         <FormControl w="14rem">
           <FormLabel htmlFor="alt-nombre" fontSize="sm" mb={0}>

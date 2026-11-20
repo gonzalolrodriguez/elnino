@@ -30,7 +30,7 @@ import {
 } from "@chakra-ui/react";
 import { TIPOS_ORDEN, type TipoOrden } from "@evacuaciones/shared";
 import { useRef, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthContext";
 import { AlertaError } from "../../components/Formulario";
@@ -50,14 +50,46 @@ const TEXTO_TIPO: Record<TipoOrden, string> = {
 };
 const SECTORES = ["S1", "S2", "S3", "S4"];
 
+const PLANTILLAS_ORDEN: { etiqueta: string; tipo: TipoOrden; sectores: string[]; fundamento: string }[] = [
+  {
+    etiqueta: "Evacuación preventiva S4 · Ventana Seca",
+    tipo: "evacuacion_preventiva",
+    sectores: ["S4"],
+    fundamento:
+      "Evacuación preventiva en Ventana Seca para Sector S4 Rural Este (compromiso en 7,50 m · K10 v1.0, 0,30 m antes de la alerta oficial de 7,80 m · K3). Único acceso de tierra que se vuelve intransitable con >= 30 mm de lluvia (SUPUESTO); se prioriza despacho de camiones jaula y traslado de 150 personas antes de precipitaciones.",
+  },
+  {
+    etiqueta: "Alerta temprana · S4 y S3",
+    tipo: "alerta",
+    sectores: ["S3", "S4"],
+    fundamento:
+      "Alerta operativa para Sectores S4 Rural Este (compromiso 7,50 m) y S3 Sur (compromiso 7,90 m · K10 v1.0) ante ascenso sostenido en Puerto Formosa (lectura al corte 5,60 m · K1 limpio, tasa octubre 0,1077 m/día). Alistamiento de centros de recepción y cuadrillas.",
+  },
+  {
+    etiqueta: "Evacuación general · S4, S3 y S1",
+    tipo: "evacuacion",
+    sectores: ["S1", "S3", "S4"],
+    fundamento:
+      "Evacuación inmediata de Sectores S4 (7,50 m), S3 (7,90 m) y S1 Norte (8,10 m · acceso único de ripio) por superación del umbral de alerta (7,80 m · K3) y aproximación al nivel de evacuación (8,30 m · K3). Activación de flota completa y centros de recepción.",
+  },
+];
+
 function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
+  const [params] = useSearchParams();
   const { usuario } = useAuth();
   const { entrada, escenario, desactualizado } = useEscenario();
   const esDecisor = usuario?.rol === "decisor";
   const dialogo = useDisclosure();
   const cancelar = useRef<HTMLButtonElement>(null);
-  const [tipo, setTipo] = useState<TipoOrden>("evacuacion_preventiva");
-  const [sectores, setSectores] = useState<string[]>(escenario && !desactualizado ? escenario.resumen.comprometidos : []);
+  const tipoParam = params.get("tipo") as TipoOrden | null;
+  const sectoresParam = (params.get("sectores") ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => SECTORES.includes(s));
+  const [tipo, setTipo] = useState<TipoOrden>(tipoParam && TIPOS_ORDEN.includes(tipoParam) ? tipoParam : "evacuacion_preventiva");
+  const [sectores, setSectores] = useState<string[]>(
+    sectoresParam.length > 0 ? sectoresParam : escenario && !desactualizado ? escenario.resumen.comprometidos : [],
+  );
   const [fundamento, setFundamento] = useState("");
   const [fecha, setFecha] = useState("");
   const [intento, setIntento] = useState(false);
@@ -109,6 +141,29 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
         </Alert>
       )}
       <fieldset disabled={!esDecisor} style={{ border: 0, padding: 0, margin: 0 }}>
+        <Box layerStyle="suave" p={3} mb={3}>
+          <Text fontSize="xs" fontWeight={700} mb={1.5}>
+            Plantillas rápidas de orden de evacuación (SIMULADO):
+          </Text>
+          <Flex gap={1.5} wrap="wrap">
+            {PLANTILLAS_ORDEN.map((p) => (
+              <Button
+                key={p.etiqueta}
+                size="xs"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setTipo(p.tipo);
+                  setSectores([...p.sectores]);
+                  setFundamento(p.fundamento);
+                  setIntento(false);
+                }}
+              >
+                {p.etiqueta}
+              </Button>
+            ))}
+          </Flex>
+        </Box>
         <Flex gap={3} wrap="wrap" mb={3}>
           <FormControl w="16rem">
             <FormLabel htmlFor="orden-tipo" fontSize="sm" mb={0}>

@@ -91,7 +91,7 @@ export default function Login() {
                 <Insignia categoria="SIMULADO" />
               </Flex>
               <Text fontSize="xs" color="textoSuave" mb={3}>
-                Pulsá un perfil para cargar su correo ficticio (<code>@demo.evacuaciones.invalid</code>).
+                Pulsá un perfil para autocompletar su correo y clave de demostración (<code>@demo.evacuaciones.invalid</code>).
               </Text>
               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2.5}>
                 {CUENTAS_DEMO.map((c) => {
@@ -129,6 +129,7 @@ export default function Login() {
                         type="button"
                         onClick={() => {
                           setEmail(c.email);
+                          setPassword(c.email.startsWith("admin@") ? "DemoAdmin2026!" : "DemoEvacuaciones2026");
                           setErrores({});
                         }}
                       >
