@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
-import { ESTADO_EVACUACION, etiquetaRespuestaConfirmacion, fechaHora } from "../../lib/etiquetas";
+import { ESTADO_EVACUACION, fechaHora } from "../../lib/etiquetas";
 import { hace, useAhora, useCargaViva } from "../../lib/vivo";
 import { api } from "../api";
 import { ChipEvacuacion } from "../evacuaciones/ChipEvacuacion";
 import { DetalleEvacuacion } from "../evacuaciones/DetalleEvacuacion";
+import { RespuestaConfirmacionTexto } from "../evacuaciones/RespuestaConfirmacion";
 import { useSenalTiempoReal } from "../TiempoRealContext";
 import type { Evacuacion } from "../tipos";
 import { fmtNum, Seccion } from "../ui";
@@ -137,7 +138,7 @@ export default function Evacuaciones() {
                       <ChipEvacuacion estado={x.estado} />
                     </Td>
                     <Td isNumeric>{x.constancia ? fmtNum(x.constancia.personas_trasladadas) : "—"}</Td>
-                    <Td>{x.confirmacion?.respuesta ? etiquetaRespuestaConfirmacion(x.confirmacion.respuesta) : "—"}</Td>
+                    <Td>{x.confirmacion?.respuesta ? <RespuestaConfirmacionTexto respuesta={x.confirmacion.respuesta} /> : "—"}</Td>
                     <Td>{fechaHora(x.actualizado_en)}</Td>
                     <Td>
                       <Button size="xs" variant="outline" onClick={() => setElegida(x.tarea_id)} aria-label={`Ver detalle de la tarea ${x.tarea_id}`}>

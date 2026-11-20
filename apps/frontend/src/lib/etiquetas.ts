@@ -109,6 +109,8 @@ export const etiquetaEstadoEvacuacion = de(ESTADO_EVACUACION);
 export const MOTIVO_DISCREPANCIA: Record<string, string> = {
   evacuado_dice_no: "La persona evacuada respondió que no llegó al destino informado.",
   evacuado_reporta_problema: "La persona evacuada avisó que hubo un problema en el traslado.",
+  evacuado_parcial: "La persona evacuada avisó que fue asistida solo en parte.",
+  evacuado_no_encontraron: "La persona evacuada avisó que la cuadrilla no la encontró en el lugar indicado.",
   destino_lejos_del_centro: "El punto de destino marcado queda lejos del centro de recepción elegido.",
 };
 export const etiquetaMotivoDiscrepancia = de(MOTIVO_DISCREPANCIA);
