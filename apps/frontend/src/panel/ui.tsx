@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, Button, Flex, Heading, Text } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, type BoxProps, Button, Flex, Heading, Text } from "@chakra-ui/react";
 import type { Categoria } from "@evacuaciones/shared";
 import type { ReactNode } from "react";
 
@@ -29,34 +29,101 @@ export function fmtDias(min: number | null, max: number | null): string {
   return min === max || r(min) === r(max) ? `${r(min)} días` : `${r(min)} a ${r(max)} días`;
 }
 
-/** Bloque con título del panel: tarjeta blanca de línea fina (16 px de radio), sin sombras ni contornos gruesos. */
+/**
+ * Para `Table sx={APILAR}`: por debajo de 48 em cada fila pasa a ser un bloque con sus rótulos (`data-etiqueta` de cada
+ * celda), así la tabla no necesita desplazamiento horizontal en el celular. La primera celda es el título de la fila.
+ */
+export const APILAR = {
+  "@media (max-width: 47.99em)": {
+    thead: { position: "absolute", left: "-9999px" },
+    "tbody tr": { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "1rem", rowGap: "0.25rem", padding: "0.75rem 0", borderBottom: "1px solid var(--chakra-colors-pizarra-100)" },
+    "tbody td": { display: "block", border: "none", padding: "0.125rem 0", textAlign: "left !important", whiteSpace: "normal" },
+    "tbody td::before": { content: "attr(data-etiqueta)", display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--chakra-colors-textoSuave)" },
+    "tbody td:first-of-type": { gridColumn: "1 / -1", fontWeight: 700 },
+    "tbody td:first-of-type::before": { display: "none" },
+    "tbody td[colspan]": { gridColumn: "1 / -1" },
+  },
+} as const;
+
+/** Tonos de los chips de estado: siempre llevan ícono y texto, el color solo refuerza. */
+export type TonoChip = "ok" | "aviso" | "alerta" | "info" | "neutro";
+const TONOS: Record<TonoChip, { bg: string; fg: string; borde: string }> = {
+  ok: { bg: "verde.50", fg: "verde.800", borde: "verde.200" },
+  aviso: { bg: "alerta.50", fg: "alerta.800", borde: "alerta.200" },
+  alerta: { bg: "evacuacion.50", fg: "evacuacion.800", borde: "evacuacion.200" },
+  info: { bg: "agua.100", fg: "agua.800", borde: "agua.200" },
+  neutro: { bg: "pizarra.100", fg: "pizarra.700", borde: "pizarra.200" },
+};
+
+/** Chip de estado compacto (ícono + texto). */
+export function Chip({ tono = "neutro", icono, children, ...resto }: { tono?: TonoChip; icono?: ReactNode; children: ReactNode } & Omit<BoxProps, "children">) {
+  const t = TONOS[tono];
+  return (
+    <Box
+      as="span"
+      display="inline-flex"
+      alignItems="center"
+      gap={1.5}
+      px={2.5}
+      py="2px"
+      borderRadius="full"
+      fontSize="0.8125rem"
+      fontWeight={600}
+      lineHeight={1.4}
+      whiteSpace="nowrap"
+      bg={t.bg}
+      color={t.fg}
+      border="1px solid"
+      borderColor={t.borde}
+      {...resto}
+    >
+      {icono}
+      {children}
+    </Box>
+  );
+}
+
+/** Recuadro redondo con un ícono: da identidad a cada bloque y a cada página sin ocupar una línea propia. */
+export function FichaIcono({ icono, tam = "2rem", tono = "info" }: { icono: ReactNode; tam?: string; tono?: TonoChip }) {
+  const t = TONOS[tono];
+  return (
+    <Flex aria-hidden="true" w={tam} h={tam} flexShrink={0} align="center" justify="center" borderRadius="lg" bg={t.bg} color={t.fg}>
+      {icono}
+    </Flex>
+  );
+}
+
+/** Bloque con título del panel: tarjeta blanca de línea fina (16 px de radio), sin sombras; el título lleva un ícono opcional. */
 export function Seccion({
   titulo,
   children,
   categoria,
   derecha,
   id,
+  icono,
+  mb = 5,
 }: {
   titulo: string;
   children: ReactNode;
   categoria?: Categoria;
   derecha?: ReactNode;
   id?: string;
+  icono?: ReactNode;
+  mb?: number;
 }) {
   return (
-    <Box
-      as="section"
-      aria-labelledby={id ?? undefined}
-      layerStyle="tarjeta"
-      p={{ base: 4, md: 6 }}
-      mb={5}
-    >
-      <Flex align="center" gap={3} mb={3} wrap="wrap">
-        <Heading as="h2" id={id} size="md">
+    <Box as="section" aria-labelledby={id ?? undefined} layerStyle="tarjeta" p={{ base: 4, md: 5 }} mb={mb} minW={0}>
+      <Flex align="center" columnGap={3} rowGap={1.5} mb={4} wrap="wrap">
+        {icono && <FichaIcono icono={icono} />}
+        <Heading as="h2" id={id} size="sm" textStyle="tituloBloque" fontSize="1.125rem">
           {titulo}
         </Heading>
         {categoria && <Insignia categoria={categoria} />}
-        <Box ml="auto">{derecha}</Box>
+        {derecha && (
+          <Box ml="auto" textStyle="microdato">
+            {derecha}
+          </Box>
+        )}
       </Flex>
       {children}
     </Box>
@@ -81,15 +148,13 @@ export function Cifra({
 }) {
   return (
     <Box minW="9rem" flex="1 1 9rem">
-      <Text fontSize="xs" color="textoSuave">
-        {etiqueta}
-      </Text>
-      <Text textStyle="cifra" fontSize="1.625rem" data-testid={testId}>
+      <Text textStyle="rotulo">{etiqueta}</Text>
+      <Text textStyle="cifraMedia" data-testid={testId} my={1}>
         {valor}
       </Text>
       <Insignia categoria={categoria} />
       {(fuente || fecha) && (
-        <Text fontSize="0.75rem" color="textoSuave" mt="2px">
+        <Text textStyle="microdato" mt="2px">
           {[fuente, fecha ? fmtFecha(fecha) : null].filter(Boolean).join(" · ")}
         </Text>
       )}

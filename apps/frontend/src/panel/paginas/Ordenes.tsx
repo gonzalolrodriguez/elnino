@@ -15,7 +15,6 @@ import {
   FormControl,
   FormErrorMessage,
   FormLabel,
-  Heading,
   Input,
   Select,
   Table,
@@ -40,6 +39,8 @@ import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Orden } from "../tipos";
+import { IconoMegafono } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, fmtFecha, fmtM, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
@@ -203,9 +204,7 @@ export default function Ordenes() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Órdenes y alertas
-      </Heading>
+      <CabeceraPagina titulo="Órdenes y alertas" icono={<IconoMegafono tam="1.5rem" />} />
       <Seccion titulo="Emitir una orden" categoria="SIMULADO" id="sec-emitir">
         <FormOrden
           alEmitir={(o) => {

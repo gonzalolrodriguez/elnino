@@ -1,8 +1,7 @@
-import { Alert, AlertDescription, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Spinner, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Box, Button, Checkbox, Flex, FormControl, FormLabel, Select, Spinner, Table, Tbody, Td, Text, Th, Thead, Tr, VisuallyHidden } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
-import { Insignia } from "../../components/Insignia";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 import { ESTADO_EVACUACION, fechaHora } from "../../lib/etiquetas";
 import { hace, useAhora, useCargaViva } from "../../lib/vivo";
@@ -12,6 +11,8 @@ import { DetalleEvacuacion } from "../evacuaciones/DetalleEvacuacion";
 import { RespuestaConfirmacionTexto } from "../evacuaciones/RespuestaConfirmacion";
 import { useSenalTiempoReal } from "../TiempoRealContext";
 import type { Evacuacion } from "../tipos";
+import { IconoCamion } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { fmtNum, Seccion } from "../ui";
 
 const SECTORES = ["S1", "S2", "S3", "S4"];
@@ -36,15 +37,7 @@ export default function Evacuaciones() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={1}>
-        Evacuaciones
-      </Heading>
-      <Flex align="center" gap={2} mb={4} wrap="wrap">
-        <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="textoSuave">
-          Qué cerró cada cuadrilla y qué confirmó la persona evacuada. La ubicación es solo para roles operativos y cada consulta queda registrada.
-        </Text>
-      </Flex>
+      <CabeceraPagina titulo="Evacuaciones" icono={<IconoCamion tam="1.5rem" />} categoria="SIMULADO" ayuda="Qué cerró cada cuadrilla y qué confirmó la persona evacuada. La ubicación es solo para roles operativos y cada consulta queda registrada." />
 
       <Seccion titulo="Lista de evacuaciones" categoria="SIMULADO" id="sec-evacuaciones" derecha={<Text fontSize="xs" color="textoSuave">{carga.actualizadoEn === null ? "" : `Actualizado ${hace(ahora - carga.actualizadoEn)}`}</Text>}>
         <Flex gap={3} wrap="wrap" mb={3} align="flex-end">

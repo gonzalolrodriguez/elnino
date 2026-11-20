@@ -1,7 +1,9 @@
-import { Alert, AlertIcon, Box, Heading, List, ListItem, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, List, ListItem, Text } from "@chakra-ui/react";
 
 import { LIMITES_ESTATICOS } from "../../datos/kit";
 import { useMeta } from "../../lib/useMeta";
+import { IconoInfo } from "../../components/iconos/Iconos";
+import { CabeceraPagina } from "../CabeceraPagina";
 import { fmtFecha, Seccion } from "../ui";
 
 /** Panel «Límites» (CLAUDE.md §3, regla 7): lo que el kit no tiene y lo que la plataforma no puede decir. */
@@ -10,9 +12,7 @@ export default function Limites() {
   const limites = m.estado === "ok" ? m.meta.limites : LIMITES_ESTATICOS;
   return (
     <>
-      <Heading as="h1" size="lg" mb={4}>
-        Límites de los datos y de la herramienta
-      </Heading>
+      <CabeceraPagina titulo="Límites de los datos y de la herramienta" icono={<IconoInfo tam="1.5rem" />} />
       {m.estado === "error" && (
         <Alert status="warning" mb={3} fontSize="sm">
           <AlertIcon />
