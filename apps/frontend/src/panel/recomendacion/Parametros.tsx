@@ -1,22 +1,29 @@
-import { Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Input, Select, SimpleGrid, Text } from "@chakra-ui/react";
+import { Box, Button, FormControl, FormLabel, Input, SimpleGrid, Text } from "@chakra-ui/react";
 import { useState, type ReactNode } from "react";
 
+import { CampoSelect } from "../../components/Formulario";
+import { Opcion } from "../../components/Opcion";
 import type { PronosticoLluvia } from "../tipos";
 
 export type Prioridad = "riesgo" | "poblacion";
 
-function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
+function Grupo({ titulo, ayuda, children }: { titulo: string; ayuda?: ReactNode; children: ReactNode }) {
   return (
     <Box as="fieldset" minW={0} border="none" p={0} m={0}>
-      <Heading as="legend" size="xs" mb={2} p={0}>
+      <Text as="legend" textStyle="cuerpo" fontWeight={700} mb={ayuda ? 0.5 : 2} p={0}>
         {titulo}
-      </Heading>
+      </Text>
+      {ayuda && (
+        <Text textStyle="microdato" mb={3}>
+          {ayuda}
+        </Text>
+      )}
       {children}
     </Box>
   );
 }
 
-/** Lluvia prevista SIMULADA para evaluar la ventana seca (opcional). */
+/** Lluvia prevista simulada para evaluar la ventana seca (opcional). */
 function CampoPronostico({ valor, onCambio }: { valor: PronosticoLluvia | null; onCambio: (p: PronosticoLluvia | null) => void }) {
   const [activo, setActivo] = useState(valor !== null);
   const [mm, setMm] = useState(valor ? String(valor.mm) : "100");
@@ -30,28 +37,23 @@ function CampoPronostico({ valor, onCambio }: { valor: PronosticoLluvia | null; 
   }
 
   return (
-    <Grupo titulo="Ventana seca: lluvia prevista">
-      <Text textStyle="microdato" mb={2}>
-        Opcional. Si la lluvia deja intransitable el acceso de un sector (tierra desde 30 mm, ripio desde 80 mm, SUPUESTO), su plazo pasa a ser la hora de esa lluvia. No es un pronóstico real.
-      </Text>
-      <Checkbox
-        size="md"
+    <Grupo
+      titulo="Ventana seca: lluvia prevista"
+      ayuda="Opcional. Si la lluvia deja intransitable el acceso de un sector (tierra desde 30 mm, ripio desde 80 mm, supuesto del equipo), su plazo pasa a ser la hora de esa lluvia. No es un pronóstico real."
+    >
+      <Opcion
+        etiqueta="Simular lluvia prevista"
         isChecked={activo}
-        onChange={(e) => {
-          setActivo(e.target.checked);
-          actualizar(e.target.checked, nMm, nHoras);
+        onChange={(marcado) => {
+          setActivo(marcado);
+          actualizar(marcado, nMm, nHoras);
         }}
-      >
-        Simular lluvia prevista
-      </Checkbox>
-      <Flex gap={3} mt={3}>
+      />
+      <SimpleGrid columns={2} spacing={3} mt={3}>
         <FormControl isDisabled={!activo} isInvalid={activo && !(nMm > 0 && nMm <= 1000)}>
-          <FormLabel htmlFor="pron-mm" fontSize="sm" mb={1}>
-            Milímetros
-          </FormLabel>
+          <FormLabel htmlFor="pron-mm">Milímetros</FormLabel>
           <Input
             id="pron-mm"
-            size="sm"
             bg="superficie"
             inputMode="decimal"
             value={mm}
@@ -62,12 +64,9 @@ function CampoPronostico({ valor, onCambio }: { valor: PronosticoLluvia | null; 
           />
         </FormControl>
         <FormControl isDisabled={!activo} isInvalid={activo && !(nHoras > 0 && nHoras <= 720)}>
-          <FormLabel htmlFor="pron-horas" fontSize="sm" mb={1}>
-            Dentro de (horas)
-          </FormLabel>
+          <FormLabel htmlFor="pron-horas">Dentro de (horas)</FormLabel>
           <Input
             id="pron-horas"
-            size="sm"
             bg="superficie"
             inputMode="decimal"
             value={horas}
@@ -77,9 +76,9 @@ function CampoPronostico({ valor, onCambio }: { valor: PronosticoLluvia | null; 
             }}
           />
         </FormControl>
-      </Flex>
+      </SimpleGrid>
       {activo && !valido && (
-        <Text fontSize="xs" color="umbral.textoEvacuacion" mt={1} role="alert">
+        <Text textStyle="microdato" color="evacuacion.700" fontWeight={600} mt={2} role="alert">
           Indicá entre 0 y 1.000 mm y entre 0 y 720 horas (mayores que cero).
         </Text>
       )}
@@ -112,30 +111,23 @@ export function Parametros({
 }) {
   return (
     <Box>
-      <Button display={{ base: "inline-flex", md: "none" }} variant="outline" size="sm" minH="2.75rem" w="100%" justifyContent="space-between" aria-expanded={!plegado} aria-controls="reco-parametros" onClick={onAlternarPlegado}>
+      <Button display={{ base: "inline-flex", md: "none" }} variant="outline" w="100%" justifyContent="space-between" aria-expanded={!plegado} aria-controls="reco-parametros" onClick={onAlternarPlegado}>
         Parámetros{plegado ? " (mostrar)" : " (ocultar)"}
       </Button>
       <Box id="reco-parametros" display={{ base: plegado ? "none" : "block", md: "block" }} mt={{ base: 4, md: 0 }}>
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={{ base: 5, md: 6 }}>
-          <Grupo titulo="Prioridad de los sectores">
-            <FormControl>
-              <FormLabel htmlFor="reco-prioridad" fontSize="sm" mb={1}>
-                Orden
-              </FormLabel>
-              <Select id="reco-prioridad" size="sm" bg="superficie" value={prioridad} onChange={(e) => onPrioridad(e.target.value as Prioridad)}>
-                <option value="riesgo">Por riesgo (menor margen primero)</option>
-                <option value="poblacion">Por población (más personas primero)</option>
-              </Select>
-            </FormControl>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={{ base: 6, md: 8 }}>
+          <Grupo titulo="Prioridad de los sectores" ayuda="Qué sector se evacua primero en el plan.">
+            <CampoSelect id="reco-prioridad" etiqueta="Orden de los sectores" value={prioridad} onChange={(e) => onPrioridad(e.target.value as Prioridad)}>
+              <option value="riesgo">Por riesgo (menor margen primero)</option>
+              <option value="poblacion">Por población (más personas primero)</option>
+            </CampoSelect>
           </Grupo>
           <CampoPronostico valor={pronostico} onCambio={onPronostico} />
-          <Grupo titulo="Familias">
-            <Text textStyle="microdato" mb={2}>
-              El plan nunca separa a una familia: viaja y se aloja entera. Si no entra en ningún centro, se avisa y decide una persona con rol autorizado. La población de K10 no tiene hogares; para probar el criterio se puede usar un set separado de hogares SIMULADOS (tamaños SUPUESTO).
-            </Text>
-            <Checkbox size="md" isChecked={hogares} onChange={(e) => onHogares(e.target.checked)}>
-              Usar hogares SIMULADOS para la población de K10
-            </Checkbox>
+          <Grupo
+            titulo="Familias"
+            ayuda="El plan nunca separa a una familia: viaja y se aloja entera. Si no entra en ningún centro, se avisa y decide una persona con rol autorizado. La población de los sectores de evaluación (K10) no tiene hogares: para probar el criterio se puede usar un set separado de hogares simulados (tamaños: supuesto del equipo)."
+          >
+            <Opcion etiqueta="Usar hogares simulados en los sectores de evaluación (K10)" isChecked={hogares} onChange={onHogares} />
           </Grupo>
         </SimpleGrid>
       </Box>

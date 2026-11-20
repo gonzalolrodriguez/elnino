@@ -3,14 +3,17 @@ import type { ReactNode } from "react";
 
 import { IconoChevron } from "../iconos";
 
-/** Dato compacto: rótulo chico arriba, valor con numerales tabulares y una nota opcional. */
-export function Dato({ etiqueta, valor, nota, icono, testId, color, tam = "1.375rem" }: { etiqueta: string; valor: ReactNode; nota?: ReactNode; icono?: ReactNode; testId?: string; color?: string; tam?: string }) {
+/**
+ * Dato compacto: rótulo arriba, valor con numerales tabulares (`cifraMedia`) y una nota opcional. Con `compacto` el
+ * valor es un texto corto ("ya comprometido") y usa el estilo de título de bloque en lugar de la cifra.
+ */
+export function Dato({ etiqueta, valor, nota, icono, testId, color, compacto }: { etiqueta: string; valor: ReactNode; nota?: ReactNode; icono?: ReactNode; testId?: string; color?: string; compacto?: boolean }) {
   return (
     <Box minW={0}>
       <Text textStyle="rotulo">{etiqueta}</Text>
       <Flex align="center" gap={1.5} color={color}>
         {icono}
-        <Text as="span" data-testid={testId} fontFamily="heading" fontWeight={700} fontSize={tam} lineHeight={1.2} overflowWrap="anywhere" letterSpacing="-0.02em" sx={{ fontVariantNumeric: "tabular-nums lining-nums" }}>
+        <Text as="span" data-testid={testId} textStyle={compacto ? "tituloBloque" : "cifraMedia"} overflowWrap="anywhere">
           {valor}
         </Text>
       </Flex>
