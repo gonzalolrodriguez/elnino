@@ -31,6 +31,7 @@ from app.db.sesion import get_db
 from app.domain import cuadrillas as dom
 from app.servicios import contexto
 from app.servicios import ordenes as srv_ordenes
+from app.servicios import partes as srv_partes
 from app.servicios.mi import sectores_de_usuario
 
 router = APIRouter(tags=["operacion"])
@@ -133,6 +134,7 @@ def _tarea_a_dict(t: Tarea) -> dict:
         "titulo": t.titulo,
         "descripcion": t.descripcion,
         "estado": t.estado,
+        "requiere_atencion": t.requiere_atencion,
         "checklist": t.checklist,
         "creado_en": t.creado_en.isoformat(),
         "actualizado_en": t.actualizado_en.isoformat(),
@@ -163,9 +165,12 @@ def listar_tareas(
     if estado:
         consulta = consulta.where(Tarea.estado == estado)
     total = db.execute(select(func.count()).select_from(consulta.subquery())).scalar_one()
-    filas = db.execute(consulta.order_by(Tarea.id.desc()).limit(limite).offset(offset)).scalars()
+    filas = list(
+        db.execute(consulta.order_by(Tarea.id.desc()).limit(limite).offset(offset)).scalars()
+    )
+    ultimos = srv_partes.ultimos_partes(db, [t.id for t in filas])
     return {
-        "tareas": [_tarea_a_dict(t) for t in filas],
+        "tareas": [{**_tarea_a_dict(t), "ultimo_parte": ultimos.get(t.id)} for t in filas],
         "total": total,
         "limite": limite,
         "offset": offset,
@@ -219,6 +224,10 @@ def actualizar_tarea(
         if db.get(Cuadrilla, datos.cuadrilla_id) is None:
             raise HTTPException(422, "Cuadrilla inexistente")
         tarea.cuadrilla_id = datos.cuadrilla_id
+    if usuario.rol != "cuadrilla" and (
+        datos.estado is not None or datos.cuadrilla_id is not None
+    ):
+        tarea.requiere_atencion = False  # un operador la atendió: reasignó o cambió el estado
     tarea.actualizado_en = ahora()
     db.flush()
     # La cuadrilla queda ocupada mientras tenga tareas abiertas y se libera al cerrar la última.
@@ -234,7 +243,8 @@ def actualizar_tarea(
     difusor.publicar(
         "tarea", {"id": tarea.id, "estado": tarea.estado, "cuadrilla_id": tarea.cuadrilla_id}
     )
-    return _tarea_a_dict(tarea)
+    ultimo = srv_partes.ultimos_partes(db, [tarea.id]).get(tarea.id)
+    return {**_tarea_a_dict(tarea), "ultimo_parte": ultimo}
 
 
 # ---- órdenes ------------------------------------------------------------------------------------

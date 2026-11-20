@@ -36,6 +36,7 @@ from app.db.modelos import (
     IntegranteCuadrilla,
     LecturaHidrometrica,
     Notificacion,
+    ParteTarea,
     PuestoPluviometrico,
     RecursoSimulado,
     RolOperativo,
@@ -459,6 +460,94 @@ def sembrar_constancias_demo(db: Session) -> int:
     return nuevas
 
 
+# Partes de demostración (SIMULADO): tarea, tipo de cuadrilla, estado de la tarea, requiere atención
+# y partes (tipo, resultado, observación, rol del autor).
+CASOS_PARTES = (
+    (
+        "[DEMO] Traslado de rodeo · camino anegado",
+        "ganadera",
+        "pendiente",
+        False,
+        (
+            (
+                "avance",
+                None,
+                "Cargamos el primer camión jaula; seguimos con el segundo.",
+                "transporte",
+            ),
+            (
+                "dificultad",
+                None,
+                "El camino de tierra al cargadero está anegado; esperamos indicación de ruta.",
+                "veterinario",
+            ),
+        ),
+    ),
+    (
+        "[DEMO] Asistencia a familias · acceso cortado",
+        "humana",
+        "pendiente",
+        True,
+        (
+            (
+                "resultado",
+                "parcial",
+                "Se trasladaron dos de tres familias; la tercera quedó pendiente por el acceso.",
+                "encargado_cuadrilla",
+            ),
+        ),
+    ),
+)
+
+
+def sembrar_partes_demo(db: Session) -> int:
+    """Dos tareas abiertas con partes de ejemplo (una dificultad sin resolver y un parcial).
+
+    SIMULADO: sin personas reales; el autor figura por su rol operativo. Idempotente por el título.
+    """
+    nuevos = 0
+    for titulo, tipo, estado, atencion, partes in CASOS_PARTES:
+        if db.execute(select(Tarea.id).where(Tarea.titulo == titulo)).first():
+            continue
+        cuadrilla = (
+            db.execute(
+                select(Cuadrilla)
+                .where(Cuadrilla.tipo_incidente == tipo)
+                .order_by(Cuadrilla.id)
+            )
+            .scalars()
+            .first()
+        )
+        if cuadrilla is None:
+            continue
+        tarea = Tarea(
+            cuadrilla_id=cuadrilla.id,
+            sector_id="S4",
+            titulo=titulo,
+            descripcion="Tarea de demostración con partes de la cuadrilla (SIMULADO)",
+            estado=estado,
+            requiere_atencion=atencion,
+        )
+        db.add(tarea)
+        db.flush()
+        for tipo_parte, resultado, observacion, rol in partes:
+            db.add(
+                ParteTarea(
+                    tarea_id=tarea.id,
+                    cuadrilla_id=cuadrilla.id,
+                    tipo=tipo_parte,
+                    resultado=resultado,
+                    observacion=observacion,
+                    autor_rol=rol,
+                    resuelta=False if tipo_parte == "dificultad" else None,
+                    categoria="SIMULADO",
+                )
+            )
+            nuevos += 1
+    db.flush()
+    return nuevos
+
+
 def sembrar_todo(db: Session) -> dict[str, int]:
     """Carga los datos base; los usuarios y cuadrillas de demo solo con ``SEED_DEMO=true``."""
     demo = get_settings().seed_demo
@@ -475,6 +564,7 @@ def sembrar_todo(db: Session) -> dict[str, int]:
         "cuadrillas_nuevas": sembrar_cuadrillas(db) if demo else 0,
     }
     resultado["constancias_demo_nuevas"] = sembrar_constancias_demo(db) if demo else 0
+    resultado["partes_demo_nuevos"] = sembrar_partes_demo(db) if demo else 0
     db.commit()
     return resultado
 
