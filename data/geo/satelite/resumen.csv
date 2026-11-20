@@ -1,0 +1,9 @@
+fecha,sensor,area_agua_km2,altura_k1_m,fecha_k1,nube_pct,cobertura_aoi_pct,archivo
+2016-01-09,Sentinel-1,243.07,9.8,2016-01-09,,80.2,agua_s1_2016-01-09.geojson
+2016-01-23,Sentinel-2,208.22,9.4,2016-01-23,0.1,99.4,agua_s2_2016-01-23.geojson
+2019-05-28,Sentinel-1,277.6,9.64,2019-05-28,,100.0,agua_s1_2019-05-28.geojson
+2019-06-03,Sentinel-2,141.75,9.72,2019-06-03,28.2,46.4,agua_s2_2019-06-03.geojson
+2019-10-07,Sentinel-1,71.96,2.07,2019-10-07,,100.0,agua_s1_2019-10-07.geojson
+2019-10-09,Sentinel-2,67.13,2.07,2019-10-09,0.0,99.9,agua_s2_2019-10-09.geojson
+2026-10-25,Sentinel-1,79.84,5.4,2026-10-25,,100.0,agua_s1_2026-10-25.geojson
+2026-10-26,Sentinel-2,42.63,5.44,2026-10-26,24.7,47.1,agua_s2_2026-10-26.geojson
