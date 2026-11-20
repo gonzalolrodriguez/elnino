@@ -6,6 +6,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { puedeUsar3D, useMenosMovimiento } from "../lib/entorno";
 import { LeyendaRelieve } from "../relieve/LeyendaRelieve";
 import { useRelieve } from "../relieve/useRelieve";
+import { accionPorRol, useSesionPortada } from "./accionSesion";
 import { CuencaSVG } from "./CuencaSVG";
 import { EscalaHidrometrica } from "./EscalaHidrometrica";
 import { RecorridoRio } from "./RecorridoRio";
@@ -88,6 +89,8 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function Hero() {
   const menosMovimiento = useMenosMovimiento();
+  const sesion = useSesionPortada();
+  const accion = sesion ? accionPorRol(sesion.rol) : null;
   // El 3D exige WebGL 2 y un equipo con recursos: en equipos limitados se usa el respaldo 2D.
   const [webgl] = useState(puedeUsar3D);
   const { datos, fallo } = useRelieve();
@@ -228,9 +231,15 @@ export function Hero() {
             categoría y su fuente.
           </Text>
           <Box mt={7} display="flex" flexWrap="wrap" gap={3}>
-            <Button as="a" href="#ingreso" size="lg" variant="acento">
-              Elegir mi perfil
-            </Button>
+            {accion ? (
+              <Button as={RouterLink} to={accion.a} size="lg" variant="acento">
+                {accion.texto}
+              </Button>
+            ) : (
+              <Button as="a" href="#ingreso" size="lg" variant="acento">
+                Elegir mi perfil
+              </Button>
+            )}
             <Button as={RouterLink} to="/informacion#como-llega" size="lg" variant="sobreOscuro">
               Cómo llega el agua a Formosa
             </Button>

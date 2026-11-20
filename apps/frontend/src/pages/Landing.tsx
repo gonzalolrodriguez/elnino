@@ -5,6 +5,7 @@ import { Layout } from "../components/Layout";
 import { Plegable } from "../components/Plegable";
 import { TresRelojes } from "../components/TresRelojes";
 import { LIMITES_ESTATICOS } from "../datos/kit";
+import { accionPorRol, useSesionPortada } from "../landing/accionSesion";
 import { FranjaEstado } from "../landing/FranjaEstado";
 import { Hero } from "../landing/Hero";
 import { useMeta } from "../lib/useMeta";
@@ -18,6 +19,7 @@ const PERFILES = [
 
 export default function Landing() {
   const meta = useMeta();
+  const sesion = useSesionPortada();
   const { hash } = useLocation();
   const limites = meta.estado === "ok" ? meta.meta.limites : LIMITES_ESTATICOS;
 
@@ -28,6 +30,20 @@ export default function Landing() {
       <FranjaEstado />
 
       <Box as="section" id="ingreso" aria-labelledby="titulo-perfiles" maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 8, md: 10 }} pb={{ base: 8, md: 10 }}>
+        {sesion ? (
+          <Box layerStyle="tarjeta" p={4} display="flex" flexWrap="wrap" alignItems="center" gap={3} data-testid="portada-sesion">
+            <Heading as="h2" id="titulo-perfiles" size="md" flex="1 1 12rem">
+              Hola, {sesion.nombre_visible}
+            </Heading>
+            <Button as={RouterLink} to={accionPorRol(sesion.rol).a} size="lg">
+              {accionPorRol(sesion.rol).texto}
+            </Button>
+            <Link as={RouterLink} to="/app" fontWeight={600} fontSize="sm">
+              Descargar la app
+            </Link>
+          </Box>
+        ) : (
+          <>
         <Heading as="h2" id="titulo-perfiles" size="lg" mb={4}>
           ¿Cómo querés ingresar?
         </Heading>
@@ -53,6 +69,8 @@ export default function Landing() {
             Descargar la app
           </Link>
         </Text>
+          </>
+        )}
       </Box>
 
       <TresRelojes sobretitulo="Entender la situación" />

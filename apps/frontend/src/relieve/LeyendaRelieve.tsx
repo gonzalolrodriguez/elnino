@@ -34,21 +34,26 @@ export function LeyendaRelieve({ meta, vista }: { meta: MetaRelieve; vista: "3d"
       m={0}
       style={{ backdropFilter: "blur(8px)" }}
     >
-      <Text as="figcaption" fontWeight={600} color="oscuro.fg" pt={1.5}>
-        Esquema ilustrativo, no a escala cartográfica
-      </Text>
-      <Text fontWeight={400}>
-        {vista === "3d"
-          ? `Exageración vertical ×${EXAGERACION_VERTICAL} (desniveles ampliados ${EXAGERACION_VERTICAL} veces)`
-          : `Exageración vertical: ninguna en esta vista en planta (la escena 3D usa ×${EXAGERACION_VERTICAL})`}
-      </Text>
-      <Flex gap={2} align="center" wrap="wrap" mt={1.5}>
+      <Flex as="figcaption" gap={2} align="center" wrap="wrap" pt={1.5}>
+        <Text as="span" fontWeight={600} color="oscuro.fg">
+          Esquema ilustrativo
+        </Text>
+        <Text as="span" aria-hidden="true">
+          ·
+        </Text>
         <Insignia categoria="DOCUMENTO DE REFERENCIA" onDark />
-        <Text as="span">Descarga {fechaLarga(meta.fecha_descarga)}</Text>
       </Flex>
       <Plegable titulo={<span style={{ fontSize: "0.75rem" }}>Leyenda de altitud y fuentes</span>} tono="oscuro">
         <Box pb={2}>
-          <Text fontWeight={600} color="oscuro.fg" mb={1}>
+          <Text fontWeight={600} color="oscuro.fg">
+            No a escala cartográfica. Descarga {fechaLarga(meta.fecha_descarga)}.
+          </Text>
+          <Text>
+            {vista === "3d"
+              ? `Exageración vertical ×${EXAGERACION_VERTICAL} (desniveles ampliados ${EXAGERACION_VERTICAL} veces)`
+              : `Exageración vertical: ninguna en esta vista en planta (la escena 3D usa ×${EXAGERACION_VERTICAL})`}
+          </Text>
+          <Text fontWeight={600} color="oscuro.fg" mt={1.5} mb={1}>
             Altitud (m sobre el nivel del mar)
           </Text>
           <Box h="9px" borderRadius="full" style={{ background: degradado }} aria-hidden="true" />

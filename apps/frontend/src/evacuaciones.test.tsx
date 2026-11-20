@@ -132,7 +132,7 @@ describe("página Evacuaciones", () => {
     expect(within(detalle).getByRole("img", { name: /Esquema sin escala/ })).toBeInTheDocument();
     expect(within(detalle).getByText("Encargado de cuadrilla", { exact: false })).toBeInTheDocument();
     const conf = within(detalle).getByTestId("confirmacion");
-    expect(conf).toHaveTextContent("No llegó");
+    expect(conf).toHaveTextContent("No vinieron");
     expect(conf).toHaveTextContent("SMS (simulado)");
     expect(conf).toHaveTextContent("Nos dejaron en otro lado");
   });
@@ -329,5 +329,13 @@ describe("confirmación del evacuado en Mi cuenta", () => {
     renderRuta("/mi-cuenta");
     await screen.findByRole("heading", { name: "Mi cuenta" });
     await waitFor(() => expect(screen.queryByTestId("confirmar-traslado")).not.toBeInTheDocument());
+  });
+});
+
+describe("motivos de discrepancia nuevos", () => {
+  it("tienen texto legible (parcial y no_encontraron)", async () => {
+    const { etiquetaMotivoDiscrepancia } = await import("./lib/etiquetas");
+    expect(etiquetaMotivoDiscrepancia("evacuado_parcial")).toContain("solo en parte");
+    expect(etiquetaMotivoDiscrepancia("evacuado_no_encontraron")).toContain("no la encontró");
   });
 });

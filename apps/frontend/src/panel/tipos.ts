@@ -531,7 +531,7 @@ export type ResumenAdmin = BloqueResumen & {
 };
 
 /** Constancias de evacuación (ver docs/contrato_api.md, "Constancias de evacuación"). */
-export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "destino_lejos_del_centro";
+export type MotivoDiscrepancia = "evacuado_dice_no" | "evacuado_reporta_problema" | "evacuado_parcial" | "evacuado_no_encontraron" | "destino_lejos_del_centro";
 
 export type Constancia = {
   id: number;
@@ -544,8 +544,11 @@ export type Constancia = {
   creada_en: string;
 };
 
+/** Respuestas de la persona evacuada. `si`, `no` y `problema` son los valores históricos (SMS y datos viejos). */
+export type RespuestaConfirmacion = "completa" | "parcial" | "no_encontraron" | "no_vinieron" | "otro_problema" | "si" | "no" | "problema";
+
 export type ConfirmacionEvacuado = {
-  respuesta: "si" | "no" | "problema";
+  respuesta: RespuestaConfirmacion;
   canal: string;
   comentario: string | null;
   solicitada_en: string;
@@ -589,7 +592,7 @@ export type ConsultaConfirmacion = {
   codigo: string;
   centro_nombre: string | null;
   respondida: boolean;
-  respuesta: "si" | "no" | "problema" | null;
+  respuesta: RespuestaConfirmacion | null;
   comentario: string | null;
   solicitada_en: string;
   respondida_en: string | null;
