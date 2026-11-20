@@ -56,6 +56,8 @@ Cada cifra, umbral, serie o capa que la herramienta muestra, con su fuente y su 
 | Anticipación del traslado de ganado usada en la factibilidad | 48 h antes del compromiso (extremo conservador de 24 a 48 h) | SUPUESTO (`ventana_inicio_ganado_horas`) | Simulado | 19/11/2026 |
 | Centros de recepción dentro de un sector en riesgo | No reciben evacuados (dentro de uno comprometido, nunca) | SUPUESTO (`centro_excluir_en_riesgo`) | Simulado | 19/11/2026 |
 | Distancia adicional para enganchar un punto a un camino usable | 500 m | SUPUESTO (`ruteo_enganche_usable_m`) | Simulado | 19/11/2026 |
+| Tamaño de los hogares del set separado de K10 | 1 persona 15 %, 2: 20 %, 3: 20 %, 4: 18 %, 5: 12 %, 6: 8 %, 7: 4 %, 8: 3 % (promedio 3,5) | SUPUESTO (`hogar_tamano_distribucion`). El cuadro del Censo 2022 de hogares por cantidad de personas de Formosa no se pudo obtener: los cuadros provisionales de INDEC no lo traen y la página de resultados definitivos (censo.gob.ar) no abrió por un certificado TLS incompleto | Simulado | 19/11/2026 |
+| Hogares SIMULADOS de K10 (`data/simulado/hogares_k10.json`) | S1: 340 hogares; S2: 1.008; S3: 239; S4: 43 (suman exactamente la población de K10) | Generados con semilla fija por `python -m app.ingest.hogares_simulados`; solo se usan con `poblacion_k10_en_hogares` | Simulado | 19/11/2026 |
 | Lluvia prevista para la ventana seca | La que ingrese el operador (mm y horas) | Entrada del operador; no es un pronóstico | Simulado | — |
 | Veredicto de factibilidad, plazos y tiempos de traslado | Los calcula la API por sector | Tiempos por la red vial de OpenStreetMap (DOCUMENTO DE REFERENCIA) o aproximados; plazos con las tasas de K1 (proyección lineal); supuestos de esta tabla | Simulado | 19/11/2026 |
 

@@ -172,7 +172,7 @@ Las pruebas del backend usan una base PostGIS separada (`evacuaciones_test`, en 
 ```bash
 # Backend (desde apps/backend, entorno virtual activo, base levantada)
 set -a; . ../../.env; set +a
-ruff check . && pytest -q                    # 311 pruebas
+ruff check . && pytest -q                    # 325 pruebas
 
 # Web y app (desde la raíz)
 pnpm -r typecheck                            # tsc --noEmit en web, app y shared

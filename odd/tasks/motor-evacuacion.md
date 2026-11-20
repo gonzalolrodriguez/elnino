@@ -103,7 +103,23 @@ Commits en `dev-cabrera`: `5acff00` (lluvia en la red), `2ef4911` (matriz de tie
 
 | ID | Tarea | Estado |
 |---|---|---|
-| M7.1 | Set separado de hogares SIMULADOS para K10 y script reproducible | Pendiente |
-| M7.2 | Asignación con familias indivisibles y viajes sin partir familias | Pendiente |
-| M7.3 | Recomendador, API (`poblacion_k10_en_hogares`), web y pruebas | Pendiente |
-| M7.4 | Contrato, decisiones y ficha de fuentes | Pendiente |
+| M7.1 | Set separado de hogares SIMULADOS para K10 y script reproducible | Hecho |
+| M7.2 | Asignación con familias indivisibles y viajes sin partir familias | Hecho |
+| M7.3 | Recomendador, API (`poblacion_k10_en_hogares`), web y pruebas | Hecho |
+| M7.4 | Contrato, decisiones y ficha de fuentes | Hecho |
+
+### Evidencia M7
+
+Commits: `78872cd` (diseño), `a1ff7cf` (set de hogares), `9a50692` (motor), `c730a5d` (web) y el de documentación.
+
+- Backend: `ruff check .` sin errores; `pytest -q` 325 pasadas (14 nuevas de familias en `tests/test_motor_evacuacion.py`).
+- Web: `tsc`, `eslint` y `vitest` (194) en verde.
+- Con la red real (base local):
+
+| Escenario | Familias juntas | Familias sin lugar entero | Personas con lugar | Viajes |
+|---|---|---|---|---|
+| 7,60 m, 40 mm, K10 como total | 1 registrada | 0 | 1.250 | lancha 13, colectivo 29 |
+| 7,60 m, 40 mm, hogares SIMULADOS | 328 | 295 (902 personas, las que no entran en el cupo total) | 1.250 | lancha 13, colectivo 29 |
+| 9,00 m, hogares SIMULADOS | 328 | 1.304 (4.406 personas) | 1.250 | igual |
+
+No separar familias no hizo perder lugares ni sumó viajes en estos escenarios. Las familias sin lugar entero son las personas que igual no entraban, porque el cupo total simulado es de 1.250.
