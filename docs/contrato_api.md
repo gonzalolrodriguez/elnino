@@ -325,8 +325,8 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 |---|---|---|---|
 | GET | `/cuadrillas` | mandos | Cuadrillas con integrantes, plantilla sugerida y `roles_faltantes` |
 | POST | `/cuadrillas` | mandos | `{ "nombre", "tipo_incidente": "humana|ganadera|apicola", "vehiculo"?: "4x4|camion_jaula|colectivo|lancha|moto", "integrantes": [{"rol_operativo"}] }` (201). `vehiculo` es opcional y `SIMULADO` (otro valor: 422); `GET /cuadrillas` lo devuelve (`null` si no tiene) |
-| GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }` |
-| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última |
+| GET | `/tareas?estado=&limite=&offset=` | cuadrilla y mandos | La cuadrilla ve solo las de sus cuadrillas. Responde `{ "tareas", "total", "limite", "offset" }`; cada tarea trae `requiere_atencion` (bool) y `ultimo_parte` (parte o `null`, ver "Partes de las cuadrillas y panel de cuadrillas") |
+| PATCH | `/tareas/{id}` | cuadrilla y mandos | `estado` (`pendiente`, `en_curso`, `completada`; 409 si la transición no corresponde), `checklist` (lista de `{ "item": texto 1-200, "hecho": boolean }`, `item` obligatorio, máx. 50), `cuadrilla_id` (solo mandos). La cuadrilla pasa a `ocupada` mientras tenga tareas abiertas y vuelve a `disponible` al cerrar la última. Si un operador (no la cuadrilla) cambia el `estado` o reasigna la tarea, se limpia `requiere_atencion`. La respuesta incluye `requiere_atencion` y `ultimo_parte` |
 | POST | `/ordenes` | **solo `decisor`** (otro rol: 403) | `{ "tipo": "alerta|evacuacion_preventiva|evacuacion", "sectores": ["S4"], "fundamento": "...", "fecha_simulada": "2026-11-17" }` (201). **Idempotente** con `Idempotency-Key: <UUID>` (mismo decisor y clave: 200 con la orden original y `"repetida": true`, sin duplicar notificaciones ni tareas). Las tareas se reparten entre las cuadrillas del tipo con menos tareas abiertas |
 | GET | `/ordenes` | autenticado | Mandos ven todas; ciudadanía y productores, las de su sector |
 | GET | `/solicitudes` | ciudadanía y productores (las propias) y mandos | Filtros `estado`, `sector_id`; paginación `limite` (100, máx. 500) y `offset`; responde `{ "solicitudes", "total", "limite", "offset" }` |
@@ -337,6 +337,94 @@ Respuesta del caso de control: dormidero 150 m², 1 camión jaula con divisiones
 | PATCH | `/solicitudes/{id}` | mandos | Siguiente estado: `verificada`, `asignada` (con `cuadrilla_id` opcional, crea la tarea), `en_curso`, `resuelta`; saltar estados da 409 |
 
 `POST /ordenes` registra al emisor (rol), crea notificaciones para quienes viven o producen en los sectores, tareas por cuadrilla (no en una simple `alerta`) y un **borrador** de bitácora K8; responde `{ "id", "notificaciones_creadas", "tareas_creadas", "bitacora_borrador_id", ... }`.
+
+## Partes de las cuadrillas y panel de cuadrillas
+
+La cuadrilla informa al sistema cómo va cada tarea con **partes**: `avance`, `dificultad` o `resultado`. El autor figura por su **rol operativo** (`autor_rol`), nunca por nombre. Todo es `SIMULADO` en la demo. Estos endpoints llevan el mismo tope por persona que `/mi/*` (`RATE_LIMIT_USUARIO`, 429 con `Retry-After`).
+
+Parte (`ParteTarea`):
+
+```json
+{ "id": 7, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "dificultad", "resultado": null,
+  "observacion": "El camino de tierra hacia el cargadero está anegado.",
+  "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": false }
+```
+
+- `tipo`: `avance | dificultad | resultado`. `resultado` solo se informa con `tipo=resultado` (`completa | parcial | no_realizada | reprogramada`); en otro tipo: 422.
+- `observacion`: de 3 a 1000 caracteres; **obligatoria** si `tipo` es `dificultad` o si es `resultado` distinto de `completa` (422). En `avance` y en `completa` es opcional.
+- `resuelta`: solo en `dificultad` (nace en `false`); en los demás tipos es `null`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/tareas/{id}/partes` | `cuadrilla`, solo integrantes de la cuadrilla de esa tarea | `{ "tipo", "resultado"?, "observacion"? }` (cuerpo estricto: un campo extra da 422). 201 con el parte. **Idempotente** con la cabecera opcional `Idempotency-Key: <UUID>` (cola sin conexión de la app): el mismo usuario y la misma clave devuelven el parte original con **200**, sin duplicarlo ni repetir sus efectos (la misma clave en otra tarea: 409; clave que no es UUID: 422). Otra cuadrilla, mandos o ciudadanía: 403; tarea inexistente: 404; tarea `completada` o `cancelada`: 409 |
+| GET | `/tareas/{id}/partes` | mandos e integrantes de esa cuadrilla | `{ "items": [parte...] }`, más nuevo primero (máx. 200). Otra cuadrilla o ciudadanía: 403 |
+| PATCH | `/partes/{id}` | mandos | `{ "resuelta": true }`: marca la dificultad como resuelta (otro tipo de parte: 409; `false` u otro campo: 422) |
+| GET | `/partes/recientes?limite=20` | mandos | `{ "items": [parte + { "sector_id", "solicitud_id", "cuadrilla_nombre", "tarea_estado" }] }` (`limite` 1 a 100). Primero lo que pide atención (dificultades sin resolver y resultados no completos de tareas con `requiere_atencion`), después por fecha |
+| GET | `/cuadrillas/resumen` | mandos | Cuadrillas con sus designados, la tarea actual y el último parte (abajo) |
+| POST | `/cuadrillas/{id}/integrantes` | `operador`, `admin` | `{ "usuario_id", "rol_operativo" }` (201 con el ítem de resumen de la cuadrilla). Solo usuarios **activos con rol `cuadrilla`** y roles del catálogo (422); ya integrante: 409; cuadrilla inexistente: 404. Si la cuadrilla tiene una vacante sin persona con ese rol, se cubre |
+| DELETE | `/cuadrillas/{id}/integrantes/{usuario_id}` | `operador`, `admin` | Quita al integrante; 200 con el ítem de resumen actualizado; 404 si no integraba la cuadrilla |
+
+**Efectos sobre la tarea**
+
+| Parte | Efecto |
+|---|---|
+| `resultado=completa` | La tarea pasa a `completada` y se limpia `requiere_atencion`. Si la tarea es de evacuación (nace de una orden o de un pedido `evacuacion`/`ganado`) responde **409** `"Cerrá la tarea con constancia"`: se cierra con `POST /tareas/{id}/cierre`, que además deja su propio parte `resultado=completa` |
+| `parcial`, `no_realizada`, `reprogramada` | La tarea vuelve a `pendiente` con `requiere_atencion=true`; si el pedido figuraba `en_curso` o `resuelta`, vuelve a `asignada` |
+| `avance`, `dificultad` | No cambian el estado de la tarea |
+
+`requiere_atencion` se limpia cuando un operador cambia el estado o reasigna la tarea (`PATCH /tareas/{id}`), o cuando llega un parte `completa`.
+
+`GET /cuadrillas/resumen` devuelve `{ "items": [...] }`, un ítem por cuadrilla (sin nombres de personas, solo `usuario_id` y rol operativo):
+
+```json
+{ "id": 1, "nombre": "Cuadrilla humana SIMULADA 1", "tipo_incidente": "humana", "vehiculo": "4x4",
+  "estado": "ocupada",
+  "integrantes": [
+    { "usuario_id": 4, "rol_operativo": "encargado_cuadrilla", "es_encargado": true },
+    { "usuario_id": null, "rol_operativo": "sipec", "es_encargado": false } ],
+  "tarea_actual": { "id": 12, "estado": "pendiente", "solicitud_id": null, "sector_id": "S4", "requiere_atencion": true },
+  "ultimo_parte": { "id": 8, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "resultado", "resultado": "parcial",
+    "observacion": "Se trasladaron dos de tres familias; la tercera quedó pendiente por el acceso.",
+    "autor_rol": "encargado_cuadrilla", "creado_en": "2026-11-20T21:14:09.512847+00:00", "resuelta": null },
+  "dificultades_abiertas": 0 }
+```
+
+`tarea_actual` es la tarea abierta más relevante (en curso, luego las que requieren atención, luego la última) o `null`. `usuario_id: null` es un rol del catálogo todavía sin persona designada.
+
+**Mis pedidos:** cada ítem de `GET /mi/pedidos` agrega `"novedad": null | { "tipo": "demora|dificultad|parcial|no_realizada|reprogramada", "en": "<ISO>" }`: la última novedad relevante, **sin el texto de la observación**. `dificultad` mientras no esté resuelta; `parcial`/`no_realizada`/`reprogramada` mientras la tarea siga con `requiere_atencion`; `demora` cuando la tarea está en curso y la última posición compartida venció (`posicion_vencida_minutos`). Los avances no se informan a la ciudadanía.
+
+**Tiempo real:** el evento `parte_tarea` `{ "tarea_id", "cuadrilla_id", "tipo", "resultado" }` llega solo a `operador`, `decisor` y `admin` (nunca la observación; el panel la consulta con `GET /partes/recientes`). Se emite al crear un parte, al resolver una dificultad y al cerrar con constancia.
+
+Auditoría: `parte_tarea_creado`, `parte_tarea_resuelto`, `cuadrilla_integrante_agregado` y `cuadrilla_integrante_quitado` quedan en la bitácora de accesos (el detalle del parte guarda solo `tipo[:resultado]`, no la observación).
+
+```bash
+# La cuadrilla informa una dificultad en su tarea 12 (H_CUADRILLA = cabecera Authorization de un integrante)
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H 'Content-Type: application/json' \
+  -d '{"tipo":"dificultad","observacion":"El camino de tierra hacia el cargadero está anegado."}'
+
+# Reintento seguro desde la cola sin conexión: misma Idempotency-Key -> 200 con el parte original
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H "Idempotency-Key: $(uuidgen)" -H 'Content-Type: application/json' \
+  -d '{"tipo":"avance","observacion":"En camino"}'
+
+# Resultado parcial: la tarea vuelve a pendiente y queda con requiere_atencion
+curl -s -X POST $API/tareas/12/partes -H "$H_CUADRILLA" -H 'Content-Type: application/json' \
+  -d '{"tipo":"resultado","resultado":"parcial","observacion":"Quedó una familia sin trasladar."}'
+
+# El operador ve lo que pide atención, resuelve la dificultad y mira el panel de cuadrillas
+curl -s "$API/partes/recientes?limite=20" -H "$H_OPERADOR"
+curl -s -X PATCH $API/partes/7 -H "$H_OPERADOR" -H 'Content-Type: application/json' -d '{"resuelta":true}'
+curl -s $API/cuadrillas/resumen -H "$H_OPERADOR"
+
+# Designar a un usuario con rol cuadrilla (cubre la vacante del rol si existe) y quitarlo
+curl -s -X POST $API/cuadrillas/1/integrantes -H "$H_OPERADOR" -H 'Content-Type: application/json' \
+  -d '{"usuario_id":9,"rol_operativo":"sipec"}'
+curl -s -X DELETE $API/cuadrillas/1/integrantes/9 -H "$H_OPERADOR"
+
+# Casos inválidos: dificultad sin observación -> 422; completa en una tarea de evacuación -> 409 "Cerrá la tarea con constancia";
+# parte de una cuadrilla ajena o de un ciudadano -> 403; tarea inexistente -> 404; PATCH de un avance -> 409
+```
+
+Prueba automática: `tests/test_partes.py`.
 
 ## Ciudadanía y productores (`/mi/*`)
 
@@ -562,7 +650,7 @@ Para conectar la Meta Cloud API real: registrar la ruta como URL de webhook de l
 
 ## Tiempo real
 
-`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
+`WS /api/v1/ws`. El token de acceso **no** va en la URL: se envía como **primer mensaje** `{"token": "<access_token>"}` dentro de los 5 segundos siguientes a la conexión; si falta, es inválido o vence el plazo, el servidor cierra con el código **1008**. Luego el servidor envía `{"tipo": "conectado"}` y los eventos `{"tipo": "escenario|solicitud|orden|tarea|posicion_cuadrilla|parte_tarea", "datos": {...}}`: los mandos y la cuadrilla reciben todos (salvo `posicion_cuadrilla` y `parte_tarea`, solo para operador, decisor y admin); ciudadanía y productores reciben `orden` **solo si viven o producen en los sectores de la orden** y sus propios `solicitud`. Cada envío tiene plazo de 5 s: un cliente lento se desconecta sin demorar a los demás.
 
 La conexión **no sobrevive a la autorización con la que se abrió**: el servidor la cierra con **1008** cuando vence el `exp` del token de acceso (el cliente debe renovar el token con `/auth/refresh` y reconectar) y cuando un admin cambia la contraseña, el estado o el rol del usuario (`PATCH /usuarios/{id}`) o se detecta reutilización de un refresh token.
 
@@ -612,7 +700,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (64 rutas y 74 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (70 rutas y 81 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='\n').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'\n')"

@@ -243,3 +243,11 @@ La lámina no es un modelo hidráulico: dibuja cuánto supera la altura de Puert
 | Línea de tiempo de un pedido (recibida, verificada, asignada, en curso, resuelta) | Horas tomadas de los registros del sistema (alta del pedido, bitácora de cambios de estado, tarea y constancia); si un estado se alcanzó sin registro de hora, se muestra sin hora | Base de datos de la plataforma (pedidos de demostración, personas ficticias) | Simulado | 20/11/2026 |
 | Rol de la cuadrilla asignada | `encargado_cuadrilla` u otro rol del catálogo, nunca el nombre de una persona | Catálogo `roles_operativos` (sin funcionarios reales) | Simulado | 20/11/2026 |
 | Respuestas de confirmación del evacuado | `completa`, `parcial`, `no_encontraron`, `no_vinieron`, `otro_problema` | Decisión de diseño del equipo (20/11/2026); es una marca para revisar, no una acusación | Simulado | 20/11/2026 |
+
+## Partes de las cuadrillas y panel de cuadrillas
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Partes de una tarea (avance, dificultad, resultado `completa`, `parcial`, `no_realizada` o `reprogramada`) y su observación | Texto libre de la cuadrilla; el autor figura por su rol operativo, nunca por nombre. Los dos partes de demostración (una dificultad sin resolver y un resultado parcial, en S4) son datos de ejemplo | Base de datos de la plataforma (`data/`, seed `sembrar_partes_demo`); no hay padrón público de partes de campo | Simulado | 20/11/2026 |
+| Cuadrillas, sus designados y la tarea actual | Rol operativo de cada integrante del catálogo `roles_operativos`; `usuario_id: null` es un rol sin persona designada | `data/simulado/cuadrillas.json` y altas hechas desde el panel (usuarios de demostración, sin personas reales) | Simulado | 20/11/2026 |
+| Novedad de un pedido (`demora`, `dificultad`, `parcial`, `no_realizada`, `reprogramada`) | Se deriva de los partes de la tarea; `demora` se activa cuando la última posición compartida supera `posicion_vencida_minutos` (30 min, SUPUESTO) | Partes de la cuadrilla y `apps/backend/app/config/supuestos.yaml` | Simulado (SUPUESTO) | 20/11/2026 |
