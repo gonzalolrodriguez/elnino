@@ -112,6 +112,7 @@ describe("asistencia", () => {
     mockEnviar.mockResolvedValue({ enviadaYa: false, fotoPendiente: false });
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "3");
     await fireEvent.press(screen.getByText("Tomar mi ubicación"));
     await screen.findByText("Actualizar ubicación");
@@ -126,6 +127,7 @@ describe("asistencia", () => {
     mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
     await fireEvent.changeText(screen.getByLabelText("Referencia de ubicación (paraje, camino, escuela cercana)"), "Paraje El Colorado");
     await fireEvent.press(screen.getByText("Tomar mi ubicación"));
@@ -142,6 +144,7 @@ describe("asistencia", () => {
     mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
     expect(screen.getByText("Enviar solicitud").props).toBeDefined();
     await fireEvent.changeText(screen.getByLabelText("Referencia de ubicación (paraje, camino, escuela cercana)"), "Paraje El Colorado");
@@ -157,6 +160,7 @@ describe("asistencia", () => {
     mockEstado = usuario("ciudadano");
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
     await fireEvent.press(screen.getByText("Enviar solicitud"));
     expect(mockEnviar).not.toHaveBeenCalled();
@@ -167,6 +171,7 @@ describe("asistencia", () => {
     mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false });
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "2");
     await fireEvent.press(screen.getByText("Tomar mi ubicación"));
     await screen.findByText("Actualizar ubicación");
@@ -196,6 +201,7 @@ describe("asistencia", () => {
     mockEstado = usuario("ciudadano");
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     await fireEvent.changeText(screen.getByLabelText("Personas a asistir"), "501");
     await fireEvent.press(screen.getByText("Tomar mi ubicación"));
     await screen.findByText("Actualizar ubicación");
@@ -208,6 +214,7 @@ describe("asistencia", () => {
     mockEstado = usuario("ciudadano");
     const Asistencia = require("@/app/(app)/asistencia").default;
     await render(conSafe(<Asistencia />));
+    await fireEvent.press(screen.getByText("Detallar pedido"));
     expect(screen.getByText("¿Sin datos? Enviar por SMS")).toBeTruthy();
     expect(screen.getAllByText(/SIMULADO/).length).toBeGreaterThan(0);
   });
