@@ -4,6 +4,7 @@ import { Image, Text } from "react-native";
 import { AyudaAhora } from "@/components/AyudaAhora";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { EstadoSector } from "@/components/EstadoSector";
+import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { SelectorEspecie } from "@/components/SelectorEspecie";
 import { Boton, Campo, COLOR, ErrorCaja, Insignia, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useCola } from "@/lib/ColaContext";
@@ -214,6 +215,7 @@ export default function Asistencia() {
           onPress={cargarUbicacion}
           deshabilitado={trabajando}
         />
+        <MarcarEnMapa punto={ubicacion} alCambiar={(p) => editando(setUbicacion)({ lat: p.lat, lon: p.lon })} />
       </Tarjeta>
 
       <Tarjeta>
