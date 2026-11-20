@@ -19,6 +19,9 @@ import type {
   Lectura,
   Notificacion,
   Lluvia,
+  CuadrillaResumen,
+  ParteReciente,
+  ParteTarea,
   Orden,
   PronosticoLluvia,
   Puesto,
@@ -131,6 +134,13 @@ export const api = {
   crearUsuario: (c: { email: string; password: string; nombre_visible: string; rol: string; rol_operativo?: string | null }) =>
     solicitar<UsuarioAdmin>("/usuarios", { ...a, cuerpo: c }),
   modificarUsuario: (id: number, c: Record<string, unknown>) => solicitar<UsuarioAdmin>(`/usuarios/${id}`, { ...a, metodo: "PATCH", cuerpo: c }),
+  cuadrillasResumen: () => solicitar<{ items: CuadrillaResumen[] }>("/cuadrillas/resumen", a),
+  agregarIntegrante: (cuadrillaId: number, c: { usuario_id: number; rol_operativo: string }) =>
+    solicitar<unknown>(`/cuadrillas/${cuadrillaId}/integrantes`, { ...a, cuerpo: c }),
+  quitarIntegrante: (cuadrillaId: number, usuarioId: number) => solicitar<unknown>(`/cuadrillas/${cuadrillaId}/integrantes/${usuarioId}`, { ...a, metodo: "DELETE" }),
+  partesDeTarea: (tareaId: number) => solicitar<{ items: ParteTarea[] }>(`/tareas/${tareaId}/partes`, a),
+  resolverParte: (parteId: number) => solicitar<ParteTarea>(`/partes/${parteId}`, { ...a, metodo: "PATCH", cuerpo: { resuelta: true } }),
+  partesRecientes: (limite = 20) => solicitar<{ items: ParteReciente[] }>(`/partes/recientes?limite=${limite}`, a),
 };
 
 function cabeceras(): Record<string, string> {
