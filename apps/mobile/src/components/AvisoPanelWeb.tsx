@@ -1,4 +1,5 @@
-import { Subtitulo, Tarjeta, Texto } from "@/components/ui";
+import { Encabezado } from "@/components/Piezas";
+import { Tarjeta, Texto } from "@/components/ui";
 import { hostDeUrl, obtenerUrlServidor } from "@/lib/servidor";
 
 /**
@@ -10,7 +11,7 @@ export function AvisoPanelWeb() {
   const host = hostDeUrl(obtenerUrlServidor());
   return (
     <Tarjeta>
-      <Subtitulo>Tu panel completo está en la web</Subtitulo>
+      <Encabezado icono="info">Tu panel completo está en la web</Encabezado>
       <Texto>
         Desde esta aplicación ves tus alertas y un resumen de solo lectura. El simulador, las órdenes y
         la bitácora están en el panel web: abrilo desde una computadora e ingresá con la misma cuenta.

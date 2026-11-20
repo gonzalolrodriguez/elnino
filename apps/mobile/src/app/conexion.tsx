@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 
 import { ConfigServidor } from "@/components/ConfigServidor";
 import { EstadoBackend } from "@/components/EstadoBackend";
+import { Disco } from "@/components/Piezas";
 import { Boton, Pantalla, Texto, Titulo } from "@/components/ui";
 
 /**
@@ -12,6 +13,7 @@ export default function Conexion() {
   const router = useRouter();
   return (
     <Pantalla>
+      <Disco tono="neutro" icono="info" tam={48} />
       <Titulo>Conexión</Titulo>
       <Texto suave>
         Indicá la dirección del servidor al que se conecta la aplicación. Normalmente no hace falta
