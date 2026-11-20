@@ -103,7 +103,7 @@ export function AvisoEscenario() {
         </Box>
         <Box flex="1 1 12rem">
           <Text as="label" htmlFor="barra-lluvia" fontSize="xs" fontWeight={600} display="block">
-            Lluvia: {fmtNum(entrada.lluvia_mm)} mm ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
+            Lluvia del escenario: {fmtNum(entrada.lluvia_mm)} mm ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
           </Text>
           <input
             id="barra-lluvia"

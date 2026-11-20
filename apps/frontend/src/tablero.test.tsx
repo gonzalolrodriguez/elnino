@@ -301,7 +301,7 @@ describe("aviso de escenario", () => {
     const aviso = await screen.findByTestId("aviso-escenario");
     expect(aviso).toHaveTextContent("Escenario activo: 8,20 m");
     expect(aviso).toHaveTextContent("SIMULADO");
-    fireEvent.change(within(barra).getByLabelText(/^Lluvia:/), { target: { value: "40" } });
+    fireEvent.change(within(barra).getByLabelText(/^Lluvia del escenario:/), { target: { value: "40" } });
     expect(screen.getByTestId("aviso-escenario")).toHaveTextContent("40 mm de lluvia");
     expect(llamadas(f, "POST /simulacion/escenario")).toHaveLength(0);
   });

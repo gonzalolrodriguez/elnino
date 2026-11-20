@@ -30,7 +30,7 @@ import {
 } from "@chakra-ui/react";
 import { TIPOS_ORDEN, type TipoOrden } from "@evacuaciones/shared";
 import { useRef, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthContext";
 import { AlertaError } from "../../components/Formulario";
@@ -50,6 +50,13 @@ const TEXTO_TIPO: Record<TipoOrden, string> = {
 };
 const SECTORES = ["S1", "S2", "S3", "S4"];
 
+/** Sectores válidos del parámetro `?sectores=S4,S3` (los que no existen se descartan). */
+function sectoresDeLaUrl(valor: string | null): string[] {
+  if (!valor) return [];
+  const pedidos = valor.split(",").map((x) => x.trim().toUpperCase());
+  return SECTORES.filter((s) => pedidos.includes(s));
+}
+
 function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
   const { usuario } = useAuth();
   const { entrada, escenario, desactualizado } = useEscenario();
@@ -57,7 +64,13 @@ function FormOrden({ alEmitir }: { alEmitir: (o: Orden) => void }) {
   const dialogo = useDisclosure();
   const cancelar = useRef<HTMLButtonElement>(null);
   const [tipo, setTipo] = useState<TipoOrden>("evacuacion_preventiva");
-  const [sectores, setSectores] = useState<string[]>(escenario && !desactualizado ? escenario.resumen.comprometidos : []);
+  const [params] = useSearchParams();
+  // Si llegan sectores por la URL (botón "Preparar orden" de Recomendación) mandan sobre los del escenario calculado.
+  const [sectores, setSectores] = useState<string[]>(() => {
+    const deLaUrl = sectoresDeLaUrl(params.get("sectores"));
+    if (deLaUrl.length > 0) return deLaUrl;
+    return escenario && !desactualizado ? escenario.resumen.comprometidos : [];
+  });
   const [fundamento, setFundamento] = useState("");
   const [fecha, setFecha] = useState("");
   const [intento, setIntento] = useState(false);
