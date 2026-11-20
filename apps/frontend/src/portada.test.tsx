@@ -56,7 +56,7 @@ describe("portada según la sesión", () => {
     expect(screen.getByRole("link", { name: "Elegir mi perfil" })).toHaveAttribute("href", "#ingreso");
     expect(screen.queryByTestId("portada-sesion")).toBeNull();
     // La franja de estado y los tres relojes siguen para todos.
-    expect(screen.getByText("Entender la situación")).toBeInTheDocument();
+    expect(screen.getByTestId("tres-relojes-amplia")).toBeInTheDocument();
   });
 
   it("«Recorrer el río» arranca plegado y se abre con el botón", async () => {

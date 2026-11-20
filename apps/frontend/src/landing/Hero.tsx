@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
+import { ANCHO_CONTENEDOR, GUTTER } from "../components/Contenedor";
 import { puedeUsar3D, useMenosMovimiento } from "../lib/entorno";
 import { LeyendaRelieve } from "../relieve/LeyendaRelieve";
 import { useRelieve } from "../relieve/useRelieve";
@@ -181,7 +182,7 @@ export function Hero() {
           pointerEvents="none"
           bgImage={{
             base: "linear-gradient(180deg, transparent 55%, var(--chakra-colors-oscuro-bg) 100%)",
-            lg: "linear-gradient(90deg, var(--chakra-colors-oscuro-bg) 0%, rgba(14,27,44,0.92) 26%, rgba(14,27,44,0) 60%), linear-gradient(180deg, transparent 80%, var(--chakra-colors-oscuro-bg) 100%)",
+            lg: "linear-gradient(90deg, var(--chakra-colors-oscuro-bg) 0%, rgba(14,27,44,0.92) 38%, rgba(14,27,44,0) 66%), linear-gradient(180deg, transparent 80%, var(--chakra-colors-oscuro-bg) 100%)",
           }}
         />
         {!datos && (
@@ -194,7 +195,7 @@ export function Hero() {
         <RecorridoRio control={control} disponible3D={usar3D && listo3D} reducido={menosMovimiento} resaltado={resaltado} alResaltar={setResaltado} pista={pista} />
       </Box>
       {datos && (
-        <Box order={{ base: 4, lg: 0 }} position={{ base: "relative", lg: "absolute" }} left={{ lg: 8 }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
+        <Box order={{ base: 4, lg: 0 }} position={{ base: "relative", lg: "absolute" }} left={{ lg: "max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem))" }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
           <LeyendaRelieve meta={datos.meta} vista={usar3D ? "3d" : "2d"} />
         </Box>
       )}
@@ -203,9 +204,9 @@ export function Hero() {
         order={{ base: 1, lg: 0 }}
         position="relative"
         zIndex={1}
-        maxW="90rem"
+        maxW={ANCHO_CONTENEDOR.lectura}
         mx="auto"
-        px={{ base: 4, md: 8 }}
+        px={GUTTER}
         pt={{ base: 8, lg: 16 }}
         pb={{ base: 10, lg: "11rem" }}
         display="grid"

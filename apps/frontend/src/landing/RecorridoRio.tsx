@@ -73,11 +73,11 @@ export function RecorridoRio({ control, disponible3D, reducido, resaltado, alRes
       data-testid="recorrido-rio"
       position={{ base: "relative", lg: "absolute" }}
       bottom={{ lg: 6 }}
-      left={{ lg: "calc(2rem + 19rem + 1rem)" }}
-      right={{ lg: 8 }}
+      left={{ lg: "calc(max(1.5rem, (100% - 72rem) / 2 + 1.5rem) + 19rem + 1rem)" }}
+      right={{ lg: "max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem))" }}
       maxW={{ lg: "46rem" }}
       zIndex={3}
-      mx={{ base: 4, md: 8, lg: 0 }}
+      mx={{ base: 4, md: 6, lg: 0 }}
       mt={{ base: 3, lg: 0 }}
       mb={{ base: 4, lg: 0 }}
       p={3}
