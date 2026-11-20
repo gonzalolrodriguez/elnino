@@ -13,11 +13,12 @@ import {
   type TextInputProps,
 } from "react-native";
 
+import { Icono, type NombreIcono } from "@/components/Icono";
 import { CIFRAS, COLOR, RADIO, TIPO } from "@/components/tema";
 import { ANCHO_MAX, TOQUE_MIN, useDiseno } from "@/lib/responsive";
 import type { Categoria } from "@/lib/servicios";
 
-export { COLOR, RADIO, TIPO } from "@/components/tema";
+export { COLOR, ESPACIO, RADIO, TIPO } from "@/components/tema";
 
 /**
  * `true` dentro de la barra de pestañas: ella ya reserva la zona segura inferior (gestos / botones
@@ -171,12 +172,15 @@ export function Boton({
   deshabilitado,
   variante = "primario",
   cargando,
+  icono,
 }: {
   titulo: string;
   onPress: () => void;
   deshabilitado?: boolean;
   variante?: "primario" | "secundario" | "peligro";
   cargando?: boolean;
+  /** Ícono decorativo a la izquierda del texto (el significado sigue estando en el texto). */
+  icono?: NombreIcono;
 }) {
   const apagado = deshabilitado || cargando;
   const secundario = variante === "secundario";
@@ -198,9 +202,12 @@ export function Boton({
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color={secundario ? COLOR.primario : "#fff"} />
+        <ActivityIndicator color={secundario ? COLOR.primario : COLOR.papel} />
       ) : (
-        <Text style={[estilos.botonTexto, secundario && { color: COLOR.primario }]}>{titulo}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, flexShrink: 1 }}>
+          {icono ? <Icono nombre={icono} tam={20} color={secundario ? COLOR.primario : COLOR.papel} /> : null}
+          <Text style={[estilos.botonTexto, secundario && { color: COLOR.primario }, { flexShrink: 1 }]}>{titulo}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -306,9 +313,12 @@ export function Cargando({ texto = "Cargando…" }: { texto?: string }) {
   );
 }
 
-export function Vacio({ texto }: { texto: string }) {
+export function Vacio({ texto, icono = "bandeja" }: { texto: string; icono?: NombreIcono }) {
   return (
     <View style={estilos.centro}>
+      <View style={estilos.discoVacio}>
+        <Icono nombre={icono} tam={24} color={COLOR.primario} />
+      </View>
       <Text style={[estilos.texto, { color: COLOR.suave, textAlign: "center" }]}>{texto}</Text>
     </View>
   );
@@ -325,7 +335,12 @@ export function ErrorCaja({
 }) {
   return (
     <View style={estilos.errorCaja} accessibilityRole="alert">
-      <Text style={estilos.errorTexto}>{mensaje}</Text>
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+        <View style={{ marginTop: 1 }}>
+          <Icono nombre="alerta" tam={22} color={COLOR.error} />
+        </View>
+        <Text style={[estilos.errorTexto, { flex: 1 }]}>{mensaje}</Text>
+      </View>
       {onReintentar ? <Boton titulo="Reintentar" variante="secundario" onPress={onReintentar} /> : null}
       {children}
     </View>
@@ -338,11 +353,11 @@ const estilos = StyleSheet.create({
   pequeno: { ...TIPO.pequeno },
   subtitulo: { ...TIPO.subtitulo, color: COLOR.texto },
   tarjeta: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: COLOR.borde,
     borderRadius: RADIO.tarjeta,
     padding: 16,
-    gap: 8,
+    gap: 10,
     backgroundColor: COLOR.superficie,
   },
   boton: {
@@ -355,7 +370,7 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
   },
   botonSecundario: { backgroundColor: COLOR.cielo },
-  botonTexto: { color: "#fff", fontWeight: "600", fontSize: 16, textAlign: "center" },
+  botonTexto: { color: COLOR.papel, fontWeight: "600", fontSize: 16, textAlign: "center" },
   enlace: { minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center", paddingHorizontal: 12 },
   enlaceTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600", textAlign: "center" },
   opcion: {
@@ -367,7 +382,7 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
   },
   opcionTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600" },
-  etiqueta: { ...TIPO.etiqueta, color: COLOR.suave },
+  etiqueta: { ...TIPO.etiqueta, color: COLOR.texto },
   campo: {
     borderWidth: 1,
     borderColor: COLOR.bordeCampo,
@@ -387,7 +402,8 @@ const estilos = StyleSheet.create({
     gap: 10,
   },
   errorTexto: { color: COLOR.error, fontSize: 15, fontWeight: "600", lineHeight: 21 },
-  centro: { padding: 24, alignItems: "center", gap: 8 },
+  centro: { padding: 24, alignItems: "center", gap: 10 },
+  discoVacio: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLOR.cielo, alignItems: "center", justifyContent: "center" },
   insignia: {
     alignSelf: "flex-start",
     borderRadius: RADIO.pastilla,

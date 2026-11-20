@@ -108,3 +108,19 @@ export function formatearFechaHora(valor: string | number | Date | null | undefi
   const dos = (n: number) => String(n).padStart(2, "0");
   return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()} ${dos(d.getHours())}:${dos(d.getMinutes())}`;
 }
+
+export type GravedadAviso = { nivel: "evacuacion" | "preventiva" | "alerta" | "discrepancia" | "aviso"; texto: string };
+
+/**
+ * Gravedad de una notificación para mostrarla con chip (ícono + texto + color). El backend arma el
+ * mensaje de las órdenes empezando por el rótulo del tipo («Evacuación preventiva para S4 …»), así que
+ * se lee de ahí; lo que no se reconoce queda como «Aviso» neutro, nunca como alarma.
+ */
+export function gravedadAviso(mensaje: string, tipo?: string): GravedadAviso {
+  if (tipo === "discrepancia") return { nivel: "discrepancia", texto: "Discrepancia" };
+  const m = mensaje.trimStart().toLowerCase();
+  if (m.startsWith("evacuación preventiva") || m.startsWith("evacuacion preventiva")) return { nivel: "preventiva", texto: "Evacuación preventiva" };
+  if (m.startsWith("evacuación") || m.startsWith("evacuacion")) return { nivel: "evacuacion", texto: "Evacuación" };
+  if (m.startsWith("alerta")) return { nivel: "alerta", texto: "Alerta" };
+  return { nivel: "aviso", texto: "Aviso" };
+}
