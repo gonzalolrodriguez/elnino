@@ -4,7 +4,8 @@ import { useState } from "react";
 import { AlertaError } from "../../components/Formulario";
 import { IconoAlerta, IconoEnviar, IconoTilde, IconoTriangulo } from "../../components/iconos/Iconos";
 import { ApiError } from "../../lib/api";
-import { AYUDA_RESULTADO, enviarParte, ETIQUETA_RESULTADO, MAX_OBSERVACION, ORDEN_RESULTADOS, validarParte, type ResultadoParte, type TipoParte } from "../../lib/partes";
+import { AYUDA_RESULTADO, enviarParte, ETIQUETA_RESULTADO, MAX_OBSERVACION, ORDEN_RESULTADOS, subirAdjuntoParte, validarParte, type ResultadoParte, type TipoParte } from "../../lib/partes";
+import { SelectorAdjuntos, type ProgresoArchivo } from "./AdjuntosParte";
 
 type Modo = "avance" | "dificultad" | "terminar";
 
@@ -24,12 +25,52 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
   const [error, setError] = useState<unknown>(null);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const [progreso, setProgreso] = useState<Record<number, ProgresoArchivo>>({});
+  // Parte ya creado cuyos archivos todavía no terminaron de subirse: el parte no se vuelve a crear al reintentar.
+  const [parteCreado, setParteCreado] = useState<{ id: number; mensaje: string } | null>(null);
 
   function abrir(m: Modo) {
     setAviso(null);
     setError(null);
     setErrorCampo(null);
     setModo((actual) => (actual === m ? null : m));
+  }
+
+  function terminar(mensaje: string) {
+    setAviso(mensaje);
+    setModo(null);
+    setObservacion("");
+    setResultado("");
+    setArchivos([]);
+    setProgreso({});
+    setParteCreado(null);
+    alEnviado();
+  }
+
+  /** Sube los archivos indicados de a uno. Devuelve cuántos quedaron sin subir (los errores quedan por archivo). */
+  async function subir(parteId: number, indices: number[]): Promise<number> {
+    let fallidos = 0;
+    for (const i of indices) {
+      setProgreso((p) => ({ ...p, [i]: { estado: "subiendo" } }));
+      try {
+        await subirAdjuntoParte(tareaId, parteId, archivos[i]);
+        setProgreso((p) => ({ ...p, [i]: { estado: "ok" } }));
+      } catch (e) {
+        fallidos++;
+        setProgreso((p) => ({ ...p, [i]: { estado: "error", mensaje: e instanceof Error ? e.message : "No se pudo subir el archivo." } }));
+      }
+    }
+    return fallidos;
+  }
+
+  async function reintentarAdjuntos() {
+    if (!parteCreado) return;
+    setEnviando(true);
+    const pendientes = archivos.map((_, i) => i).filter((i) => progreso[i]?.estado !== "ok");
+    const fallidos = await subir(parteCreado.id, pendientes);
+    setEnviando(false);
+    if (fallidos === 0) terminar(parteCreado.mensaje);
   }
 
   async function enviar(e: React.FormEvent) {
@@ -49,12 +90,15 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
     }
     setEnviando(true);
     try {
-      await enviarParte(tareaId, r.cuerpo);
-      setAviso(tipo === "avance" ? "Avance informado." : tipo === "dificultad" ? "Dificultad informada: el operador la ve en su panel." : "Resultado informado.");
-      setModo(null);
-      setObservacion("");
-      setResultado("");
-      alEnviado();
+      const parte = await enviarParte(tareaId, r.cuerpo);
+      const mensaje = tipo === "avance" ? "Avance informado." : tipo === "dificultad" ? "Dificultad informada: el operador la ve en su panel." : "Resultado informado.";
+      if (archivos.length === 0) terminar(mensaje);
+      else {
+        setParteCreado({ id: parte.id, mensaje });
+        alEnviado(); // el parte ya existe: el historial lo muestra aunque falten archivos
+        const fallidos = await subir(parte.id, archivos.map((_, i) => i));
+        if (fallidos === 0) terminar(mensaje);
+      }
     } catch (err) {
       // El servidor puede exigir la constancia aunque el cliente no lo supiera: se pasa a ese formulario en vez de mostrar un error.
       if (err instanceof ApiError && err.estado === 409 && /constancia/i.test(err.message)) {
@@ -66,6 +110,8 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
     }
   }
 
+  const exigeConstanciaAhora = modo === "terminar" && resultado === "completa" && exigeConstancia;
+  const faltanArchivos = parteCreado !== null && archivos.some((_, i) => progreso[i]?.estado !== "ok");
   const obligatoria = modo === "dificultad" || (modo === "terminar" && resultado !== "completa");
   const idObs = `parte-obs-${tareaId}`;
 
@@ -139,7 +185,9 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
             </FormErrorMessage>
           </FormControl>
 
-          {modo === "terminar" && resultado === "completa" && exigeConstancia && (
+          {!exigeConstanciaAhora && <SelectorAdjuntos idBase={String(tareaId)} archivos={archivos} alCambiar={setArchivos} progreso={progreso} bloqueado={enviando || parteCreado !== null} />}
+
+          {exigeConstanciaAhora && (
             <Flex align="flex-start" gap={2} mt={3} fontSize="sm" color="textoSuave">
               <Box mt="2px" aria-hidden="true" display="flex">
                 <IconoAlerta tam="1rem" />
@@ -153,13 +201,31 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
               <AlertaError error={error} />
             </Box>
           )}
+          {faltanArchivos && !enviando && (
+            <Text mt={3} fontSize="sm" role="status" data-testid="parte-sin-archivos">
+              El parte ya se envió, pero faltan archivos por subir. Podés reintentar solo esos archivos o seguir sin ellos.
+            </Text>
+          )}
           <Flex gap={2} mt={4} direction={{ base: "column", sm: "row" }}>
-            <Button type="submit" size="lg" isLoading={enviando} leftIcon={<IconoEnviar />}>
-              {modo === "terminar" && resultado === "completa" && exigeConstancia ? "Continuar con la constancia" : "Enviar"}
-            </Button>
-            <Button type="button" size="lg" variant="outline" isDisabled={enviando} onClick={() => setModo(null)}>
-              Volver
-            </Button>
+            {parteCreado ? (
+              <>
+                <Button type="button" size="lg" isLoading={enviando} leftIcon={<IconoEnviar />} onClick={() => void reintentarAdjuntos()}>
+                  Reintentar archivos
+                </Button>
+                <Button type="button" size="lg" variant="outline" isDisabled={enviando} onClick={() => terminar(parteCreado.mensaje)}>
+                  Seguir sin esos archivos
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="submit" size="lg" isLoading={enviando} leftIcon={<IconoEnviar />}>
+                  {exigeConstanciaAhora ? "Continuar con la constancia" : "Enviar"}
+                </Button>
+                <Button type="button" size="lg" variant="outline" isDisabled={enviando} onClick={() => setModo(null)}>
+                  Volver
+                </Button>
+              </>
+            )}
           </Flex>
         </Box>
       )}

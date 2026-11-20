@@ -8,6 +8,7 @@ import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { ETIQUETA_RESULTADO, partesDeTarea, type Parte } from "../../lib/partes";
 import { useCarga } from "../../lib/useCarga";
 import { TACTIL } from "../../panel/cuadrillas/partes";
+import { MiniaturaAdjunto } from "./AdjuntosParte";
 
 const VISIBLES = 5;
 
@@ -52,6 +53,13 @@ function FilaParte({ p }: { p: Parte }) {
           <Text fontSize="sm" mt={1} whiteSpace="pre-wrap" overflowWrap="anywhere">
             {p.observacion}
           </Text>
+        )}
+        {(p.adjuntos ?? []).length > 0 && (
+          <Flex gap={2} mt={2} wrap="wrap" role="group" aria-label={`Evidencia del parte ${p.id}`}>
+            {(p.adjuntos ?? []).map((ad) => (
+              <MiniaturaAdjunto key={ad.n} tareaId={p.tarea_id} parteId={p.id} adjunto={ad} />
+            ))}
+          </Flex>
         )}
       </Box>
     </Flex>
