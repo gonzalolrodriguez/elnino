@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { CaudalGlofas } from "../caudal/CaudalGlofas";
+import { CabeceraPublica } from "../components/CabeceraPublica";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
 import { UMBRAL_ALERTA } from "../datos/kit";
@@ -37,14 +38,14 @@ function Seccion({ id, titulo, children }: { id: string; titulo: string; childre
 function Hecho({ valor, texto, fuente }: { valor: string; texto: string; fuente: string }) {
   return (
     <Box py={4} borderBottom="1px solid" borderColor="borde" display="grid" gridTemplateColumns={{ base: "1fr", md: "9.5rem minmax(0, 1fr)" }} gap={{ base: 1, md: 6 }} maxW="48rem">
-      <Text textStyle="cifra" fontSize="2xl">
+      <Text textStyle="cifraMedia">
         {valor}
       </Text>
       <Box>
         <Text>{texto}</Text>
         <Box mt={2} display="flex" gap={2} alignItems="center" flexWrap="wrap">
           <Insignia categoria="DOCUMENTO DE REFERENCIA" />
-          <Text as="span" fontSize="xs" color="textoSuave">
+          <Text as="span" textStyle="microdato">
             {fuente}
           </Text>
         </Box>
@@ -66,13 +67,13 @@ function Indice() {
       pl={{ lg: 4 }}
       mb={{ base: 6, lg: 0 }}
     >
-      <Text fontWeight={700} fontSize="sm" mb={2}>
+      <Text textStyle="rotulo" color="texto" mb={2}>
         En esta página
       </Text>
       <Box as="ul" listStyleType="none" m={0} p={0} display={{ base: "grid", sm: "grid", lg: "block" }} gridTemplateColumns={{ base: "1fr", sm: "1fr 1fr" }} columnGap={6}>
         {TEMAS.map((t) => (
           <li key={t.id}>
-            <Link href={`#${t.id}`} display="block" py={1.5} fontSize="sm" textDecoration="none" color="textoSuave" _hover={{ color: "primario", textDecoration: "underline" }}>
+            <Link href={`#${t.id}`} display="block" py={1.5} fontSize="rotulo" textDecoration="none" color="textoSuave" _hover={{ color: "primario", textDecoration: "underline" }}>
               {t.titulo}
             </Link>
           </li>
@@ -92,13 +93,11 @@ export default function Informacion() {
 
   return (
     <Layout titulo="Información">
-      <Box maxW="80rem" mx="auto">
-      <Heading as="h1" size="2xl" maxW="40rem">
-        Información para entender la crecida
-      </Heading>
-      <Text mt={4} maxW="40rem" fontSize="lg" color="pizarra.700">
-        El Niño, el río Paraguay y la lluvia local: qué es cada fenómeno, cómo se traduce en Formosa y qué dicen los datos hasta el corte del 31/10/2026.
-      </Text>
+      <Box>
+      <CabeceraPublica
+        titulo="Información para entender la crecida"
+        intro="El Niño, el río Paraguay y la lluvia local: qué es cada fenómeno, cómo se traduce en Formosa y qué dicen los datos hasta el corte del 31/10/2026."
+      />
 
       <Box mt={{ base: 6, lg: 8 }} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "13rem minmax(0, 1fr)" }} columnGap={{ lg: 10 }}>
         <Indice />
@@ -163,7 +162,7 @@ export default function Informacion() {
         </Text>
         <Hecho valor="+2,2" texto="Pico estimado del índice ONI. La probabilidad de que el ONI llegue a +2,0 °C o más es de 93 %." fuente="Pronóstico agroclimático estacional 2026/27 Formosa, CFS v2 (emisión 29/10/2026)" />
         <Hecho valor="8 de 14" texto="Campañas de años El Niño que quedaron en el tercio húmedo en Formosa; solo una cayó en el tercio seco (45 campañas analizadas). La fase ENOS cambia las probabilidades, no decide la campaña." fuente="Mismo pronóstico agroclimático (29/10/2026)" />
-        <Text mt={3} fontSize="sm" color="textoSuave" maxW="40rem">
+        <Text mt={3} textStyle="microdato" maxW="40rem">
           El INA no pronostica la altura del río más allá de 15 días: cualquier fecha de cruce de un umbral en 2027 sería un supuesto.
         </Text>
       </Seccion>

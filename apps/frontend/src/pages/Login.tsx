@@ -47,22 +47,22 @@ export default function Login() {
       <PaginaFormulario
         titulo="Ingresar"
         intro="Para ciudadanía, productores y cuentas institucionales."
-        anchoFormulario="28rem"
+        anchoFormulario="26rem"
         aside={
           <>
             <BloqueApoyo titulo="Qué encontrás adentro">
-              <Box as="dl" m={0} fontSize="sm">
-                <Text as="dt" fontWeight={700}>Ciudadanía</Text>
-                <Text as="dd" m={0} mb={2}>Tu sector, tus alertas y el centro de recepción que te corresponde.</Text>
-                <Text as="dt" fontWeight={700}>Productores</Text>
-                <Text as="dd" m={0} mb={2}>Tu establecimiento y tu hacienda declarada, para planificar el traslado.</Text>
-                <Text as="dt" fontWeight={700}>Cuentas institucionales</Text>
-                <Text as="dd" m={0}>Panel operativo o tareas de cuadrilla. Las crea el administrador: no hay autorregistro.</Text>
+              <Box as="dl" m={0}>
+                <Text as="dt" fontWeight={600}>Ciudadanía</Text>
+                <Text as="dd" m={0} mb={3} color="textoSuave">Tu sector, tus alertas y el centro de recepción que te corresponde.</Text>
+                <Text as="dt" fontWeight={600}>Productores</Text>
+                <Text as="dd" m={0} mb={3} color="textoSuave">Tu establecimiento y tu hacienda declarada, para planificar el traslado.</Text>
+                <Text as="dt" fontWeight={600}>Cuentas institucionales</Text>
+                <Text as="dd" m={0} color="textoSuave">Panel operativo o tareas de cuadrilla. Las crea el administrador: no hay autorregistro.</Text>
               </Box>
             </BloqueApoyo>
             <Box borderTop="1px solid" borderColor="borde" pt={1}>
-              <Plegable titulo={<Heading as="h2" size="sm">Si no podés ingresar</Heading>}>
-                <Text fontSize="sm" pb={2}>
+              <Plegable titulo={<Heading as="h2" size="bloque">Si no podés ingresar</Heading>}>
+                <Text pb={2} color="textoSuave">
                   Después de varios intentos fallidos el acceso se bloquea un tiempo. Revisá el correo y la contraseña, y volvé a intentar
                   más tarde.
                 </Text>
@@ -77,20 +77,23 @@ export default function Login() {
             <AlertaError error={error} />
             <Campo id="email" etiqueta="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errores.email} autoComplete="username" />
             <Campo id="password" etiqueta="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} error={errores.password} autoComplete="current-password" />
-            <Button type="submit" isLoading={enviando} loadingText="Ingresando">
+            <Button type="submit" isLoading={enviando} loadingText="Ingresando" w={{ base: "100%", sm: "auto" }} alignSelf="flex-start" minW="10rem">
               Ingresar
             </Button>
-            <Text fontSize="sm">
-              ¿No tenés cuenta? Registrate como{" "}
-              <Link as={RouterLink} to="/registro/ciudadania">
-                ciudadanía
-              </Link>{" "}
-              o como{" "}
-              <Link as={RouterLink} to="/registro/productor">
-                productor
-              </Link>
-              . Las cuentas institucionales las crea el administrador.
-            </Text>
+            <Box borderTop="1px solid" borderColor="borde" pt={4}>
+              <Text fontWeight={600}>¿No tenés cuenta?</Text>
+              <Text mt={1} color="textoSuave">
+                Registrate como{" "}
+                <Link as={RouterLink} to="/registro/ciudadania">
+                  ciudadanía
+                </Link>{" "}
+                o como{" "}
+                <Link as={RouterLink} to="/registro/productor">
+                  productor
+                </Link>
+                . Las cuentas institucionales las crea el administrador.
+              </Text>
+            </Box>
           </VStack>
         </form>
         </TarjetaFormulario>

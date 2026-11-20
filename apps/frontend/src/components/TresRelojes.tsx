@@ -19,6 +19,7 @@ import {
 import { PAL } from "../estilo/paleta";
 import { fmt, fmtMiles, useMenosMovimiento } from "../lib/entorno";
 import { distanciaAUmbral, estadoCamino, fraccion, margenAntesDeAlerta, rangoDias, textoRango } from "../lib/relojes";
+import { ANCHO_CONTENEDOR, GUTTER } from "./Contenedor";
 import { Insignia } from "./Insignia";
 import { Plegable } from "./Plegable";
 
@@ -112,8 +113,6 @@ function Pie({ categorias, fuente }: { categorias: Categoria[]; fuente: string }
 
 type Props = {
   variante?: "amplia" | "compacta";
-  /** Texto corto sobre el título (solo en la variante amplia), p. ej. el nombre de la sección en la portada. */
-  sobretitulo?: string;
   /** Altura del río en metros. Por defecto, el dato del corte (31/10/2026). */
   alturaM?: number;
   /** Categoría de la altura: DATO OBSERVADO para el corte; SIMULADO si es un valor del simulador. */
@@ -123,14 +122,14 @@ type Props = {
   lluviaCategoria?: Categoria;
 };
 
-export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaCategoria = CATEGORIAS.OBSERVADO, lluviaMm, lluviaCategoria = CATEGORIAS.SIMULADO }: Props) {
+export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CATEGORIAS.OBSERVADO, lluviaMm, lluviaCategoria = CATEGORIAS.SIMULADO }: Props) {
   const amplia = variante === "amplia";
   const corte = CIFRAS_FORMOSA.find((c) => c.id === "corte");
   const altura = alturaM ?? corte?.valor ?? 5.6;
   const fechaAltura = alturaM === undefined ? corte?.fecha : undefined;
   const s4 = SECTORES_K10.find((s) => s.id === "S4");
   const margenS4 = s4 ? margenAntesDeAlerta(s4.compromiso_m, UMBRAL_ALERTA) : null;
-  const tamano = amplia ? { base: "10rem", md: "11.5rem" } : "6.25rem";
+  const tamano = amplia ? { base: "7.5rem", md: "8.5rem" } : "6.25rem";
 
   const dist = distanciaAUmbral(altura, UMBRAL_ALERTA);
   const rango = rangoDias(altura, UMBRAL_ALERTA);
@@ -153,7 +152,7 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
           etiqueta={`Reloj del río: ${fmt(altura)} m de ${fmt(UMBRAL_EVACUACION)} m de evacuación; la alerta está en ${fmt(UMBRAL_ALERTA)} m`}
           centro={
             <>
-              <Text textStyle="cifra" fontSize={amplia ? { base: "1.75rem", md: "2.1rem" } : "1.25rem"} data-testid="reloj-rio-falta">
+              <Text textStyle="cifra" fontSize={amplia ? { base: "1.4rem", md: "1.6rem" } : "1.25rem"} data-testid="reloj-rio-falta">
                 {dist.alcanzado ? "Superada" : `${fmt(dist.faltaM)} m`}
               </Text>
               <Text fontSize={amplia ? "xs" : "10px"} color="textoSuave" lineHeight={1.25}>
@@ -206,7 +205,7 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
           }
           centro={
             <>
-              <Text textStyle="cifra" fontSize={amplia ? { base: "1.75rem", md: "2.1rem" } : "1.25rem"} data-testid="reloj-barro-cifra">
+              <Text textStyle="cifra" fontSize={amplia ? { base: "1.4rem", md: "1.6rem" } : "1.25rem"} data-testid="reloj-barro-cifra">
                 {fmt(hayLluvia ? mm : LLUVIA_CORTA_TIERRA_MM, 0)} mm
               </Text>
               <Text fontSize={amplia ? "xs" : "10px"} color="textoSuave" lineHeight={1.25}>
@@ -261,7 +260,7 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
           etiqueta="Reloj del Niño: 83 % de probabilidad de un evento fuerte o muy fuerte"
           centro={
             <>
-              <Text textStyle="cifra" fontSize={amplia ? { base: "1.75rem", md: "2.1rem" } : "1.25rem"} data-testid="reloj-nino-cifra">
+              <Text textStyle="cifra" fontSize={amplia ? { base: "1.4rem", md: "1.6rem" } : "1.25rem"} data-testid="reloj-nino-cifra">
                 83 %
               </Text>
               <Text fontSize={amplia ? "xs" : "10px"} color="textoSuave" lineHeight={1.25}>
@@ -294,19 +293,17 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
       as="section"
       aria-labelledby={`titulo-relojes-${variante}`}
       data-testid={`tres-relojes-${variante}`}
-      {...(amplia
-        ? { bg: "superficie", borderY: "1px solid", borderColor: "borde" }
-        : { layerStyle: "tarjeta", mb: 5 })}
+      {...(amplia ? {} : { layerStyle: "tarjeta", mb: 5 })}
     >
-      <Box maxW={amplia ? "90rem" : undefined} mx="auto" px={amplia ? { base: 4, md: 8 } : { base: 4, md: 5 }} py={amplia ? { base: 10, md: 16 } : 4}>
+      <Box
+        maxW={amplia ? ANCHO_CONTENEDOR.lectura : undefined}
+        mx="auto"
+        px={amplia ? GUTTER : { base: 4, md: 5 }}
+        py={amplia ? { base: 8, md: 12 } : 4}
+      >
         {amplia ? (
-          <Box mb={{ base: 6, md: 10 }} maxW="40rem">
-            {sobretitulo && (
-              <Text fontSize="sm" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" mb={1}>
-                {sobretitulo}
-              </Text>
-            )}
-            <Heading as="h2" id={`titulo-relojes-${variante}`} size="xl" mb={2}>
+          <Box mb={{ base: 5, md: 8 }} maxW="40rem">
+            <Heading as="h2" id={`titulo-relojes-${variante}`} size="lg" mb={2}>
               Tres relojes corren a la vez
             </Heading>
             <Text color="textoSuave">A veces hay que evacuar con el río todavía bajo: el barro corta el camino primero. Cada reloj mide una cuenta regresiva distinta.</Text>
@@ -317,20 +314,28 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
           </Heading>
         )}
 
-        <Box display="grid" gridTemplateColumns={amplia ? { base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } : { base: "minmax(0, 1fr)", lg: "repeat(3, minmax(0, 1fr))" }} columnGap={amplia ? 0 : 4}>
+        <Box
+          display="grid"
+          gridTemplateColumns={amplia ? { base: "minmax(0, 1fr)", lg: "repeat(3, minmax(0, 1fr))" } : { base: "minmax(0, 1fr)", lg: "repeat(3, minmax(0, 1fr))" }}
+          columnGap={amplia ? 0 : 4}
+          gap={amplia ? { base: 4, lg: 5 } : undefined}
+          alignItems={amplia ? "stretch" : undefined}
+        >
           {relojes.map((r, i) => (
             <Box
               key={r.id}
               data-testid={`reloj-${r.id}`}
-              py={amplia ? { base: 6, md: 0 } : { base: 3, lg: 0 }}
-              pl={amplia ? { base: 0, md: i === 0 ? 0 : 8 } : { base: 0, lg: i === 0 ? 0 : 4 }}
-              pr={amplia ? { base: 0, md: i === 2 ? 0 : 8 } : 0}
-              borderTop={i === 0 ? "none" : { base: "1px solid", [amplia ? "md" : "lg"]: "none" }}
-              borderLeft={i === 0 ? "none" : { base: "none", [amplia ? "md" : "lg"]: "1px solid" }}
-              borderColor="borde"
-              pt={i === 0 ? 0 : undefined}
+              display={amplia ? "flex" : undefined}
+              flexDirection={amplia ? "column" : undefined}
+              {...(amplia ? { layerStyle: "tarjeta", p: { base: 5, md: 6 } } : {})}
+              py={amplia ? undefined : { base: 3, lg: 0 }}
+              pl={amplia ? undefined : { base: 0, lg: i === 0 ? 0 : 4 }}
+              borderTop={amplia ? undefined : i === 0 ? "none" : { base: "1px solid", lg: "none" }}
+              borderLeft={amplia ? undefined : i === 0 ? "none" : { base: "none", lg: "1px solid" }}
+              borderColor={amplia ? undefined : "borde"}
+              pt={!amplia && i === 0 ? 0 : undefined}
             >
-              <Flex gap={amplia ? 5 : 3} align="center" direction={amplia ? { base: "row", md: "column" } : "row"} alignItems={amplia ? { base: "center", md: "flex-start" } : "center"}>
+              <Flex gap={amplia ? 5 : 3} align="center" direction="row" alignItems="center">
                 {r.dial}
                 <Box minW={0}>
                   <Heading as="h3" size={amplia ? "md" : "xs"} mb={1}>
@@ -342,10 +347,12 @@ export function TresRelojes({ variante = "amplia", sobretitulo, alturaM, alturaC
                 </Box>
               </Flex>
               {amplia && (
-                <Box mt={4}>
+                <Box mt={4} flex="1" display="flex" flexDirection="column">
                   {r.detalle}
                   {r.extra}
-                  <Pie categorias={r.categorias} fuente={r.fuente} />
+                  <Box mt="auto">
+                    <Pie categorias={r.categorias} fuente={r.fuente} />
+                  </Box>
                 </Box>
               )}
               {!amplia && (

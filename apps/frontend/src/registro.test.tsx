@@ -97,7 +97,7 @@ describe("registro de productores", () => {
     llenarAcceso();
     escribir(/^Nombre del establecimiento/, "Establecimiento de prueba");
     fireEvent.click(screen.getByRole("button", { name: "Usar el ejemplo del sector S4" }));
-    expect(screen.getByText(/Cae en el sector S4/)).toBeInTheDocument();
+    expect(screen.getByText(/dentro del Sector S4/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Agregar hacienda" }));
     fireEvent.change(screen.getByLabelText("Categoría"), { target: { value: "vaca con cría" } });
     fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "5" } });
