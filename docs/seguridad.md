@@ -2,7 +2,7 @@
 
 > PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial
 
-Medidas implementadas en las Fases 1 a 5 (backend, web y app móvil) y su correspondencia con OWASP Top 10 (2021). Lo que aún no existe se indica en "Pendiente" al final. Las secciones están en orden cronológico: las medidas de las Fases 1 y 2 se completan con las de las Fases 3 a 5 (sección "Fases 3 a 5").
+Medidas implementadas en las Fases 1 a 5 (backend, web y app móvil) y su correspondencia con OWASP Top 10:2025 (web y API) y OWASP Mobile Top 10 2024. Lo que aún no existe se indica en "Pendiente" al final. Las secciones están en orden cronológico: las medidas de las Fases 1 y 2 se completan con las de las Fases 3 a 5 (sección "Fases 3 a 5").
 
 ## Medidas
 
@@ -27,16 +27,16 @@ Medidas implementadas en las Fases 1 a 5 (backend, web y app móvil) y su corres
 
 ## Correspondencia con OWASP Top 10:2025 (web y API)
 
-Se usa la edición 2025 (no hay una edición 2026 oficial). Estado al 19/11/2026.
+Se usa la edición 2025 (no hay una edición 2026 oficial). Estado al 20/11/2026 (ver "Auditoría del 20/11/2026").
 
 | Riesgo | Mitigación | Riesgo aceptado / pendiente |
 |---|---|---|
-| A01 Pérdida de control de acceso (incluye SSRF) | RBAC por endpoint y por recurso; altas institucionales solo por admin; denegaciones auditadas; el backend no hace solicitudes a URLs provistas por el usuario; las órdenes por WebSocket solo llegan a los mandos y a quienes viven o producen en los sectores alcanzados. | Los miembros de cuadrilla ven todos los eventos de mandos. |
-| A02 Configuración de seguridad incorrecta | Cabeceras de seguridad, CORS acotado (con `Idempotency-Key`), secretos obligatorios, `ENTORNO=produccion` oculta `/docs` y `/openapi.json` y fuerza la cookie `Secure`, la base de datos se publica solo en `127.0.0.1`, usuarios de demo solo con `SEED_DEMO=true`, tope global de cuerpo de 1 MB. | El demo local usa `COOKIE_SECURE=false` y HTTP; en producción se exige HTTPS. |
-| A03 Fallas en la cadena de suministro de software | Dependencias fijadas en `requirements.txt` y lockfiles; `maplibre-gl` llevado al parche. | Falta `pip-audit` / `pnpm audit` en la CI. |
+| A01 Pérdida de control de acceso (incluye SSRF) | RBAC por endpoint y por recurso; altas institucionales solo por admin; denegaciones auditadas; el backend no hace solicitudes a URLs provistas por el usuario; las órdenes por WebSocket solo llegan a los mandos y a quienes viven o producen en los sectores alcanzados; `/mi/*` filtra por la persona (pedidos, seguimiento y código de confirmación ajenos no aparecen); la posición de una cuadrilla vence a los 30 min y nunca se muestra después. | Los miembros de cuadrilla ven todos los eventos de mandos. |
+| A02 Configuración de seguridad incorrecta | Cabeceras de seguridad, CORS acotado (con `Idempotency-Key`), secretos obligatorios, CSP y `Referrer-Policy` en el build del portal web, `ENTORNO=produccion` oculta `/docs` y `/openapi.json` y fuerza la cookie `Secure`, la base de datos se publica solo en `127.0.0.1`, usuarios de demo solo con `SEED_DEMO=true`, tope global de cuerpo de 1 MB. | El demo local usa `COOKIE_SECURE=false` y HTTP; en producción se exige HTTPS. |
+| A03 Fallas en la cadena de suministro de software | Dependencias fijadas en `requirements.txt` y lockfiles; `maplibre-gl` llevado al parche; `pip-audit` y `pnpm audit` corridos a mano el 20/11/2026 y FastAPI/Starlette actualizados (ver auditoría). | Falta automatizarlos en la CI; avisos moderados de `react-router` 6 sin explotación posible en esta app y de `glob`/`minimatch` solo en herramientas de prueba. |
 | A04 Fallas criptográficas | Argon2id; AES-GCM con AAD; JWT con secreto obligatorio; refresh guardado como hash SHA-256; cookies `HttpOnly`/`Secure`/`SameSite=Strict`. | Tráfico HTTP sin cifrar en el demo de LAN (ver APK). |
 | A05 Inyección | ORM con parámetros enlazados; SQL de ruteo armado solo con constantes e ids enteros validados; validación estricta de entradas con vocabularios cerrados (especies, categorías, sectores). | - |
-| A06 Diseño inseguro | Bloqueo temporal, rate limiting por IP, cuota blanda de solicitudes (20/hora) y tope de fotos por persona, rotación y revocación de sesiones, idempotencia (solicitudes, órdenes, mensajes de canal), consentimiento informado, mínimo de datos personales, sin CAPTCHA ni pasos extra para la ciudadanía. | - |
+| A06 Diseño inseguro | Bloqueo temporal, rate limiting por IP y por persona en los endpoints autenticados de uso frecuente, cuota blanda de solicitudes (20/hora) y tope de fotos por persona, rotación y revocación de sesiones, idempotencia (solicitudes, órdenes, mensajes de canal), consentimiento informado, mínimo de datos personales, sin CAPTCHA ni pasos extra para la ciudadanía. | - |
 | A07 Fallas de autenticación | Política de contraseñas; **401 genérico** para correo inexistente, contraseña errónea, cuenta inactiva o bloqueada (sin enumeración); bloqueo por par cuenta+IP y por cuenta; tiempos igualados; refresh rotativo con detección de reutilización y gracia de un solo uso ligada al cliente; logout que revoca la familia y cierra los WebSockets. | Sin MFA para usuarios institucionales (decisión de producto pendiente). El registro responde 409 si el correo existe. |
 | A08 Fallas de integridad de software y datos | Bitácora con hash encadenado verificable (`/admin/resumen` informa su integridad); migraciones versionadas; firma HMAC de los webhooks de canales comparada en bytes. | El truncamiento de las últimas filas de la bitácora no se detecta. |
 | A09 Fallas de registro y alertas | Eventos de autenticación, administración y acceso a datos personales en la bitácora; los correos inexistentes se auditan agregados (una fila por IP y minuto) para no serializar el sistema; `/admin/resumen` expone bloqueos y la verificación de la cadena. | No hay alertas automáticas hacia una persona. |
@@ -69,6 +69,25 @@ Se usa la edición 2025 (no hay una edición 2026 oficial). Estado al 19/11/2026
 | WebSocket | Envíos concurrentes con plazo de 5 s, marcos binarios ignorados, `orden` solo a los alcanzados, logout cierra los sockets del usuario. | `app/core/eventos.py`, `app/api/v1/ws.py` |
 | Despliegue | `SEED_DEMO` (apagado por defecto), `ENTORNO=produccion`, base en `127.0.0.1`. | `docker-compose.yml`, `app/config/settings.py` |
 
+## Auditoría del 20/11/2026
+
+Revisión de los cambios posteriores a `v1.0-entrega` (panel ciudadano, seguimiento de la cuadrilla, motor de evacuación) más `pip-audit` y `pnpm audit --prod`.
+
+| # | Hallazgo | Resolución | Dónde |
+|---|---|---|---|
+| M1 | La última posición de una cuadrilla no vencía: si dejaba de compartir con la tarea en curso, quien pidió ayuda y el panel seguían viendo coordenadas viejas. | Vence a los `posicion_vencida_minutos` (30, SUPUESTO): no se muestra a nadie y se purga en la siguiente lectura (ver "Seguimiento de la cuadrilla"). | `app/servicios/seguimiento.py` |
+| M2 | La app guardaba pedidos, sector, confirmaciones y destinos en SQLite y solo los borraba al cerrar sesión a mano; si el servidor rechazaba el refresh (401/403) quedaban en el teléfono. | `limpiarSesionLocal` borra la caché personal y la cola ya resuelta en todo fin de sesión (ver M9 móvil). | `apps/mobile/src/lib/limpiezaLocal.ts` |
+| M3 | Las teselas de `tile.openstreetmap.org` revelan IP y zona; el portal no tenía CSP ni política de referer. | CSP en el build, `strict-origin-when-cross-origin` y aviso en el mapa de registro (ver "Portal web: CSP y teselas"). | `apps/frontend/vite.config.ts`, `src/lib/csp.ts`, `index.html` |
+| B1 | Sin límite de frecuencia en endpoints autenticados (`/mi/*` se consulta cada 20 s). | Límite por persona: `RATE_LIMIT_USUARIO` (300/min) y `RATE_LIMIT_SIMULACION` (120/min). `/mi/seguimiento` y `/cuadrillas/posiciones` leen roles y posiciones por lote (sin N+1). | `app/core/limitador.py` |
+| B2 | Dos primeros envíos simultáneos de posición daban 500 por clave duplicada. | `INSERT ... ON CONFLICT DO NOTHING`; el perdedor recibe 429. | `app/servicios/seguimiento.py` |
+| B3 | Saltos de posición inverosímiles no se rechazan. | Documentado, no implementado (riesgo de bloquear a la cuadrilla por saltos del GPS). | "Seguimiento de la cuadrilla" |
+| B4 | El id de sector del SQL de ruteo se validaba con `match` y `$` (admite un salto de línea final). | `fullmatch`, con prueba. | `app/servicios/ruteo.py` |
+| D1 | `starlette` 0.41.3: PYSEC-2026-1941, -1942, -161, -2280, -2281, -248 y -249 (DoS por formularios y por `Range`, `Host`/ruta sin validar al reconstruir `request.url`, SSRF por rutas UNC en `StaticFiles` de Windows). | FastAPI 0.115.6 → **0.165.0** y Starlette → **1.10.0**; `pip-audit`: sin hallazgos; pytest completo en verde. Hay que reinstalar el entorno (`pip install -r requirements-dev.txt`). | `apps/backend/requirements.txt` |
+| D2 | `react-router` 6.30.6: open redirect con barra invertida en `<Link>`/`useNavigate` (GHSA-wrjc-x8rr-h8h6) e inyección de constructor en `deserializeErrors` (GHSA-337j-9hxr-rhxg); se corrigen solo en 7.18. | **No explotable aquí:** la app usa `BrowserRouter` (sin router de datos, SSR ni `hydrationData`, que es lo único que llama a `deserializeErrors`); el único destino variable (`desde` del login) sale de `location.pathname` de una ruta protegida, que siempre empieza con `/comando`, `/mi-cuenta`, `/cuadrilla` o `/admin`. Igual se valida que sea una ruta interna (`src/auth/rutaInterna.ts`). La migración a v7 queda pendiente. | `apps/frontend/src/pages/Login.tsx` |
+| D3 | `glob` (GHSA-3g3m-2fjr-6pw4) y `minimatch` (GHSA-g3hv-75wg-m249), moderados. | Solo en la cadena de `jest` (herramientas de prueba); no viajan en el build web ni en el APK. Aceptado. | — |
+
+Revisión propia de control de acceso (sin hallazgos nuevos): `/mi/pedidos`, `/mi/seguimiento` y `/mi/confirmaciones` filtran por solicitante (el código ajeno da 404 sin oráculo); `POST /cuadrillas/mi-posicion` exige rol `cuadrilla` y una tarea en curso de **su** cuadrilla; `GET /cuadrillas/posiciones` solo mandos; el evento WebSocket `posicion_cuadrilla` solo llega a operador, decisor y admin y no lleva coordenadas; la respuesta SMS `PARCIAL <código>` sigue las mismas reglas (teléfono registrado, vigencia, límites y respuesta única) que `SI`/`NO`/`PROBLEMA`.
+
 ## Decisiones y límites conocidos
 
 - **Enumeración de correos:** el registro responde 409 si el correo existe. Es un compromiso de usabilidad; el login no distingue entre correo inexistente, contraseña errónea o cuenta bloqueada (siempre el mismo 401; el 429 es solo del limitador por IP).
@@ -79,7 +98,7 @@ Se usa la edición 2025 (no hay una edición 2026 oficial). Estado al 19/11/2026
 
 ## Pendiente de la Fase 1
 
-Resuelto: límites de tamaño y tipo de los adjuntos (ver "Fases 3 a 5"). Sigue pendiente: `pip-audit` y análisis estático en CI e inscripción de la base ante la AAIP (fuera del alcance del MVP).
+Resuelto: límites de tamaño y tipo de los adjuntos (ver "Fases 3 a 5"); `pip-audit` corrido a mano el 20/11/2026. Sigue pendiente: auditoría y análisis estático en CI e inscripción de la base ante la AAIP (fuera del alcance del MVP).
 
 
 ## Fase 2: correcciones de la revisión de la Fase 1 y nuevas medidas
@@ -186,7 +205,10 @@ Correspondencia adicional con OWASP: A04 (idempotencia y límites de adjuntos), 
 ## Pendiente (documentado como hoja de ruta)
 
 - MFA para usuarios institucionales y desbloqueo por OTP o correo (ver `docs/decisiones.md`).
-- `pip-audit`, `pnpm audit` y análisis estático en la integración continua.
+- `pip-audit`, `pnpm audit` y análisis estático en la integración continua (el 20/11/2026 se corrieron a mano).
+- Migrar a `react-router` 7.18 o superior (avisos moderados no explotables hoy; ver auditoría del 20/11/2026).
+- Cifrar la base SQLite de la app (SQLCipher) y servir teselas de mapa propias.
+- Descartar saltos de posición inverosímiles de la cuadrilla.
 - Límite de conexiones WebSocket por usuario.
 - Almacenamiento del limitador en Redis si se despliega con más de un proceso.
 - Anclar periódicamente el último hash de la bitácora de accesos fuera de la base.
