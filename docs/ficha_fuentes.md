@@ -198,3 +198,15 @@ Fuentes externas consultadas en la Fase 6: ninguna nueva (solo los archivos del 
 | Prefectura Naval Argentina (emergencia náutica) | 106 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
 | Policía / emergencias | 911 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
 | Emergencias ambientales | 105 | https://www.argentina.gob.ar/tema/emergencias | Documento de referencia | 19/11/2026 |
+
+## Seguimiento de la cuadrilla ("Cuadrilla en camino")
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría | Fecha |
+|---|---|---|---|---|
+| Velocidad media de la cuadrilla para estimar la llegada | 40 km/h | Supuesto `velocidad_cuadrilla_kmh` (`supuestos.yaml`); sin fuente pública, mezcla pavimento, ripio y tierra | Simulado (SUPUESTO) | 20/11/2026 |
+| Factor de desvío de la distancia por calle | 1,3 | Supuesto `factor_desvio` (`supuestos.yaml`, ya citado en el ruteo) | Simulado (SUPUESTO) | 20/11/2026 |
+| Minutos para avisar que la posición es vieja | 5 min | Supuesto `posicion_vieja_minutos` (`supuestos.yaml`) | Simulado (SUPUESTO) | 20/11/2026 |
+| Intervalo mínimo entre posiciones de una cuadrilla | 10 s | Supuesto `intervalo_min_posicion_s` (`supuestos.yaml`); límite de frecuencia del backend | Simulado (SUPUESTO) | 20/11/2026 |
+| Intervalo de envío de la posición desde la app y de refresco de las pantallas | 30 s (envío) y 20 s (refresco) | Decisión de diseño del equipo, no un dato | Simulado (SUPUESTO) | 20/11/2026 |
+| Distancia y llegada estimada que ve el solicitante ("unos 12 min") | Calculadas con los supuestos anteriores | Posición compartida por la cuadrilla (SIMULADO en la demo); es una estimación, no una promesa | Simulado (SUPUESTO) | 20/11/2026 |
+

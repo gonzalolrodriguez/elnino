@@ -406,6 +406,24 @@ class Tarea(Base):
     actualizado_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
 
 
+class PosicionCuadrilla(Base):
+    """Última posición compartida por una cuadrilla (una sola fila por cuadrilla, sin historial).
+
+    Privacidad: se pisa en cada envío, se borra cuando la cuadrilla ya no tiene tareas en curso y
+    solo la leen el solicitante de la tarea en curso y los roles operativos.
+    """
+
+    __tablename__ = "posiciones_cuadrilla"
+
+    cuadrilla_id: Mapped[int] = mapped_column(
+        ForeignKey("cuadrillas.id", ondelete="CASCADE"), primary_key=True
+    )
+    geom = mapped_column(_punto())
+    precision_m: Mapped[float | None] = mapped_column(Float)
+    registrada_en: Mapped[datetime] = mapped_column(_TZ, default=ahora)
+    categoria: Mapped[str] = mapped_column(String(30), default="SIMULADO")
+
+
 class ConstanciaTarea(Base):
     """Constancia de cierre de una tarea de evacuación: destino, personas, animales y fotos."""
 

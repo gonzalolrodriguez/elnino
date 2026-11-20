@@ -1981,6 +1981,107 @@
         ]
       }
     },
+    "/api/v1/cuadrillas/mi-posicion": {
+      "post": {
+        "tags": [
+          "seguimiento"
+        ],
+        "summary": "Compartir Posicion",
+        "operationId": "compartir_posicion_api_v1_cuadrillas_mi_posicion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PosicionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Compartir Posicion Api V1 Cuadrillas Mi Posicion Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mi/seguimiento": {
+      "get": {
+        "tags": [
+          "seguimiento"
+        ],
+        "summary": "Mi Seguimiento",
+        "operationId": "mi_seguimiento_api_v1_mi_seguimiento_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Mi Seguimiento Api V1 Mi Seguimiento Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cuadrillas/posiciones": {
+      "get": {
+        "tags": [
+          "seguimiento"
+        ],
+        "summary": "Posiciones",
+        "operationId": "posiciones_api_v1_cuadrillas_posiciones_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Posiciones Api V1 Cuadrillas Posiciones Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/solicitudes": {
       "post": {
         "tags": [
@@ -4242,6 +4343,42 @@
           "fundamento"
         ],
         "title": "OrdenIn"
+      },
+      "PosicionIn": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "precision_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision M"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "PosicionIn"
       },
       "Punto": {
         "properties": {
