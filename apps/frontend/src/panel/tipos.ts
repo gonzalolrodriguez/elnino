@@ -172,9 +172,38 @@ export type Metricas = {
   camiones_jaula_necesarios: number;
   tiempo_primer_sector_min: number | null;
   tiempo_total_min: number | null;
-  accesos_vulnerables_usados: string[];
+  accesos_vulnerables_usados: number;
+  sectores_no_alcanzan?: number;
+  sectores_justos?: number;
+  sectores_ya_comprometidos?: number;
+  personas_minuto?: number;
+  metodo_tiempos?: Record<string, number>;
   faltantes: Record<string, unknown>;
 };
+
+export type Veredicto = "alcanza" | "justo" | "no_alcanza" | "ya_comprometido" | "sin_estimacion";
+
+export type FactibilidadDetalle = {
+  veredicto: Veredicto;
+  plazo_minimo_h: number | null;
+  plazo_maximo_h: number | null;
+  limitante: "rio" | "ventana_seca" | null;
+  tiempo_para_completar_h: number | null;
+  holgura_h: number | null;
+  iniciar_antes_de_h: number | null;
+  explicacion: string;
+};
+
+export type Factibilidad = {
+  personas: FactibilidadDetalle;
+  ganado?: FactibilidadDetalle;
+  margen_seguridad_fraccion: number;
+  supuestos: string[];
+  pronostico_lluvia?: { mm: number; horas: number; categoria: Categoria };
+  categoria: Categoria;
+};
+
+export type PronosticoLluvia = { mm: number; horas: number };
 
 export type PlanSector = {
   id: string;
@@ -190,7 +219,15 @@ export type PlanSector = {
     dias_hasta_compromiso_maximo: number | null;
     supuesto: string;
   } & Record<string, unknown>;
-  traslado_personas: { vehiculo: string; superficie_acceso: string; viajes: number };
+  factibilidad?: Factibilidad;
+  traslado_personas: {
+    vehiculo: string;
+    superficie_acceso: string;
+    viajes: number;
+    tiempo_inicio_min?: number | null;
+    tiempo_acumulado_min?: number | null;
+    metodo_tiempo?: string[];
+  };
   asignacion_personas: { centro_id: number; centro: string; cantidad: number }[];
   personas_sin_lugar: number;
   asignacion_animales: { centro_id: number; centro: string; cantidad: number }[];
@@ -203,6 +240,7 @@ export type PlanSector = {
 export type Plan = {
   orden_sectores: string[];
   centros_excluidos: number[];
+  centros_descartados?: { id: number; nombre: string | null; motivo: string }[];
   metricas: Metricas;
   sectores: PlanSector[];
 };

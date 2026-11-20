@@ -20,6 +20,7 @@ import type {
   Notificacion,
   Lluvia,
   Orden,
+  PronosticoLluvia,
   Puesto,
   Recomendacion,
   ResumenAdmin,
@@ -61,10 +62,13 @@ export const api = {
     solicitar<unknown>(`/accesos/${id}`, { ...a, metodo: "PATCH", cuerpo: { transitable, motivo: transitable ? null : motivo } }),
   centros: () => solicitar<{ centros: Centro[] }>("/centros", a),
   escenario: (e: EntradaEscenario) => solicitar<Escenario>("/simulacion/escenario", { ...a, cuerpo: e }),
-  recomendacion: (e: EntradaEscenario, prioridad: "riesgo" | "poblacion") =>
-    solicitar<Recomendacion>("/simulacion/recomendacion", { ...a, cuerpo: { ...e, prioridad } }),
-  alternativas: (e: EntradaEscenario, editable?: EditableAlternativa) =>
-    solicitar<Alternativas>("/simulacion/alternativas", { ...a, cuerpo: { ...e, ...(editable ? { editable } : {}) } }),
+  recomendacion: (e: EntradaEscenario, prioridad: "riesgo" | "poblacion", pronostico?: PronosticoLluvia) =>
+    solicitar<Recomendacion>("/simulacion/recomendacion", { ...a, cuerpo: { ...e, prioridad, ...(pronostico ? { pronostico_lluvia: pronostico } : {}) } }),
+  alternativas: (e: EntradaEscenario, editable?: EditableAlternativa, pronostico?: PronosticoLluvia) =>
+    solicitar<Alternativas>("/simulacion/alternativas", {
+      ...a,
+      cuerpo: { ...e, ...(editable ? { editable } : {}), ...(pronostico ? { pronostico_lluvia: pronostico } : {}) },
+    }),
   ruteo: (c: ConsultaRuta) => solicitar<Ruta>("/ruteo", { ...a, cuerpo: c }),
   ganaderia: (c: unknown) => solicitar<CalculoGanadero>("/ganaderia/calculo", { ...a, cuerpo: c }),
   cuadrillas: () => solicitar<{ cuadrillas: Cuadrilla[] }>("/cuadrillas", a),

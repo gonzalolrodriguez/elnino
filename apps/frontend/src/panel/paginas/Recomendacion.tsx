@@ -6,7 +6,7 @@ import { Insignia } from "../../components/Insignia";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
-import type { Alternativas, Plan, PlanSector, Recomendacion } from "../tipos";
+import type { Alternativas, FactibilidadDetalle, Plan, PlanSector, PronosticoLluvia, Recomendacion, Veredicto } from "../tipos";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import { COLOR_ESTADO, fmtDias, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
@@ -24,6 +24,65 @@ export function fmtValor(v: unknown): string {
     return partes.length ? partes.join("; ") : "ninguno";
   }
   return String(v);
+}
+
+export const NOMBRE_VEREDICTO: Record<Veredicto, string> = {
+  alcanza: "alcanza a tiempo",
+  justo: "llega justo",
+  no_alcanza: "no alcanza",
+  ya_comprometido: "ya comprometido: emergencia",
+  sin_estimacion: "sin estimación",
+};
+
+const COLOR_VEREDICTO: Record<Veredicto, { scheme: string; variant: "solid" | "subtle" | "outline" }> = {
+  alcanza: { scheme: "green", variant: "subtle" },
+  justo: { scheme: "orange", variant: "subtle" },
+  no_alcanza: { scheme: "red", variant: "solid" },
+  ya_comprometido: { scheme: "red", variant: "outline" },
+  sin_estimacion: { scheme: "gray", variant: "outline" },
+};
+
+const NOMBRE_METODO: Record<string, string> = {
+  red_vial: "por la red vial (OSM)",
+  aproximado: "aproximado (línea recta × desvío)",
+  lancha_linea_recta: "en lancha (línea recta)",
+  arreo_aproximado: "arreo a pie (aproximado)",
+};
+
+function fmtH(h: number | null | undefined): string {
+  if (h === null || h === undefined) return "sin dato";
+  return h < 48 ? `${fmtNum(h, 1)} h` : `${fmtNum(h / 24, 1)} días`;
+}
+
+/** Veredicto de factibilidad con texto (nunca solo color) y su explicación. */
+export function LineaFactibilidad({ titulo, f }: { titulo: string; f: FactibilidadDetalle }) {
+  const c = COLOR_VEREDICTO[f.veredicto];
+  const plazo =
+    f.plazo_minimo_h === null
+      ? "sin plazo estimado"
+      : f.plazo_minimo_h === f.plazo_maximo_h
+        ? fmtH(f.plazo_minimo_h)
+        : `${fmtH(f.plazo_minimo_h)} a ${fmtH(f.plazo_maximo_h)}`;
+  return (
+    <Box fontSize="sm" mt={1} data-testid={`factibilidad-${titulo}`}>
+      <Flex gap={2} align="center" wrap="wrap">
+        <strong>¿Alcanza el tiempo? ({titulo}):</strong>
+        <Badge colorScheme={c.scheme} variant={c.variant}>
+          {NOMBRE_VEREDICTO[f.veredicto]}
+        </Badge>
+      </Flex>
+      {f.veredicto !== "ya_comprometido" && (
+        <Text fontSize="xs">
+          Plazo: {plazo}
+          {f.limitante === "ventana_seca" ? " (lo fija la lluvia prevista: ventana seca)" : " (río, proyección lineal)"} · termina en {fmtH(f.tiempo_para_completar_h)}
+          {f.iniciar_antes_de_h !== null && f.veredicto !== "sin_estimacion" ? ` · iniciar antes de ${fmtH(Math.max(f.iniciar_antes_de_h, 0))}` : ""}.
+        </Text>
+      )}
+      <Text fontSize="xs" color="textoSuave">
+        {f.explicacion}
+      </Text>
+    </Box>
+  );
 }
 
 function TarjetaSector({ s }: { s: PlanSector }) {
@@ -50,9 +109,15 @@ function TarjetaSector({ s }: { s: PlanSector }) {
       <Text fontSize="sm">
         <strong>Ventana hasta el compromiso:</strong> {s.ventana.ya_comprometido ? "ya comprometido" : fmtDias(s.ventana.dias_hasta_compromiso_minimo, s.ventana.dias_hasta_compromiso_maximo)} (proyección lineal, SUPUESTO).
       </Text>
+      {s.factibilidad && <LineaFactibilidad titulo="personas" f={s.factibilidad.personas} />}
+      {s.factibilidad?.ganado && <LineaFactibilidad titulo="ganado" f={s.factibilidad.ganado} />}
       <Text fontSize="sm">
-        <strong>Traslado:</strong> {s.traslado_personas.vehiculo}, {fmtNum(s.traslado_personas.viajes)} viajes por acceso {s.traslado_personas.superficie_acceso}.
+        <strong>Traslado:</strong> {s.traslado_personas.vehiculo}, {fmtNum(s.traslado_personas.viajes)} viajes por acceso {s.traslado_personas.superficie_acceso ?? "ninguno (aislado)"}.
         {s.camiones_jaula > 0 ? ` ${s.camiones_jaula} camiones jaula.` : ""}
+        {s.traslado_personas.metodo_tiempo && s.traslado_personas.metodo_tiempo.length > 0
+          ? ` Tiempos ${s.traslado_personas.metodo_tiempo.map((m) => NOMBRE_METODO[m] ?? m).join(" y ")}.`
+          : ""}
+        {s.traslado_personas.tiempo_inicio_min ? ` Empieza a los ${fmtNum(s.traslado_personas.tiempo_inicio_min)} min, cuando se libera la flota.` : ""}
       </Text>
       <Text fontSize="sm">
         <strong>Centros:</strong> {s.asignacion_personas.map((a) => `${a.centro} (${fmtNum(a.cantidad)})`).join(", ") || "sin asignación"}.
@@ -79,11 +144,105 @@ function ResumenPlan({ p }: { p: Plan }) {
       <Text>Con lugar: <strong>{fmtNum(m.personas_evacuadas)}</strong></Text>
       <Text>Sin lugar: <strong>{fmtNum(m.personas_sin_lugar)}</strong></Text>
       <Text>Camiones jaula: <strong>{fmtNum(m.camiones_jaula_necesarios)}</strong></Text>
+      {m.sectores_no_alcanzan !== undefined && (
+        <Text>
+          Sectores que no alcanzan: <strong>{fmtNum(m.sectores_no_alcanzan)}</strong>
+        </Text>
+      )}
+      {m.sectores_justos !== undefined && (
+        <Text>
+          Sectores que llegan justo: <strong>{fmtNum(m.sectores_justos)}</strong>
+        </Text>
+      )}
+      <Text>
+        Tiempo total: <strong>{m.tiempo_total_min === null ? "sin dato" : `${fmtNum(m.tiempo_total_min)} min`}</strong>
+      </Text>
+      {(p.centros_descartados ?? []).length > 0 && (
+        <Box gridColumn="1 / -1" data-testid="centros-descartados">
+          <Text fontWeight={600}>Centros descartados en este escenario:</Text>
+          {(p.centros_descartados ?? []).map((c) => (
+            <Text key={c.id} fontSize="xs">
+              {c.nombre ?? `Centro ${c.id}`}: {c.motivo}
+            </Text>
+          ))}
+        </Box>
+      )}
     </SimpleGrid>
   );
 }
 
-function BloqueRecomendacion() {
+/** Lluvia prevista SIMULADA para evaluar la ventana seca (opcional). */
+function BloquePronostico({ valor, onCambio }: { valor: PronosticoLluvia | null; onCambio: (p: PronosticoLluvia | null) => void }) {
+  const [activo, setActivo] = useState(valor !== null);
+  const [mm, setMm] = useState(valor ? String(valor.mm) : "100");
+  const [horas, setHoras] = useState(valor ? String(valor.horas) : "24");
+  const nMm = Number(mm.replace(",", "."));
+  const nHoras = Number(horas.replace(",", "."));
+  const valido = nMm > 0 && nMm <= 1000 && nHoras > 0 && nHoras <= 720;
+
+  function actualizar(a: boolean, m: number, h: number) {
+    onCambio(a && m > 0 && m <= 1000 && h > 0 && h <= 720 ? { mm: m, horas: h } : null);
+  }
+
+  return (
+    <Seccion titulo="Ventana seca: lluvia prevista" categoria="SIMULADO" id="sec-pronostico">
+      <Text fontSize="sm" mb={2}>
+        Opcional. Si la lluvia prevista deja intransitable el acceso que usa un sector (tierra desde 30 mm, ripio desde 80 mm, SUPUESTO), el plazo de ese sector pasa a ser la hora de esa lluvia. No es un pronóstico real.
+      </Text>
+      <Flex gap={3} align="flex-end" wrap="wrap">
+        <Checkbox
+          size="sm"
+          isChecked={activo}
+          onChange={(e) => {
+            setActivo(e.target.checked);
+            actualizar(e.target.checked, nMm, nHoras);
+          }}
+        >
+          Simular lluvia prevista
+        </Checkbox>
+        <FormControl w="9rem" isDisabled={!activo} isInvalid={activo && !(nMm > 0 && nMm <= 1000)}>
+          <FormLabel htmlFor="pron-mm" fontSize="sm" mb={0}>
+            Milímetros
+          </FormLabel>
+          <Input
+            id="pron-mm"
+            size="sm"
+            bg="superficie"
+            inputMode="decimal"
+            value={mm}
+            onChange={(e) => {
+              setMm(e.target.value);
+              actualizar(activo, Number(e.target.value.replace(",", ".")), nHoras);
+            }}
+          />
+        </FormControl>
+        <FormControl w="9rem" isDisabled={!activo} isInvalid={activo && !(nHoras > 0 && nHoras <= 720)}>
+          <FormLabel htmlFor="pron-horas" fontSize="sm" mb={0}>
+            Dentro de (horas)
+          </FormLabel>
+          <Input
+            id="pron-horas"
+            size="sm"
+            bg="superficie"
+            inputMode="decimal"
+            value={horas}
+            onChange={(e) => {
+              setHoras(e.target.value);
+              actualizar(activo, nMm, Number(e.target.value.replace(",", ".")));
+            }}
+          />
+        </FormControl>
+      </Flex>
+      {activo && !valido && (
+        <Text fontSize="xs" color="red.600" mt={1} role="alert">
+          Indicá entre 0 y 1.000 mm y entre 0 y 720 horas (mayores que cero).
+        </Text>
+      )}
+    </Seccion>
+  );
+}
+
+function BloqueRecomendacion({ pronostico }: { pronostico: PronosticoLluvia | null }) {
   const { entrada } = useEscenario();
   const [prioridad, setPrioridad] = useState<"riesgo" | "poblacion">("riesgo");
   const [r, setR] = useState<Recomendacion | null>(null);
@@ -94,7 +253,7 @@ function BloqueRecomendacion() {
     setCargando(true);
     setError(null);
     try {
-      setR(await api.recomendacion(entrada, prioridad));
+      setR(await api.recomendacion(entrada, prioridad, pronostico ?? undefined));
     } catch (e) {
       setError(e);
     } finally {
@@ -162,7 +321,7 @@ function BloqueRecomendacion() {
   );
 }
 
-function BloqueComparador() {
+function BloqueComparador({ pronostico }: { pronostico: PronosticoLluvia | null }) {
   const { entrada } = useEscenario();
   const centros = useCarga(() => api.centros());
   const [nombre, setNombre] = useState("");
@@ -180,7 +339,9 @@ function BloqueComparador() {
         .split(/[\s,]+/)
         .map((x) => x.trim().toUpperCase())
         .filter(Boolean);
-      setRes(await api.alternativas(entrada, { nombre: nombre.trim() || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: excluidos }));
+      setRes(
+        await api.alternativas(entrada, { nombre: nombre.trim() || undefined, orden_sectores: ids.length ? ids : undefined, centros_excluidos: excluidos }, pronostico ?? undefined),
+      );
     } catch (e) {
       setError(e);
     } finally {
@@ -268,7 +429,7 @@ function BloqueComparador() {
             </Table>
           </TablaDesplazable>
           <Text fontSize="xs" color="textoSuave" mt={2}>
-            Tiempos con flota compartida y velocidades por superficie (SUPUESTO). Cada alternativa quedó guardada con el snapshot del escenario.
+            Tiempos por la red vial cuando está cargada (si no, aproximados); cada tipo de vehículo atiende a los sectores en el orden de la alternativa y los tipos distintos trabajan en paralelo. Velocidades por superficie: SUPUESTO. Cada alternativa quedó guardada con el snapshot del escenario.
           </Text>
         </Box>
       )}
@@ -277,13 +438,15 @@ function BloqueComparador() {
 }
 
 export default function PaginaRecomendacion() {
+  const [pronostico, setPronostico] = useState<PronosticoLluvia | null>(null);
   return (
     <>
       <Heading as="h1" size="lg" mb={4}>
         Recomendación y alternativas
       </Heading>
-      <BloqueRecomendacion />
-      <BloqueComparador />
+      <BloquePronostico valor={pronostico} onCambio={setPronostico} />
+      <BloqueRecomendacion pronostico={pronostico} />
+      <BloqueComparador pronostico={pronostico} />
     </>
   );
 }
