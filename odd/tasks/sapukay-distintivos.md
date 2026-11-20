@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | S1 | Seguimiento de la cuadrilla ("Uber del rescate"): posición de la cuadrilla en tarea en curso, tarjeta "Cuadrilla en camino" con llegada estimada para el solicitante (app y web), capa de cuadrillas en el mapa del panel | A | agente escritor en worktree (backend + app + web) | Hecha: 902ddc6, bee399f, 2ad55fa, 27564c6 (merge 09c1c41). Ver odd/tasks/seguimiento-cuadrilla.md |
 | S3 | Tres relojes (río, barro, Niño) en la landing y en el tablero del panel | A | agente escritor en worktree (web) | Hecha: 917bfe9, 9614bcc (merge cd0adf1). Animación sin ver en navegador |
-| S2 | Brújula offline hacia el centro asignado o punto de encuentro, en la app | B | agente escritor en worktree (app) | Pendiente |
+| S2 | Brújula offline hacia el centro asignado o punto de encuentro, en la app | B | agente escritor en worktree (app) | Hecha: f89fb23. Sin probar en dispositivo |
 | S4 | Inundación ilustrativa de S1–S4 en el mapa del simulador, según la altura | B | agente escritor en worktree (web) | Pendiente |
 | S5 | Integración: merge en `dev-gonzalo`, tests completos, docs (ficha técnica, ficha de fuentes), push y PR | — | coordinador | Pendiente |
 
@@ -27,3 +27,4 @@
 
 - 20/11 ~03:50: rama `dev-gonzalo` creada desde `main` (`8fd029a`). Tanda A lanzada.
 - 20/11 ~05:30: tanda A integrada en `dev-gonzalo` y pusheada. Verificación sobre el merge: web tsc/eslint limpios, vitest 217/217 (18 archivos); app tsc limpio, jest 237/237 (16 suites); backend ruff limpio, pytest 320/320. Tanda B lanzada (S2, S4).
+- 20/11: S2 hecha (app): pantalla `brujula` ("¿Hacia dónde voy?", accesible con y sin sesión desde la bienvenida y desde "Estado de tu sector"). Lógica pura en `src/lib/brujula.ts`; destinos (centro asignado de `/mi/sector` + lista de `/centros`) cacheados en SQLite con fecha (`destinosBrujula.ts`); GPS y rumbo con expo-location (`useSensoresBrujula.ts`). Sin sensor o sin calibrar: rumbo en texto y aviso. Sin cifras nuevas ni supuestos nuevos (categoría del destino tal como la informa el backend). Verificación: `tsc --noEmit` limpio, `jest` 17 suites / 250 tests en verde (13 nuevos en `brujula.test.tsx`), `expo export --platform android` arma el bundle.
