@@ -261,3 +261,17 @@ La lámina no es un modelo hidráulico: dibuja cuánto supera la altura de Puert
 | Partes de una tarea (avance, dificultad, resultado `completa`, `parcial`, `no_realizada` o `reprogramada`) y su observación | Texto libre de la cuadrilla; el autor figura por su rol operativo, nunca por nombre. Los dos partes de demostración (una dificultad sin resolver y un resultado parcial, en S4) son datos de ejemplo | Base de datos de la plataforma (`data/`, seed `sembrar_partes_demo`); no hay padrón público de partes de campo | Simulado | 20/11/2026 |
 | Cuadrillas, sus designados y la tarea actual | Rol operativo de cada integrante del catálogo `roles_operativos`; `usuario_id: null` es un rol sin persona designada | `data/simulado/cuadrillas.json` y altas hechas desde el panel (usuarios de demostración, sin personas reales) | Simulado | 20/11/2026 |
 | Novedad de un pedido (`demora`, `dificultad`, `parcial`, `no_realizada`, `reprogramada`) | Se deriva de los partes de la tarea; `demora` se activa cuando la última posición compartida supera `posicion_vencida_minutos` (30 min, SUPUESTO) | Partes de la cuadrilla y `apps/backend/app/config/supuestos.yaml` | Simulado (SUPUESTO) | 20/11/2026 |
+
+## Caudal modelado del río Paraguay (GloFAS) (`data/processed/glofas_*.json`)
+
+Descargado el 20/11/2026 con `apps/backend/scripts/descargar_glofas.py` (Open-Meteo Flood API, datos GloFAS v4 del Copernicus Emergency Management Service, CC BY 4.0, uso no comercial). Es caudal **modelado** en m³/s: no es altura de escala ni un pronóstico oficial, y no se convierte a metros porque el kit no trae una curva altura-caudal oficial. La API no permite pedir el pronóstico tal como se emitió el 31/10/2026, por eso hasta el corte solo se muestra caudal modelado (sin banda de incertidumbre). Mostrado en el Monitor del panel y en Información.
+
+| Qué muestra la herramienta | Valor | Fuente | Categoría (observado / referencia / simulado) | Fecha del dato |
+|---|---|---|---|---|
+| Caudal diario modelado en Puerto Formosa (celda 26,175° S, 58,175° O; el punto K3 es 26,183° S, 58,183° O y la API toma la celda más cercana de ~5 km) | Serie de 7.609 días, 01/01/2006 a 31/10/2026 | GloFAS v4 vía https://flood-api.open-meteo.com/v1/flood (`river_discharge`, `timezone=GMT`) | Referencia | 31/10/2026 (descarga 20/11/2026) |
+| Caudal modelado al corte | 2.083,49 m³/s | Ídem | Referencia | 31/10/2026 |
+| Pico modelado de 2016 | 15.738,83 m³/s (26/03/2016) | Ídem; máximo del año calculado sobre la serie | Referencia | 26/03/2016 |
+| Pico modelado de 2019 | 9.637,29 m³/s (07/04/2019) | Ídem; máximo del año calculado sobre la serie | Referencia | 07/04/2019 |
+| Caudal modelado en Puerto Pilcomayo (celda 25,375° S, 57,675° O) | 1.948,84 m³/s al 31/10/2026; picos 15.065,07 m³/s (26/03/2016) y 9.483,18 m³/s (07/04/2019) | Ídem | Referencia | 31/10/2026 |
+| Fechas de los picos de caudal frente a las alturas de K1 (9,81 m el 05/01/2016; 9,72 m el 02/06/2019) | No coinciden: son series distintas (modelo de ~5 km frente a lectura de escala) y se muestran por separado, con su categoría | GloFAS; K1 | Referencia / Observado | — |
+| Datos posteriores al corte (ensamble p25, p75, mín., máx., mediana, 01/11/2026 a 31/01/2027) | Apagados por defecto (`PERMITIR_DATOS_POST_CORTE=false`). Si se activan: ejecución vigente al 20/11/2026, no el pronóstico emitido el 31/10; la banda refleja solo la dispersión entre miembros del ensamble | Ídem | Referencia | Posterior al corte (descarga 20/11/2026) |
