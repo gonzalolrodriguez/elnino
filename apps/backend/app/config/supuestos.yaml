@@ -122,3 +122,11 @@ intervalo_min_posicion_s:
 posicion_vencida_minutos:
   valor: 30
   fuente: SUPUESTO (pasado este tiempo sin recibir la posición de la cuadrilla, la posición se considera vencida, no se muestra a nadie y se borra en la siguiente lectura o envío. Retención mínima, Ley 25.326)
+
+# --- Recorrido animado y modo demostración ---
+seguimiento_demo:
+  valor: true
+  fuente: "SIMULADO (modo demostración; con la tarea en curso y sin posición real, el servidor ubica al vehículo sobre la ruta según el tiempo desde el inicio de la tarea y la velocidad supuesta; la posición real siempre gana; poner false para apagarlo)"
+base_cuadrillas_simulada:
+  valor: {lon: -58.176, lat: -26.200}
+  fuente: "SUPUESTO (punto de salida SIMULADO de las cuadrillas en el ejido urbano de Formosa, entre los sectores S2 y S3; no es la ubicación de ninguna institución real)"

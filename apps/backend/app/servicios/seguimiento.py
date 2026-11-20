@@ -24,12 +24,22 @@ from app.db.modelos import (
     Tarea,
 )
 from app.domain import seguimiento as dom
+from app.servicios import ruta_seguimiento as rutas
 
 CATEGORIA = "SIMULADO"
 FUENTE = "Posición compartida por la cuadrilla desde la app (SIMULADO en la demo)"
 NOTA_ESTIMACION = (
     "Es una estimación: línea recta por un factor de desvío y una velocidad media (SUPUESTO). "
     "No es una promesa de llegada."
+)
+
+
+FUENTE_SIMULADA = (
+    "Posición SIMULADA por el servidor (modo demostración): no es la ubicación real de ninguna cuadrilla"
+)
+NOTA_SIMULADA = (
+    "Modo demostración (SIMULADO): el vehículo sale de una base simulada y avanza por la ruta según "
+    "el tiempo transcurrido y una velocidad supuesta. No es una ubicación real ni una promesa de llegada."
 )
 
 
@@ -179,6 +189,7 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
             Tarea,
             SolicitudAsistencia,
             Cuadrilla.tipo_incidente,
+            Cuadrilla.vehiculo,
             func.ST_X(SolicitudAsistencia.geom),
             func.ST_Y(SolicitudAsistencia.geom),
         )
@@ -187,8 +198,6 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
         .where(SolicitudAsistencia.solicitante_id == usuario_id, Tarea.estado == "en_curso")
         .order_by(Tarea.id.desc())
     ).all()
-    factor = float(supuesto("factor_desvio"))
-    velocidad = float(supuesto("velocidad_cuadrilla_kmh"))
     limite = float(supuesto("posicion_vieja_minutos"))
     ahora_ = ahora()
     corte = _limite_vencida()
@@ -196,36 +205,53 @@ def seguimiento_de(db: Session, usuario_id: int) -> list[dict]:
     guardadas = _posiciones(db, ids)
     roles = _roles(db, ids)
     items = []
-    for tarea, solicitud, tipo, plon, plat in filas:
+    for tarea, solicitud, tipo, vehiculo, plon, plat in filas:
         pos = guardadas.get(tarea.cuadrilla_id)
         vencida = pos is not None and pos[3] < corte
         if vencida:
             pos = None  # una posición vencida nunca se muestra
+        destino = (plon, plat) if plon is not None and plat is not None else None
+        # Modo demostración (SIMULADO): sin posición real, el móvil sale de la base simulada.
+        sim = None
+        if pos is None and destino is not None and rutas.demo_activo():
+            sim = rutas.simular(db, destino, vehiculo, tarea.actualizado_en, ahora_, tarea.id)
         item: dict = {
             "solicitud_id": solicitud.id,
             "tarea_id": tarea.id,
             "tipo_cuadrilla": tipo,
             "roles": roles[tarea.cuadrilla_id],
-            "estado": "en_camino" if pos else "asignada_sin_posicion",
+            "estado": "en_camino" if (pos or sim) else "asignada_sin_posicion",
             "posicion": None,
             "actualizada_en": None,
-            "posicion_vieja": True if vencida else None,
+            "posicion_vieja": True if vencida and sim is None else None,
             "distancia_m": None,
             "llegada_estimada_min": None,
+            "ruta": None,
+            "simulada": sim is not None,
             "categoria": CATEGORIA,
-            "fuente": FUENTE,
+            "fuente": FUENTE_SIMULADA if sim else FUENTE,
             "supuestos": supuestos_usados(),
-            "nota": NOTA_ESTIMACION,
+            "nota": NOTA_SIMULADA if sim else NOTA_ESTIMACION,
         }
-        if pos:
+        if sim:
+            item["posicion"] = {"lat": sim.lat, "lon": sim.lon, "precision_m": None}
+            item["actualizada_en"] = ahora_.isoformat()
+            item["posicion_vieja"] = False
+            item["distancia_m"] = round(sim.distancia_restante_m)
+            item["llegada_estimada_min"] = rutas.minutos(
+                sim.distancia_restante_m, sim.ruta.velocidad_kmh
+            )
+            item["ruta"] = sim.ruta.a_dict(sim.progreso, simulada=True)
+        elif pos:
             lon, lat, precision, registrada = pos
             item["posicion"] = {"lat": lat, "lon": lon, "precision_m": precision}
             item["actualizada_en"] = registrada.isoformat()
             item["posicion_vieja"] = dom.posicion_vieja(registrada, ahora_, limite)
-            if plon is not None and plat is not None:
-                est = dom.estimar(lon, lat, plon, plat, factor, velocidad)
-                item["distancia_m"] = est.distancia_m
-                item["llegada_estimada_min"] = est.llegada_estimada_min
+            if destino is not None:
+                ruta = rutas.ruta_hacia(db, (lon, lat), destino, vehiculo=vehiculo, clave=tarea.id)
+                item["distancia_m"] = round(ruta.distancia_m)
+                item["llegada_estimada_min"] = ruta.llegada_estimada_min
+                item["ruta"] = ruta.a_dict(0.0, simulada=False)
         items.append(item)
     return items
 
@@ -267,7 +293,7 @@ def posiciones_operativas(db: Session) -> list[dict]:
         if ids
         else {}
     )
-    return [
+    reales = [
         {
             "cuadrilla_id": cid,
             "nombre": nombre,
@@ -279,7 +305,56 @@ def posiciones_operativas(db: Session) -> list[dict]:
             "actualizada_en": registrada.isoformat(),
             "posicion_vieja": dom.posicion_vieja(registrada, ahora_, limite),
             "tareas_en_curso": en_curso.get(cid, 0),
+            "simulada": False,
             "categoria": CATEGORIA,
         }
         for cid, nombre, tipo, lon, lat, precision, registrada in filas
+    ]
+    if rutas.demo_activo():
+        reales += _posiciones_simuladas(db, ids, ahora_)
+        reales.sort(key=lambda p: p["cuadrilla_id"])
+    return reales
+
+
+def _posiciones_simuladas(db: Session, con_posicion_real: set[int], ahora_) -> list[dict]:
+    """Modo demostración: cuadrillas con tarea en curso y sin posición real, sobre su ruta simulada."""
+    filas = db.execute(
+        select(
+            Tarea,
+            Cuadrilla.nombre,
+            Cuadrilla.tipo_incidente,
+            Cuadrilla.vehiculo,
+            func.ST_X(SolicitudAsistencia.geom),
+            func.ST_Y(SolicitudAsistencia.geom),
+        )
+        .join(SolicitudAsistencia, SolicitudAsistencia.id == Tarea.solicitud_id)
+        .join(Cuadrilla, Cuadrilla.id == Tarea.cuadrilla_id)
+        .where(Tarea.estado == "en_curso", SolicitudAsistencia.geom.is_not(None))
+        .order_by(Tarea.id.desc())
+    ).all()
+    vistas = set(con_posicion_real)
+    candidatas = []
+    for tarea, nombre, tipo, vehiculo, lon, lat in filas:
+        if tarea.cuadrilla_id in vistas:
+            continue
+        vistas.add(tarea.cuadrilla_id)  # una por cuadrilla: su tarea en curso más reciente
+        candidatas.append((tarea, nombre, tipo, vehiculo, lon, lat))
+    roles = _roles(db, {t.cuadrilla_id for t, *_ in candidatas})
+    return [
+        {
+            "cuadrilla_id": tarea.cuadrilla_id,
+            "nombre": nombre,
+            "tipo_incidente": tipo,
+            "roles": roles[tarea.cuadrilla_id],
+            "lat": sim.lat,
+            "lon": sim.lon,
+            "precision_m": None,
+            "actualizada_en": ahora_.isoformat(),
+            "posicion_vieja": False,
+            "tareas_en_curso": sum(1 for t, *_ in filas if t.cuadrilla_id == tarea.cuadrilla_id),
+            "simulada": True,
+            "categoria": CATEGORIA,
+        }
+        for tarea, nombre, tipo, vehiculo, lon, lat in candidatas
+        for sim in [rutas.simular(db, (lon, lat), vehiculo, tarea.actualizado_en, ahora_, tarea.id)]
     ]

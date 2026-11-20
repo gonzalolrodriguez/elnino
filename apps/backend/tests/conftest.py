@@ -175,3 +175,12 @@ def como(client):
         return cache[clave]
 
     return _como
+
+
+@pytest.fixture(autouse=True)
+def _sin_modo_demostracion(monkeypatch):
+    """El modo demostración del seguimiento (SIMULADO) está apagado salvo que la prueba lo pida."""
+    from app.servicios import ruta_seguimiento
+
+    monkeypatch.setattr(ruta_seguimiento, "demo_activo", lambda: False)
+    ruta_seguimiento.limpiar_cache()
