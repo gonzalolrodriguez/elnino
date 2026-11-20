@@ -25,7 +25,7 @@ from app.db.modelos import (
     Usuario,
 )
 from app.domain import cuadrillas
-from app.servicios import contexto, recomendacion
+from app.servicios import contexto, recomendacion, seguimiento
 
 TIPOS_ORDEN = ("alerta", "evacuacion_preventiva", "evacuacion")
 ROTULO = {
@@ -79,6 +79,7 @@ def liberar_si_sin_tareas(db: Session, cuadrilla_id: int | None) -> None:
     """Vuelve a ``disponible`` una cuadrilla que ya no tiene tareas abiertas."""
     if cuadrilla_id is None:
         return
+    seguimiento.purgar_si_sin_en_curso(db, cuadrilla_id)
     abiertas = db.execute(
         select(func.count(Tarea.id)).where(
             Tarea.cuadrilla_id == cuadrilla_id, Tarea.estado.in_(ESTADOS_TAREA_ABIERTA)

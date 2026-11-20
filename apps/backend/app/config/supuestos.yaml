@@ -94,3 +94,14 @@ confirmacion_sms_fallos_por_codigo:
 confirmacion_sms_desconocidos_por_hora:
   valor: 20
   fuente: SUPUESTO (códigos inexistentes probados por hora desde un mismo remitente; superado el tope se ignoran sus códigos inexistentes, pero un código válido de su teléfono registrado sigue funcionando)
+
+# --- Seguimiento de la cuadrilla ---
+velocidad_cuadrilla_kmh:
+  valor: 40
+  fuente: SUPUESTO (velocidad media de una cuadrilla en camino hacia el pedido; mezcla pavimento, ripio y tierra; se usa solo para estimar la llegada)
+posicion_vieja_minutos:
+  valor: 5
+  fuente: SUPUESTO (pasado este tiempo sin recibir la posición de la cuadrilla, se avisa que la posición es vieja y la llegada estimada puede no ser confiable)
+intervalo_min_posicion_s:
+  valor: 10
+  fuente: SUPUESTO (segundos mínimos entre dos posiciones de una misma cuadrilla; antes se responde 429)
