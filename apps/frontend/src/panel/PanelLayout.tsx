@@ -38,6 +38,7 @@ export const GRUPOS_NAVEGACION: { id: string; titulo: string; secciones: Seccion
     titulo: "Ejecutar",
     secciones: [
       { to: "/comando/operacion", texto: "Solicitudes y cuadrillas" },
+      { to: "/comando/cuadrillas", texto: "Cuadrillas" },
       { to: "/comando/evacuaciones", texto: "Evacuaciones" },
     ],
   },
