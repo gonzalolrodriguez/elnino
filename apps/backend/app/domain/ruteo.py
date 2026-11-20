@@ -41,6 +41,23 @@ def velocidades(perfil: str) -> dict[str, float]:
     return dict(todas[perfil])
 
 
+def superficies_cerradas_por_lluvia(perfil: str, lluvia_mm: float) -> set[str]:
+    """Superficies que la lluvia deja intransitables para el perfil (CLAUDE.md §8.1).
+
+    Mismos umbrales que los accesos de los sectores: tierra (y superficie desconocida, que se trata
+    como tierra) con lluvia >= ``umbral_lluvia_camino_tierra_mm``; ripio con lluvia >=
+    ``umbral_lluvia_camino_ripio_mm``. El arreo a pie no depende de la lluvia.
+    """
+    if perfil == ARREO or lluvia_mm <= 0:
+        return set()
+    cerradas: set[str] = set()
+    if lluvia_mm >= float(supuesto("umbral_lluvia_camino_tierra_mm")):
+        cerradas |= {"tierra", "desconocida"}
+    if lluvia_mm >= float(supuesto("umbral_lluvia_camino_ripio_mm")):
+        cerradas.add("ripio")
+    return cerradas
+
+
 def tiempo_min(distancia_m: float, velocidad_kmh: float) -> float:
     return round(distancia_m / (velocidad_kmh * 1000 / 60), 1)
 

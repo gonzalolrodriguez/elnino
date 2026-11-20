@@ -55,14 +55,19 @@ def _consulta_aristas(
     comprometidos: list[str],
     exentos: list[str],
     accesos_bloqueados: list[int] | None = None,
+    lluvia_mm: float = 0.0,
 ) -> str:
-    """SQL de aristas para ``pgr_dijkstra``: costo en segundos según perfil y superficie."""
+    """SQL de aristas para ``pgr_dijkstra``: costo en segundos según perfil y superficie.
+
+    Con lluvia, los perfiles con ruedas pierden los tramos de las superficies que el umbral cierra.
+    """
     vel = dom.velocidades(perfil)
     # Sin superficie conocida se asume tierra (criterio conservador).
     superficie = "COALESCE(superficie, 'tierra')"
     casos = " ".join(f"WHEN '{s}' THEN longitud_m / {v * 1000 / 3600!r}" for s, v in vel.items())
     costo = f"CASE {superficie} {casos} END"
-    permitidas = ", ".join(f"'{s}'" for s in vel)
+    cerradas = dom.superficies_cerradas_por_lluvia(perfil, lluvia_mm)
+    permitidas = ", ".join(f"'{s}'" for s in vel if s not in cerradas) or "NULL"
     afectados = [s for s in comprometidos if s not in exentos]
     for sid in afectados:
         if not _ID.match(sid):
@@ -111,13 +116,14 @@ def _ruta_en_red(
     comprometidos: list[str],
     exentos: list[str],
     accesos_bloqueados: list[int] | None = None,
+    lluvia_mm: float = 0.0,
 ) -> dict | None:
     maximo = float(supuesto("ruteo_distancia_maxima_a_red_m"))
     n_o = _nodo_cercano(db, *origen)
     n_d = _nodo_cercano(db, *destino)
     if n_o is None or n_d is None or n_o[1] > maximo or n_d[1] > maximo:
         return None
-    aristas = _consulta_aristas(perfil, comprometidos, exentos, accesos_bloqueados)
+    aristas = _consulta_aristas(perfil, comprometidos, exentos, accesos_bloqueados, lluvia_mm)
     filas = db.execute(
         text(
             "SELECT d.seq, d.edge, d.cost, r.nombre, r.superficie, r.longitud_m, r.categoria, r.fuente "
@@ -217,6 +223,9 @@ def resolver_ruta(
         "destino": {"lon": destino[0], "lat": destino[1]},
         "sectores_comprometidos": comprometidos,
         "accesos_bloqueados": bloqueados,
+        "superficies_cerradas_por_lluvia": sorted(
+            dom.superficies_cerradas_por_lluvia(perfil, lluvia_mm)
+        ),
         "categoria": "SIMULADO",
         "nota": NOTA_CATEGORIA,
         "advertencias": [],
@@ -224,7 +233,9 @@ def resolver_ruta(
 
     if red_disponible(db):
         exentos = [sector_origen] if sector_origen in comprometidos else []
-        ruta = _ruta_en_red(db, perfil, origen, destino, comprometidos, exentos, base_bloqueados)
+        ruta = _ruta_en_red(
+            db, perfil, origen, destino, comprometidos, exentos, base_bloqueados, lluvia_mm
+        )
         if ruta is not None:
             if exentos and perfil != dom.ARREO:
                 base["advertencias"].append(
