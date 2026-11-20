@@ -290,6 +290,21 @@ describe("aviso de escenario", () => {
     fireEvent.click(within(aviso).getByRole("button", { name: /Volver a observado/ }));
     await waitFor(() => expect(screen.queryByTestId("aviso-escenario")).not.toBeInTheDocument());
   });
+
+  it("la barra del escenario está en páginas que no son el mapa y cambia el escenario sin consultar al backend", async () => {
+    const f = conSesion("operador", { "GET /panel/resumen": ok(RESUMEN) });
+    renderRuta("/comando");
+    const barra = await screen.findByTestId("barra-escenario");
+    expect(barra).toHaveTextContent("5,60 m");
+    expect(barra).toHaveTextContent("DATO OBSERVADO");
+    fireEvent.change(within(barra).getByLabelText("Altura del escenario (control deslizante)"), { target: { value: "8.2" } });
+    const aviso = await screen.findByTestId("aviso-escenario");
+    expect(aviso).toHaveTextContent("Escenario activo: 8,20 m");
+    expect(aviso).toHaveTextContent("SIMULADO");
+    fireEvent.change(within(barra).getByLabelText(/^Lluvia:/), { target: { value: "40" } });
+    expect(screen.getByTestId("aviso-escenario")).toHaveTextContent("40 mm de lluvia");
+    expect(llamadas(f, "POST /simulacion/escenario")).toHaveLength(0);
+  });
 });
 
 const ADMIN = {
