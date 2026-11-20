@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
+import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { MapaConRespaldo } from "@/components/MapaSector";
 import { Cargando, COLOR, Enlace, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
@@ -160,6 +161,7 @@ export default function Sector() {
       <View style={{ flex: 1, flexDirection: "row", padding: d.margen, gap: d.margen }}>
         <View style={{ flex: 1, gap: d.paso }}>
           <Titulo>Mi sector</Titulo>
+          <EnlaceBrujula />
           {mapa}
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: d.paso, paddingBottom: d.insets.bottom }}>
@@ -172,6 +174,7 @@ export default function Sector() {
   return (
     <Pantalla dosColumnas>
       <Titulo>Mi sector</Titulo>
+      <EnlaceBrujula />
       {carga.tipo === "cargando" ? <Cargando texto="Cargando tu sector…" /> : null}
       {carga.tipo === "error" ? <ErrorCaja mensaje={carga.mensaje} onReintentar={cargar} /> : null}
       {vacio}

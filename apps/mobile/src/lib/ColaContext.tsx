@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { PendientesContext } from "@/lib/EstadoCola";
 import { ColaOffline, type DatosCola, type ItemCola, type VaciadoResultado } from "@/lib/cola";
 import { RepositorioSqlite } from "@/lib/colaSqlite";
 import { escucharRed, hayRed } from "@/lib/red";
@@ -24,7 +25,7 @@ type Valor = {
   otroServidor: ItemCola[];
   sinRed: boolean;
   /** Guarda la solicitud en la cola local y trata de enviarla de inmediato. */
-  enviar: (datos: DatosCola, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean; rechazada: string | null; resultado: DatosCola | null }>;
+  enviar: (datos: DatosCola, fotoUri: string | null) => Promise<{ enviadaYa: boolean; fotoPendiente: boolean; rechazada: string | null; resultado: DatosCola | null; servidorId?: number | null }>;
   reintentar: () => Promise<VaciadoResultado>;
   descartar: (id: number) => Promise<void>;
   borrarLocal: () => Promise<void>;
@@ -89,6 +90,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
         // El servidor rechazó el envío (p. ej. 409): se informa el motivo en vez de decir «se enviará».
         rechazada: actual?.estado === "rechazada" ? (actual.ultimoError ?? "El servidor no aceptó el envío.") : null,
         resultado: actual?.datos ?? null,
+        servidorId: actual?.servidorId ?? null,
       };
     },
     [cola, usuario.id, vaciar],
@@ -113,7 +115,11 @@ export function ColaProvider({ children }: { children: ReactNode }) {
     }),
     [items, sinRed, enviar, vaciar, cola, refrescar, repo, usuario.id, versionServidor],
   );
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={valor}>
+      <PendientesContext.Provider value={valor.pendientes}>{children}</PendientesContext.Provider>
+    </Contexto.Provider>
+  );
 }
 
 export function useCola(): Valor {

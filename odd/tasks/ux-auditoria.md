@@ -14,8 +14,8 @@
 | U4 | Landing móvil: texto, altura y CTA antes de la escena; mapa 2D mientras carga el 3D | agente web | Pendiente |
 | U5 | Landing: frase de estado en lenguaje llano, tres acciones y "Emergencia: 103" bajo el hero | agente web | Pendiente |
 | U6 | Landing: selector de perfil compacto justo después del hero | agente web | Pendiente |
-| U7 | App: "Necesito ayuda ahora" en un toque (GPS automático, detalles después, con confirmación) | agente app (worktree) | Pendiente |
-| U8 | App: barra fija con 103 y estado de conexión; acceso directo a la brújula, también para cuadrilla | agente app | Pendiente |
+| U7 | App: "Necesito ayuda ahora" en un toque (GPS automático, detalles después, con confirmación) | agente app (worktree) | Hecha: 4a577e9 |
+| U8 | App: barra fija con 103 y estado de conexión; acceso directo a la brújula, también para cuadrilla | agente app | Hecha: 0690a1a |
 | U9 | Arreglos rápidos web: fecha dd/mm/aaaa en leyenda de relieve, texto mínimo 12 px, enlaces del pie con área táctil, aria-label en tabla del monitor, carga unificada | agente web | Pendiente |
 | U10 | Integración: merge en `dev-ux`, tests completos, push y PR | coordinador | Pendiente |
 
@@ -28,3 +28,4 @@
 ## Progreso
 
 - 20/11: rama `dev-ux` creada desde `main` (`e44d72c`). Agentes web y app lanzados en paralelo.
+- 20/11: U7 y U8 (app móvil) hechas en worktree: tsc limpio; jest --runInBand 19 suites / 265 tests en verde. Sin probar en dispositivo (GPS real, cuenta regresiva, llamada al 103 y apertura del SMS).
