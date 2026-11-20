@@ -172,14 +172,14 @@ Las pruebas del backend usan una base PostGIS separada (`evacuaciones_test`, en 
 ```bash
 # Backend (desde apps/backend, entorno virtual activo, base levantada)
 set -a; . ../../.env; set +a
-ruff check . && pytest -q                    # 202 pruebas
+ruff check . && pytest -q                    # 311 pruebas
 
 # Web y app (desde la raíz)
 pnpm -r typecheck                            # tsc --noEmit en web, app y shared
-pnpm --filter @evacuaciones/frontend test    # vitest: 53 pruebas (pnpm test hace lo mismo)
+pnpm --filter @evacuaciones/frontend test    # vitest: 194 pruebas (pnpm test hace lo mismo)
 pnpm --filter @evacuaciones/frontend lint
 pnpm --filter @evacuaciones/frontend build
-pnpm --filter @evacuaciones/mobile test      # jest-expo: 72 pruebas
+pnpm --filter @evacuaciones/mobile test      # jest-expo: 220 pruebas
 ```
 
 ## App móvil (`apps/mobile`)
@@ -247,7 +247,7 @@ Disponible en `/comando/*` para `operador`, `decisor` y `admin` (la ciudadanía 
 |---|---|
 | `/comando` | Monitor: serie K1 con umbrales y picos, ascenso y "¿cuánto tiempo queda?" (proyección lineal, SUPUESTO), lluvia por origen |
 | `/comando/mapa` | Mapa con sectores K10, accesos, centros, estaciones y capas oficiales (cada una con fuente y fecha de actualización); simulador (altura 0 a 12 m, lluvia, caminos cerrados, ISAD SIMULADO); marcar un camino como no transitable con su motivo (`PATCH /accesos/{id}`); ruteo vehicular, de camión jaula y de arreo |
-| `/comando/recomendacion` | Recomendador por sector (una recomendación, no una orden) y comparador de tres alternativas |
+| `/comando/recomendacion` | Recomendador por sector (una recomendación, no una orden) con veredicto "¿alcanza el tiempo?" (río y, opcionalmente, lluvia prevista SIMULADA para la ventana seca), tiempos por la red vial y centros descartados; comparador de tres alternativas |
 | `/comando/produccion` | Arca Productiva: calculadora ganadera con sus supuestos |
 | `/comando/operacion`, `/comando/lluvia` | Solicitudes, tareas y cuadrillas; parte de lluvia, importación y exportación de la planilla UPCA |
 | `/comando/ordenes` | Emisión de órdenes (solo `decisor`, con confirmación; el operador ve el formulario deshabilitado); abre el borrador de bitácora |
@@ -272,11 +272,11 @@ python apps/backend/scripts/descargar_relieve.py                     # relieve, 
 
 El resto de los endpoints (recomendador, alternativas, ruteo, Arca Productiva, lluvia, canales con HMAC, órdenes, bitácora, verificadores y WebSocket) está en `docs/contrato_api.md` con ejemplos `curl`.
 
-**Red vial para el ruteo.** Sin red cargada, `POST /ruteo` usa una estimación aproximada con su limitación explícita. Para usar pgRouting con la red real (OpenStreetMap, ya partida en nodos; ni el contenedor ni el seed la cargan):
+**Red vial para el ruteo y el recomendador.** Con Docker (opción A), el contenedor carga la red real de OpenStreetMap (`data/geo/red_vial.geojson`, 12.987 tramos, unos 10 s la primera vez) si la tabla está vacía. Con el backend local (opción B) hay que cargarla a mano. Sin red cargada, `POST /ruteo` y el recomendador usan una estimación aproximada con su limitación explícita.
 
 ```bash
 cd apps/backend
-python -m app.ingest.red_vial                 # carga data/geo/red_vial.geojson (o pasar otra ruta; --agregar la suma)
+python -m app.ingest.red_vial --si-vacia      # carga data/geo/red_vial.geojson (o pasar otra ruta; --agregar la suma)
 ```
 
 Propiedades reconocidas del GeoJSON de `LineString`: `nombre`, `superficie` (`pavimento`, `ripio`, `tierra` o `desconocida`; si falta se infiere de `surface` o `highway`) y, si la red ya está partida en nodos, `nodo_ini` y `nodo_fin`.

@@ -33,12 +33,12 @@ Verificado leyendo el código y, para el ruteo, con la red vial real cargada en 
 | ID | Tarea | Estado |
 |---|---|---|
 | M0 | Este documento | Hecho |
-| M1 | **Factibilidad temporal** por sector: plazo (río, con rango de tasas; y ventana seca si se informa un pronóstico de lluvia SIMULADO), tiempo para completar, hora límite de inicio y veredicto `alcanza` / `justo` / `no_alcanza` / `ya_comprometido` / `sin_estimacion`. Ganado: plazo menos la anticipación de 24 a 48 h. | Pendiente |
-| M2 | **Flota por tipo de vehículo**: cada tipo tiene su propia línea de tiempo (los sectores que usan el mismo tipo van en secuencia; tipos distintos, en paralelo). Tiempo de los camiones jaula. | Pendiente |
-| M3 | **Lluvia en la red vial**: en los perfiles con ruedas, los tramos de tierra (y superficie desconocida) se cierran con lluvia ≥ umbral de tierra y los de ripio con ≥ umbral de ripio. El arreo no cambia. | Pendiente |
-| M4 | **Tiempos por red en el recomendador**: matriz sector → centro con `pgr_dijkstraCost` (una consulta por grupo de orígenes), respaldo en línea recta × 1,3 con el método indicado por par. Centros excluidos con su motivo (dentro de un sector comprometido o en riesgo; inalcanzables). Carga de la red real al levantar Docker si la tabla está vacía. | Pendiente |
-| M5 | **Reparto por flujo de costo mínimo**: respeta la prioridad de los sectores (un sector de mayor prioridad nunca queda sin lugar para darle lugar a uno de menor) y, con eso fijo, minimiza personas × minutos. | Pendiente |
-| M6 | Pruebas, contrato API, `docs/decisiones.md`, `supuestos.yaml` y `ficha_fuentes.md` | Pendiente |
+| M1 | **Factibilidad temporal** por sector: plazo (río, con rango de tasas; y ventana seca si se informa un pronóstico de lluvia SIMULADO), tiempo para completar, hora límite de inicio y veredicto `alcanza` / `justo` / `no_alcanza` / `ya_comprometido` / `sin_estimacion`. Ganado: plazo menos la anticipación de 24 a 48 h. | Hecho |
+| M2 | **Flota por tipo de vehículo**: cada tipo tiene su propia línea de tiempo (los sectores que usan el mismo tipo van en secuencia; tipos distintos, en paralelo). Tiempo de los camiones jaula. | Hecho |
+| M3 | **Lluvia en la red vial**: en los perfiles con ruedas, los tramos de tierra (y superficie desconocida) se cierran con lluvia ≥ umbral de tierra y los de ripio con ≥ umbral de ripio. El arreo no cambia. | Hecho |
+| M4 | **Tiempos por red en el recomendador**: matriz sector → centro con `pgr_dijkstraCost` (una consulta por grupo de orígenes), respaldo en línea recta × 1,3 con el método indicado por par. Centros excluidos con su motivo (dentro de un sector comprometido o en riesgo; inalcanzables). Carga de la red real al levantar Docker si la tabla está vacía. | Hecho |
+| M5 | **Reparto por flujo de costo mínimo**: respeta la prioridad de los sectores (un sector de mayor prioridad nunca queda sin lugar para darle lugar a uno de menor) y, con eso fijo, minimiza personas × minutos. | Hecho |
+| M6 | Pruebas, contrato API, `docs/decisiones.md`, `supuestos.yaml` y `ficha_fuentes.md` | Hecho |
 
 ## Criterios de aceptación
 
@@ -53,10 +53,31 @@ Verificado leyendo el código y, para el ruteo, con la red vial real cargada en 
 
 ## Supuestos nuevos (van a `supuestos.yaml`)
 
-- `margen_seguridad_horas`: horas de holgura para que un plan "alcanza" (si termina dentro del plazo mínimo pero sin esa holgura, es "justo"). SUPUESTO.
+- `margen_seguridad_fraccion` (0,25): parte del plazo más corto que debe quedar libre para "alcanza". Se empezó con 12 h fijas y se cambió: con una ventana seca de 6 h ningún plan podía alcanzar. SUPUESTO.
+- `ruteo_enganche_usable_m` (500 m): distancia adicional máxima para enganchar un punto a un tramo firme y usable. SUPUESTO.
 - `centro_excluir_en_riesgo`: si los centros dentro de sectores en riesgo también se excluyen (además de los comprometidos). SUPUESTO.
 
 ## Pendiente de decisión del equipo
 
 - **C4 · lugares reales**: escuelas del Mapa Educativo como candidatas a centro (capacidad SIMULADO) y puestos de lluvia en localidades BAHRA. Cambia lo que se ve en la demo.
 - **Familias sin partir**: el reparto trabaja con la población agregada de cada sector (K10 + registradas); no garantiza que un grupo familiar vaya entero a un mismo centro. Requiere trabajar por familia registrada.
+
+## Evidencia
+
+Commits en `dev-cabrera`: `5acff00` (lluvia en la red), `2ef4911` (matriz de tiempos, enganche y carga de la red), `fdcfb94` (factibilidad, flota y reparto), `bd71a51` (web), `87f7c20` (pruebas web con Node 25+).
+
+- Backend: `ruff check .` sin errores; `pytest -q` 311 pasadas (291 previas + 20 nuevas en `tests/test_motor_evacuacion.py` y `tests/test_ruteo.py`).
+- Web: `tsc` sin errores, `eslint` sin avisos, `vitest` 194 pasadas (2 nuevas en `src/recomendacion.test.tsx`).
+- Contra la base local con la red OSM cargada (7,60 m y 40 mm): los cuatro tramos sector → centro salen por la red (`red_vial`), S4 aislado sale en lancha; recomendación en unos 1,2 s, alternativas en 1 s; con 9 m (todos los sectores comprometidos) 2,9 s.
+- Mismo escenario con lluvia prevista de 100 mm en 6 h: S1 (único acceso de ripio) pasa a plazo por ventana seca de 6 h.
+
+- `--si-vacia` probado sobre una base con la tabla vacía (carga 12.987 tramos con fuente y fecha) y repetido sobre la tabla llena (no la toca).
+
+**No verificado:** la pantalla del recomendador en un navegador con sesión real (hay prueba automática con datos simulados) ni un `docker compose up` completo desde un volumen nuevo.
+
+## Límites conocidos
+
+- El origen de cada sector es su centroide: no hay puntos de encuentro reales cargados.
+- Los tiempos no incluyen carga y descarga ni el regreso de la última ronda (igual que antes).
+- La lancha va en línea recta y no tiene flota limitada por tipo de embarcación más allá de `recursos`.
+- El reparto trabaja con la población agregada del sector: una familia registrada puede quedar repartida entre dos centros.
