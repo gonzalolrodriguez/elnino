@@ -4,11 +4,12 @@ import { RepositorioSqlite } from "@/lib/colaSqlite";
 /**
  * Datos de la persona guardados en claro en SQLite que se borran cuando la sesión termina (cierre
  * manual, cambio de servidor o refresh rechazado por el servidor):
- * - la caché de respuestas (pedidos, sector, confirmaciones, ayuda rápida, destinos de la brújula);
+ * - la caché de respuestas (pedidos, sector, confirmaciones, ayuda rápida, destinos de la brújula,
+ *   historial de partes de la cuadrilla `partes:<usuario>:<servidor>:<tarea>`);
  *   se conserva solo la lista pública de centros;
  * - los ítems de la cola offline ya enviados o rechazados.
  *
- * Los pedidos de ayuda **pendientes** se conservan a propósito: borrarlos por un refresh vencido
+ * Los pedidos de ayuda y los partes de cuadrilla **pendientes** se conservan a propósito: borrarlos por un refresh vencido
  * perdería un pedido de emergencia sin enviar. Se envían al volver a entrar con la misma cuenta y se
  * borran si entra otra (`ColaOffline.limpiarAjenos`) o al cerrar sesión desde Perfil.
  * Nunca lanza: una falla de SQLite no debe impedir cerrar la sesión.
