@@ -39,11 +39,17 @@ services:
       DATA_DIR: /data
     volumes:
       - ./data:/data:ro
-    # Aplica las migraciones y la carga inicial (idempotente) antes de arrancar la API.
+    # Aplica las migraciones y la carga inicial (idempotente) antes de arrancar la API. La red vial
+    # real (OpenStreetMap, data/geo/red_vial.geojson) se carga solo si la tabla está vacía (~10 s la
+    # primera vez); el recomendador y el ruteo la usan para los tiempos de viaje.
     command:
       - sh
       - -c
-      - alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000
+      - >-
+        alembic upgrade head && python -m app.db.seed &&
+        python -m app.ingest.red_vial --si-vacia --fecha 2026-11-17
+        --fuente "OpenStreetMap vía Overpass (ODbL) · data/geo/red_vial.geojson" &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

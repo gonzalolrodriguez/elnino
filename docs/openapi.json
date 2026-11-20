@@ -3481,6 +3481,22 @@
                 "type": "null"
               }
             ]
+          },
+          "pronostico_lluvia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PronosticoLluviaIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "poblacion_k10_en_hogares": {
+            "type": "boolean",
+            "title": "Poblacion K10 En Hogares",
+            "description": "Usar el set separado de hogares SIMULADOS de K10 (familias indivisibles)",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -4243,6 +4259,32 @@
         ],
         "title": "OrdenIn"
       },
+      "PronosticoLluviaIn": {
+        "properties": {
+          "mm": {
+            "type": "number",
+            "maximum": 1000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Mm",
+            "description": "Lluvia prevista (mm), se suma a la del escenario"
+          },
+          "horas": {
+            "type": "number",
+            "maximum": 720.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Horas",
+            "description": "Horas desde ahora hasta esa lluvia"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mm",
+          "horas"
+        ],
+        "title": "PronosticoLluviaIn",
+        "description": "Lluvia prevista SIMULADA para la ventana seca: ``mm`` que caen dentro de ``horas``."
+      },
       "Punto": {
         "properties": {
           "lon": {
@@ -4356,6 +4398,22 @@
               }
             ],
             "title": "Sectores"
+          },
+          "pronostico_lluvia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PronosticoLluviaIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "poblacion_k10_en_hogares": {
+            "type": "boolean",
+            "title": "Poblacion K10 En Hogares",
+            "description": "Usar el set separado de hogares SIMULADOS de K10 (familias indivisibles)",
+            "default": false
           }
         },
         "additionalProperties": false,
