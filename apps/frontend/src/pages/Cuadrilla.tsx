@@ -1,9 +1,9 @@
-import { Badge, Box, Button, Checkbox, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useCallback, useState, type ReactElement } from "react";
+import { Box, Button, Checkbox, Flex, Heading, Stack, Text } from "@chakra-ui/react";
+import { useCallback, useState } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { AlertaError } from "../components/Formulario";
-import { IconoAlerta, IconoCamion, IconoReloj, IconoTilde, IconoTriangulo } from "../components/iconos/Iconos";
+import { IconoCamion, IconoTriangulo } from "../components/iconos/Iconos";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
 import type { TareaConPartes } from "../lib/partes";
@@ -11,27 +11,16 @@ import { useCarga } from "../lib/useCarga";
 import { useTiempoReal, type EventoTiempoReal } from "../lib/ws";
 import { api } from "../panel/api";
 import type { Notificacion, Tarea } from "../panel/tipos";
+import { CabeceraPagina } from "../panel/CabeceraPagina";
+import { ChipEstadoTarea, TACTIL } from "../panel/cuadrillas/partes";
+import { IconoActualizar } from "../panel/iconos";
 import { Cargando, fmtFecha, Seccion } from "../panel/ui";
 import { AccionesParte } from "./cuadrilla/AccionesParte";
 import { CerrarConConstancia } from "./cuadrilla/CerrarConConstancia";
 import { CompartirUbicacion } from "./cuadrilla/CompartirUbicacion";
 import { HistorialPartes } from "./cuadrilla/HistorialPartes";
 
-const ETIQUETA: Record<Tarea["estado"], string> = {
-  pendiente: "Pendiente",
-  en_curso: "En curso",
-  completada: "Completada",
-  cancelada: "Cancelada",
-};
-const COLOR: Record<Tarea["estado"], string> = { pendiente: "yellow", en_curso: "blue", completada: "green", cancelada: "gray" };
 const ESTADOS_WS = { conectado: "Tiempo real conectado", conectando: "Conectando tiempo real…", desconectado: "Tiempo real desconectado" } as const;
-
-const ICONO_ESTADO: Record<Tarea["estado"], ReactElement> = {
-  pendiente: <IconoReloj tam="0.9rem" />,
-  en_curso: <IconoCamion tam="0.9rem" />,
-  completada: <IconoTilde tam="0.9rem" />,
-  cancelada: <IconoAlerta tam="0.9rem" />,
-};
 
 function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes; alCambiar: (t: Tarea) => void; alRecargar: () => void }) {
   const [cerrando, setCerrando] = useState(false);
@@ -62,17 +51,14 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes;
 
   return (
     <Box as="article" aria-label={`Tarea ${tarea.id}`} layerStyle="tarjeta" p={{ base: 3, md: 4 }}>
-      <Flex gap={2} align="center" wrap="wrap" mb={1}>
-        <Heading as="h3" size="sm">
+      <Flex columnGap={2} rowGap={1.5} align="center" wrap="wrap" mb={1.5}>
+        <Heading as="h3" size="sm" textStyle="tituloBloque" flexBasis={{ base: "100%", sm: "auto" }}>
           {tarea.titulo}
         </Heading>
-        <Badge colorScheme={COLOR[tarea.estado]} data-testid={`estado-${tarea.id}`} display="inline-flex" alignItems="center" gap={1}>
-          {ICONO_ESTADO[tarea.estado]}
-          {ETIQUETA[tarea.estado]}
-        </Badge>
+        <ChipEstadoTarea estado={tarea.estado} testId={`estado-${tarea.id}`} />
         <Insignia categoria="SIMULADO" />
       </Flex>
-      <Text fontSize="xs" color="textoSuave" mb={2}>
+      <Text textStyle="microdato" mb={2}>
         {[
           tarea.sector_id ? `Sector ${tarea.sector_id}` : null,
           tarea.solicitud_id ? `Solicitud n.º ${tarea.solicitud_id}` : null,
@@ -119,9 +105,9 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes;
       )}
 
       {(tarea.checklist ?? []).length > 0 && (
-        <Stack role="group" aria-label={`Checklist de la tarea ${tarea.id}`} spacing={1} my={3}>
+        <Stack role="group" aria-label={`Checklist de la tarea ${tarea.id}`} spacing={0} my={3}>
           {(tarea.checklist ?? []).map((c, i) => (
-            <Checkbox key={`${tarea.id}-${i}`} isChecked={c.hecho} isDisabled={trabajando || cerrada} onChange={() => alternar(i)}>
+            <Checkbox key={`${tarea.id}-${i}`} size="lg" minH="2.75rem" isChecked={c.hecho} isDisabled={trabajando || cerrada} onChange={() => alternar(i)}>
               {c.item}
             </Checkbox>
           ))}
@@ -133,7 +119,7 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes;
         <HistorialPartes tareaId={tarea.id} refresco={versionPartes} />
       </Box>
       {!cerrada && (
-        <Button mt={3} size="xs" variant="ghost" isDisabled={trabajando} onClick={() => void aplicar({ estado: "cancelada" })}>
+        <Button mt={3} size="sm" {...TACTIL} colorScheme="red" variant="ghost" isDisabled={trabajando} onClick={() => void aplicar({ estado: "cancelada" })}>
           Cancelar tarea
         </Button>
       )}
@@ -145,13 +131,13 @@ function Avisos({ avisos, alMarcar }: { avisos: Notificacion[]; alMarcar: (id: n
   return (
     <Stack as="ul" listStyleType="none" spacing={2}>
       {avisos.map((n) => (
-        <Flex as="li" key={n.id} gap={3} align="center" justify="space-between" borderLeft="3px solid" borderColor={n.leida ? "pizarra.200" : "acento"} pl={3}>
+        <Flex as="li" key={n.id} columnGap={3} rowGap={1.5} align={{ base: "flex-start", sm: "center" }} direction={{ base: "column", sm: "row" }} justify="space-between" borderLeft="3px solid" borderColor={n.leida ? "pizarra.200" : "acento"} pl={3}>
           <Box>
             <Text fontSize="sm" fontWeight={n.leida ? 400 : 700}>{n.mensaje}</Text>
-            <Text fontSize="xs" color="textoSuave">{fmtFecha(n.creada_en)}</Text>
+            <Text textStyle="microdato">{n.leida ? "Leída" : "Sin leer"} · {fmtFecha(n.creada_en)}</Text>
           </Box>
           {!n.leida && (
-            <Button size="xs" variant="outline" onClick={() => alMarcar(n.id)}>
+            <Button size="sm" {...TACTIL} variant="outline" onClick={() => alMarcar(n.id)}>
               Marcar como leída
             </Button>
           )}
@@ -194,15 +180,23 @@ export default function Cuadrilla() {
 
   return (
     <Layout titulo="Mis tareas">
-      <Heading as="h1" size="xl" mb={1}>
-        Mis tareas
-      </Heading>
-      <Text fontSize="sm" color="textoSuave" mb={4} role="status">
-        {ESTADOS_WS[ws]}. Las tareas y checklists de abajo son datos de demostración.
-      </Text>
+      <Box maxW="90rem">
+        <CabeceraPagina
+          titulo="Mis tareas"
+          icono={<IconoCamion tam="1.5rem" />}
+          categoria="SIMULADO"
+          ayuda="Tus tareas, las novedades que informás y las alertas que recibís. Los datos son de demostración."
+          actualizado={<span role="status">{ESTADOS_WS[ws]}</span>}
+          acciones={
+            <Button size="sm" {...TACTIL} variant="outline" onClick={recargarTareas} leftIcon={<IconoActualizar tam="1.125rem" />}>
+              Actualizar
+            </Button>
+          }
+        />
+      </Box>
 
       <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 3fr) minmax(0, 2fr)" }} columnGap={6} alignItems="start" maxW="90rem">
-      <Seccion titulo="Tareas asignadas" categoria="SIMULADO" id="sec-mis-tareas" derecha={<Button size="xs" variant="outline" onClick={recargarTareas}>Actualizar</Button>}>
+      <Seccion titulo="Tareas asignadas" categoria="SIMULADO" id="sec-mis-tareas">
         <Cargando
           carga={tareas}
           esVacio={(d) => d.length === 0}

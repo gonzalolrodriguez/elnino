@@ -1,11 +1,14 @@
-import { Box, Button, Flex, Heading, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { useAuth } from "../../auth/AuthContext";
-import { Insignia } from "../../components/Insignia";
+import { IconoPersonas } from "../../components/iconos/Iconos";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
+import { CabeceraPagina } from "../CabeceraPagina";
+import { TACTIL } from "../cuadrillas/partes";
 import { TarjetaCuadrilla } from "../cuadrillas/TarjetaCuadrilla";
+import { IconoActualizar } from "../iconos";
 import { useSenalTiempoReal } from "../TiempoRealContext";
 import type { CuadrillaResumen } from "../tipos";
 import { Cargando } from "../ui";
@@ -42,15 +45,17 @@ export default function Cuadrillas() {
 
   return (
     <>
-      <Heading as="h1" size="lg" mb={1}>
-        Cuadrillas
-      </Heading>
-      <Flex align="center" gap={2} mb={4}>
-        <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="textoSuave">
-          Quién integra cada cuadrilla (por rol, sin nombres), en qué tarea está y qué informó. Datos de demostración.
-        </Text>
-      </Flex>
+      <CabeceraPagina
+        titulo="Cuadrillas"
+        icono={<IconoPersonas tam="1.5rem" />}
+        categoria="SIMULADO"
+        ayuda="Quién integra cada cuadrilla (por rol, sin nombres), en qué tarea está y qué informó. Datos de demostración."
+        acciones={
+          <Button size="sm" {...TACTIL} variant="outline" onClick={carga.recargar} leftIcon={<IconoActualizar tam="1.125rem" />}>
+            Actualizar
+          </Button>
+        }
+      />
       <Cargando
         carga={carga}
         esVacio={(d) => d.items.length === 0}
@@ -61,7 +66,7 @@ export default function Cuadrillas() {
             <>
               <Flex as="div" role="group" aria-label="Filtrar cuadrillas" gap={2} wrap="wrap" mb={4}>
                 {FILTROS.map((f) => (
-                  <Button key={f.id} size="xs" variant={filtro === f.id ? "solid" : "outline"} aria-pressed={filtro === f.id} onClick={() => setFiltro(f.id)}>
+                  <Button key={f.id} size="sm" {...TACTIL} borderRadius="full" variant={filtro === f.id ? "solid" : "outline"} aria-pressed={filtro === f.id} onClick={() => setFiltro(f.id)}>
                     {f.texto}
                     {f.id !== "todas" ? ` (${aplicarFiltro(d.items, f.id).length})` : ""}
                   </Button>
@@ -72,7 +77,7 @@ export default function Cuadrillas() {
                   Ninguna cuadrilla coincide con este filtro.
                 </Text>
               ) : (
-                <Box as="div" display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "repeat(2, minmax(0, 1fr))" }} gap={4}>
+                <Box as="div" display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "repeat(2, minmax(0, 1fr))" }} gap={4} alignItems="start">
                   {visibles.map((c) => (
                     <TarjetaCuadrilla key={c.id} c={c} puedeGestionar={puedeGestionar} alCambiar={carga.recargar} />
                   ))}

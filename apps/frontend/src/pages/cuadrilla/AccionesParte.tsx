@@ -1,4 +1,4 @@
-import { Box, Button, Flex, FormControl, FormErrorMessage, FormHelperText, FormLabel, Radio, RadioGroup, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Box, Button, Flex, FormControl, FormErrorIcon, FormErrorMessage, FormHelperText, FormLabel, Radio, RadioGroup, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { AlertaError } from "../../components/Formulario";
@@ -91,8 +91,8 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
       )}
 
       {modo !== null && (
-        <Box as="form" onSubmit={(e: React.FormEvent) => void enviar(e)} noValidate mt={3} p={3} border="1px solid" borderColor="borde" borderRadius="lg" aria-label={`${TITULO[modo]} de la tarea ${tareaId}`}>
-          <Text fontWeight={700} mb={2}>
+        <Box as="form" onSubmit={(e: React.FormEvent) => void enviar(e)} noValidate mt={3} p={{ base: 3, md: 4 }} bg="fondo" border="1px solid" borderColor="borde" borderRadius="lg" aria-label={`${TITULO[modo]} de la tarea ${tareaId}`}>
+          <Text fontWeight={700} fontSize="md" mb={3}>
             {TITULO[modo]}
           </Text>
 
@@ -124,6 +124,7 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
             </FormLabel>
             <Textarea
               id={idObs}
+              autoFocus={modo !== "terminar"}
               bg="superficie"
               rows={3}
               maxLength={MAX_OBSERVACION}
@@ -132,7 +133,10 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
               placeholder={modo === "dificultad" ? EJEMPLOS_DIFICULTAD : modo === "avance" ? "Por ejemplo: llegamos al paraje, empezamos a cargar." : "Contá qué pasó."}
             />
             {modo === "dificultad" && <FormHelperText>El operador lo ve enseguida. No incluyas nombres ni datos personales.</FormHelperText>}
-            <FormErrorMessage>{errorCampo}</FormErrorMessage>
+            <FormErrorMessage>
+              <FormErrorIcon />
+              {errorCampo}
+            </FormErrorMessage>
           </FormControl>
 
           {modo === "terminar" && resultado === "completa" && exigeConstancia && (
@@ -149,11 +153,11 @@ export function AccionesParte({ tareaId, exigeConstancia, alEnviado, alConstanci
               <AlertaError error={error} />
             </Box>
           )}
-          <Flex gap={2} mt={3}>
-            <Button type="submit" isLoading={enviando} leftIcon={<IconoEnviar />}>
+          <Flex gap={2} mt={4} direction={{ base: "column", sm: "row" }}>
+            <Button type="submit" size="lg" isLoading={enviando} leftIcon={<IconoEnviar />}>
               {modo === "terminar" && resultado === "completa" && exigeConstancia ? "Continuar con la constancia" : "Enviar"}
             </Button>
-            <Button type="button" variant="outline" isDisabled={enviando} onClick={() => setModo(null)}>
+            <Button type="button" size="lg" variant="outline" isDisabled={enviando} onClick={() => setModo(null)}>
               Volver
             </Button>
           </Flex>

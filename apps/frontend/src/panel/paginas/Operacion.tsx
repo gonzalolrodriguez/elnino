@@ -1,19 +1,19 @@
-import { Badge, Box, Button, Flex, FormControl, FormLabel, Heading, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
+import { Box, Button, Flex, FormControl, FormLabel, Input, Select, Table, Tbody, Td, Text, Th, Thead, Tr, useToast } from "@chakra-ui/react";
 import { ESTADOS_SOLICITUD } from "@evacuaciones/shared";
 import { Fragment, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AlertaError } from "../../components/Formulario";
-import { Insignia } from "../../components/Insignia";
+import { IconoBandeja, IconoCamion, IconoPersonas, IconoTilde, IconoReloj } from "../../components/iconos/Iconos";
+import { TablaDesplazable } from "../../components/TablaDesplazable";
+import { etiquetaEstadoSolicitud, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
-import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
-import { AvisoAtencion } from "../cuadrillas/TarjetaCuadrilla";
+import { CabeceraPagina } from "../CabeceraPagina";
+import { AvisoAtencion, ChipEstadoTarea, ChipParte, TACTIL } from "../cuadrillas/partes";
 import { HistorialPartes } from "../cuadrillas/HistorialPartes";
-import { ChipParte } from "../cuadrillas/partes";
-import { Cargando, fmtNum, Seccion } from "../ui";
-import { TablaDesplazable } from "../../components/TablaDesplazable";
-import { etiquetaEstadoSolicitud, etiquetaEstadoTarea, etiquetaOrigenSolicitud, etiquetaRolOperativo, etiquetaTipoSolicitud } from "../../lib/etiquetas";
+import type { Cuadrilla, Solicitud, Tarea } from "../tipos";
+import { APILAR, Cargando, Chip, fmtNum, Seccion, type TonoChip } from "../ui";
 
 const TIPO_INCIDENTE = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" } as const;
 const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
@@ -26,6 +26,12 @@ const SIGUIENTE_TAREA: Record<string, { estado: string; texto: string }[]> = {
     { estado: "cancelada", texto: "Cancelar" },
   ],
 };
+/** Estas tablas tienen muchas columnas: se apilan por debajo de 80 em (1280 px), porque el menú lateral le quita ancho a la página. */
+const BASE_APILAR = APILAR["@media (max-width: 47.99em)"];
+const APILAR_PANEL = {
+  "@media (max-width: 79.99em)": { ...BASE_APILAR, "tbody tr": { ...BASE_APILAR["tbody tr"], gridTemplateColumns: "repeat(auto-fill, minmax(9.5rem, 1fr))" } },
+} as const;
+const TONO_SOLICITUD: Record<string, TonoChip> = { recibida: "aviso", verificada: "info", asignada: "info", en_curso: "info", resuelta: "ok" };
 
 function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadrillas: Cuadrilla[] }>> }) {
   const toast = useToast();
@@ -46,54 +52,62 @@ function BloqueCuadrillas({ carga }: { carga: ReturnType<typeof useCarga<{ cuadr
   }
 
   return (
-    <Seccion titulo="Cuadrillas" categoria="SIMULADO" id="sec-cuadrillas">
+    <Seccion titulo="Cuadrillas" categoria="SIMULADO" id="sec-cuadrillas" icono={<IconoPersonas tam="1.25rem" />}>
       <Cargando carga={carga} esVacio={(d) => d.cuadrillas.length === 0} vacio="Todavía no hay cuadrillas. Creá una abajo." hijos={(d) => (
-        <TablaDesplazable etiqueta="Cuadrillas" mb={3}>
-          <Table size="sm" aria-label="Cuadrillas">
+        <TablaDesplazable etiqueta="Cuadrillas" mb={4}>
+          <Table size="sm" aria-label="Cuadrillas" sx={APILAR_PANEL}>
             <Thead>
               <Tr>
                 <Th>Cuadrilla</Th>
                 <Th>Tipo</Th>
                 <Th>Integrantes (rol)</Th>
-                <Th>Roles faltantes de la plantilla</Th>
+                <Th>Roles que faltan en la plantilla</Th>
               </Tr>
             </Thead>
             <Tbody>
               {d.cuadrillas.map((c) => (
                 <Tr key={c.id}>
                   <Td>{c.nombre}</Td>
-                  <Td>{TIPO_INCIDENTE[c.tipo_incidente as keyof typeof TIPO_INCIDENTE] ?? c.tipo_incidente}</Td>
-                  <Td whiteSpace="normal">{c.integrantes.map((i) => etiquetaRolOperativo(i.rol_operativo)).join(", ") || "sin integrantes"}</Td>
-                  <Td whiteSpace="normal">{c.roles_faltantes.join(", ") || "plantilla completa"}</Td>
+                  <Td data-etiqueta="Tipo">{TIPO_INCIDENTE[c.tipo_incidente as keyof typeof TIPO_INCIDENTE] ?? c.tipo_incidente}</Td>
+                  <Td whiteSpace="normal" data-etiqueta="Integrantes (rol)">{c.integrantes.map((i) => etiquetaRolOperativo(i.rol_operativo)).join(", ") || "sin integrantes"}</Td>
+                  <Td whiteSpace="normal" data-etiqueta="Roles que faltan en la plantilla">{c.roles_faltantes.map((r) => etiquetaRolOperativo(r)).join(", ") || "plantilla completa"}</Td>
                 </Tr>
               ))}
             </Tbody>
           </Table>
         </TablaDesplazable>
       )} />
-      <Flex gap={2} align="flex-end" wrap="wrap">
-        <FormControl w="14rem">
-          <FormLabel htmlFor="cuadrilla-nombre" fontSize="sm" mb={0}>
-            Nombre de la cuadrilla
-          </FormLabel>
-          <Input id="cuadrilla-nombre" size="sm" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </FormControl>
-        <FormControl w="12rem">
-          <FormLabel htmlFor="cuadrilla-tipo" fontSize="sm" mb={0}>
-            Tipo de incidente
-          </FormLabel>
-          <Select id="cuadrilla-tipo" size="sm" bg="superficie" value={tipo} onChange={(e) => setTipo(e.target.value as keyof typeof TIPO_INCIDENTE)}>
-            {Object.entries(TIPO_INCIDENTE).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-        <Button size="sm" onClick={() => void crear()} isDisabled={nombre.trim().length < 2}>
-          Crear cuadrilla
-        </Button>
-      </Flex>
+      <Box as="form" onSubmit={(e: React.FormEvent) => { e.preventDefault(); if (nombre.trim().length >= 2) void crear(); }} borderTop="1px solid" borderColor="borde" pt={4}>
+        <Text fontWeight={700} mb={2}>
+          Crear una cuadrilla
+        </Text>
+        <Text textStyle="microdato" mb={3}>
+          El nombre lleva al menos 2 letras y no incluye nombres de personas.
+        </Text>
+        <Flex gap={3} align="flex-end" wrap="wrap">
+          <FormControl w={{ base: "full", sm: "16rem" }}>
+            <FormLabel htmlFor="cuadrilla-nombre" fontSize="sm" mb={1}>
+              Nombre de la cuadrilla
+            </FormLabel>
+            <Input id="cuadrilla-nombre" bg="superficie" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </FormControl>
+          <FormControl w={{ base: "full", sm: "14rem" }}>
+            <FormLabel htmlFor="cuadrilla-tipo" fontSize="sm" mb={1}>
+              Tipo de incidente
+            </FormLabel>
+            <Select id="cuadrilla-tipo" bg="superficie" value={tipo} onChange={(e) => setTipo(e.target.value as keyof typeof TIPO_INCIDENTE)}>
+              {Object.entries(TIPO_INCIDENTE).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </Select>
+          </FormControl>
+          <Button type="submit" w={{ base: "full", sm: "auto" }} isDisabled={nombre.trim().length < 2}>
+            Crear cuadrilla
+          </Button>
+        </Flex>
+      </Box>
       <Box mt={2}>
         <AlertaError error={error} />
       </Box>
@@ -122,10 +136,10 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
   }
 
   return (
-    <Seccion titulo="Tareas de cuadrillas" categoria="SIMULADO" id="sec-tareas">
+    <Seccion titulo="Tareas de cuadrillas" categoria="SIMULADO" id="sec-tareas" icono={<IconoCamion tam="1.25rem" />}>
       <Cargando carga={carga} esVacio={(d) => d.tareas.length === 0} vacio="No hay tareas. Se crean al emitir una orden o asignar una solicitud." hijos={(d) => (
         <TablaDesplazable etiqueta="Tareas">
-          <Table size="sm" aria-label="Tareas">
+          <Table size="sm" aria-label="Tareas" sx={APILAR_PANEL}>
             <Thead>
               <Tr>
                 <Th>Tarea</Th>
@@ -139,47 +153,48 @@ function BloqueTareas({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
             <Tbody>
               {d.tareas.map((t) => (
                 <Fragment key={t.id}>
-                <Tr>
-                  <Td whiteSpace="normal">{t.titulo}</Td>
-                  <Td>{t.sector_id ?? "—"}</Td>
-                  <Td whiteSpace="normal">
-                    <Flex direction="column" align="flex-start" gap={1}>
-                      <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
-                      {t.requiere_atencion && <AvisoAtencion />}
-                      {t.ultimo_parte && <ChipParte parte={t.ultimo_parte} />}
-                    </Flex>
-                  </Td>
-                  <Td>
-                    <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="xs" bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
-                      {cuadrillas.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre}
-                        </option>
-                      ))}
-                    </Select>
-                  </Td>
-                  <Td>
-                    <Flex gap={1}>
-                      {(SIGUIENTE_TAREA[t.estado] ?? []).map((a) => (
-                        <Button key={a.estado} size="xs" variant="outline" onClick={() => void cambiar(t, { estado: a.estado })}>
-                          {a.texto}
-                        </Button>
-                      ))}
-                    </Flex>
-                  </Td>
-                  <Td>
-                    <Button size="xs" variant="outline" aria-expanded={abiertas.includes(t.id)} aria-controls={`partes-tarea-${t.id}`} onClick={() => alternar(t.id)} aria-label={`${abiertas.includes(t.id) ? "Ocultar" : "Ver"} partes de la tarea ${t.id}`}>
-                      {abiertas.includes(t.id) ? "Ocultar partes" : "Ver partes"}
-                    </Button>
-                  </Td>
-                </Tr>
-                {abiertas.includes(t.id) && (
                   <Tr>
-                    <Td colSpan={6} whiteSpace="normal">
-                      <HistorialPartes tareaId={t.id} requiereAtencion={t.requiere_atencion === true} alCambiar={carga.recargar} />
+                    <Td whiteSpace="normal" maxW="22rem">{t.titulo}</Td>
+                    <Td data-etiqueta="Sector">{t.sector_id ?? "—"}</Td>
+                    <Td whiteSpace="normal" data-etiqueta="Estado">
+                      <Flex direction="column" align="flex-start" gap={1}>
+                        <ChipEstadoTarea estado={t.estado} />
+                        {t.requiere_atencion && <AvisoAtencion />}
+                        {t.ultimo_parte && <ChipParte parte={t.ultimo_parte} />}
+                      </Flex>
+                    </Td>
+                    <Td data-etiqueta="Cuadrilla" sx={{ "@media (max-width: 79.99em)": { gridColumn: "1 / -1 !important" } }}>
+                      <Select aria-label={`Cuadrilla de la tarea ${t.id}`} size="sm" minW="12rem" {...TACTIL} bg="superficie" value={t.cuadrilla_id ?? ""} placeholder="Sin asignar" onChange={(e) => e.target.value && void cambiar(t, { cuadrilla_id: Number(e.target.value) })}>
+                        {cuadrillas.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </Select>
+                    </Td>
+                    <Td data-etiqueta="Acciones">
+                      <Flex gap={1.5} wrap="wrap">
+                        {(SIGUIENTE_TAREA[t.estado] ?? []).map((a) => (
+                          <Button key={a.estado} size="sm" {...TACTIL} variant="outline" aria-label={`${a.texto} la tarea ${t.id}`} onClick={() => void cambiar(t, { estado: a.estado })}>
+                            {a.texto}
+                          </Button>
+                        ))}
+                        {(SIGUIENTE_TAREA[t.estado] ?? []).length === 0 && <Text color="textoSuave">Sin acciones</Text>}
+                      </Flex>
+                    </Td>
+                    <Td data-etiqueta="Partes">
+                      <Button size="sm" {...TACTIL} variant="outline" aria-expanded={abiertas.includes(t.id)} aria-controls={`partes-tarea-${t.id}`} onClick={() => alternar(t.id)} aria-label={`${abiertas.includes(t.id) ? "Ocultar" : "Ver"} partes de la tarea ${t.id}`}>
+                        {abiertas.includes(t.id) ? "Ocultar partes" : "Ver partes"}
+                      </Button>
                     </Td>
                   </Tr>
-                )}
+                  {abiertas.includes(t.id) && (
+                    <Tr>
+                      <Td colSpan={6} whiteSpace="normal" id={`partes-tarea-${t.id}`}>
+                        <HistorialPartes tareaId={t.id} requiereAtencion={t.requiere_atencion === true} alCambiar={carga.recargar} />
+                      </Td>
+                    </Tr>
+                  )}
                 </Fragment>
               ))}
             </Tbody>
@@ -222,21 +237,13 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
   const siguiente = (e: string) => ESTADOS_SOLICITUD[ESTADOS_SOLICITUD.indexOf(e as (typeof ESTADOS_SOLICITUD)[number]) + 1];
 
   return (
-    <Seccion titulo="Cola de solicitudes de asistencia" categoria="SIMULADO" id="sec-solicitudes" derecha={
-      <Select aria-label="Cuadrilla para asignar" size="xs" bg="superficie" placeholder="Cuadrilla al asignar" value={cuadrilla} onChange={(e) => setCuadrilla(e.target.value)}>
-        {cuadrillas.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nombre}
-          </option>
-        ))}
-      </Select>
-    }>
-      <Flex gap={3} wrap="wrap" mb={3}>
-        <FormControl w="12rem">
-          <FormLabel htmlFor="op-filtro-estado" fontSize="sm" mb={0}>
+    <Seccion titulo="Cola de solicitudes de asistencia" categoria="SIMULADO" id="sec-solicitudes" icono={<IconoBandeja tam="1.25rem" />}>
+      <Flex gap={3} wrap="wrap" mb={4}>
+        <FormControl w={{ base: "calc(50% - 0.375rem)", sm: "11rem" }}>
+          <FormLabel htmlFor="op-filtro-estado" fontSize="sm" mb={1}>
             Estado
           </FormLabel>
-          <Select id="op-filtro-estado" size="sm" bg="superficie" value={estadoFiltro} onChange={(e) => cambiarFiltro("estado", e.target.value)}>
+          <Select id="op-filtro-estado" bg="superficie" value={estadoFiltro} onChange={(e) => cambiarFiltro("estado", e.target.value)}>
             <option value="">Todos</option>
             {ESTADOS_SOLICITUD.map((e) => (
               <option key={e} value={e}>
@@ -245,11 +252,11 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
             ))}
           </Select>
         </FormControl>
-        <FormControl w="10rem">
-          <FormLabel htmlFor="op-filtro-sector" fontSize="sm" mb={0}>
+        <FormControl w={{ base: "calc(50% - 0.375rem)", sm: "9rem" }}>
+          <FormLabel htmlFor="op-filtro-sector" fontSize="sm" mb={1}>
             Sector
           </FormLabel>
-          <Select id="op-filtro-sector" size="sm" bg="superficie" value={sectorFiltro} onChange={(e) => cambiarFiltro("sector", e.target.value)}>
+          <Select id="op-filtro-sector" bg="superficie" value={sectorFiltro} onChange={(e) => cambiarFiltro("sector", e.target.value)}>
             <option value="">Todos</option>
             {["S1", "S2", "S3", "S4"].map((s) => (
               <option key={s} value={s}>
@@ -258,10 +265,22 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
             ))}
           </Select>
         </FormControl>
+        <FormControl w={{ base: "full", sm: "16rem" }} ml={{ sm: "auto" }}>
+          <FormLabel htmlFor="op-cuadrilla-asignar" fontSize="sm" mb={1}>
+            Cuadrilla para asignar
+          </FormLabel>
+          <Select id="op-cuadrilla-asignar" bg="superficie" placeholder="Elegir al pasar a «Asignada»" value={cuadrilla} onChange={(e) => setCuadrilla(e.target.value)}>
+            {cuadrillas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
       </Flex>
       <Cargando carga={carga} esVacio={(d) => d.solicitudes.length === 0} vacio={estadoFiltro || sectorFiltro ? "No hay solicitudes con esos filtros." : "No hay solicitudes en la cola."} hijos={(d) => (
         <TablaDesplazable etiqueta="Solicitudes">
-          <Table size="sm" aria-label="Solicitudes">
+          <Table size="sm" aria-label="Solicitudes" sx={APILAR_PANEL}>
             <Thead>
               <Tr>
                 <Th>N.º</Th>
@@ -279,22 +298,29 @@ function BloqueSolicitudes({ cuadrillas }: { cuadrillas: Cuadrilla[] }) {
                 const sig = siguiente(s.estado);
                 return (
                   <Tr key={s.id}>
-                    <Td>{s.id}</Td>
-                    <Td>{etiquetaTipoSolicitud(s.tipo)}</Td>
-                    <Td>{etiquetaOrigenSolicitud(s.origen)}</Td>
-                    <Td>{s.sector_id ?? "—"}</Td>
-                    <Td isNumeric>{fmtNum(s.personas)}</Td>
-                    <Td isNumeric>{fmtNum(s.animales)}</Td>
                     <Td>
-                      <Badge>{etiquetaEstadoSolicitud(s.estado)}</Badge>
+                      <Text as="span" display={{ base: "inline", xl: "none" }}>
+                        Solicitud n.º{" "}
+                      </Text>
+                      {s.id}
                     </Td>
-                    <Td>
+                    <Td data-etiqueta="Tipo">{etiquetaTipoSolicitud(s.tipo)}</Td>
+                    <Td data-etiqueta="Origen">{etiquetaOrigenSolicitud(s.origen)}</Td>
+                    <Td data-etiqueta="Sector">{s.sector_id ?? "—"}</Td>
+                    <Td isNumeric data-etiqueta="Personas">{fmtNum(s.personas)}</Td>
+                    <Td isNumeric data-etiqueta="Animales">{fmtNum(s.animales)}</Td>
+                    <Td data-etiqueta="Estado">
+                      <Chip tono={TONO_SOLICITUD[s.estado] ?? "neutro"} icono={s.estado === "resuelta" ? <IconoTilde tam="0.9rem" /> : <IconoReloj tam="0.9rem" />}>
+                        {etiquetaEstadoSolicitud(s.estado)}
+                      </Chip>
+                    </Td>
+                    <Td data-etiqueta="Pasar a">
                       {sig ? (
-                        <Button size="xs" variant="outline" onClick={() => void avanzar(s, sig)}>
+                        <Button size="sm" {...TACTIL} variant="outline" aria-label={`Pasar la solicitud ${s.id} a ${etiquetaEstadoSolicitud(sig).toLowerCase()}`} onClick={() => void avanzar(s, sig)}>
                           {etiquetaEstadoSolicitud(sig)}
                         </Button>
                       ) : (
-                        "Resuelta"
+                        <Text color="textoSuave">Ya resuelta</Text>
                       )}
                     </Td>
                   </Tr>
@@ -316,15 +342,12 @@ export default function Operacion() {
   const lista = cuadrillas.datos?.cuadrillas ?? [];
   return (
     <>
-      <Heading as="h1" size="lg" mb={1}>
-        Solicitudes y cuadrillas
-      </Heading>
-      <Flex align="center" gap={2} mb={4}>
-        <Insignia categoria="SIMULADO" />
-        <Text fontSize="sm" color="textoSuave">
-          Solicitudes, cuadrillas y tareas de demostración, con roles en lugar de nombres.
-        </Text>
-      </Flex>
+      <CabeceraPagina
+        titulo="Solicitudes y cuadrillas"
+        icono={<IconoBandeja tam="1.5rem" />}
+        categoria="SIMULADO"
+        ayuda="Solicitudes, cuadrillas y tareas de demostración, con roles en lugar de nombres."
+      />
       <BloqueSolicitudes cuadrillas={lista} />
       <BloqueTareas cuadrillas={lista} />
       <BloqueCuadrillas carga={cuadrillas} />

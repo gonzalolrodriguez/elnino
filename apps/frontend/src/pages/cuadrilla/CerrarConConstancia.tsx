@@ -130,7 +130,7 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
   }
 
   return (
-    <Box as="form" onSubmit={(e: React.FormEvent) => void enviar(e)} noValidate mt={3} p={3} border="1px solid" borderColor="borde" borderRadius="lg" aria-label={`Constancia de la tarea ${tareaId}`}>
+    <Box as="form" onSubmit={(e: React.FormEvent) => void enviar(e)} noValidate mt={3} p={{ base: 3, md: 4 }} bg="fondo" border="1px solid" borderColor="borde" borderRadius="lg" aria-label={`Constancia de la tarea ${tareaId}`}>
       <Heading as="h4" size="sm" mb={1}>
         Cerrar con constancia
       </Heading>
@@ -150,14 +150,14 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
           <FormLabel htmlFor={`cc-lat-${tareaId}`} fontSize="sm">
             Latitud del destino
           </FormLabel>
-          <Input id={`cc-lat-${tareaId}`} size="sm" bg="superficie" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
+          <Input id={`cc-lat-${tareaId}`} size="md" bg="superficie" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
           <FormErrorMessage>{errores.lat}</FormErrorMessage>
         </FormControl>
         <FormControl isInvalid={!!errores.lon} isRequired>
           <FormLabel htmlFor={`cc-lon-${tareaId}`} fontSize="sm">
             Longitud del destino
           </FormLabel>
-          <Input id={`cc-lon-${tareaId}`} size="sm" bg="superficie" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} />
+          <Input id={`cc-lon-${tareaId}`} size="md" bg="superficie" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} />
           <FormErrorMessage>{errores.lon}</FormErrorMessage>
         </FormControl>
       </SimpleGrid>
@@ -166,7 +166,7 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
         <FormLabel htmlFor={`cc-centro-${tareaId}`} fontSize="sm">
           Centro de recepción
         </FormLabel>
-        <Select id={`cc-centro-${tareaId}`} size="sm" bg="superficie" value={centro} onChange={(e) => setCentro(e.target.value)} placeholder="Sin centro (otro destino)">
+        <Select id={`cc-centro-${tareaId}`} size="md" bg="superficie" value={centro} onChange={(e) => setCentro(e.target.value)} placeholder="Sin centro (otro destino)">
           {(centros.datos?.centros ?? []).map((c) => (
             <option key={c.id} value={c.id}>
               {c.nombre}
@@ -180,7 +180,7 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
         <FormLabel htmlFor={`cc-personas-${tareaId}`} fontSize="sm">
           Personas trasladadas
         </FormLabel>
-        <Input id={`cc-personas-${tareaId}`} size="sm" bg="superficie" inputMode="numeric" w="8rem" value={personas} onChange={(e) => setPersonas(e.target.value)} />
+        <Input id={`cc-personas-${tareaId}`} size="md" bg="superficie" inputMode="numeric" w="8rem" value={personas} onChange={(e) => setPersonas(e.target.value)} />
         <FormErrorMessage>{errores.personas}</FormErrorMessage>
       </FormControl>
 
@@ -188,16 +188,16 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
         <Text as="legend" fontSize="sm" fontWeight={600} mb={1}>
           Animales trasladados
         </Text>
-        <Flex gap={3} wrap="wrap">
+        <SimpleGrid columns={{ base: 2, sm: 5 }} spacing={3}>
           {ESPECIES.map(([k, etiqueta]) => (
-            <FormControl key={k} w="7.5rem">
-              <FormLabel htmlFor={`cc-${k}-${tareaId}`} fontSize="xs" mb={0}>
+            <FormControl key={k}>
+              <FormLabel htmlFor={`cc-${k}-${tareaId}`} fontSize="sm" mb={1}>
                 {etiqueta}
               </FormLabel>
-              <Input id={`cc-${k}-${tareaId}`} size="sm" bg="superficie" inputMode="numeric" value={animales[k] ?? ""} onChange={(e) => setAnimales((a) => ({ ...a, [k]: e.target.value }))} />
+              <Input id={`cc-${k}-${tareaId}`} size="md" bg="superficie" inputMode="numeric" value={animales[k] ?? ""} onChange={(e) => setAnimales((a) => ({ ...a, [k]: e.target.value }))} />
             </FormControl>
           ))}
-        </Flex>
+        </SimpleGrid>
         {errores.animales && (
           <Text fontSize="sm" color="evacuacion.700" role="alert">
             {errores.animales}
@@ -209,7 +209,7 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
         <FormLabel htmlFor={`cc-nota-${tareaId}`} fontSize="sm">
           Nota
         </FormLabel>
-        <Textarea id={`cc-nota-${tareaId}`} size="sm" bg="superficie" rows={3} maxLength={1000} value={nota} onChange={(e) => setNota(e.target.value)} />
+        <Textarea id={`cc-nota-${tareaId}`} size="md" bg="superficie" rows={3} maxLength={1000} value={nota} onChange={(e) => setNota(e.target.value)} />
         <FormErrorMessage>{errores.nota}</FormErrorMessage>
       </FormControl>
 
@@ -225,16 +225,16 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
       {error !== null && (
         <Box mt={3}>
           <AlertaError error={error} />
-          <Text fontSize="xs" color="textoSuave" mt={1}>
+          <Text textStyle="microdato" mt={1}>
             Si se cortó la conexión, volvé a enviar: el servidor reconoce el mismo cierre y no lo duplica.
           </Text>
         </Box>
       )}
-      <Flex gap={2} mt={4}>
-        <Button type="submit" size="sm" isLoading={enviando}>
+      <Flex gap={2} mt={4} direction={{ base: "column", sm: "row" }}>
+        <Button type="submit" size="lg" isLoading={enviando}>
           Cerrar con constancia
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={alCancelar} isDisabled={enviando}>
+        <Button type="button" size="lg" variant="outline" onClick={alCancelar} isDisabled={enviando}>
           Volver
         </Button>
       </Flex>

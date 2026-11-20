@@ -1,25 +1,28 @@
-import { Badge, Box, Button, Flex, Heading, Link, Text, useToast } from "@chakra-ui/react";
-import { useState } from "react";
+import { Box, Button, Flex, Heading, Link, Text, useToast } from "@chakra-ui/react";
+import { useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
-import { IconoMas, IconoPersonas, IconoTriangulo, IconoVehiculo } from "../../components/iconos/Iconos";
+import { IconoHistorial, IconoMas, IconoPersonas, IconoTriangulo, IconoVehiculo } from "../../components/iconos/Iconos";
 import { AlertaError } from "../../components/Formulario";
 import { Insignia } from "../../components/Insignia";
-import { etiquetaEstadoTarea, etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
+import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { etiquetaVehiculo } from "../../lib/pedidos";
-import { FichaIcono } from "../../pages/micuenta/Panel";
 import { api } from "../api";
 import type { CuadrillaResumen } from "../tipos";
+import { Chip, FichaIcono } from "../ui";
 import { FormularioIntegrante } from "./FormularioIntegrante";
-import { ChipParte, truncar } from "./partes";
+import { AvisoAtencion, ChipEstadoTarea, ChipParte, TACTIL, truncar } from "./partes";
+
+export { AvisoAtencion };
 
 export const TIPO_INCIDENTE: Record<string, string> = { humana: "Humana y servicios", ganadera: "Ganadera", apicola: "Apícola" };
+const ESTADO_CUADRILLA: Record<string, string> = { disponible: "Disponible", en_tarea: "En tarea", inactiva: "Inactiva" };
 
-/** Rótulo con ícono para lo que requiere atención del operador: nunca solo color. */
-export function AvisoAtencion({ children = "Requiere atención" }: { children?: string }) {
+/** Título de cada bloque de la ficha: una línea de texto normal con ícono, no un rótulo en mayúsculas. */
+function Rotulo({ icono, children, id }: { icono?: ReactNode; children: ReactNode; id?: string }) {
   return (
-    <Flex as="span" display="inline-flex" align="center" gap={1.5} px={2.5} py="1px" borderRadius="full" bg="alerta.100" color="alerta.800" fontSize="sm" fontWeight={700} data-testid="requiere-atencion">
-      <IconoTriangulo tam="1rem" />
+    <Flex as="h3" id={id} align="center" gap={1.5} textStyle="rotulo" mb={1.5}>
+      {icono}
       {children}
     </Flex>
   );
@@ -33,6 +36,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
   const [error, setError] = useState<unknown>(null);
   const vehiculo = etiquetaVehiculo(c.vehiculo);
   const t = c.tarea_actual;
+  const tituloId = `cuadrilla-${c.id}-titulo`;
 
   async function quitar(usuarioId: number, rol: string) {
     setError(null);
@@ -47,69 +51,58 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
   }
 
   return (
-    <Box as="article" id={`cuadrilla-${c.id}`} aria-labelledby={`cuadrilla-${c.id}-titulo`} layerStyle="tarjeta" p={{ base: 4, md: 5 }} data-testid={`cuadrilla-${c.id}`}>
+    <Box as="article" id={`cuadrilla-${c.id}`} aria-labelledby={tituloId} layerStyle="tarjeta" p={{ base: 4, md: 5 }} minW={0} scrollMarginTop="5rem" data-testid={`cuadrilla-${c.id}`}>
       <Flex gap={3.5} align="flex-start">
-        <FichaIcono tono="tinta" tam="3rem">
-          <IconoVehiculo vehiculo={c.vehiculo} tam="1.5rem" />
-        </FichaIcono>
+        <FichaIcono tono={t ? "info" : "ok"} tam="3rem" icono={<IconoVehiculo vehiculo={c.vehiculo} tam="1.5rem" />} />
         <Box minW={0} flex="1">
-          <Heading as="h3" id={`cuadrilla-${c.id}-titulo`} size="sm">
+          <Heading as="h2" id={tituloId} size="sm" textStyle="tituloBloque">
             {c.nombre}
           </Heading>
-          <Text fontSize="sm" color="textoSuave">
-            {TIPO_INCIDENTE[c.tipo_incidente] ?? c.tipo_incidente}
-          </Text>
-          <Flex align="center" gap={2} wrap="wrap" mt={1.5}>
-            <Badge>{c.estado.replace("_", " ")}</Badge>
-            {vehiculo && (
-              <Flex as="span" align="center" gap={1.5} px={2.5} py="1px" borderRadius="full" bg="limo.50" color="limo.800" fontSize="sm" fontWeight={600}>
-                <IconoVehiculo vehiculo={c.vehiculo} tam="1rem" />
-                {vehiculo}
-              </Flex>
-            )}
+          <Text textStyle="microdato">{TIPO_INCIDENTE[c.tipo_incidente] ?? c.tipo_incidente}</Text>
+          <Flex align="center" gap={1.5} wrap="wrap" mt={2}>
+            <Chip tono={t ? "info" : "ok"}>{ESTADO_CUADRILLA[c.estado] ?? c.estado.replace("_", " ")}</Chip>
+            {vehiculo && <Chip tono="neutro">{vehiculo}</Chip>}
             <Insignia categoria="SIMULADO" />
           </Flex>
         </Box>
-        {c.dificultades_abiertas > 0 && (
-          <Flex as="span" align="center" gap={1.5} fontSize="sm" fontWeight={700} color="alerta.800" data-testid={`dificultades-${c.id}`}>
-            <IconoTriangulo tam="1rem" />
-            {c.dificultades_abiertas} {c.dificultades_abiertas === 1 ? "dificultad abierta" : "dificultades abiertas"}
-          </Flex>
-        )}
       </Flex>
 
-      <Box mt={4}>
-        <Flex align="center" gap={1.5} fontSize="xs" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" mb={1.5}>
-          <IconoPersonas tam="1rem" /> Integrantes (por rol)
-        </Flex>
+      {c.dificultades_abiertas > 0 && (
+        <Chip tono="aviso" icono={<IconoTriangulo tam="1rem" />} fontWeight={700} mt={3} data-testid={`dificultades-${c.id}`}>
+          {c.dificultades_abiertas} {c.dificultades_abiertas === 1 ? "dificultad abierta" : "dificultades abiertas"}
+        </Chip>
+      )}
+
+      <Box mt={4} pt={3} borderTop="1px solid" borderColor="borde">
+        <Rotulo icono={<IconoPersonas tam="1rem" />}>Integrantes (por rol)</Rotulo>
         {c.integrantes.length === 0 ? (
           <Text fontSize="sm" color="textoSuave">
             Sin integrantes.
           </Text>
         ) : (
-          <Box as="ul" listStyleType="none" m={0} p={0} display="flex" flexDirection="column" gap={1}>
+          <Box as="ul" listStyleType="none" m={0} p={0} display="flex" flexDirection="column" gap={1.5}>
             {c.integrantes.map((i) => (
-              <Flex as="li" key={i.usuario_id} align="center" gap={2} wrap="wrap" fontSize="sm">
+              <Flex as="li" key={i.usuario_id} align="center" columnGap={2} rowGap={1} wrap="wrap" fontSize="sm" minH="2rem">
                 <Text as="span" fontWeight={600}>
                   {etiquetaRolOperativo(i.rol_operativo)}
                 </Text>
                 {i.es_encargado && (
-                  <Badge colorScheme="green" data-testid="encargado">
+                  <Chip tono="ok" data-testid="encargado">
                     Encargado
-                  </Badge>
+                  </Chip>
                 )}
                 {puedeGestionar &&
                   (quitando === i.usuario_id ? (
-                    <Flex as="span" align="center" gap={1} ml="auto">
-                      <Button size="xs" colorScheme="red" onClick={() => void quitar(i.usuario_id, i.rol_operativo)} aria-label={`Confirmar: quitar ${etiquetaRolOperativo(i.rol_operativo)}`}>
+                    <Flex as="span" align="center" gap={1.5} ml="auto">
+                      <Button size="sm" {...TACTIL} colorScheme="red" onClick={() => void quitar(i.usuario_id, i.rol_operativo)} aria-label={`Confirmar: quitar ${etiquetaRolOperativo(i.rol_operativo)}`}>
                         Sí, quitar
                       </Button>
-                      <Button size="xs" variant="outline" onClick={() => setQuitando(null)}>
+                      <Button size="sm" {...TACTIL} variant="outline" onClick={() => setQuitando(null)}>
                         No
                       </Button>
                     </Flex>
                   ) : (
-                    <Button size="xs" variant="outline" ml="auto" onClick={() => setQuitando(i.usuario_id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
+                    <Button size="sm" {...TACTIL} variant="outline" ml="auto" onClick={() => setQuitando(i.usuario_id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
                       Quitar
                     </Button>
                   ))}
@@ -119,7 +112,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
         )}
         {puedeGestionar && (
           <>
-            <Button size="xs" variant="outline" mt={2} leftIcon={<IconoMas tam="0.9rem" />} aria-expanded={agregando} onClick={() => setAgregando((v) => !v)}>
+            <Button size="sm" {...TACTIL} variant="outline" mt={3} leftIcon={<IconoMas tam="0.9rem" />} aria-expanded={agregando} onClick={() => setAgregando((v) => !v)}>
               {agregando ? "Cerrar" : "Agregar integrante"}
             </Button>
             {agregando && (
@@ -139,16 +132,14 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
       </Box>
 
       <Box mt={4} pt={3} borderTop="1px solid" borderColor="borde">
-        <Text fontSize="xs" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" mb={1.5}>
-          Tarea actual
-        </Text>
+        <Rotulo icono={<IconoVehiculo vehiculo={c.vehiculo} tam="1rem" />}>Tarea actual</Rotulo>
         {t ? (
-          <Flex align="center" gap={2} wrap="wrap" fontSize="sm">
-            <Link as={RouterLink} to={`/comando/operacion?tarea=${t.id}#sec-tareas`} fontWeight={700}>
+          <Flex align="center" columnGap={2} rowGap={1.5} wrap="wrap" fontSize="sm">
+            <Link as={RouterLink} to={`/comando/operacion?tarea=${t.id}#sec-tareas`} fontWeight={700} display="inline-flex" alignItems="center" minH={{ base: "2.75rem", md: "auto" }}>
               Tarea n.º {t.id}
             </Link>
             {t.sector_id && <span>Sector {t.sector_id}</span>}
-            <Badge>{etiquetaEstadoTarea(t.estado)}</Badge>
+            <ChipEstadoTarea estado={t.estado} />
             {t.requiere_atencion && <AvisoAtencion />}
           </Flex>
         ) : (
@@ -158,21 +149,19 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar }: { c: Cuadrill
         )}
       </Box>
 
-      <Box mt={3}>
-        <Text fontSize="xs" fontWeight={700} letterSpacing="0.06em" textTransform="uppercase" color="textoSuave" mb={1.5}>
-          Último parte
-        </Text>
+      <Box mt={3} pt={3} borderTop="1px solid" borderColor="borde">
+        <Rotulo icono={<IconoHistorial tam="1rem" />}>Último parte</Rotulo>
         {c.ultimo_parte ? (
           <Box fontSize="sm" data-testid={`ultimo-parte-${c.id}`}>
-            <Flex align="center" gap={2} wrap="wrap">
+            <Flex align="center" columnGap={2} rowGap={1} wrap="wrap">
               <ChipParte parte={c.ultimo_parte} />
               {c.ultimo_parte.autor_rol && <span>{etiquetaRolOperativo(c.ultimo_parte.autor_rol)}</span>}
-              <Text as="time" dateTime={c.ultimo_parte.creado_en} color="textoSuave" ml="auto">
+              <Text as="time" dateTime={c.ultimo_parte.creado_en} textStyle="microdato" ml={{ md: "auto" }}>
                 {fechaHora(c.ultimo_parte.creado_en)}
               </Text>
             </Flex>
             {c.ultimo_parte.observacion && (
-              <Text color="textoSuave" mt={1}>
+              <Text color="textoSuave" mt={1.5} overflowWrap="anywhere">
                 {truncar(c.ultimo_parte.observacion, 200)}
               </Text>
             )}
