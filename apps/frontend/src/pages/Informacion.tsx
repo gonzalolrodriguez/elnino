@@ -2,6 +2,7 @@ import { Box, Heading, Link, ListItem, Text, UnorderedList } from "@chakra-ui/re
 import { useEffect, type ReactNode } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
+import { CaudalGlofas } from "../caudal/CaudalGlofas";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
 import { UMBRAL_ALERTA } from "../datos/kit";
@@ -15,6 +16,7 @@ const TEMAS = [
   { id: "como-llega", titulo: "Cómo llega el agua a Formosa" },
   { id: "amenazas", titulo: "Dos amenazas distintas" },
   { id: "serie", titulo: "Puerto Formosa: umbrales y picos" },
+  { id: "caudal", titulo: "Caudal modelado (GloFAS)" },
   { id: "pronostico", titulo: "Pronóstico estacional 2026/27" },
   { id: "sectores", titulo: "Sectores de evaluación" },
   { id: "que-hacer", titulo: "Qué hacer" },
@@ -147,6 +149,13 @@ export default function Informacion() {
         <SerieK1 serie={serie} />
       </Seccion>
 
+      <Seccion id="caudal" titulo="Caudal modelado del río Paraguay (GloFAS)">
+        <Text maxW="40rem" mb={4}>
+          Además de la altura de la escala, el modelo global GloFAS estima el caudal del río. Es una referencia modelada, distinta de la altura observada.
+        </Text>
+        <CaudalGlofas k1={serie} />
+      </Seccion>
+
       <Seccion id="pronostico" titulo="Pronóstico estacional 2026/27">
         <Text maxW="40rem" mb={4}>
           El modelo CFS v2 de NOAA (ensamble de 20 corridas) estima condiciones de El Niño muy fuerte para el período noviembre de 2026
@@ -188,6 +197,9 @@ export default function Informacion() {
             consultada el 29/10/2026: alerta.ina.gob.ar/pub/datos.
           </ListItem>
           <ListItem>Umbrales y ubicación de estaciones: INA, catálogo de estaciones, K3 (DATO OBSERVADO, consultado el 29/10/2026).</ListItem>
+          <ListItem>
+            Caudal diario modelado: GloFAS v4 (Copernicus Emergency Management Service) vía Open-Meteo Flood API, CC BY 4.0 (DOCUMENTO DE REFERENCIA, modelado, hasta el corte 31/10/2026).
+          </ListItem>
           <ListItem>Sectores: K10 v1.0 del 12/11/2026 (SIMULADO).</ListItem>
           <ListItem>SMN, Boletín N.º 1 sobre El Niño, 04/09/2026 (DOCUMENTO DE REFERENCIA).</ListItem>
           <ListItem>NOAA CPC, Discusión ENSO, 08/10/2026 (DOCUMENTO DE REFERENCIA).</ListItem>

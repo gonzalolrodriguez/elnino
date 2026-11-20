@@ -206,6 +206,14 @@ curl -s -i $API/auth/yo
 curl -s $API/usuarios -H "Authorization: Bearer $TOKEN"
 ```
 
+Caudal modelado GloFAS (público, sin autenticación; ejemplo reproducible):
+
+```bash
+curl -s "http://localhost:8000/api/v1/serie/caudal-glofas?estacion=formosa" | python -c "import json,sys; d=json.load(sys.stdin); print(d['categoria'], d['ultima'], d['picos'], d['posterior_al_corte'])"
+# DOCUMENTO DE REFERENCIA {'fecha': '2026-10-31', 'caudal_m3s': 2083.49} [{'anio': 2016, ...}, {'anio': 2019, ...}] None
+curl -s -o /dev/null -w "%{http_code}\n" "http://localhost:8000/api/v1/serie/caudal-glofas?estacion=asuncion"   # 422
+```
+
 ## Pruebas automáticas relacionadas
 
 `apps/backend/tests/test_auth.py` cubre estos flujos (registro con y sin consentimiento, contraseña corta, login, bloqueo con 429, rotación y reutilización del refresh, `/auth/yo` con y sin token, `/usuarios` con ciudadano y con admin).
@@ -228,6 +236,7 @@ Convenciones: las respuestas con cifras llevan `categoria` (`DATO OBSERVADO`, `D
 | GET | `/roles-operativos` | autenticado | Catálogo de roles operativos `{ "roles": [{ "codigo", "nombre", "descripcion" }] }` (`SIMULADO`, sin nombres de personas). Lo usa el panel de administración (Fase 3) |
 | GET | `/serie/formosa?desde=&hasta=` | público | Serie diaria K1 (máximo del día), umbrales K3, picos 2016 y 2019, máximo y última lectura. No interpola huecos |
 | GET | `/serie/ascenso?altura_actual_m=` | público | Velocidades de ascenso (2015-16, 2019, oct-2026), cruces, tasas m/día y **tiempo restante** a alerta, evacuación y cada compromiso K10 como rango (de la tasa más alta a la más baja). La proyección es lineal (`SUPUESTO`), no un pronóstico |
+| GET | `/serie/caudal-glofas?estacion=formosa\|pilcomayo` | público | Caudal diario **modelado** (m³/s, GloFAS vía Open-Meteo, `DOCUMENTO DE REFERENCIA`) del 01/01/2006 al 31/10/2026, picos modelados de 2016 y 2019 y último valor. Incluye `categoria`, `fuente`, `licencia`, `atribucion`, `fecha_dato`, `fecha_descarga`, `celda_usada` y la nota de que no hay conversión a altura. `posterior_al_corte` es `null` salvo con `PERMITIR_DATOS_POST_CORTE=true`; entonces trae fechas, mediana, p25, p75, mínimo y máximo del ensamble con `rotulo`, `horizonte_dias` y `supuesto`. `pronostico_emitido_al_corte` es siempre `null`: la fuente no ofrece el pronóstico tal como se emitió el 31/10/2026. `estacion` inválida: 422 |
 
 `GET /serie/ascenso` (extracto):
 
@@ -724,7 +733,7 @@ Pruebas automáticas: `tests/test_escenario.py`, `test_recomendacion.py`, `test_
 
 ## Regenerar el esquema OpenAPI
 
-`docs/openapi.json` se exporta de la aplicación (70 rutas y 81 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
+`docs/openapi.json` se exporta de la aplicación (71 rutas y 82 operaciones HTTP bajo `/api/v1`, todas documentadas en este archivo; el WebSocket `WS /ws` no figura en OpenAPI y está en "Tiempo real"). Desde `apps/backend`, con el entorno virtual activo y las variables de `.env` cargadas:
 
 ```bash
 python -c "import json; from app.main import app; open('../../docs/openapi.json','w',encoding='utf-8',newline='\n').write(json.dumps(app.openapi(), ensure_ascii=False, indent=2)+'\n')"

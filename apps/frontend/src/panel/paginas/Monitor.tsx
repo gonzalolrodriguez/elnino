@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, Heading, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
+import { CaudalGlofas } from "../../caudal/CaudalGlofas";
 import { Insignia } from "../../components/Insignia";
 import { indiceDeFecha, type SerieDiaria } from "../../datos/kit";
 import { SerieK1 } from "../../informacion/SerieK1";
@@ -189,6 +190,9 @@ export default function Monitor() {
       <CabeceraPagina titulo="Río y lluvia" icono={<IconoOlas tam="1.5rem" />} />
       <Seccion titulo="Puerto Formosa: serie diaria, umbrales y picos" categoria="DATO OBSERVADO" id="sec-serie">
         <Cargando carga={serie} hijos={(s) => <SerieYCifras s={s} />} />
+      </Seccion>
+      <Seccion titulo="Caudal modelado del río Paraguay (GloFAS)" categoria="DOCUMENTO DE REFERENCIA" id="sec-caudal">
+        <CaudalGlofas />
       </Seccion>
       <Seccion titulo="Velocidad de ascenso y tiempo restante" categoria="DATO OBSERVADO" id="sec-ascenso" derecha={
         <Flex gap={2}>

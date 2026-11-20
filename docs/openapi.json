@@ -1205,6 +1205,55 @@
         }
       }
     },
+    "/api/v1/serie/caudal-glofas": {
+      "get": {
+        "tags": [
+          "datos"
+        ],
+        "summary": "Serie Caudal Glofas",
+        "description": "Caudal diario modelado (m³/s) hasta el corte; posterior al corte solo con el flag.",
+        "operationId": "serie_caudal_glofas_api_v1_serie_caudal_glofas_get",
+        "parameters": [
+          {
+            "name": "estacion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "formosa",
+                "pilcomayo"
+              ],
+              "type": "string",
+              "default": "formosa",
+              "title": "Estacion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Serie Caudal Glofas Api V1 Serie Caudal Glofas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cuadrillas": {
       "get": {
         "tags": [
