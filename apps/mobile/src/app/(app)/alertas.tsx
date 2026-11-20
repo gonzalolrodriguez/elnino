@@ -7,6 +7,7 @@ import { AvisoPanelWeb } from "@/components/AvisoPanelWeb";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { TarjetaConfirmacion, useConsultas } from "@/components/TarjetaConfirmacion";
 import { Boton, Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Tarjeta, Texto, Titulo, Vacio } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { useAlertas } from "@/lib/AlertasContext";
 import { datosDeConfirmacion } from "@/lib/confirmacion";
 import { formatearFechaHora, gravedadAviso, type GravedadAviso } from "@/lib/etiquetas";
@@ -83,7 +84,7 @@ export default function Alertas() {
             })()}
             <Chip tono={n.leida ? "neutro" : "info"} icono={n.leida ? "tilde" : "campana"} texto={n.leida ? "Leída" : "Nueva"} />
           </Chips>
-          <Text maxFontSizeMultiplier={1.6} style={{ fontSize: 16, lineHeight: 23, color: COLOR.texto, fontWeight: n.leida ? "400" : "600" }}>
+          <Text maxFontSizeMultiplier={1.6} style={[n.leida ? TIPO.cuerpo : TIPO.cuerpoFuerte, { color: COLOR.texto }]}>
             {n.mensaje}
           </Text>
           <Texto suave pequeno>

@@ -6,7 +6,7 @@ import { Icono } from "@/components/Icono";
 import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { Disco } from "@/components/Piezas";
 import { Boton, COLOR, ErrorCaja, Insignia, Tarjeta, Texto } from "@/components/ui";
-import { RADIO } from "@/components/tema";
+import { RADIO, TIPO } from "@/components/tema";
 import { useCola } from "@/lib/ColaContext";
 import { datosPedidoRapido, personasParaPedidoRapido, SEGUNDOS_CONFIRMACION } from "@/lib/ayudaRapida";
 import { abrirSMS } from "@/lib/ayudaSms";
@@ -132,14 +132,14 @@ export function AyudaAhora({
             gap: 12,
             paddingHorizontal: 16,
             paddingVertical: 14,
-            backgroundColor: pressed ? "#8F1D14" : COLOR.error,
+            backgroundColor: pressed ? COLOR.errorPresionado : COLOR.error,
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLOR.velo, alignItems: "center", justifyContent: "center" }}>
             <Icono nombre="alerta" tam={28} color={COLOR.papel} />
           </View>
-          <Text maxFontSizeMultiplier={1.5} style={{ color: COLOR.papel, fontSize: 22, lineHeight: 27, fontWeight: "700", letterSpacing: -0.3, flexShrink: 1 }}>
+          <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.destacado, color: COLOR.papel, flexShrink: 1 }}>
             Necesito ayuda ahora
           </Text>
         </Pressable>
@@ -156,7 +156,7 @@ export function AyudaAhora({
         <>
           <Text
             accessibilityLiveRegion="polite"
-            style={{ fontSize: 20, lineHeight: 26, fontWeight: "700", letterSpacing: -0.2, color: COLOR.texto }}
+            style={{ ...TIPO.subtitulo, color: COLOR.texto }}
           >
             Se enviará tu pedido de ayuda en {fase.segundos} s
           </Text>
@@ -198,7 +198,7 @@ export function AyudaAhora({
             <Disco tono={fase.estado === "encolada" ? "aviso" : "ok"} icono={fase.estado === "encolada" ? "reloj" : "tilde"} tam={40} />
             <Text
               accessibilityLiveRegion="polite"
-              style={{ flex: 1, color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.okTexto, fontWeight: "700", fontSize: 18, lineHeight: 24 }}
+              style={{ flex: 1, ...TIPO.subtitulo, color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.okTexto }}
             >
               {fase.estado === "encolada" ? "Pedido guardado en el teléfono" : "Pedido enviado"}
               {fase.id !== null ? ` · n.º ${fase.id}` : ""}
@@ -221,7 +221,7 @@ export function AyudaAhora({
             onPress={() => router.push("/solicitudes")}
             style={{ minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center" }}
           >
-            <Text style={{ color: COLOR.primario, fontWeight: "600", fontSize: 15 }}>Ver Mis pedidos</Text>
+            <Text style={{ ...TIPO.cuerpoFuerte, color: COLOR.primario }}>Ver Mis pedidos</Text>
           </Pressable>
           <Boton titulo="Listo" variante="secundario" onPress={() => setFase({ tipo: "reposo" })} />
         </>

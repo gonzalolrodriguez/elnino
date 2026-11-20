@@ -8,6 +8,7 @@ import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
 import { SelectorEspecie } from "@/components/SelectorEspecie";
 import { Aviso, Disco, Encabezado } from "@/components/Piezas";
 import { Boton, Campo, COLOR, ErrorCaja, Insignia, Opcion, Opciones, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { useCola } from "@/lib/ColaContext";
 import type { DatosSolicitud } from "@/lib/cola";
 import { etiquetaTipoSolicitud } from "@/lib/etiquetas";
@@ -252,7 +253,7 @@ export default function Asistencia() {
         <Tarjeta>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Disco tono="ok" icono="tilde" tam={40} />
-            <Text style={{ flex: 1, color: COLOR.okTexto, fontWeight: "700", fontSize: 18 }}>Solicitud enviada</Text>
+            <Text style={{ flex: 1, color: COLOR.okTexto, ...TIPO.subtitulo }}>Solicitud enviada</Text>
           </View>
           <Insignia categoria="SIMULADO" />
           <Texto suave>Podés seguir su estado en Mis pedidos.</Texto>
@@ -262,7 +263,7 @@ export default function Asistencia() {
         <Tarjeta>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Disco tono="aviso" icono="reloj" tam={40} />
-            <Text style={{ flex: 1, color: COLOR.avisoTexto, fontWeight: "700", fontSize: 18 }}>Solicitud enviada</Text>
+            <Text style={{ flex: 1, color: COLOR.avisoTexto, ...TIPO.subtitulo }}>Solicitud enviada</Text>
           </View>
           <Texto suave>La foto todavía no se pudo subir; se reintentará sola cuando haya conexión.</Texto>
         </Tarjeta>
@@ -271,7 +272,7 @@ export default function Asistencia() {
         <Tarjeta>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Disco tono="aviso" icono="reloj" tam={40} />
-            <Text style={{ flex: 1, color: COLOR.avisoTexto, fontWeight: "700", fontSize: 18 }}>Guardada en el teléfono</Text>
+            <Text style={{ flex: 1, color: COLOR.avisoTexto, ...TIPO.subtitulo }}>Guardada en el teléfono</Text>
           </View>
           <Texto suave>
             {sinRed

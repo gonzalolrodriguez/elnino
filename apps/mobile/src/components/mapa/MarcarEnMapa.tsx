@@ -61,7 +61,7 @@ export function MarcarEnMapa({
           />
           <Insignia categoria="SIMULADO" />
           <Texto suave pequeno>
-            Sectores K10 (SIMULADO, v1.0, {K10_FECHA}).
+            Sectores de evaluación (K10), versión 1.0, {K10_FECHA}.
           </Texto>
           {sinMapa ? <Texto suave pequeno>Podés usar el GPS o escribir una referencia en su lugar.</Texto> : null}
         </>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
-import { COLOR, RADIO } from "@/components/tema";
+import { COLOR, RADIO, TIPO } from "@/components/tema";
 import { obtenerSalud } from "@/lib/api";
 import { escucharServidor } from "@/lib/servidor";
 
@@ -43,7 +43,7 @@ export function EstadoBackend() {
 
 const styles = StyleSheet.create({
   caja: { padding: 16, backgroundColor: COLOR.cielo, borderRadius: RADIO.tarjeta, gap: 6 },
-  titulo: { fontSize: 15, fontWeight: "600", color: COLOR.texto },
-  ok: { color: COLOR.ok, fontWeight: "700", fontSize: 16 },
-  error: { color: COLOR.error, fontSize: 15 },
+  titulo: { ...TIPO.cuerpoFuerte, color: COLOR.texto },
+  ok: { ...TIPO.cuerpoFuerte, fontWeight: "700", color: COLOR.okTexto },
+  error: { ...TIPO.cuerpo, color: COLOR.errorTexto },
 });

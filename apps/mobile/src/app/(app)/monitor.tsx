@@ -6,6 +6,7 @@ import { SoloRol } from "@/components/SoloRol";
 import { Icono } from "@/components/Icono";
 import { Chip, Chips, Cifra, Disco, Encabezado, FilaKpi, Kpi, TONOS, type Tono } from "@/components/Piezas";
 import { Cargando, COLOR, ErrorCaja, Insignia, Pantalla, Rejilla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoSector, etiquetaEstadoEvacuacionCorta, etiquetaEstadoSolicitud, etiquetaEstadoTarea, formatearFechaHora } from "@/lib/etiquetas";
@@ -103,6 +104,7 @@ function Sectores({ r }: { r: PanelResumen["sectores"] }) {
   return (
     <>
       <Subtitulo>Sectores</Subtitulo>
+      <Insignia categoria={r.categoria} />
       {r.items.length === 0 ? <Texto suave>No hay sectores cargados.</Texto> : null}
       <Rejilla>
         {r.items.map((s) => {
@@ -113,7 +115,7 @@ function Sectores({ r }: { r: PanelResumen["sectores"] }) {
                 <Disco tono={(TONO_ESTADO[s.estado] ?? TONO_ESTADO.normal).tono} icono={(TONO_ESTADO[s.estado] ?? TONO_ESTADO.normal).icono} tam={36} />
                 <Text
                   maxFontSizeMultiplier={1.6}
-                  style={{ flex: 1, fontWeight: "700", fontSize: 17, lineHeight: 23, color: TONOS[(TONO_ESTADO[s.estado] ?? TONO_ESTADO.normal).tono].texto }}
+                  style={{ flex: 1, ...TIPO.subtitulo, color: TONOS[(TONO_ESTADO[s.estado] ?? TONO_ESTADO.normal).tono].texto }}
                 >
                   {s.nombre}: {etiquetaEstadoSector(s.estado)}
                   {s.aislado ? " · aislado" : ""}
@@ -126,7 +128,6 @@ function Sectores({ r }: { r: PanelResumen["sectores"] }) {
                 <Kpi rotulo="Animales expuestos" valor={numeroAR(s.animales_expuestos ?? 0, 0)} icono="mascota" />
               </FilaKpi>
               <Chip tono={abiertos === s.accesos.length ? "ok" : "aviso"} icono="camion" texto={`Accesos transitables: ${abiertos} de ${s.accesos.length}`} />
-              <Insignia categoria={r.categoria} />
             </Tarjeta>
           );
         })}
@@ -161,13 +162,14 @@ function Centros({ r }: { r: PanelResumen["centros"] }) {
   return (
     <>
       <Subtitulo>Centros de recepción</Subtitulo>
+      <Insignia categoria={r.categoria} />
       {r.items.length === 0 ? <Texto suave>No hay centros cargados.</Texto> : null}
       <Rejilla>
         {r.items.map((c) => (
           <Tarjeta key={c.nombre}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icono nombre="casa" tam={20} color={COLOR.primario} />
-              <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, fontWeight: "700", fontSize: 16, color: COLOR.texto }}>
+              <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, ...TIPO.cuerpoFuerte, fontWeight: "700", color: COLOR.texto }}>
                 {c.nombre}
               </Text>
             </View>
@@ -187,7 +189,6 @@ function Centros({ r }: { r: PanelResumen["centros"] }) {
                 />
               </View>
             ) : null}
-            <Insignia categoria={r.categoria} />
           </Tarjeta>
         ))}
       </Rejilla>
@@ -200,12 +201,13 @@ function Cuadrillas({ r }: { r: NonNullable<PanelResumen["cuadrillas"]> }) {
   return (
     <>
       <Subtitulo>Cuadrillas</Subtitulo>
+      <Insignia categoria={r.categoria} />
       <Rejilla>
         {r.items.map((c) => (
           <Tarjeta key={c.nombre}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icono nombre="tarea" tam={20} color={COLOR.primario} />
-              <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, fontWeight: "700", fontSize: 16, color: COLOR.texto }}>
+              <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, ...TIPO.cuerpoFuerte, fontWeight: "700", color: COLOR.texto }}>
                 {c.nombre}
               </Text>
             </View>
@@ -215,7 +217,6 @@ function Cuadrillas({ r }: { r: NonNullable<PanelResumen["cuadrillas"]> }) {
                 .map(([e, n]) => `${etiquetaEstadoTarea(e)}: ${numeroAR(n ?? 0, 0)}`)
                 .join(" · ") || "Sin tareas"}
             </Texto>
-            <Insignia categoria={r.categoria} />
           </Tarjeta>
         ))}
       </Rejilla>
@@ -254,7 +255,7 @@ function Frescura({ r }: { r: PanelResumen }) {
     <Tarjeta>
       <Encabezado icono="reloj">Frescura de los datos</Encabezado>
       <Texto suave>Última lectura del río: {fechaCorta(f?.rio_ultima_lectura)}</Texto>
-      <Texto suave>Sectores (K10): {fechaCorta(f?.k10_sectores)}</Texto>
+      <Texto suave>Sectores de evaluación (K10): {fechaCorta(f?.k10_sectores)}</Texto>
       <Texto suave>
         Última lectura de lluvia: {f?.lluvia_ultima_lectura ? fechaCorta(f.lluvia_ultima_lectura) : "sin dato de lluvia"}
       </Texto>

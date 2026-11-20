@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 
 import { MapaAbierto } from "@/components/mapa/MapaAbierto";
 import { Boton, COLOR, Subtitulo, Tarjeta, Texto } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { acumuladas, largoTotal, minutosRestantes, type Par } from "@/lib/animacionRuta";
 import { formatearDistancia } from "@/lib/seguimiento";
 import { useMovimientoReducido } from "@/lib/movimientoReducido";
@@ -69,7 +70,7 @@ export function MapaRutaPedido({ pedido, ruta }: { pedido: PedidoCiudadano; ruta
   const puntos = useMemo<PuntoCapa[]>(() => {
     const lista: PuntoCapa[] = [];
     if (pedido.lon != null && pedido.lat != null) {
-      lista.push({ id: "pedido", lon: pedido.lon, lat: pedido.lat, etiqueta: "Tu pedido", forma: "circulo", color: "#1E5AA0" });
+      lista.push({ id: "pedido", lon: pedido.lon, lat: pedido.lat, etiqueta: "Tu pedido", forma: "circulo", color: COLOR.primario });
     }
     if (pedido.centro && pedido.centro.lon != null && pedido.centro.lat != null) {
       lista.push({
@@ -78,7 +79,7 @@ export function MapaRutaPedido({ pedido, ruta }: { pedido: PedidoCiudadano; ruta
         lat: pedido.centro.lat,
         etiqueta: `Centro: ${pedido.centro.nombre} (SIMULADO)`,
         forma: "cuadrado",
-        color: "#2F7D5B",
+        color: COLOR.ok,
       });
     }
     return lista;
@@ -100,7 +101,7 @@ export function MapaRutaPedido({ pedido, ruta }: { pedido: PedidoCiudadano; ruta
           accessibilityLabel="Simulado: recorrido de demostración"
           style={{ alignSelf: "flex-start", backgroundColor: COLOR.avisoFondo, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}
         >
-          <Text maxFontSizeMultiplier={1.5} style={{ color: COLOR.avisoTexto, fontWeight: "700", fontSize: 12 }}>
+          <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.minimo, color: COLOR.avisoTexto }}>
             SIMULADO · recorrido de demostración
           </Text>
         </View>
@@ -122,7 +123,7 @@ export function MapaRutaPedido({ pedido, ruta }: { pedido: PedidoCiudadano; ruta
         variante="secundario"
         onPress={() => setSeguir((v) => !v)}
       />
-      <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={{ fontWeight: "700", fontSize: 18, color: COLOR.texto }}>
+      <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={{ ...TIPO.subtitulo, color: COLOR.texto }}>
         {llegada ?? "Llegada: sin estimación"}
       </Text>
       {distancia ? <Texto>Faltan {distancia}.</Texto> : null}

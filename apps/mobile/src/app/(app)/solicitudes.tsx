@@ -19,6 +19,7 @@ import {
   Vacio,
 } from "@/components/ui";
 import { FilaHistorial, TarjetaPedido } from "@/components/MisPedidos";
+import { TIPO } from "@/components/tema";
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { esAvisoLeido, esCierre, esParte, esSolicitud, hostDeUrl } from "@/lib/cola";
 import { useCola } from "@/lib/ColaContext";
@@ -108,7 +109,7 @@ export default function Solicitudes() {
               ) : null}
               {i.fotoUri && !i.fotoSubida ? <Texto suave>La foto se enviará después del pedido.</Texto> : null}
               {i.ultimoError ? (
-                <Text style={{ color: COLOR.error, fontSize: 14 }}>{i.ultimoError}</Text>
+                <Text style={{ ...TIPO.etiqueta, color: COLOR.errorTexto }}>{i.ultimoError}</Text>
               ) : null}
               {i.estado === "pendiente" ? (
                 <Texto suave>
@@ -183,7 +184,7 @@ export default function Solicitudes() {
         <Rejilla>
           {carga.filas.map((s) => (
             <Tarjeta key={s.id}>
-              <Text style={{ fontWeight: "700", fontSize: 17, color: COLOR.texto }}>#{s.id}</Text>
+              <Text style={{ ...TIPO.subtitulo, color: COLOR.texto }}>#{s.id}</Text>
               <Chips>
                 <Chip icono={s.estado === "resuelta" ? "tilde" : "reloj"} tono={s.estado === "resuelta" ? "ok" : "info"} texto={etiquetaEstadoSolicitud(s.estado)} />
               </Chips>

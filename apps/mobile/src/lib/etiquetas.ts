@@ -28,6 +28,15 @@ const ESTADO_SECTOR: Record<string, string> = {
   comprometido: "Comprometido",
 };
 
+const ESTADO_ACCESO: Record<string, string> = {
+  transitable: "Transitable",
+  cerrado_operador: "Cerrado por el operador",
+  intransitable_lluvia: "Intransitable por la lluvia",
+  anegado: "Anegado",
+};
+
+const SUPERFICIE: Record<string, string> = { tierra: "tierra", ripio: "ripio", pavimentado: "pavimento", pavimento: "pavimento" };
+
 const ORIGEN: Record<string, string> = {
   app: "Aplicación",
   web: "Web",
@@ -94,6 +103,8 @@ const buscar = (tabla: Record<string, string>, codigo: string | null | undefined
 export const etiquetaEstadoSolicitud = (c: string) => buscar(ESTADO_SOLICITUD, c);
 export const etiquetaEstadoTarea = (c: string) => buscar(ESTADO_TAREA, c);
 export const etiquetaEstadoSector = (c: string) => buscar(ESTADO_SECTOR, c);
+export const etiquetaEstadoAcceso = (c: string) => buscar(ESTADO_ACCESO, c);
+export const etiquetaSuperficie = (c: string) => buscar(SUPERFICIE, c);
 export const etiquetaOrigen = (c: string) => buscar(ORIGEN, c);
 export const etiquetaTipoSolicitud = (c: string) => buscar(TIPO_SOLICITUD, c);
 export const etiquetaTipoOrden = (c: string) => buscar(TIPO_ORDEN, c);
