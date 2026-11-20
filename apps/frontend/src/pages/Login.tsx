@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
+import { rutaInterna } from "../auth/rutaInterna";
 import { AlertaError, Campo } from "../components/Formulario";
 import { Layout } from "../components/Layout";
 import { Plegable } from "../components/Plegable";
@@ -13,7 +14,7 @@ export default function Login() {
   const { iniciarSesion, estado, usuario } = useAuth();
   const navegar = useNavigate();
   const ubicacion = useLocation();
-  const desde = (ubicacion.state as { desde?: string } | null)?.desde;
+  const desde = rutaInterna((ubicacion.state as { desde?: unknown } | null)?.desde);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
