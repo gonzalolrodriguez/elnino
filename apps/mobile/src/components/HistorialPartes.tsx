@@ -65,6 +65,11 @@ export function HistorialPartes({ tareaId, version = 0 }: { tareaId: number; ver
             {p.tipo === "dificultad" ? (p.resuelta ? " · resuelta" : " · sin resolver") : ""}
           </Text>
           {p.observacion ? <Texto>{p.observacion}</Texto> : null}
+          {p.adjuntos && p.adjuntos.length > 0 ? (
+            <Texto suave pequeno>
+              Evidencia: {p.adjuntos.length} {p.adjuntos.length === 1 ? "archivo adjunto" : "archivos adjuntos"}
+            </Texto>
+          ) : null}
           <Text style={{ color: COLOR.suave, fontSize: 13 }} maxFontSizeMultiplier={1.5}>
             {formatearFechaHora(p.creado_en)}
             {p.autor_rol ? ` · ${etiquetaRolOperativo(p.autor_rol)}` : ""}

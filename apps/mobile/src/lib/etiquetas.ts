@@ -1,4 +1,4 @@
-import { esCierre, esConfirmacion, esParte, type DatosCola } from "@/lib/cola";
+import { esAvisoLeido, esCierre, esConfirmacion, esParte, type DatosCola } from "@/lib/cola";
 import { descripcionParte } from "@/lib/partes";
 import { etiquetaRespuesta } from "@/lib/respuestas";
 
@@ -66,6 +66,7 @@ export function descripcionItemCola(d: DatosCola): string {
   if (esCierre(d)) return `Cierre con constancia de la tarea #${d.tarea_id}`;
   if (esConfirmacion(d)) return `Tu respuesta sobre el traslado: ${etiquetaRespuesta(d.respuesta)}`;
   if (esParte(d)) return descripcionParte(d);
+  if (esAvisoLeido(d)) return "Aviso del operativo marcado como leído";
   return `${etiquetaTipoSolicitud(d.tipo)} · ${d.personas} personas · ${d.animales} animales`;
 }
 

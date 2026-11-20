@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
+import { AvisosOperativo } from "@/components/AvisosOperativo";
 import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { FormCierre } from "@/components/FormCierre";
 import { FormParte } from "@/components/FormParte";
 import { HistorialPartes } from "@/components/HistorialPartes";
 import { Icono } from "@/components/Icono";
+import { MiCuadrilla } from "@/components/MiCuadrilla";
 import { Aviso, Chip, Chips, Disco, type Tono } from "@/components/Piezas";
 import { SoloRol } from "@/components/SoloRol";
 import {
@@ -30,6 +32,7 @@ import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { descripcionParte, exigeConstancia, type TipoParte } from "@/lib/partes";
 import { api, type Tarea } from "@/lib/servicios";
+import { useIdCuadrilla } from "@/lib/useCuadrilla";
 
 const TONO_TAREA: Record<Tarea["estado"], { tono: Tono; icono: "reloj" | "camion" | "tilde" | "cruz" }> = {
   pendiente: { tono: "neutro", icono: "reloj" },
@@ -145,11 +148,23 @@ function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar
       {cierreLocal ? (
         <Texto>Cierre con constancia guardado en el teléfono: se envía solo cuando haya conexión.</Texto>
       ) : null}
-      {pendientesParte.map((i) => (
-        <Texto key={i.id} suave>
-          Pendiente de envío: {i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "parte"}. Se manda solo cuando haya conexión.
-        </Texto>
-      ))}
+      {pendientesParte.map((i) => {
+        const archivos = i.datos && esParte(i.datos) ? (i.datos.adjuntos?.length ?? 0) : 0;
+        return (
+          <View key={i.id} style={{ gap: 2 }}>
+            <Texto suave>
+              {i.servidorId === null
+                ? `Pendiente de envío: ${i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "parte"}. Se manda solo cuando haya conexión.`
+                : `${i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "Parte"}: el parte ya llegó al operador.`}
+            </Texto>
+            {archivos > 0 ? (
+              <Texto suave pequeno>
+                {archivos === 1 ? "Falta subir 1 archivo de evidencia" : `Faltan subir ${archivos} archivos de evidencia`}: se suben solos cuando haya conexión.
+              </Texto>
+            ) : null}
+          </View>
+        );
+      })}
       {rechazadosParte.map((i) => (
         <View key={i.id} style={{ gap: 6 }}>
           <Text style={{ fontWeight: "600" }}>
@@ -255,6 +270,7 @@ function ListaTareas() {
   const rechazados = items.filter((i) => esCierre(i.datos) && i.estado === "rechazada");
   const [tareas, setTareas] = useState<Tarea[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cuadrillaId = useIdCuadrilla(tareas ? tareas.map((t) => t.cuadrilla_id) : null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -272,7 +288,9 @@ function ListaTareas() {
   return (
     <Pantalla dosColumnas>
       <Titulo>Tareas de la cuadrilla</Titulo>
+      {cuadrillaId !== null ? <AvisosOperativo cuadrillaId={cuadrillaId} /> : null}
       <EnlaceBrujula />
+      {cuadrillaId !== null ? <MiCuadrilla cuadrillaId={cuadrillaId} /> : null}
       <Texto suave>
         Los cambios de estado requieren conexión. Los partes y el cierre con constancia se pueden cargar
         sin conexión: quedan en el teléfono y se envían solos.

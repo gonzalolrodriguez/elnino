@@ -5,7 +5,8 @@ import { RepositorioSqlite } from "@/lib/colaSqlite";
  * Datos de la persona guardados en claro en SQLite que se borran cuando la sesión termina (cierre
  * manual, cambio de servidor o refresh rechazado por el servidor):
  * - la caché de respuestas (pedidos, sector, confirmaciones, ayuda rápida, destinos de la brújula,
- *   historial de partes de la cuadrilla `partes:<usuario>:<servidor>:<tarea>`);
+ *   historial de partes de la cuadrilla `partes:<usuario>:<servidor>:<tarea>`, avisos del operativo
+ *   `avisos:…`, lo tildado en «qué llevar» `equipo:…` y la ficha `micuadrilla:…`);
  *   se conserva solo la lista pública de centros;
  * - los ítems de la cola offline ya enviados o rechazados.
  *

@@ -25,6 +25,16 @@ export type PuntoCapa = {
   color: string;
 };
 
+/** Trazo sobre el mapa (p. ej. el desvío que indica el operativo). El color acompaña al texto, no lo reemplaza. */
+export type LineaCapa = {
+  id: string;
+  /** Texto accesible del trazo. */
+  etiqueta: string;
+  coordenadas: Par[];
+  /** Color CSS hex (#rrggbb). */
+  color: string;
+};
+
 export type RutaMapa = {
   coordenadas: Par[];
   /** 0..1 sobre la ruta, medido en el momento en que llegó el dato. */
@@ -36,7 +46,7 @@ export type RutaMapa = {
 
 /** App → mapa. */
 export type MensajeAlMapa =
-  | { t: "capas"; sectores: SectorMapa[]; puntos: PuntoCapa[] }
+  | { t: "capas"; sectores: SectorMapa[]; puntos: PuntoCapa[]; lineas?: LineaCapa[] }
   | { t: "encuadre"; puntos: Par[]; zoomMax?: number }
   | { t: "vista"; centro: Par; zoom: number }
   /** Marcador del punto elegido; con `elegir` el mapa deja marcar tocando o arrastrando. */

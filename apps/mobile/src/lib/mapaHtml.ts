@@ -73,6 +73,13 @@ function dibujarCapas(m){
     var t=document.createElement("span");t.textContent=s.etiqueta;
     poly.bindTooltip(t,{permanent:true,direction:"center",className:"et"});
   });
+  (m.lineas||[]).forEach(function(l){
+    if(!l.coordenadas||l.coordenadas.length<2)return;
+    var c=colorOk(l.color),pts=l.coordenadas.map(ll);
+    L.polyline(pts,{color:"#ffffff",weight:10,lineCap:"round",lineJoin:"round"}).addTo(capas);
+    var tl=document.createElement("span");tl.textContent=l.etiqueta;
+    L.polyline(pts,{color:c,weight:6,lineCap:"round",lineJoin:"round",dashArray:"2 10"}).addTo(capas).bindTooltip(tl,{sticky:true});
+  });
   (m.puntos||[]).forEach(function(p){
     var e=elemento(p.forma,colorOk(p.color),p.etiqueta);
     L.marker([p.lat,p.lon],{icon:L.divIcon({html:e,className:"",iconSize:[18,18],iconAnchor:[9,9]}),title:p.etiqueta,keyboard:false}).addTo(capas);
