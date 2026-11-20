@@ -1,4 +1,4 @@
-import { Box, Flex, Heading } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 /** Ficha de ícono: cuadrado suave con el ícono adentro. Decorativa. */
@@ -66,5 +66,29 @@ export function Vacio({ icono, children, ...resto }: { icono: ReactNode; childre
         {children}
       </Box>
     </Flex>
+  );
+}
+
+/** Una cifra de un resumen (grupo familiar, establecimientos): ícono, número grande y rótulo. */
+export function Dato({ icono, valor, rotulo }: { icono: ReactNode; valor: unknown; rotulo: string }) {
+  return (
+    <Flex direction="column" gap={1.5} minW={0}>
+      <Box aria-hidden="true" display="flex" color="agua.700">
+        {icono}
+      </Box>
+      <Text textStyle="cifraMedia" fontSize="2rem">
+        {valor === undefined || valor === null ? "—" : String(valor)}
+      </Text>
+      <Text textStyle="rotulo">{rotulo}</Text>
+    </Flex>
+  );
+}
+
+/** Rejilla de cifras de un resumen: 2 columnas en móvil, 4 desde `sm`, con filete entre columnas. */
+export function RejillaDatos({ children }: { children: ReactNode }) {
+  return (
+    <Box display="grid" gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))" }} gap={{ base: 5, sm: 4 }} sx={{ "& > *": { paddingLeft: { sm: 4 } }, "& > *:first-of-type": { paddingLeft: 0 } }}>
+      {children}
+    </Box>
   );
 }
