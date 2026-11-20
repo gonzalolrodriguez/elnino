@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native";
 
+import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { TarjetaConfirmacion, useConsultas } from "@/components/TarjetaConfirmacion";
 import { TarjetaCuadrillaEnCamino } from "@/components/TarjetaCuadrillaEnCamino";
 import { COLOR, Cargando, Insignia, Subtitulo, Tarjeta, Texto } from "@/components/ui";
@@ -28,6 +29,7 @@ export function EstadoSector() {
       <ConsultasPendientes />
       <TarjetaCuadrillaEnCamino />
       <TarjetaSector />
+      <EnlaceBrujula />
     </>
   );
 }
