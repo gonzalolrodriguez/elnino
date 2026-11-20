@@ -2,9 +2,9 @@ import { Box, Flex, Text, VisuallyHidden } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import type { ReactElement } from "react";
 
-import { IconoBandeja, IconoCamion, IconoEscudo, IconoPersonas, IconoTilde } from "../../components/iconos/Iconos";
+import { IconoBandeja, IconoCamion, IconoEscudo, IconoPersonas, IconoReloj, IconoTilde, IconoTriangulo } from "../../components/iconos/Iconos";
 import { fechaHora } from "../../lib/etiquetas";
-import { pasosDe, type Pedido } from "../../lib/pedidos";
+import { pasosDe, type NovedadPedido, type Pedido } from "../../lib/pedidos";
 
 const ICONOS: Record<string, ReactElement> = {
   recibida: <IconoBandeja tam="1rem" />,
@@ -20,6 +20,15 @@ const latido = keyframes`
   0% { box-shadow: 0 0 0 0 rgba(30, 90, 160, 0.38); }
   70%, 100% { box-shadow: 0 0 0 0.6rem rgba(30, 90, 160, 0); }
 `;
+
+/** Texto de la novedad. Solo el tipo: la observación de la cuadrilla no se muestra a la ciudadanía. */
+export const TEXTO_NOVEDAD: Record<NovedadPedido["tipo"], string> = {
+  dificultad: "La cuadrilla informó una dificultad y el operador ya lo sabe.",
+  demora: "La cuadrilla informó una demora.",
+  parcial: "La tarea quedó a medias: el operador va a reprogramarla.",
+  no_realizada: "La cuadrilla no pudo completar la tarea: el operador va a reprogramarla.",
+  reprogramada: "La cuadrilla no pudo completar la tarea: el operador va a reprogramarla.",
+};
 
 /** «14:05» si es de hoy y «19/11 14:05» si es de otro día (horario de Argentina). */
 function cuando(iso: string | null): string | null {
@@ -38,7 +47,10 @@ function cuando(iso: string | null): string | null {
  */
 export function LineaTiempoPedido({ pedido }: { pedido: Pedido }) {
   const pasos = pasosDe(pedido);
+  const novedad = pedido.novedad ?? null;
+  const textoNovedad = novedad ? TEXTO_NOVEDAD[novedad.tipo] : undefined;
   return (
+    <Box>
     <Box as="ol" listStyleType="none" m={0} p={0} aria-label={`Avance del pedido n.º ${pedido.id}`} data-testid={`linea-tiempo-${pedido.id}`}>
       {pasos.map((p, i) => {
         const ultimo = i === pasos.length - 1;
@@ -81,6 +93,15 @@ export function LineaTiempoPedido({ pedido }: { pedido: Pedido }) {
           </Flex>
         );
       })}
+    </Box>
+    {textoNovedad && novedad && (
+      <Flex align="flex-start" gap={2} mt={3} fontSize="sm" color="textoSuave" role="status" data-testid={`novedad-${pedido.id}`} data-tipo={novedad.tipo}>
+        <Box aria-hidden="true" display="flex" mt="2px" color="alerta.700">
+          {novedad.tipo === "demora" ? <IconoReloj tam="1rem" /> : <IconoTriangulo tam="1rem" />}
+        </Box>
+        <Text>{textoNovedad}</Text>
+      </Flex>
+    )}
     </Box>
   );
 }
