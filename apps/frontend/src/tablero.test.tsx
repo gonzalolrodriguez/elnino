@@ -140,7 +140,7 @@ describe("evaluarFrescura", () => {
 
 describe("navegación del panel", () => {
   it("agrupa las secciones por tarea con nombres corrientes y mantiene las rutas", () => {
-    expect(GRUPOS_NAVEGACION.map((g) => g.titulo)).toEqual(["Situación", "Respuesta", "Análisis", "Registro"]);
+    expect(GRUPOS_NAVEGACION.map((g) => g.titulo)).toEqual(["Situación", "Decidir", "Ejecutar", "Respaldo y registro"]);
     const textos = GRUPOS_NAVEGACION.flatMap((g) => g.secciones.map((s) => s.texto));
     expect(textos).toContain("Tablero");
     expect(textos).toContain("Río y lluvia");
@@ -156,7 +156,7 @@ describe("navegación del panel", () => {
     conSesion("decisor", { "GET /panel/resumen": ok(RESUMEN) });
     renderRuta("/comando");
     const nav = await screen.findByRole("navigation", { name: "Secciones del panel operativo" });
-    for (const g of ["Situación", "Respuesta", "Análisis", "Registro"]) expect(within(nav).getByText(g)).toBeInTheDocument();
+    for (const g of ["Situación", "Decidir", "Ejecutar", "Respaldo y registro"]) expect(within(nav).getByText(g)).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Producción y ganado" })).toHaveAttribute("href", "/comando/produccion");
   });
 });
@@ -289,6 +289,21 @@ describe("aviso de escenario", () => {
     expect(aviso).toHaveTextContent("SIMULADO");
     fireEvent.click(within(aviso).getByRole("button", { name: /Volver a observado/ }));
     await waitFor(() => expect(screen.queryByTestId("aviso-escenario")).not.toBeInTheDocument());
+  });
+
+  it("la barra del escenario está en páginas que no son el mapa y cambia el escenario sin consultar al backend", async () => {
+    const f = conSesion("operador", { "GET /panel/resumen": ok(RESUMEN) });
+    renderRuta("/comando");
+    const barra = await screen.findByTestId("barra-escenario");
+    expect(barra).toHaveTextContent("5,60 m");
+    expect(barra).toHaveTextContent("DATO OBSERVADO");
+    fireEvent.change(within(barra).getByLabelText("Altura del escenario (control deslizante)"), { target: { value: "8.2" } });
+    const aviso = await screen.findByTestId("aviso-escenario");
+    expect(aviso).toHaveTextContent("Escenario activo: 8,20 m");
+    expect(aviso).toHaveTextContent("SIMULADO");
+    fireEvent.change(within(barra).getByLabelText(/^Lluvia del escenario:/), { target: { value: "40" } });
+    expect(screen.getByTestId("aviso-escenario")).toHaveTextContent("40 mm de lluvia");
+    expect(llamadas(f, "POST /simulacion/escenario")).toHaveLength(0);
   });
 });
 

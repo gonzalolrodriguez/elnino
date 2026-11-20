@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, Text } from "react-native";
 
+import { AyudaAhora } from "@/components/AyudaAhora";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
 import { EstadoSector } from "@/components/EstadoSector";
 import { SelectorEspecie } from "@/components/SelectorEspecie";
@@ -40,6 +41,15 @@ export default function Asistencia() {
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<"enviada" | "encolada" | "foto_pendiente" | null>(null);
+  const [detalle, setDetalle] = useState(false);
+
+  // Editar el formulario después de un envío borra el aviso anterior: ya no corresponde al pedido nuevo.
+  const editando =
+    <T,>(poner: (v: T) => void) =>
+    (v: T) => {
+      setResultado(null);
+      poner(v);
+    };
 
   const cargarUbicacion = async () => {
     setError(null);
@@ -144,6 +154,7 @@ export default function Asistencia() {
 
   return (
     <Pantalla>
+      <AyudaAhora referencia={referencia} alNecesitarDetalle={() => setDetalle(true)} />
       <EstadoSector />
       <Titulo>Pedir asistencia</Titulo>
       <Texto suave>
@@ -151,20 +162,27 @@ export default function Asistencia() {
         emergencia.
       </Texto>
 
+      <Boton
+        titulo={detalle ? "Ocultar el detalle del pedido" : "Detallar pedido"}
+        variante="secundario"
+        onPress={() => setDetalle((v) => !v)}
+      />
+      {detalle ? (
+        <>
       <Subtitulo>Tipo de pedido</Subtitulo>
       <Opciones>
         {TIPOS.map((t) => (
-          <Opcion key={t.valor} titulo={t.etiqueta} elegida={tipo === t.valor} onPress={() => setTipo(t.valor)} />
+          <Opcion key={t.valor} titulo={t.etiqueta} elegida={tipo === t.valor} onPress={() => editando(setTipo)(t.valor)} />
         ))}
       </Opciones>
 
-      <Campo etiqueta="Personas a asistir" value={personas} onChangeText={setPersonas} keyboardType="number-pad" />
-      <Campo etiqueta="Animales" value={animales} onChangeText={setAnimales} keyboardType="number-pad" />
-      {entero(animales) > 0 ? <SelectorEspecie valor={especie} alCambiar={setEspecie} /> : null}
+      <Campo etiqueta="Personas a asistir" value={personas} onChangeText={editando(setPersonas)} keyboardType="number-pad" />
+      <Campo etiqueta="Animales" value={animales} onChangeText={editando(setAnimales)} keyboardType="number-pad" />
+      {entero(animales) > 0 ? <SelectorEspecie valor={especie} alCambiar={editando(setEspecie)} /> : null}
       <Campo
         etiqueta="Detalle (máx. 500 caracteres)"
         value={texto}
-        onChangeText={setTexto}
+        onChangeText={editando(setTexto)}
         multiline
         maxLength={500}
         style={{ minHeight: 96, textAlignVertical: "top" }}
@@ -173,7 +191,7 @@ export default function Asistencia() {
       <Campo
         etiqueta="Referencia de ubicación (paraje, camino, escuela cercana)"
         value={referencia}
-        onChangeText={setReferencia}
+        onChangeText={editando(setReferencia)}
         maxLength={60}
       />
       <Texto suave pequeno>
@@ -275,6 +293,8 @@ export default function Asistencia() {
         <Texto suave>{textoDestinoSMS()}</Texto>
         <Boton titulo="¿Sin datos? Enviar por SMS" variante="secundario" onPress={porSMS} />
       </Tarjeta>
+        </>
+      ) : null}
       <EnlaceQueHacer />
     </Pantalla>
   );

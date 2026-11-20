@@ -114,10 +114,22 @@ export function Hero() {
   useEffect(() => () => window.clearTimeout(temporizadorPista.current), []);
 
   return (
-    <Box as="section" ref={heroRef} aria-labelledby="titulo-hero" position="relative" bg="oscuro.bg" color="oscuro.fg" overflow="hidden" className="sobre-oscuro">
+    <Box
+      as="section"
+      ref={heroRef}
+      aria-labelledby="titulo-hero"
+      position="relative"
+      display={{ base: "flex", lg: "block" }}
+      flexDirection="column"
+      bg="oscuro.bg"
+      color="oscuro.fg"
+      overflow="hidden"
+      className="sobre-oscuro"
+    >
       <Box
         data-testid="escena-cuenca"
         data-modo={quiere3D ? "3d" : "2d"}
+        order={{ base: 2, lg: 0 }}
         position={{ base: "relative", lg: "absolute" }}
         top={{ lg: 0 }}
         right={{ lg: 0 }}
@@ -125,6 +137,24 @@ export function Hero() {
         left={{ lg: 0 }}
         h={{ base: datos ? "320px" : "240px", lg: "auto" }}
       >
+        {usar3D && (
+          // Mientras la escena 3D se descarga y se dibuja se muestra el esquema 2D, en vez de una franja oscura vacía.
+          <Box
+            aria-hidden="true"
+            data-testid="cuenca-provisoria"
+            position="absolute"
+            top={0}
+            bottom={0}
+            left={{ base: 0, lg: "40%" }}
+            right={{ base: 0, lg: "26%" }}
+            opacity={listo3D ? 0 : 1}
+            visibility={listo3D ? "hidden" : "visible"}
+            transition="opacity 900ms cubic-bezier(0.23, 1, 0.32, 1), visibility 0s linear 900ms"
+            pointerEvents="none"
+          >
+            <CuencaSVG datos={datos} resaltado={resaltado} />
+          </Box>
+        )}
         {usar3D ? (
           <Limite3D alFallar={alFallar3D}>
             <Suspense fallback={null}>
@@ -157,14 +187,17 @@ export function Hero() {
           </Text>
         )}
       </Box>
-      <RecorridoRio control={control} disponible3D={usar3D && listo3D} reducido={menosMovimiento} resaltado={resaltado} alResaltar={setResaltado} pista={pista} />
+      <Box order={{ base: 3, lg: 0 }}>
+        <RecorridoRio control={control} disponible3D={usar3D && listo3D} reducido={menosMovimiento} resaltado={resaltado} alResaltar={setResaltado} pista={pista} />
+      </Box>
       {datos && (
-        <Box position={{ base: "relative", lg: "absolute" }} left={{ lg: 8 }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
+        <Box order={{ base: 4, lg: 0 }} position={{ base: "relative", lg: "absolute" }} left={{ lg: 8 }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
           <LeyendaRelieve meta={datos.meta} vista={usar3D ? "3d" : "2d"} />
         </Box>
       )}
 
       <Box
+        order={{ base: 1, lg: 0 }}
         position="relative"
         zIndex={1}
         maxW="90rem"

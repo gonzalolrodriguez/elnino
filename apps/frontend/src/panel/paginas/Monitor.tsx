@@ -65,7 +65,7 @@ function TablaLluvia({ l }: { l: Lluvia }) {
         ))}
       </Flex>
       <TablaDesplazable etiqueta="Lecturas de lluvia recientes" maxH="16rem" overflowY="auto">
-        <Table size="sm" variant="simple">
+        <Table size="sm" variant="simple" aria-label="Lecturas de lluvia recientes">
           <Thead position="sticky" top={0} bg="superficie">
             <Tr>
               <Th>Fecha</Th>

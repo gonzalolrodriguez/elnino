@@ -1,7 +1,8 @@
-import { Alert, AlertIcon, Badge, Box, Button, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, Badge, Box, Button, Heading, Text } from "@chakra-ui/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { useAuth, type Usuario } from "../auth/AuthContext";
+import { EstadoCargando } from "../components/EstadoCargando";
 import { Layout } from "../components/Layout";
 import { ApiError, solicitar } from "../lib/api";
 import { etiquetaEstadoUsuario, etiquetaRol, etiquetaRolOperativo, fechaHora } from "../lib/etiquetas";
@@ -79,11 +80,7 @@ function Bloque<T>({
       <Heading as="h2" size="md" mb={3}>
         {titulo}
       </Heading>
-      {recurso.estado === "cargando" && (
-        <Text display="flex" alignItems="center" gap={2}>
-          <Spinner size="sm" /> Cargando…
-        </Text>
-      )}
+      {recurso.estado === "cargando" && <EstadoCargando py={4} />}
       {recurso.estado === "vacio" && <Text>{vacio}</Text>}
       {recurso.estado === "no_disponible" && (
         <Alert status="info" fontSize="sm">

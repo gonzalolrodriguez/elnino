@@ -59,9 +59,18 @@ describe("landing", () => {
 
   it("ofrece registro para ciudadanía y productores y solo ingreso para mandos", () => {
     renderRuta("/");
-    expect(screen.getByRole("link", { name: "Registrarme" })).toHaveAttribute("href", "/registro/ciudadania");
-    expect(screen.getByRole("link", { name: "Registrar mi establecimiento" })).toHaveAttribute("href", "/registro/productor");
-    expect(screen.getByRole("link", { name: "Ingresar con cuenta institucional" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "Ciudadanía" })).toHaveAttribute("href", "/registro/ciudadania");
+    expect(screen.getByRole("link", { name: "Productores" })).toHaveAttribute("href", "/registro/productor");
+    expect(screen.getByRole("link", { name: "Mandos operativos" })).toHaveAttribute("href", "/login");
+  });
+
+  it("muestra la frase de estado con su categoría y el teléfono de emergencia", () => {
+    renderRuta("/");
+    const franja = screen.getByTestId("franja-estado");
+    expect(within(franja).getByTestId("frase-estado")).toHaveTextContent("Hoy, 31/10/2026: el río en Puerto Formosa está en 5,60 m, sin alerta. Faltan 2,20 m para la alerta (7,80 m).");
+    expect(within(franja).getByText("DATO OBSERVADO")).toBeInTheDocument();
+    expect(within(franja).getByRole("link", { name: "Emergencia: 103" })).toHaveAttribute("href", "tel:103");
+    expect(within(franja).getByText("Seguí las indicaciones oficiales")).toBeInTheDocument();
   });
 });
 

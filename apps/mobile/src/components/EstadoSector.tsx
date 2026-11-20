@@ -27,9 +27,9 @@ export function EstadoSector() {
   return (
     <>
       <ConsultasPendientes />
+      <EnlaceBrujula />
       <TarjetaCuadrillaEnCamino />
       <TarjetaSector />
-      <EnlaceBrujula />
     </>
   );
 }

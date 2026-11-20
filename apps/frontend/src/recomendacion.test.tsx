@@ -136,6 +136,24 @@ describe("recomendador: factibilidad y ventana seca", () => {
     expect(cuerpoEnviado(f)?.poblacion_k10_en_hogares).toBe(true);
   });
 
+  it("«Preparar orden con estos sectores» lleva a Órdenes con los sectores de la recomendación precargados", async () => {
+    window.localStorage.setItem("e3_sesion", "1");
+    simularFetch({
+      "POST /auth/refresh": () => sesion("decisor"),
+      "GET /centros": () => ({ estado: 200, json: { centros: [] } }),
+      "GET /ordenes": () => ({ estado: 200, json: { ordenes: [] } }),
+      "POST /simulacion/recomendacion": () => ({ estado: 200, json: RECOMENDACION }),
+    });
+    renderRuta("/comando/recomendacion");
+    fireEvent.click(await screen.findByRole("button", { name: "Generar recomendación" }));
+    const boton = await screen.findByRole("link", { name: "Preparar orden con estos sectores" });
+    expect(boton).toHaveAttribute("href", "/comando/ordenes?sectores=S1");
+    fireEvent.click(boton);
+    const s1 = await screen.findByRole("checkbox", { name: "S1" });
+    expect(s1).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "S4" })).not.toBeChecked();
+  });
+
   it("no manda la lluvia prevista si está desactivada o es inválida", async () => {
     window.localStorage.setItem("e3_sesion", "1");
     const f = simularFetch({
