@@ -1,45 +1,72 @@
-import { Badge, Box, Flex, List, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Box, Flex, List, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import type { ReactNode } from "react";
 
 import { Insignia } from "../../components/Insignia";
-import { AUDITORIA_K1 } from "../../datos/auditoriaK1";
-import { useCarga } from "../../lib/useCarga";
-import { api } from "../api";
-import { IconoEscudo } from "../../components/iconos/Iconos";
-import { CabeceraPagina } from "../CabeceraPagina";
-import { Cargando, categoriaComun, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
+import { AUDITORIA_K1 } from "../../datos/auditoriaK1";
+import { etiquetaCodigo } from "../../lib/etiquetas";
+import { useCarga } from "../../lib/useCarga";
+import { IconoAlerta, IconoEscudo, IconoInfo, IconoTilde } from "../../components/iconos/Iconos";
+import { api } from "../api";
+import { CabeceraPagina } from "../CabeceraPagina";
+import { APILAR, Cargando, categoriaComun, Chip, Cifra, fmtNum, Seccion, type TonoChip } from "../ui";
 
-const COLOR_VEREDICTO: Record<string, string> = {
-  RESPALDADA: "green",
-  "RESPALDADA COMO PROMEDIO": "green",
-  VERDADERA: "green",
-  REFUTADA: "red",
-  FALSA: "red",
-  "NO VERIFICABLE": "gray",
-  "NO VERIFICABLE CON LA CAPA DISPONIBLE": "gray",
-};
+/** Veredicto de la API: tono e ícono propios, para que no dependa solo del color. */
+function aspectoVeredicto(v: string): { tono: TonoChip; icono: ReactNode } {
+  if (v.startsWith("REFUTADA") || v === "FALSA") return { tono: "alerta", icono: <IconoAlerta tam="1em" /> };
+  if (v.startsWith("RESPALDADA") || v === "VERDADERA") return { tono: "ok", icono: <IconoTilde tam="1em" /> };
+  return { tono: "neutro", icono: <IconoInfo tam="1em" /> };
+}
 
 function Veredicto({ v }: { v: string }) {
+  const a = aspectoVeredicto(v);
   return (
-    <Badge colorScheme={COLOR_VEREDICTO[v] ?? "gray"} variant="subtle" whiteSpace="normal">
+    <Chip tono={a.tono} icono={a.icono} whiteSpace="normal" textAlign="left">
       {v}
-    </Badge>
+    </Chip>
   );
 }
+
+/** Nombre llano de una fuente o documento del kit: "K6_informe_IA.pdf" y "K6" pasan a "Informe de inteligencia artificial (K6)". */
+function nombreLlano(texto: string): string {
+  const m = /^(K\d+)(?:[_.\s-][\w.\s-]*)?$/i.exec(texto.trim());
+  return m ? etiquetaCodigo(m[1]) : texto;
+}
+
+const entero = (re: RegExp, texto: string): number | null => {
+  const m = re.exec(texto);
+  return m ? Number(m[1]) : null;
+};
+
+/** Cifras de la auditoría de K1, sacadas del mismo resumen que la tabla para que no haya dos fuentes. */
+const FILAS_RECIBIDAS = entero(/\((\d+) filas/, AUDITORIA_K1.entrada);
+const REGISTROS_FINALES = entero(/^(\d+)/, AUDITORIA_K1.salida);
+const EN_CUARENTENA = entero(/(\d+) en cuarentena/, AUDITORIA_K1.salida);
 
 export default function Centinela() {
   const k6 = useCarga(() => api.k6());
   const k7 = useCarga(() => api.k7());
+  const catK6 = k6.estado === "ok" ? categoriaComun(k6.datos.afirmaciones.map((a) => a.categoria)) : undefined;
+  const catK7 = k7.estado === "ok" ? categoriaComun(k7.datos.relaciones.map((r) => r.categoria)) : undefined;
   return (
     <>
-      <CabeceraPagina titulo="Auditoría de datos (Centinela)" icono={<IconoEscudo tam="1.5rem" />} />
+      <CabeceraPagina
+        titulo="Auditoría de datos (Centinela)"
+        icono={<IconoEscudo tam="1.5rem" />}
+        ayuda="Qué se corrigió en la serie del río y qué afirmaciones del informe de inteligencia artificial y del esquema de ríos se sostienen con los datos."
+      />
 
-      <Seccion titulo="Auditoría de la limpieza de K1" categoria="DATO OBSERVADO" id="sec-k1">
-        <Text fontSize="sm" mb={2}>
-          Entrada: {AUDITORIA_K1.entrada}. Salida: {AUDITORIA_K1.salida}.
+      <Seccion titulo={`Limpieza de la ${etiquetaCodigo("K1", { conCodigo: false }).toLowerCase()} (K1)`} categoria="DATO OBSERVADO" id="sec-k1">
+        <Flex gap={5} wrap="wrap" mb={4}>
+          {FILAS_RECIBIDAS !== null && <Cifra etiqueta="Filas recibidas" valor={fmtNum(FILAS_RECIBIDAS)} categoria="DATO OBSERVADO" omitirCategoria />}
+          {REGISTROS_FINALES !== null && <Cifra etiqueta="Registros finales" valor={fmtNum(REGISTROS_FINALES)} categoria="DATO OBSERVADO" omitirCategoria />}
+          {EN_CUARENTENA !== null && <Cifra etiqueta="En cuarentena" valor={fmtNum(EN_CUARENTENA)} categoria="DATO OBSERVADO" omitirCategoria />}
+        </Flex>
+        <Text maxW="70ch" mb={3}>
+          El archivo original no se modifica: cada corrección genera una serie nueva y queda anotada.
         </Text>
-        <TablaDesplazable etiqueta="Hallazgos de la limpieza de K1">
-          <Table size="sm" aria-label="Hallazgos de la limpieza de K1">
+        <TablaDesplazable etiqueta="Hallazgos de la limpieza de la serie histórica">
+          <Table size="sm" aria-label="Hallazgos de la limpieza de la serie histórica" sx={APILAR}>
             <Thead>
               <Tr>
                 <Th>Problema</Th>
@@ -51,110 +78,101 @@ export default function Centinela() {
               {AUDITORIA_K1.hallazgos.map((h) => (
                 <Tr key={h.problema}>
                   <Td whiteSpace="normal">{h.problema}</Td>
-                  <Td whiteSpace="normal">{h.cantidad}</Td>
-                  <Td whiteSpace="normal">{h.tratamiento}</Td>
+                  <Td whiteSpace="normal" data-etiqueta="Registros">
+                    {h.cantidad}
+                  </Td>
+                  <Td whiteSpace="normal" data-etiqueta="Tratamiento">
+                    {h.tratamiento}
+                  </Td>
                 </Tr>
               ))}
             </Tbody>
           </Table>
         </TablaDesplazable>
-        <List styleType="disc" ml={5} mt={2} fontSize="sm">
+        <Text textStyle="rotulo" mt={4} mb={1}>
+          Controles de la serie limpia
+        </Text>
+        <List styleType="disc" pl={5} spacing={1} maxW="70ch">
           {AUDITORIA_K1.controles.map((c) => (
             <ListItem key={c}>{c}</ListItem>
           ))}
         </List>
-        <Text fontSize="xs" color="textoSuave" mt={1}>
-          Fuente: {AUDITORIA_K1.fuente}. La serie conserva alteraciones pedagógicas deliberadas: no es oficial ni apta para decisiones operativas.
+        <Text textStyle="microdato" mt={3} maxW="70ch">
+          La serie conserva alteraciones pedagógicas deliberadas: no es oficial ni apta para decisiones operativas.
         </Text>
       </Seccion>
 
-      <Seccion titulo="Verificador del informe de IA (K6)" id="sec-k6">
-        <Cargando carga={k6} hijos={(d) => (
-          <>
-            <Text fontSize="sm" mb={3}>
-              {d.informe}. {d.nota}
-            </Text>
-            {categoriaComun(d.afirmaciones.map((a) => a.categoria)) && (
-              <Flex align="center" gap={2} mb={3} data-testid="k6-categoria-comun">
-                <Text fontSize="sm">Categoría de las afirmaciones:</Text>
-                <Insignia categoria={d.afirmaciones[0].categoria} />
-              </Flex>
-            )}
-            <Flex direction="column" gap={3}>
-              {d.afirmaciones.map((a) => (
-                <Box key={a.id} borderLeft="3px solid" borderColor={a.veredicto.startsWith("REFUTADA") ? "red.500" : "pizarra.200"} pl={3} data-testid={`k6-${a.id}`}>
-                  <Flex gap={2} align="center" wrap="wrap" mb={1}>
-                    <strong>{a.id}</strong>
-                    <Veredicto v={a.veredicto} />
-                    {!categoriaComun(d.afirmaciones.map((x) => x.categoria)) && <Insignia categoria={a.categoria} />}
-                  </Flex>
-                  <Text fontSize="sm">{a.afirmacion}</Text>
-                  <Text fontSize="sm" color="pizarra.700">
-                    {a.evidencia}
-                  </Text>
-                  <Text fontSize="xs" color="textoSuave">
-                    Fuente: {a.fuente}
-                  </Text>
-                </Box>
-              ))}
-            </Flex>
-          </>
-        )} />
+      <Seccion titulo={`Verificador del ${etiquetaCodigo("K6", { conCodigo: false }).toLowerCase()} (K6)`} categoria={catK6} sinCategoria={!catK6} id="sec-k6">
+        <Cargando
+          carga={k6}
+          esVacio={(d) => d.afirmaciones.length === 0}
+          vacio="No hay afirmaciones para verificar."
+          hijos={(d) => (
+            <>
+              <Text maxW="70ch" mb={4}>
+                {nombreLlano(d.informe)}. {d.nota}
+              </Text>
+              <List>
+                {d.afirmaciones.map((a, i) => (
+                  <ListItem key={a.id} py={3} borderTop="1px solid" borderColor="borde" _first={{ borderTop: "none", pt: 0 }} data-testid={`k6-${a.id}`}>
+                    <Flex align="center" columnGap={3} rowGap={1.5} wrap="wrap" mb={1}>
+                      <Text as="span" fontWeight={700}>
+                        Afirmación {i + 1}
+                      </Text>
+                      <Veredicto v={a.veredicto} />
+                      {!catK6 && <Insignia categoria={a.categoria} />}
+                    </Flex>
+                    <Text fontWeight={600} maxW="70ch">
+                      {a.afirmacion}
+                    </Text>
+                    <Text maxW="70ch">{a.evidencia}</Text>
+                    <Text textStyle="microdato" mt={0.5}>
+                      Fuente: {nombreLlano(a.fuente)}
+                    </Text>
+                  </ListItem>
+                ))}
+              </List>
+            </>
+          )}
+        />
       </Seccion>
 
-      <Seccion titulo="Verificador de la red hidrográfica (K7)" id="sec-k7">
-        <Cargando carga={k7} hijos={(d) => (
-          <>
-            <Text fontSize="sm" mb={3}>
-              {d.esquema}. {d.nota}
-            </Text>
-            {categoriaComun(d.relaciones.map((r) => r.categoria)) && (
-              <Flex align="center" gap={2} mb={3} data-testid="k7-categoria-comun">
-                <Text fontSize="sm">Categoría de lo verificado:</Text>
-                <Insignia categoria={d.relaciones[0].categoria} />
-              </Flex>
-            )}
-            <TablaDesplazable etiqueta="Relaciones de K7">
-              <Table size="sm" aria-label="Relaciones de K7">
-                <Thead>
-                  <Tr>
-                    <Th>Relación</Th>
-                    <Th>Veredicto</Th>
-                    <Th>Corrección y evidencia</Th>
-                    <Th>Verificado con</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {d.relaciones.map((r) => (
-                    <Tr key={r.id} data-testid={`k7-${r.id}`}>
-                      <Td whiteSpace="normal" minW="14rem">
-                        <strong>{r.id}</strong> {r.relacion}
-                      </Td>
-                      <Td>
-                        <Veredicto v={r.veredicto} />
-                      </Td>
-                      <Td whiteSpace="normal" minW="16rem">
-                        {r.correccion}
-                        {r.evidencia_cartografica ? ` ${r.evidencia_cartografica}` : ""}
-                        <Text fontSize="xs" color="textoSuave">
-                          Fuente: {r.fuente}
-                        </Text>
-                      </Td>
-                      <Td whiteSpace="normal">
-                        {r.verificado_con}
-                        {!categoriaComun(d.relaciones.map((x) => x.categoria)) && (
-                          <Box mt={1}>
-                            <Insignia categoria={r.categoria} />
-                          </Box>
-                        )}
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </TablaDesplazable>
-          </>
-        )} />
+      <Seccion titulo={`Verificador de la ${etiquetaCodigo("K7", { conCodigo: false }).toLowerCase()} (K7)`} categoria={catK7} sinCategoria={!catK7} id="sec-k7">
+        <Cargando
+          carga={k7}
+          esVacio={(d) => d.relaciones.length === 0}
+          vacio="No hay relaciones para verificar."
+          hijos={(d) => (
+            <>
+              <Text maxW="70ch" mb={4}>
+                {nombreLlano(d.esquema)}. {d.nota}
+              </Text>
+              <List>
+                {d.relaciones.map((r, i) => (
+                  <ListItem key={r.id} py={3} borderTop="1px solid" borderColor="borde" _first={{ borderTop: "none", pt: 0 }} data-testid={`k7-${r.id}`}>
+                    <Flex align="center" columnGap={3} rowGap={1.5} wrap="wrap" mb={1}>
+                      <Text as="span" fontWeight={700}>
+                        Relación {i + 1}
+                      </Text>
+                      <Veredicto v={r.veredicto} />
+                      {!catK7 && <Insignia categoria={r.categoria} />}
+                    </Flex>
+                    <Text fontWeight={600} maxW="70ch">
+                      {r.relacion}
+                    </Text>
+                    <Text maxW="70ch">
+                      {r.correccion}
+                      {r.evidencia_cartografica ? ` ${r.evidencia_cartografica}` : ""}
+                    </Text>
+                    <Box textStyle="microdato" mt={0.5}>
+                      <Text as="span">Verificado con: {r.verificado_con}.</Text> <Text as="span">Fuente: {nombreLlano(r.fuente)}.</Text>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            </>
+          )}
+        />
       </Seccion>
     </>
   );
