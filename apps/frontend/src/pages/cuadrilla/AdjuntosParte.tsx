@@ -1,7 +1,8 @@
-import { Box, Button, Flex, FormControl, FormHelperText, FormLabel, Text } from "@chakra-ui/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Box, Button, Flex, FormControl, FormHelperText, FormLabel, SimpleGrid, Spinner, Text } from "@chakra-ui/react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { IconoCaja, IconoMas } from "../../components/iconos/Iconos";
+import { IconoCaja, IconoMas, IconoReloj, IconoTilde, IconoTriangulo } from "../../components/iconos/Iconos";
+import { Chip, type TonoChip } from "../../panel/ui";
 import { ACEPTA_ADJUNTOS, descargarAdjuntoParte, esVideo, formatearBytes, MAX_ADJUNTOS_PARTE, sumarAdjuntos, tipoEfectivo, type AdjuntoParte } from "../../lib/partes";
 
 export type EstadoArchivo = "pendiente" | "subiendo" | "ok" | "error";
@@ -26,6 +27,12 @@ function Previa({ archivo, url }: { archivo: File; url: string | null }) {
 }
 
 const TEXTO_ESTADO: Record<EstadoArchivo, string> = { pendiente: "Pendiente", subiendo: "Subiendo…", ok: "Subido", error: "No se subió" };
+const TONO_ESTADO: Record<EstadoArchivo, { tono: TonoChip; icono: ReactNode }> = {
+  pendiente: { tono: "neutro", icono: <IconoReloj tam="0.9rem" /> },
+  subiendo: { tono: "info", icono: <Spinner size="xs" speed="0.8s" /> },
+  ok: { tono: "ok", icono: <IconoTilde tam="0.9rem" /> },
+  error: { tono: "alerta", icono: <IconoTriangulo tam="0.9rem" /> },
+};
 
 /**
  * Selector de evidencia (hasta 5 archivos): cámara o galería, controles de tipo y tamaño en el dispositivo,
@@ -50,23 +57,21 @@ export function SelectorAdjuntos({ idBase, archivos, alCambiar, progreso, bloque
 
   return (
     <FormControl as="fieldset" mt={3} data-testid={`adjuntos-${idBase}`}>
-      <FormLabel as="legend" fontSize="sm">
-        Fotos o video como evidencia (opcional, hasta {MAX_ADJUNTOS_PARTE})
-      </FormLabel>
-      <Flex gap={2} wrap="wrap">
+      <FormLabel as="legend">Fotos o video como evidencia (opcional, hasta {MAX_ADJUNTOS_PARTE})</FormLabel>
+      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2}>
         <Button type="button" variant="outline" minH="2.75rem" leftIcon={<IconoMas />} isDisabled={bloqueado || lleno} onClick={() => refCamara.current?.click()}>
           Sacar foto o video
         </Button>
         <Button type="button" variant="outline" minH="2.75rem" isDisabled={bloqueado || lleno} onClick={() => refGaleria.current?.click()}>
           Elegir de la galería
         </Button>
-      </Flex>
+      </SimpleGrid>
       <input ref={refCamara} id={`adj-cam-${idBase}`} type="file" accept={ACEPTA_ADJUNTOS} capture="environment" hidden onChange={agregar} aria-label="Sacar foto o video con la cámara" />
       <input ref={refGaleria} id={`adj-gal-${idBase}`} type="file" accept={ACEPTA_ADJUNTOS} multiple hidden onChange={agregar} aria-label="Elegir fotos o videos de la galería" />
       <FormHelperText>Imágenes JPEG, PNG o WebP de hasta 5 MB; videos MP4 o MOV de hasta 20 MB. No filmes ni fotografíes caras ni menores de edad.</FormHelperText>
 
       {errores.length > 0 && (
-        <Box mt={2} role="alert" fontSize="sm" color="evacuacion.700" data-testid="errores-adjuntos">
+        <Box mt={2} role="alert" textStyle="microdato" color="evacuacion.700" data-testid="errores-adjuntos">
           {errores.map((m) => (
             <Text key={m}>{m}</Text>
           ))}
@@ -74,35 +79,45 @@ export function SelectorAdjuntos({ idBase, archivos, alCambiar, progreso, bloque
       )}
 
       {archivos.length > 0 && (
-        <Flex as="ul" direction="column" gap={2} listStyleType="none" m={0} mt={3} p={0} aria-label="Archivos elegidos">
-          {archivos.map((f, i) => {
-            const p = progreso?.[i];
-            return (
-              <Flex as="li" key={`${f.name}-${i}`} gap={3} align="center" data-testid={`archivo-${i}`}>
-                <Previa archivo={f} url={urls[i] ?? null} />
-                <Box minW={0} flex="1">
-                  <Text fontSize="sm" fontWeight={600} overflowWrap="anywhere">
-                    {f.name}
-                  </Text>
-                  <Text textStyle="microdato">
-                    {esVideo(f.type) ? "Video" : "Imagen"} · {formatearBytes(f.size)}
-                    {p ? ` · ${TEXTO_ESTADO[p.estado]}` : ""}
-                  </Text>
-                  {p?.estado === "error" && p.mensaje && (
-                    <Text fontSize="sm" color="evacuacion.700" role="alert">
-                      {p.mensaje}
+        <>
+          <Text textStyle="microdato" mt={3} mb={2} role="status">
+            {archivos.length} de {MAX_ADJUNTOS_PARTE} archivos elegidos
+          </Text>
+          <Flex as="ul" direction="column" gap={2} listStyleType="none" m={0} p={0} aria-label="Archivos elegidos">
+            {archivos.map((f, i) => {
+              const p = progreso?.[i];
+              const t = p ? TONO_ESTADO[p.estado] : null;
+              return (
+                <Flex as="li" key={`${f.name}-${i}`} gap={3} align="center" p={2} bg="superficie" border="1px solid" borderColor="borde" borderRadius="lg" data-testid={`archivo-${i}`}>
+                  <Previa archivo={f} url={urls[i] ?? null} />
+                  <Box minW={0} flex="1">
+                    <Text fontWeight={600} lineHeight={1.3} overflowWrap="anywhere">
+                      {f.name}
                     </Text>
+                    <Text textStyle="microdato">
+                      {esVideo(f.type) ? "Video" : "Imagen"} · {formatearBytes(f.size)}
+                    </Text>
+                    {p && t && (
+                      <Chip tono={t.tono} icono={t.icono} mt={1}>
+                        {TEXTO_ESTADO[p.estado]}
+                      </Chip>
+                    )}
+                    {p?.estado === "error" && p.mensaje && (
+                      <Text textStyle="microdato" color="evacuacion.700" role="alert" mt={1}>
+                        {p.mensaje}
+                      </Text>
+                    )}
+                  </Box>
+                  {!bloqueado && (
+                    <Button type="button" size="sm" variant="ghost" minH="2.75rem" aria-label={`Quitar ${f.name}`} onClick={() => alCambiar(archivos.filter((_, j) => j !== i))}>
+                      Quitar
+                    </Button>
                   )}
-                </Box>
-                {!bloqueado && (
-                  <Button type="button" size="sm" variant="ghost" minH="2.75rem" aria-label={`Quitar ${f.name}`} onClick={() => alCambiar(archivos.filter((_, j) => j !== i))}>
-                    Quitar
-                  </Button>
-                )}
-              </Flex>
-            );
-          })}
-        </Flex>
+                </Flex>
+              );
+            })}
+          </Flex>
+        </>
       )}
     </FormControl>
   );
@@ -133,7 +148,7 @@ export function MiniaturaAdjunto({ tareaId, parteId, adjunto }: { tareaId: numbe
   const etiqueta = `${video ? "Video" : "Foto"} ${adjunto.n} del parte ${parteId}`;
   if (fallo) {
     return (
-      <Text fontSize="sm" color="textoSuave" data-testid={`adjunto-${parteId}-${adjunto.n}`}>
+      <Text textStyle="microdato" data-testid={`adjunto-${parteId}-${adjunto.n}`}>
         {etiqueta}: no se pudo cargar.
       </Text>
     );

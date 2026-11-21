@@ -52,6 +52,7 @@ export function validarCierre(f: { lat: string; lon: string; centro: string; per
  */
 export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tareaId: number; alTerminar: () => void; alCancelar: () => void }) {
   const clave = useRef<string>("");
+  const refFotos = useRef<HTMLInputElement>(null);
   const centros = useCarga(() => api.centros());
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
@@ -217,7 +218,15 @@ export function CerrarConConstancia({ tareaId, alTerminar, alCancelar }: { tarea
         <FormLabel htmlFor={`cc-fotos-${tareaId}`} fontSize="sm">
           Fotos (hasta {MAX_FOTOS})
         </FormLabel>
-        <Input id={`cc-fotos-${tareaId}`} type="file" accept={TIPOS_FOTO} multiple size="sm" p={1} onChange={(e) => setFotos(Array.from(e.target.files ?? []))} />
+        <Button type="button" variant="outline" minH="2.75rem" w={{ base: "full", sm: "auto" }} onClick={() => refFotos.current?.click()}>
+          {fotos.length > 0 ? "Cambiar las fotos" : "Elegir fotos"}
+        </Button>
+        <input ref={refFotos} id={`cc-fotos-${tareaId}`} type="file" accept={TIPOS_FOTO} multiple hidden onChange={(e) => setFotos(Array.from(e.target.files ?? []))} />
+        {fotos.length > 0 && (
+          <Text textStyle="microdato" mt={2} role="status">
+            {fotos.length === 1 ? "1 foto elegida" : `${fotos.length} fotos elegidas`}: {fotos.map((f) => f.name).join(", ")}
+          </Text>
+        )}
         <FormHelperText>Sacá fotos del lugar o del transporte. No fotografíes caras ni menores de edad.</FormHelperText>
         <FormErrorMessage>{errores.fotos}</FormErrorMessage>
       </FormControl>

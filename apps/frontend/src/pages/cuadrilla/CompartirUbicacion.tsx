@@ -1,7 +1,6 @@
-import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, Text } from "@chakra-ui/react";
+import { Alert, AlertDescription, AlertIcon, Box, Button, Text } from "@chakra-ui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Insignia } from "../../components/Insignia";
 import { ApiError } from "../../lib/api";
 import { horaCorta } from "../../lib/seguimiento";
 import { OPCIONES_UBICACION, redondear5 } from "../../lib/useUbicacionDispositivo";
@@ -76,7 +75,7 @@ export function CompartirUbicacion({ hayTareaEnCurso }: { hayTareaEnCurso: boole
 
   if (!hayTareaEnCurso) {
     return (
-      <Text fontSize="sm" color="textoSuave" data-testid="ubicacion-sin-tarea">
+      <Text textStyle="microdato" data-testid="ubicacion-sin-tarea">
         Cuando inicies una tarea vas a poder compartir tu ubicación con quien pidió ayuda. Solo se comparte mientras la tarea está en curso.
       </Text>
     );
@@ -84,24 +83,21 @@ export function CompartirUbicacion({ hayTareaEnCurso }: { hayTareaEnCurso: boole
   const compartiendo = activo && estado.fase !== "pausado";
   return (
     <Box data-testid="compartir-ubicacion">
-      <Flex gap={3} align="center" wrap="wrap" mb={2}>
-        <Button size="sm" variant={activo ? "outline" : "solid"} aria-pressed={activo} onClick={() => setActivo((a) => !a)} minH="2.75rem">
-          {activo ? "Pausar el envío de mi ubicación" : "Compartir mi ubicación"}
-        </Button>
-        <Insignia categoria="SIMULADO" />
-      </Flex>
-      <Text fontSize="sm" role="status">
+      <Button size="sm" variant={activo ? "outline" : "solid"} aria-pressed={activo} onClick={() => setActivo((a) => !a)} minH="2.75rem" w="full" mb={3}>
+        {activo ? "Pausar el envío de mi ubicación" : "Compartir mi ubicación"}
+      </Button>
+      <Text role="status">
         {compartiendo
           ? `Compartiendo tu ubicación con el solicitante${estado.fase === "compartiendo" && estado.ultima ? ` · último envío a las ${estado.ultima}` : ""}.`
           : "No estás compartiendo tu ubicación."}
       </Text>
       {estado.fase === "error" && (
-        <Alert status="warning" fontSize="sm" mt={2} role="alert">
+        <Alert status="warning" mt={2} role="alert">
           <AlertIcon />
           <AlertDescription>{estado.mensaje}</AlertDescription>
         </Alert>
       )}
-      <Text fontSize="xs" color="textoSuave" mt={2}>
+      <Text textStyle="microdato" mt={2}>
         Se envía cada 30 segundos mientras esta página esté abierta. La ven quien pidió ayuda y los operadores, solo mientras la tarea está en curso; no se guarda un historial.
       </Text>
     </Box>
