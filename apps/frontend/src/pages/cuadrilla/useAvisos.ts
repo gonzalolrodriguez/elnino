@@ -8,10 +8,11 @@ export const INTERVALO_AVISOS_MS = 30_000;
 export type EstadoAvisos = "cargando" | "ok" | "error";
 
 /**
- * Avisos del operativo para las cuadrillas del usuario. No hay evento de tiempo real para este rol en `useTiempoReal`,
- * así que se consulta cada 30 s (y a pedido). Un 403/404 (sin avisos o sin permiso sobre esa cuadrilla) cuenta como lista vacía.
+ * Avisos del operativo para las cuadrillas del usuario. Se refrescan con el evento de tiempo real `aviso_cuadrilla`
+ * (`senal` sube cada vez que llega uno) y, como respaldo si el socket cae, cada 30 s y a pedido.
+ * Un 403/404 (sin avisos o sin permiso sobre esa cuadrilla) cuenta como lista vacía.
  */
-export function useAvisos(cuadrillaIds: number[]) {
+export function useAvisos(cuadrillaIds: number[], senal = 0) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [estado, setEstado] = useState<EstadoAvisos>("cargando");
   const [error, setError] = useState<unknown>(null);
@@ -50,6 +51,10 @@ export function useAvisos(cuadrillaIds: number[]) {
       clearInterval(t);
     };
   }, [clave, cargar]);
+
+  useEffect(() => {
+    if (senal > 0) void cargar();
+  }, [senal, cargar]);
 
   /** Marca el aviso como leído en el servidor; solo al confirmarse cambia la lista. Devuelve el error si falla. */
   const marcar = useCallback(async (id: number): Promise<unknown> => {

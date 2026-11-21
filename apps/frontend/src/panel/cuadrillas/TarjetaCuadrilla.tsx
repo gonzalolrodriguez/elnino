@@ -39,10 +39,10 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
   const t = c.tarea_actual;
   const tituloId = `cuadrilla-${c.id}-titulo`;
 
-  async function quitar(usuarioId: number, rol: string) {
+  async function quitar(integranteId: number, rol: string) {
     setError(null);
     try {
-      await api.quitarIntegrante(c.id, usuarioId);
+      await api.quitarIntegrante(c.id, integranteId);
       toast({ title: "Integrante quitado", description: `${etiquetaRolOperativo(rol)} de ${c.nombre}`, status: "success", duration: 3000 });
       setQuitando(null);
       alCambiar();
@@ -83,7 +83,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
         ) : (
           <Box as="ul" listStyleType="none" m={0} p={0} display="flex" flexDirection="column" gap={1.5}>
             {c.integrantes.map((i) => (
-              <Flex as="li" key={i.usuario_id} align="center" columnGap={2} rowGap={1} wrap="wrap" fontSize="sm" minH="2rem">
+              <Flex as="li" key={i.id} align="center" columnGap={2} rowGap={1} wrap="wrap" fontSize="sm" minH="2rem">
                 <Text as="span" fontWeight={600}>
                   {etiquetaRolOperativo(i.rol_operativo)}
                 </Text>
@@ -98,9 +98,9 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
                   </Chip>
                 )}
                 {puedeGestionar &&
-                  (quitando === i.usuario_id ? (
+                  (quitando === i.id ? (
                     <Flex as="span" align="center" gap={1.5} ml="auto">
-                      <Button size="sm" {...TACTIL} colorScheme="red" onClick={() => void quitar(i.usuario_id, i.rol_operativo)} aria-label={`Confirmar: quitar ${etiquetaRolOperativo(i.rol_operativo)}`}>
+                      <Button size="sm" {...TACTIL} colorScheme="red" onClick={() => void quitar(i.id, i.rol_operativo)} aria-label={`Confirmar: quitar ${etiquetaRolOperativo(i.rol_operativo)}`}>
                         Sí, quitar
                       </Button>
                       <Button size="sm" {...TACTIL} variant="outline" onClick={() => setQuitando(null)}>
@@ -108,7 +108,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
                       </Button>
                     </Flex>
                   ) : (
-                    <Button size="sm" {...TACTIL} variant="outline" ml="auto" onClick={() => setQuitando(i.usuario_id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
+                    <Button size="sm" {...TACTIL} variant="outline" ml="auto" onClick={() => setQuitando(i.id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
                       Quitar
                     </Button>
                   ))}

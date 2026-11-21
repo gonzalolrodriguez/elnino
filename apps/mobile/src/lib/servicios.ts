@@ -407,7 +407,7 @@ export async function enviarParte(datos: DatosParte, clave: string): Promise<Res
   }
 }
 
-/** Marca un aviso del operativo como leído. Un 409 (ya estaba leído) cuenta como hecho. */
+/** Marca un aviso del operativo como leído. El servidor es idempotente (200 si ya estaba leído); un 409 también cuenta como hecho. */
 export async function enviarAvisoLeido(datos: DatosAvisoLeido): Promise<ResultadoEnvio> {
   try {
     await peticion<unknown>(`/avisos/${datos.aviso_id}/leido`, { metodo: "POST" });
@@ -478,7 +478,7 @@ export function subirFotoItem(servidorId: number, fotoUri: string, datos: DatosC
     // `servidorId` es el id del parte. La evidencia puede ser foto o video (hasta 5 por parte).
     const a = (datos.adjuntos ?? []).find((x) => x.uri === fotoUri);
     return subirFotoA(`/tareas/${datos.tarea_id}/partes/${servidorId}/adjuntos`, fotoUri, {
-      name: nombreParaSubir({ tipo: a?.tipo ?? "imagen" }),
+      name: nombreParaSubir({ tipo: a?.tipo ?? "imagen", mime: a?.mime }),
       type: a?.mime ?? "image/jpeg",
       esVideo: a?.tipo === "video",
     });
@@ -530,6 +530,8 @@ export const api = {
   sectoresGeo: () => peticion<GeoSectores>("/sectores", { auth: false }),
   tareas: () => peticion<{ tareas: Tarea[] }>("/tareas"),
   cuadrilla: (id: number) => peticion<CuadrillaDetalle>(`/cuadrillas/${id}`),
+  /** La cuadrilla del integrante, sin nombres de personas. 404 si todavía no integra ninguna. */
+  miCuadrilla: () => peticion<CuadrillaDetalle>("/mi/cuadrilla"),
   avisosCuadrilla: (id: number) => peticion<{ items: AvisoCuadrilla[] }>(`/cuadrillas/${id}/avisos`),
   partesDeTarea: (id: number) => peticion<{ items: ParteTarea[] }>(`/tareas/${id}/partes`),
   actualizarTarea: (

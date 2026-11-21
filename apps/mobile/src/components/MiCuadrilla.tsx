@@ -2,9 +2,8 @@ import { Text, View } from "react-native";
 
 import { Chip, Chips, Encabezado } from "@/components/Piezas";
 import { COLOR, Insignia, Tarjeta, Texto } from "@/components/ui";
-import { datosDeMiCuadrilla, etiquetaProfesion, etiquetaTipoOperativo, etiquetaVehiculo } from "@/lib/cuadrillas";
+import { datosDeMiCuadrilla, type CuadrillaDetalle, etiquetaProfesion, etiquetaTipoOperativo, etiquetaVehiculo } from "@/lib/cuadrillas";
 import { etiquetaRolOperativo, formatearFechaHora } from "@/lib/etiquetas";
-import { useMiCuadrilla } from "@/lib/useCuadrilla";
 import { useUsuario } from "@/lib/SesionContext";
 
 const funcion = (rol: string | null | undefined, profesion: string | null | undefined): string =>
@@ -14,10 +13,8 @@ const funcion = (rol: string | null | undefined, profesion: string | null | unde
  * «Mi cuadrilla»: nombre, tipo de operativo, vehículo, tu función (rol y profesión), el encargado y el
  * equipamiento. Las personas van por rol y profesión, nunca por nombre.
  */
-export function MiCuadrilla({ cuadrillaId }: { cuadrillaId: number }) {
+export function MiCuadrilla({ cuadrilla, copia }: { cuadrilla: CuadrillaDetalle; copia: number | null }) {
   const usuario = useUsuario();
-  const { cuadrilla, copia, error } = useMiCuadrilla(cuadrillaId);
-  if (error || !cuadrilla) return null;
   const { yo, encargado, soyEncargado } = datosDeMiCuadrilla(cuadrilla, usuario.id);
   return (
     <Tarjeta>

@@ -1,26 +1,15 @@
 import { Box, Flex, Heading, List, ListItem, Text } from "@chakra-ui/react";
 
-import { EstadoCargando } from "../../components/EstadoCargando";
-import { AlertaError } from "../../components/Formulario";
 import { IconoCamion, IconoCaja, IconoPersonas } from "../../components/iconos/Iconos";
-import { ApiError } from "../../lib/api";
-import { detalleCuadrilla, ETIQUETA_PROFESION, ETIQUETA_TIPO_OPERATIVO } from "../../lib/avisos";
+import { ETIQUETA_PROFESION, ETIQUETA_TIPO_OPERATIVO, type CuadrillaPropia } from "../../lib/avisos";
 import { etiquetaRolOperativo } from "../../lib/etiquetas";
-import { useCarga } from "../../lib/useCarga";
+import { etiquetaVehiculo } from "../../lib/pedidos";
 
 /**
- * Resumen de la cuadrilla propia. A la cuadrilla se la ve por rol operativo y profesión: aunque la API
+ * Resumen de la cuadrilla propia (`GET /mi/cuadrilla`). A la cuadrilla se la ve por rol operativo y profesión: aunque la API
  * mande `nombre_visible`, esta pantalla no lo muestra (solo lo ven operador, decisor y admin en el panel).
  */
-export function MiCuadrilla({ cuadrillaId }: { cuadrillaId: number }) {
-  const carga = useCarga(() => detalleCuadrilla(cuadrillaId), [cuadrillaId]);
-  if (carga.estado === "cargando") return <EstadoCargando />;
-  if (carga.estado === "error") {
-    // Sin permiso o sin ficha para este rol: el resumen simplemente no aparece.
-    if (carga.error instanceof ApiError && (carga.error.estado === 403 || carga.error.estado === 404)) return null;
-    return <AlertaError error={carga.error} />;
-  }
-  const c = carga.datos;
+export function MiCuadrilla({ cuadrilla: c }: { cuadrilla: CuadrillaPropia }) {
   const encargado = (c.integrantes ?? []).find((i) => i.es_encargado);
   const equipamiento = (c.equipamiento ?? []).filter((x) => x.trim() !== "");
   const tipo = c.tipo_operativo ? ETIQUETA_TIPO_OPERATIVO[c.tipo_operativo] ?? c.tipo_operativo : null;
@@ -39,7 +28,7 @@ export function MiCuadrilla({ cuadrillaId }: { cuadrillaId: number }) {
             <IconoCamion tam="1.125rem" />
           </Box>
           <Text>
-            <strong>Vehículo:</strong> {c.vehiculo}
+            <strong>Vehículo:</strong> {etiquetaVehiculo(c.vehiculo) ?? c.vehiculo}
           </Text>
         </Flex>
       )}

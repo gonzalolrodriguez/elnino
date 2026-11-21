@@ -205,7 +205,7 @@ export default function MapaSeguimientoGL({ items, vehiculos, reducido, onSelecc
         const f = fijos.current.get(id);
         if (f) f.marca.setLngLat([it.lon, it.lat]);
         else {
-          const { el, root } = crearMarca(it.nombre, vehiculos[id] ?? null, false, alElegir);
+          const { el, root } = crearMarca(it.nombre, it.vehiculo ?? vehiculos[id] ?? null, false, alElegir);
           fijos.current.set(id, { marca: new maplibregl.Marker({ element: el, rotationAlignment: "viewport" }).setLngLat([it.lon, it.lat]).addTo(m), root });
         }
         continue;
@@ -228,7 +228,7 @@ export default function MapaSeguimientoGL({ items, vehiculos, reducido, onSelecc
           previo.marca.remove();
           queueMicrotask(() => previo.root.unmount());
         }
-        const { el, flecha, root } = crearMarca(it.nombre, vehiculos[id] ?? null, ruta.simulada, alElegir);
+        const { el, flecha, root } = crearMarca(it.nombre, it.vehiculo ?? vehiculos[id] ?? null, ruta.simulada, alElegir);
         const marca = new maplibregl.Marker({ element: el, rotationAlignment: "viewport" }).setLngLat(coords[0]).addTo(m);
         mo = { clave, coords, acum, largo: largoTotal(acum), disp, base: disp, t0: Date.now(), velocidadKmh: 0, horizonteS: undefined, angulo: 0, marca, flecha, root };
         motores.current.set(id, mo);

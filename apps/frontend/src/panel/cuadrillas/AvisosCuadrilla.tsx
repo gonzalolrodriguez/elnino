@@ -7,18 +7,12 @@ import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useSenalTiempoReal } from "../TiempoRealContext";
-import type { AvisoCuadrilla, CuadrillaCompleta, LecturaAviso, TipoAviso } from "../tipos";
+import type { AvisoCuadrilla, CuadrillaCompleta, TipoAviso } from "../tipos";
 import { Cargando, Chip, Seccion } from "../ui";
 import { ITEMS_SUGERIDOS, TIPOS_AVISO, etiquetaTipoAviso, geometriaDe, validarAviso, type ErroresAviso } from "./catalogos";
 import { MapaDesvio } from "./MapaDesvio";
 import type { Punto } from "./MapaDesvioGL";
 import { TACTIL } from "./partes";
-
-/** Lecturas de un aviso: acepta la lista `lecturas` o un único `leido_en` en el aviso. */
-export function lecturasDe(a: AvisoCuadrilla): LecturaAviso[] {
-  if (a.lecturas && a.lecturas.length > 0) return a.lecturas;
-  return a.leido_en ? [{ leido_en: a.leido_en, leido_por_rol: a.leido_por_rol ?? null }] : [];
-}
 
 const TONO_AVISO: Record<TipoAviso, "info" | "aviso" | "alerta" | "neutro"> = { desvio: "aviso", equipamiento: "info", instruccion: "neutro", seguridad: "alerta" };
 
@@ -27,24 +21,23 @@ function resumenGeometria(g: AvisoCuadrilla["geometria"]): string | null {
   return g.type === "Point" ? "Punto marcado en el mapa" : `Desvío de ${g.coordinates.length} puntos`;
 }
 
-function ListaAvisos({ cuadrillaId, recargar }: { cuadrillaId: number; recargar: number }) {
+function ListaAvisos({ cuadrillaId, recargar, puedeGestionar }: { cuadrillaId: number; recargar: number; puedeGestionar: boolean }) {
   const senal = useSenalTiempoReal();
-  const carga = useCarga(() => api.avisosDeCuadrilla(cuadrillaId).then((r) => r.avisos ?? r.items ?? []), [cuadrillaId, recargar, senal]);
+  const carga = useCarga(() => api.avisosDeCuadrilla(cuadrillaId).then((r) => r.items), [cuadrillaId, recargar, senal]);
   return (
     <Cargando
       carga={carga}
       esVacio={(d) => d.length === 0}
-      vacio="Todavía no enviaste avisos a esta cuadrilla."
+      vacio={puedeGestionar ? "Todavía no enviaste avisos a esta cuadrilla." : "Todavía no hay avisos para esta cuadrilla."}
       hijos={(avisos) => (
         <Box as="ul" listStyleType="none" m={0} p={0} display="flex" flexDirection="column" gap={2} data-testid="lista-avisos">
           {avisos.map((a) => {
-            const lecturas = lecturasDe(a);
             const geo = resumenGeometria(a.geometria);
             return (
               <Box as="li" key={a.id} p={3} borderRadius="lg" border="1px solid" borderColor="borde" bg="superficie" data-testid="aviso">
                 <Flex align="center" columnGap={2} rowGap={1} wrap="wrap">
                   <Chip tono={TONO_AVISO[a.tipo] ?? "neutro"}>{etiquetaTipoAviso(a.tipo)}</Chip>
-                  {a.emitido_por_rol && <Text fontSize="sm" color="textoSuave">{etiquetaRolOperativo(a.emitido_por_rol)}</Text>}
+                  {a.creado_por_rol && <Text fontSize="sm" color="textoSuave">{etiquetaRolOperativo(a.creado_por_rol)}</Text>}
                   <Text as="time" dateTime={a.creado_en} textStyle="microdato" ml={{ md: "auto" }}>
                     {fechaHora(a.creado_en)}
                   </Text>
@@ -67,18 +60,14 @@ function ListaAvisos({ cuadrillaId, recargar }: { cuadrillaId: number; recargar:
                   </Text>
                 )}
                 <Box mt={2} data-testid="lecturas-aviso">
-                  {lecturas.length === 0 ? (
+                  {a.leido_en ? (
+                    <Chip tono="ok" icono={<IconoTilde tam="0.9rem" />}>
+                      {`Leído por ${a.leido_por_rol ? etiquetaRolOperativo(a.leido_por_rol) : "un integrante"} · ${fechaHora(a.leido_en)}`}
+                    </Chip>
+                  ) : (
                     <Chip tono="aviso" icono={<IconoReloj tam="0.9rem" />}>
                       Pendiente de lectura
                     </Chip>
-                  ) : (
-                    <Flex gap={1.5} wrap="wrap">
-                      {lecturas.map((l, i) => (
-                        <Chip key={i} tono="ok" icono={<IconoTilde tam="0.9rem" />}>
-                          {`Leído por ${l.leido_por_rol ? etiquetaRolOperativo(l.leido_por_rol) : "un integrante"} · ${fechaHora(l.leido_en)}`}
-                        </Chip>
-                      ))}
-                    </Flex>
                   )}
                 </Box>
               </Box>
@@ -91,7 +80,7 @@ function ListaAvisos({ cuadrillaId, recargar }: { cuadrillaId: number; recargar:
 }
 
 /** Avisos del operativo a la cuadrilla: redacción con desvío dibujado o lista de qué llevar, y avisos enviados con su lectura. */
-export function AvisosCuadrilla({ cuadrilla, tareaId, referencia }: { cuadrilla: CuadrillaCompleta; tareaId: number | null; referencia?: Punto[] | null }) {
+export function AvisosCuadrilla({ cuadrilla, tareaId, referencia, puedeGestionar = true }: { cuadrilla: CuadrillaCompleta; tareaId: number | null; referencia?: Punto[] | null; puedeGestionar?: boolean }) {
   const toast = useToast();
   const [tipo, setTipo] = useState<TipoAviso>("instruccion");
   const [texto, setTexto] = useState("");
@@ -104,7 +93,8 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia }: { cuadrilla:
   const [enviando, setEnviando] = useState(false);
   const [version, setVersion] = useState(0);
 
-  const sugeridos = Array.from(new Set([...cuadrilla.equipamiento, ...ITEMS_SUGERIDOS]));
+  // Sin repetidos aunque cambie la capitalización («palas» del equipamiento y «Palas» de las sugerencias).
+  const sugeridos = [...cuadrilla.equipamiento, ...ITEMS_SUGERIDOS].filter((x, i, l) => l.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
   const conMapa = tipo === "desvio" || tipo === "seguridad";
 
   useEffect(() => {
@@ -145,6 +135,7 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia }: { cuadrilla:
 
   return (
     <Seccion titulo="Avisos del operativo" id="sec-avisos" icono={<IconoMegafono tam="1.25rem" />} categoria="SIMULADO">
+      {puedeGestionar && (
       <Box as="form" onSubmit={(e: React.FormEvent) => void enviar(e)} noValidate data-testid="form-aviso">
         <FormControl as="fieldset" border="0" p={0} m={0}>
           <FormLabel as="legend" mb={2}>
@@ -255,12 +246,13 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia }: { cuadrilla:
           {tareaId ? `El aviso queda asociado a la tarea n.º ${tareaId}.` : "La cuadrilla no tiene tarea en curso: el aviso queda sin tarea."} Cuando un integrante lo lea, vas a ver quién y a qué hora.
         </Text>
       </Box>
+      )}
 
-      <Box mt={5} pt={4} borderTop="1px solid" borderColor="borde">
+      <Box mt={puedeGestionar ? 5 : 0} pt={puedeGestionar ? 4 : 0} borderTop={puedeGestionar ? "1px solid" : undefined} borderColor="borde">
         <Text as="h3" textStyle="rotulo" mb={2}>
           Avisos enviados
         </Text>
-        <ListaAvisos cuadrillaId={cuadrilla.id} recargar={version} />
+        <ListaAvisos cuadrillaId={cuadrilla.id} recargar={version} puedeGestionar={puedeGestionar} />
       </Box>
     </Seccion>
   );

@@ -169,7 +169,7 @@ export default function DetalleCuadrilla() {
               )}
             </Seccion>
 
-            {c.estado !== "baja" && <AvisosCuadrilla cuadrilla={c} tareaId={tarea?.id ?? null} referencia={referencia} />}
+            {c.estado !== "baja" && <AvisosCuadrilla cuadrilla={c} tareaId={tarea?.id ?? null} referencia={referencia} puedeGestionar={puedeGestionar} />}
 
             {puedeGestionar && editando && (
               <AsistenteCuadrilla

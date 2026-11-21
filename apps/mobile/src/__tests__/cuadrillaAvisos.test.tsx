@@ -3,7 +3,7 @@ import { Image } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorApi } from "@/lib/api";
-import { MAX_ADJUNTOS_PARTE, MAX_IMAGEN_BYTES, MAX_VIDEO_BYTES, validarAdjunto, type AdjuntoLocal } from "@/lib/adjuntos";
+import { MAX_ADJUNTOS_PARTE, MAX_IMAGEN_BYTES, MAX_VIDEO_BYTES, nombreParaSubir, validarAdjunto, type AdjuntoLocal } from "@/lib/adjuntos";
 import { ColaOffline, RepositorioMemoria, esAvisoLeido, type DatosAvisoLeido, type DatosParte } from "@/lib/cola";
 import { avisosNuevos, capasDeDesvio, contarSinLeer, ordenarAvisos, type AvisoCuadrilla } from "@/lib/cuadrillas";
 import { armarParte } from "@/lib/partes";
@@ -51,17 +51,24 @@ jest.mock("@/lib/api", () => ({
 
 const mockTareas = jest.fn();
 const mockAvisos = jest.fn();
-const mockCuadrilla = jest.fn();
+const mockMiCuadrilla = jest.fn();
 jest.mock("@/lib/servicios", () => ({
   ...jest.requireActual("@/lib/servicios"),
   api: {
     tareas: (...a: unknown[]) => mockTareas(...a),
     avisosCuadrilla: (...a: unknown[]) => mockAvisos(...a),
-    cuadrilla: (...a: unknown[]) => mockCuadrilla(...a),
+    miCuadrilla: (...a: unknown[]) => mockMiCuadrilla(...a),
     partesDeTarea: jest.fn(async () => ({ items: [] })),
     actualizarTarea: jest.fn(),
     solicitudes: jest.fn(),
   },
+}));
+
+// Señal del evento de tiempo real `aviso_cuadrilla` (la sube AlertasProvider).
+const mockSenal = { valor: 0 };
+jest.mock("@/lib/AlertasContext", () => ({
+  ...jest.requireActual("@/lib/AlertasContext"),
+  useSenalAvisos: () => mockSenal.valor,
 }));
 
 const mockElegirAdjunto = jest.fn();
@@ -147,12 +154,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   webview.__reiniciar();
   mockAlmacen.clear();
+  mockSenal.valor = 0;
   mockItems = [];
   mockEnviar.mockResolvedValue({ enviadaYa: true, fotoPendiente: false, rechazada: null, resultado: null, itemId: 60 });
   mockTareas.mockResolvedValue({ tareas: [tarea()] });
   mockAvisos.mockResolvedValue({ items: [LEIDO, EQUIPO, DESVIO, aviso()] });
-  mockCuadrilla.mockResolvedValue({
+  mockMiCuadrilla.mockResolvedValue({
     id: 2,
+    avisos_sin_leer: 3,
     nombre: "Cuadrilla Río Norte",
     tipo_operativo: "familias",
     cantidad_integrantes: 3,
@@ -161,7 +170,7 @@ beforeEach(() => {
     estado: "disponible",
     integrantes: [
       { id: 1, usuario_id: 7, rol_operativo: "defensa_civil", profesion: "medicina", es_encargado: false },
-      { id: 2, usuario_id: 8, rol_operativo: "coordinador_sector", profesion: "logistica", es_encargado: true, nombre_visible: "Nombre Que No Debe Verse" },
+      { id: 2, usuario_id: 8, rol_operativo: "coordinador_sector", profesion: "logistica", es_encargado: true, nombre_visible: null },
     ],
     creado_en: "2026-11-20T10:00:00Z",
   });
@@ -248,15 +257,18 @@ describe("pantalla de la cuadrilla: avisos del operativo", () => {
   it("sin conexión muestra la última copia guardada con su fecha", async () => {
     const Cuadrilla = require("@/app/(app)/cuadrilla").default;
     // Lo que quedó guardado de una apertura anterior con red (las claves son personales, no públicas).
-    const { claveAvisos, claveIdCuadrilla } = require("@/lib/useCuadrilla");
+    const { claveAvisos, claveCuadrillaPropia } = require("@/lib/useCuadrilla");
     expect(claveAvisos(7, 2).startsWith(PREFIJO_CACHE_PUBLICA)).toBe(false);
+    expect(claveCuadrillaPropia(7).startsWith(PREFIJO_CACHE_PUBLICA)).toBe(false);
     mockAlmacen.set(claveAvisos(7, 2), { valor: [aviso()], guardadoEn: Date.parse("2026-11-20T18:00:00Z") });
-    mockAlmacen.set(claveIdCuadrilla(7), { valor: 2, guardadoEn: 1 });
+    mockAlmacen.set(claveCuadrillaPropia(7), { valor: { id: 2, nombre: "Cuadrilla Río Norte", tipo_operativo: "familias", cantidad_integrantes: 1, vehiculo: null, equipamiento: [], estado: "disponible", integrantes: [] }, guardadoEn: 1 });
 
     mockAvisos.mockRejectedValue(new ErrorApi(0, "sin_conexion", "Sin conexión"));
+    mockMiCuadrilla.mockRejectedValue(new ErrorApi(0, "sin_conexion", "Sin conexión"));
     mockTareas.mockRejectedValue(new ErrorApi(0, "sin_conexion", "Sin conexión"));
     await render(conSafe(<Cuadrilla />));
-    await screen.findByText(/Sin conexión: se muestra lo último guardado, actualizado el/);
+    // Lo avisan los avisos y la ficha de la cuadrilla, cada uno con su copia.
+    expect((await screen.findAllByText(/Sin conexión: se muestra lo último guardado, actualizado el/)).length).toBeGreaterThan(0);
     expect(screen.getByText("Salir antes de las 14")).toBeTruthy();
   });
 
@@ -271,11 +283,31 @@ describe("pantalla de la cuadrilla: avisos del operativo", () => {
     expect(screen.queryByText(/Nombre Que No Debe Verse/)).toBeNull();
   });
 
-  it("sin cuadrilla en las tareas ni copia guardada no muestra avisos", async () => {
+  it("la cuadrilla sale de /mi/cuadrilla aunque las tareas no traigan cuadrilla_id", async () => {
     mockTareas.mockResolvedValue({ tareas: [tarea({ cuadrilla_id: null })] });
     await abrir();
+    await screen.findByText("Cuadrilla Río Norte");
+    await waitFor(() => expect(mockAvisos).toHaveBeenCalledWith(2));
+  });
+
+  it("sin cuadrilla (404 de /mi/cuadrilla) muestra el estado vacío y no pide avisos", async () => {
+    mockMiCuadrilla.mockRejectedValue(new ErrorApi(404, "no_encontrado", "No integrás ninguna cuadrilla"));
+    await abrir();
+    await screen.findByText(/Todavía no integrás ninguna cuadrilla/);
     expect(mockAvisos).not.toHaveBeenCalled();
     expect(screen.queryByText("Avisos del operativo")).toBeNull();
+  });
+});
+
+describe("avisos en tiempo real", () => {
+  it("el evento aviso_cuadrilla vuelve a pedir los avisos sin esperar al sondeo", async () => {
+    const { AvisosOperativo } = require("@/components/AvisosOperativo") as typeof import("@/components/AvisosOperativo");
+    const vista = await render(conSafe(<AvisosOperativo cuadrillaId={2} />));
+    await screen.findByText("Salir antes de las 14");
+    expect(mockAvisos).toHaveBeenCalledTimes(1);
+    mockSenal.valor = 1;
+    await vista.rerender(conSafe(<AvisosOperativo cuadrillaId={2} />));
+    await waitFor(() => expect(mockAvisos).toHaveBeenCalledTimes(2));
   });
 });
 
@@ -336,7 +368,12 @@ describe("evidencia en los partes", () => {
     expect(validarAdjunto({ ...imagen(1), mime: "image/gif" }, 0)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/JPEG, PNG o WebP/) });
     expect(validarAdjunto(video(MAX_VIDEO_BYTES), 0).ok).toBe(true);
     expect(validarAdjunto(video(MAX_VIDEO_BYTES + 1), 0)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/20,0 MB/) });
-    expect(validarAdjunto({ ...video(), mime: "video/quicktime" }, 0)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/MP4/) });
+    // El .mov de los iPhone (video/quicktime) se acepta; otro video no.
+    expect(validarAdjunto({ ...video(), mime: "video/quicktime" }, 0).ok).toBe(true);
+    expect(validarAdjunto({ ...video(), mime: "video/quicktime", bytes: MAX_VIDEO_BYTES + 1 }, 0)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/20,0 MB/) });
+    expect(validarAdjunto({ ...video(), mime: "video/x-matroska" }, 0)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/MP4 o MOV/) });
+    expect(nombreParaSubir({ tipo: "video", mime: "video/quicktime" })).toBe("evidencia.mov");
+    expect(nombreParaSubir({ tipo: "video", mime: "video/mp4" })).toBe("evidencia.mp4");
     expect(validarAdjunto(imagen(1, null), 0).ok).toBe(true); // tamaño desconocido: valida el servidor
     expect(validarAdjunto(imagen(1), MAX_ADJUNTOS_PARTE)).toMatchObject({ ok: false, mensaje: expect.stringMatching(/hasta 5 archivos/) });
   });

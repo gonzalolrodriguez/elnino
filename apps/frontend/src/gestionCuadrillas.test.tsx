@@ -62,8 +62,8 @@ const RESUMEN: { items: CuadrillaResumen[] } = {
       vehiculo: "4x4",
       estado: "disponible",
       integrantes: [
-        { usuario_id: 10, rol_operativo: "encargado_cuadrilla", es_encargado: true, profesion: "trabajo_social" },
-        { usuario_id: 11, rol_operativo: "transporte", es_encargado: false, profesion: "chofer" },
+        { id: 100, usuario_id: 10, rol_operativo: "encargado_cuadrilla", es_encargado: true, profesion: "trabajo_social" },
+        { id: 101, usuario_id: null, rol_operativo: "transporte", es_encargado: false, profesion: "chofer" },
       ],
       tarea_actual: { id: 7, estado: "en_curso", solicitud_id: 3, sector_id: "S4", requiere_atencion: false },
       ultimo_parte: null,
@@ -207,14 +207,63 @@ describe("alta, edición y baja", () => {
     expect(llamadas(f, "POST /cuadrillas/1/integrantes")).toHaveLength(0);
   });
 
+  it("los errores del paso 2 se borran apenas el campo queda válido", async () => {
+    conSesion("operador", base());
+    renderRuta("/comando/cuadrillas");
+    fireEvent.click(await screen.findByRole("button", { name: "Nueva cuadrilla" }));
+    const asistente = await screen.findByTestId("asistente-cuadrilla");
+    fireEvent.change(within(asistente).getByLabelText(/Nombre de la cuadrilla/), { target: { value: "Costa Norte" } });
+    fireEvent.change(within(asistente).getByLabelText(/Cantidad de integrantes/), { target: { value: "1" } });
+    fireEvent.click(within(asistente).getByRole("radio", { name: /^Personas/ }));
+    fireEvent.click(within(asistente).getByRole("button", { name: "Siguiente" }));
+    await within(asistente).findAllByTestId("fila-integrante");
+    fireEvent.click(within(asistente).getByRole("button", { name: "Siguiente" }));
+    expect(await within(asistente).findByText("Elegí el rol operativo.")).toBeInTheDocument();
+    expect(within(asistente).getByText("Elegí la profesión.")).toBeInTheDocument();
+    expect(within(asistente).getByText("Marcá quién es el encargado de la cuadrilla.")).toBeInTheDocument();
+    fireEvent.change(within(asistente).getByLabelText("Rol operativo"), { target: { value: "policia" } });
+    await waitFor(() => expect(within(asistente).queryByText("Elegí el rol operativo.")).not.toBeInTheDocument());
+    expect(within(asistente).getByText("Elegí la profesión.")).toBeInTheDocument();
+    fireEvent.change(within(asistente).getByLabelText("Profesión"), { target: { value: "policia" } });
+    await waitFor(() => expect(within(asistente).queryByText("Elegí la profesión.")).not.toBeInTheDocument());
+    fireEvent.click(within(asistente).getByRole("radio", { name: "Encargado (integrante 1)" }));
+    await waitFor(() => expect(within(asistente).queryByText("Marcá quién es el encargado de la cuadrilla.")).not.toBeInTheDocument());
+  });
+
+  it("al quitar un integrante usa el id del integrante y lo hace antes de guardar los datos", async () => {
+    const f = conSesion("operador", {
+      ...base(),
+      "GET /cuadrillas/1": ok(COMPLETA),
+      "DELETE /cuadrillas/1/integrantes/101": ok({ ...COMPLETA, cantidad_integrantes: 1, integrantes: [COMPLETA.integrantes[0]] }),
+      "PATCH /cuadrillas/1": ok(COMPLETA),
+    });
+    renderRuta("/comando/cuadrillas");
+    fireEvent.click(await screen.findByRole("button", { name: "Editar Cuadrilla humana 1" }));
+    const asistente = await screen.findByTestId("asistente-cuadrilla");
+    fireEvent.change(within(asistente).getByLabelText(/Cantidad de integrantes/), { target: { value: "1" } });
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(within(asistente).getByRole("button", { name: "Siguiente" }));
+      await within(asistente).findByRole("button", { name: i < 2 ? "Siguiente" : "Guardar cambios" });
+    }
+    fireEvent.click(within(asistente).getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(llamadas(f, "PATCH /cuadrillas/1")).toHaveLength(1));
+    expect(llamadas(f, "DELETE /cuadrillas/1/integrantes/101")).toHaveLength(1);
+    expect(llamadas(f, "DELETE /cuadrillas/1/integrantes/11")).toHaveLength(0);
+    const pos = (clave: string) => f.mock.calls.indexOf(llamadas(f, clave)[0]);
+    expect(pos("DELETE /cuadrillas/1/integrantes/101")).toBeLessThan(pos("PATCH /cuadrillas/1"));
+    expect(cuerpoDe(f, "PATCH /cuadrillas/1")).toMatchObject({ cantidad_integrantes: 1 });
+  });
+
   it("da de baja con confirmación", async () => {
-    const f = conSesion("operador", { ...base(), "DELETE /cuadrillas/1": ok({ ok: true }) });
+    const f = conSesion("operador", { ...base(), "DELETE /cuadrillas/1": ok({ id: 1, estado: "baja", eliminada: false, tareas_sin_cuadrilla: 2 }) });
     renderRuta("/comando/cuadrillas");
     fireEvent.click(await screen.findByRole("button", { name: "Dar de baja a Cuadrilla humana 1" }));
     expect(await screen.findByText(/¿Dar de baja a/)).toBeInTheDocument();
     expect(llamadas(f, "DELETE /cuadrillas/1")).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(llamadas(f, "DELETE /cuadrillas/1")).toHaveLength(1));
+    // Con historial es baja lógica; las tareas pendientes vuelven al operador para reasignar.
+    expect(await screen.findByText(/su historial se conserva\. 2 tareas volvieron a pendiente/)).toBeInTheDocument();
   });
 
   it("muestra el mensaje del 409 cuando tiene una tarea en curso", async () => {
@@ -226,6 +275,8 @@ describe("alta, edición y baja", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Dar de baja a Cuadrilla humana 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "Dar de baja" }));
     expect(await screen.findByText("La cuadrilla tiene una tarea en curso")).toBeInTheDocument();
+    expect(screen.getByText(/Cerrá o cancelá la tarea desde Operación/)).toBeInTheDocument();
+    expect(screen.getByText(/Cerrá o cancelá la tarea desde Operación/)).toBeInTheDocument();
     expect(llamadas(f, "DELETE /cuadrillas/1")).toHaveLength(1);
   });
 
@@ -294,20 +345,20 @@ describe("ficha de la cuadrilla", () => {
     creado_en: "2026-11-20T13:00:00Z",
     resuelta: null,
     adjuntos: [
-      { n: 1, tipo: "imagen", bytes: 120000 },
-      { n: 2, tipo: "video/mp4", bytes: 3000000 },
+      { n: 1, tipo: "imagen", mime: "image/jpeg", bytes: 120000 },
+      { n: 2, tipo: "video", mime: "video/quicktime", bytes: 3000000 },
     ],
   };
   const AVISOS = [
-    { id: 9, cuadrilla_id: 1, tipo: "desvio", texto: "Ruta 11 cortada", items: [], geometria: { type: "LineString", coordinates: [[-58.2, -26.2], [-58.19, -26.19]] }, tarea_id: 7, creado_en: "2026-11-20T12:00:00Z", emitido_por_rol: "defensa_civil", lecturas: [{ leido_por_rol: "encargado_cuadrilla", leido_en: "2026-11-20T12:05:00Z" }] },
-    { id: 10, cuadrilla_id: 1, tipo: "equipamiento", texto: "Sumar herramientas", items: ["Palas"], geometria: null, tarea_id: 7, creado_en: "2026-11-20T12:30:00Z", lecturas: [] },
+    { id: 9, cuadrilla_id: 1, tipo: "desvio", texto: "Ruta 11 cortada", items: [], geometria: { type: "LineString", coordinates: [[-58.2, -26.2], [-58.19, -26.19]] }, tarea_id: 7, creado_en: "2026-11-20T12:00:00Z", creado_por_rol: "defensa_civil", leido_en: "2026-11-20T12:05:00Z", leido_por_rol: "encargado_cuadrilla", categoria: "SIMULADO" },
+    { id: 10, cuadrilla_id: 1, tipo: "equipamiento", texto: "Sumar herramientas", items: ["Palas"], geometria: null, tarea_id: 7, creado_en: "2026-11-20T12:30:00Z", creado_por_rol: "defensa_civil", leido_en: null, leido_por_rol: null, categoria: "SIMULADO" },
   ];
   const rutas = (extra: Rutas = {}): Rutas => ({
     "GET /cuadrillas/1": ok(COMPLETA),
     "GET /cuadrillas/resumen": ok(RESUMEN),
     "GET /cuadrillas/posiciones": ok({ posiciones: [], categoria: "SIMULADO", fuente: "demo", fecha_dato: "2026-11-20T14:00:00Z", supuestos: {} }),
     "GET /tareas/7/partes": ok({ items: [PARTE] }),
-    "GET /cuadrillas/1/avisos": ok({ avisos: AVISOS }),
+    "GET /cuadrillas/1/avisos": ok({ items: AVISOS }),
     "GET /cuadrillas/plantillas": ok({}),
     ...extra,
   });
@@ -335,6 +386,14 @@ describe("ficha de la cuadrilla", () => {
     expect(avisos).toHaveLength(2);
     expect(within(avisos[0]).getByTestId("lecturas-aviso")).toHaveTextContent("Leído por Encargado de cuadrilla");
     expect(within(avisos[1]).getByTestId("lecturas-aviso")).toHaveTextContent("Pendiente de lectura");
+  });
+
+  it("el decisor ve los avisos y su lectura, pero no puede enviar", async () => {
+    conSesion("decisor", rutas());
+    renderRuta("/comando/cuadrillas/1");
+    expect(await screen.findAllByTestId("aviso")).toHaveLength(2);
+    expect(screen.queryByTestId("form-aviso")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
   });
 
   it("envía un desvío con la geometría dibujada", async () => {

@@ -32,7 +32,7 @@ import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { descripcionParte, exigeConstancia, type TipoParte } from "@/lib/partes";
 import { api, type Tarea } from "@/lib/servicios";
-import { useIdCuadrilla } from "@/lib/useCuadrilla";
+import { useCuadrillaPropia } from "@/lib/useCuadrilla";
 
 const TONO_TAREA: Record<Tarea["estado"], { tono: Tono; icono: "reloj" | "camion" | "tilde" | "cruz" }> = {
   pendiente: { tono: "neutro", icono: "reloj" },
@@ -270,7 +270,9 @@ function ListaTareas() {
   const rechazados = items.filter((i) => esCierre(i.datos) && i.estado === "rechazada");
   const [tareas, setTareas] = useState<Tarea[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cuadrillaId = useIdCuadrilla(tareas ? tareas.map((t) => t.cuadrilla_id) : null);
+  // La cuadrilla sale de `GET /mi/cuadrilla` (no de las tareas); 404 = todavía no integra ninguna.
+  const propia = useCuadrillaPropia();
+  const cuadrillaId = propia.cuadrillaId;
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -290,7 +292,8 @@ function ListaTareas() {
       <Titulo>Tareas de la cuadrilla</Titulo>
       {cuadrillaId !== null ? <AvisosOperativo cuadrillaId={cuadrillaId} /> : null}
       <EnlaceBrujula />
-      {cuadrillaId !== null ? <MiCuadrilla cuadrillaId={cuadrillaId} /> : null}
+      {propia.cuadrilla ? <MiCuadrilla cuadrilla={propia.cuadrilla} copia={propia.copia} /> : null}
+      {propia.estado === "sin_cuadrilla" ? <Vacio icono="personas" texto="Todavía no integrás ninguna cuadrilla. Cuando la administración te sume a una, la vas a ver acá." /> : null}
       <Texto suave>
         Los cambios de estado requieren conexión. Los partes y el cierre con constancia se pueden cargar
         sin conexión: quedan en el teléfono y se envían solos.

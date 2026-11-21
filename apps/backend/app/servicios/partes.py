@@ -230,8 +230,10 @@ def resumen_cuadrillas(db: Session) -> list[dict]:
     ).scalars():
         integrantes[i.cuadrilla_id].append(
             {
+                "id": i.id,
                 "usuario_id": i.usuario_id,
                 "rol_operativo": i.rol_operativo,
+                "profesion": i.profesion,
                 "es_encargado": i.es_encargado,
             }
         )

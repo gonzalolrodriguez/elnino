@@ -42,6 +42,8 @@ export type CuadrillaDetalle = {
   equipamiento: string[];
   estado: string;
   integrantes: IntegranteCuadrilla[];
+  /** `GET /mi/cuadrilla` informa cuántos avisos nadie leyó todavía. */
+  avisos_sin_leer?: number;
 };
 
 export type TipoAviso = "desvio" | "equipamiento" | "instruccion" | "seguridad";
@@ -61,6 +63,7 @@ export type AvisoCuadrilla = {
   geometria: GeometriaAviso | null;
   tarea_id: number | null;
   creado_en: string;
+  creado_por_rol?: string | null;
   leido_en: string | null;
   leido_por_rol: string | null;
 };

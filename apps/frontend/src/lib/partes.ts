@@ -19,7 +19,8 @@ export type Parte = {
   adjuntos?: AdjuntoParte[];
 };
 
-export type AdjuntoParte = { n: number; tipo: string; bytes: number };
+/** Adjunto ya subido: `tipo` es `imagen` o `video`; `mime` el tipo real (MP4 o MOV en video). */
+export type AdjuntoParte = { n: number; tipo: string; mime?: string; bytes: number };
 
 export type CuerpoParte = { tipo: TipoParte; resultado: ResultadoParte | null; observacion: string | null };
 
@@ -70,11 +71,13 @@ export const MAX_ADJUNTOS_PARTE = 5;
 export const MAX_BYTES_IMAGEN = 5 * 1024 * 1024;
 export const MAX_BYTES_VIDEO = 20 * 1024 * 1024;
 export const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
-export const TIPO_VIDEO = "video/mp4";
+/** Video MP4 y MOV (`video/quicktime`, el formato de los iPhone). */
+export const TIPOS_VIDEO = ["video/mp4", "video/quicktime"];
 /** Para el atributo `accept` del selector: cámara o galería. */
-export const ACEPTA_ADJUNTOS = "image/jpeg,image/png,image/webp,video/mp4";
+export const ACEPTA_ADJUNTOS = "image/jpeg,image/png,image/webp,video/mp4,video/quicktime,.mov";
 
-export const esVideo = (tipo: string): boolean => tipo.startsWith("video/");
+/** Acepta el `tipo` del servidor (`video`) o un mime (`video/mp4`). */
+export const esVideo = (tipo: string): boolean => tipo === "video" || tipo.startsWith("video/");
 
 /** "850 KB", "4,2 MB". */
 export function formatearBytes(b: number): string {
@@ -82,15 +85,22 @@ export function formatearBytes(b: number): string {
   return `${(b / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
+/** Algunos navegadores no informan el tipo de un `.mov`: se deduce de la extensión (el servidor vuelve a validar el contenido). */
+export function tipoEfectivo(f: { name: string; type: string }): string {
+  if (f.type) return f.type;
+  return /\.mov$/i.test(f.name) ? "video/quicktime" : /\.mp4$/i.test(f.name) ? "video/mp4" : "";
+}
+
 /** Revisa un archivo antes de subirlo: tipo permitido y tamaño máximo. Devuelve el motivo del rechazo o `null`. El servidor vuelve a validar el tipo real. */
 export function validarAdjunto(f: { name: string; type: string; size: number }): string | null {
-  if (TIPOS_IMAGEN.includes(f.type)) {
+  const tipo = tipoEfectivo(f);
+  if (TIPOS_IMAGEN.includes(tipo)) {
     return f.size > MAX_BYTES_IMAGEN ? `${f.name}: la imagen pesa ${formatearBytes(f.size)} y el máximo es 5 MB.` : null;
   }
-  if (f.type === TIPO_VIDEO) {
+  if (TIPOS_VIDEO.includes(tipo)) {
     return f.size > MAX_BYTES_VIDEO ? `${f.name}: el video pesa ${formatearBytes(f.size)} y el máximo es 20 MB.` : null;
   }
-  return `${f.name}: solo se aceptan imágenes JPEG, PNG o WebP y videos MP4.`;
+  return `${f.name}: solo se aceptan imágenes JPEG, PNG o WebP y videos MP4 o MOV.`;
 }
 
 /** Suma archivos nuevos a los ya elegidos respetando el máximo de 5. Devuelve la lista nueva y los motivos de los rechazados. */
@@ -114,7 +124,8 @@ function cabecerasAuth(): Record<string, string> {
 /** Sube un archivo de evidencia al parte ya creado (multipart, campo `archivo`). */
 export async function subirAdjuntoParte(tareaId: number, parteId: number, archivo: File): Promise<AdjuntoParte | null> {
   const f = new FormData();
-  f.append("archivo", archivo);
+  const tipo = tipoEfectivo(archivo);
+  f.append("archivo", archivo.type === tipo ? archivo : new File([archivo], archivo.name, { type: tipo }));
   let r: Response;
   try {
     r = await fetch(`${API_BASE}/tareas/${tareaId}/partes/${parteId}/adjuntos`, { method: "POST", headers: cabecerasAuth(), body: f, credentials: "include" });
