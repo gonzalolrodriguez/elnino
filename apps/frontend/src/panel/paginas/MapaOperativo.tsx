@@ -447,10 +447,10 @@ export default function MapaOperativo() {
               </>
             )} />
           </Seccion>
-          <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo">
+          <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo" plegable="Mostrar el trazado de rutas">
             <PanelRuteo ruta={ruta} setRuta={setRuta} origenManual={origenManual} setOrigenManual={setOrigenManual} modoOrigen={modoOrigen} setModoOrigen={setModoOrigen} />
           </Seccion>
-          <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados">
+          <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados" plegable="Mostrar opciones de traslados">
             <Opcion etiqueta="Mostrar traslados cerrados (origen del pedido a destino marcado)" isChecked={verTraslados} onChange={setVerTraslados} />
             {verTraslados && evacuaciones.estado === "error" && (
               <Text mt={2} role="alert">
@@ -466,7 +466,7 @@ export default function MapaOperativo() {
               Solo para roles operativos: la ubicación del evacuado es un dato sensible.
             </Text>
           </Seccion>
-          <Seccion titulo="Cuadrillas en operación" categoria="SIMULADO" id="sec-cuadrillas">
+          <Seccion titulo="Cuadrillas en operación" categoria="SIMULADO" id="sec-cuadrillas" plegable="Mostrar opciones de cuadrillas">
             <Opcion etiqueta="Mostrar dónde está cada cuadrilla con una tarea en curso" isChecked={verCuadrillas} onChange={setVerCuadrillas} />
             {verCuadrillas && posiciones.error !== null && (
               <Text mt={2} role="alert" data-testid="error-cuadrillas">
@@ -496,7 +496,7 @@ export default function MapaOperativo() {
               Solo para roles operativos y solo mientras la cuadrilla tiene una tarea en curso.
             </Text>
           </Seccion>
-          <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas">
+          <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas" plegable="Mostrar capas oficiales">
             <Cargando carga={capas} hijos={(c) => (
               <SelectorCapas
                 capas={c.capas}

@@ -2,6 +2,7 @@ import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, type BoxProps, But
 import { CATEGORIAS, type Categoria } from "@evacuaciones/shared";
 import { createContext, useContext, type ReactNode } from "react";
 
+import { Plegable } from "../components/Plegable";
 import { EstadoCargando } from "../components/EstadoCargando";
 import { AlertaError } from "../components/Formulario";
 import { ESTADOS } from "../estilo/estados";
@@ -111,6 +112,7 @@ export function Seccion({
   icono,
   mb = 5,
   sinCategoria,
+  plegable,
 }: {
   titulo: string;
   children: ReactNode;
@@ -122,6 +124,8 @@ export function Seccion({
   id?: string;
   icono?: ReactNode;
   mb?: number;
+  /** Si se indica, el contenido queda plegado por defecto bajo este rótulo (bloques largos y secundarios). */
+  plegable?: string;
 }) {
   return (
     <Box as="section" aria-labelledby={id ?? undefined} layerStyle="tarjeta" p={{ base: 4, md: 5 }} mb={mb} minW={0}>
@@ -137,7 +141,9 @@ export function Seccion({
           </Box>
         )}
       </Flex>
-      <CategoriaDelBloque.Provider value={sinCategoria ? undefined : categoria}>{children}</CategoriaDelBloque.Provider>
+      <CategoriaDelBloque.Provider value={sinCategoria ? undefined : categoria}>
+        {plegable ? <Plegable titulo={plegable}>{children}</Plegable> : children}
+      </CategoriaDelBloque.Provider>
     </Box>
   );
 }
