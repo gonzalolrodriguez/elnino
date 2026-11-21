@@ -1,17 +1,18 @@
-import { Badge, Box, Button, Flex, Heading, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
 import { CaudalGlofas } from "../../caudal/CaudalGlofas";
 import { Insignia } from "../../components/Insignia";
 import { indiceDeFecha, type SerieDiaria } from "../../datos/kit";
 import { SerieK1 } from "../../informacion/SerieK1";
+import { etiquetaOrigenLluvia } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import type { Ascenso, Lluvia, SerieFormosa } from "../tipos";
 import { IconoOlas } from "../../components/iconos/Iconos";
 import { CabeceraPagina } from "../CabeceraPagina";
-import { Cargando, categoriaComun, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
+import { APILAR, Cargando, categoriaComun, Chip, Cifra, fmtDias, fmtFecha, fmtM, fmtNum, Seccion } from "../ui";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
 
 /** Convierte los puntos de la API en serie diaria con huecos (null): los días sin dato no se interpolan. */
@@ -25,30 +26,26 @@ export function aSerieDiaria(s: SerieFormosa): SerieDiaria {
 
 function SerieYCifras({ s }: { s: SerieFormosa }) {
   const serie = useMemo(() => (s.puntos.length ? aSerieDiaria(s) : null), [s]);
+  // Todo el bloque es DATO OBSERVADO y lo dice su título: la insignia va junto a la cifra protagonista y no se repite en las demás.
   return (
     <>
-      <Flex gap={6} wrap="wrap" mb={4}>
-        {s.ultima && <Cifra testId="monitor-ultima" etiqueta={`Última lectura (${fmtFecha(s.ultima.fecha)})`} valor={fmtM(s.ultima.altura_m)} categoria="DATO OBSERVADO" fuente="K1" fecha={s.fecha_dato} />}
-        <Cifra testId="monitor-alerta" etiqueta="Alerta" valor={fmtM(s.umbrales.alerta_m)} categoria={s.umbrales.categoria} fuente="K3" fecha={s.fecha_dato} />
-        <Cifra testId="monitor-evacuacion" etiqueta="Evacuación" valor={fmtM(s.umbrales.evacuacion_m)} categoria={s.umbrales.categoria} fuente="K3" fecha={s.fecha_dato} />
+      <Flex gap={{ base: 5, md: 8 }} rowGap={4} wrap="wrap" mb={5}>
+        {s.ultima && <Cifra testId="monitor-ultima" etiqueta={`Última lectura (${fmtFecha(s.ultima.fecha)})`} valor={fmtM(s.ultima.altura_m)} categoria="DATO OBSERVADO" fuente="Serie histórica (K1)" fecha={s.fecha_dato} />}
+        <Cifra testId="monitor-alerta" etiqueta="Umbral de alerta" valor={fmtM(s.umbrales.alerta_m)} categoria={s.umbrales.categoria} fuente="Estaciones (K3)" fecha={s.fecha_dato} omitirCategoria />
+        <Cifra testId="monitor-evacuacion" etiqueta="Umbral de evacuación" valor={fmtM(s.umbrales.evacuacion_m)} categoria={s.umbrales.categoria} fuente="Estaciones (K3)" fecha={s.fecha_dato} omitirCategoria />
         {s.picos.map((p) => (
-          <Cifra key={p.anio} etiqueta={`Pico de ${p.anio} (${fmtFecha(p.fecha)})`} valor={fmtM(p.altura_m)} categoria="DATO OBSERVADO" fuente="K1" />
+          <Cifra key={p.anio} etiqueta={`Pico de ${p.anio} (${fmtFecha(p.fecha)})`} valor={fmtM(p.altura_m)} categoria="DATO OBSERVADO" fuente="Serie histórica (K1)" omitirCategoria />
         ))}
       </Flex>
       {serie ? <SerieK1 serie={serie} /> : <Text>La serie no tiene datos.</Text>}
-      <Text fontSize="xs" color="textoSuave" mt={2}>
-        {s.notas.join(" ")}
-      </Text>
+      {s.notas.length > 0 && (
+        <Text textStyle="microdato" mt={2} maxW="70ch">
+          {s.notas.join(" ")}
+        </Text>
+      )}
     </>
   );
 }
-
-const ORIGEN: Record<string, string> = {
-  simulado: "simulado",
-  carga_manual: "carga manual",
-  parte_policial: "parte policial",
-  planilla_upca: "planilla UPCA",
-};
 
 function TablaLluvia({ l }: { l: Lluvia }) {
   const porOrigen = new Map<string, number>();
@@ -59,30 +56,30 @@ function TablaLluvia({ l }: { l: Lluvia }) {
     <>
       {comun && (
         <Flex align="center" gap={2} mb={2} data-testid="lluvia-categoria-comun">
-          <Text fontSize="sm">Categoría de las lecturas:</Text>
+          <Text textStyle="rotulo">Categoría de las lecturas:</Text>
           <Insignia categoria={comun} />
         </Flex>
       )}
       {l.sin_dato_observado && (
-        <Text mb={2} fontSize="sm" data-testid="lluvia-sin-observado">
+        <Text mb={3} maxW="70ch" data-testid="lluvia-sin-observado">
           Sin dato observado en el kit: las lecturas que se muestran son cargas o datos de demostración, con su origen.
         </Text>
       )}
       <Flex gap={2} wrap="wrap" mb={3}>
         {[...porOrigen.entries()].map(([o, n]) => (
-          <Badge key={o} colorScheme="gray">
-            {ORIGEN[o] ?? o}: {n}
-          </Badge>
+          <Chip key={o} tono="neutro">
+            {etiquetaOrigenLluvia(o)}: {n}
+          </Chip>
         ))}
       </Flex>
       <TablaDesplazable etiqueta="Lecturas de lluvia recientes" maxH="16rem" overflowY="auto">
-        <Table size="sm" variant="simple" aria-label="Lecturas de lluvia recientes">
+        <Table size="sm" variant="simple" aria-label="Lecturas de lluvia recientes" sx={APILAR}>
           <Thead position="sticky" top={0} bg="superficie">
             <Tr>
               <Th>Fecha</Th>
               <Th>Turno</Th>
               <Th>Puesto</Th>
-              <Th isNumeric>mm</Th>
+              <Th isNumeric>Lluvia</Th>
               <Th>Origen</Th>
               {!comun && <Th>Categoría</Th>}
             </Tr>
@@ -91,12 +88,14 @@ function TablaLluvia({ l }: { l: Lluvia }) {
             {l.lecturas.map((x) => (
               <Tr key={x.id}>
                 <Td>{fmtFecha(x.fecha)}</Td>
-                <Td>{x.turno}</Td>
-                <Td>{x.puesto_nombre}</Td>
-                <Td isNumeric>{x.mm === null ? "sin medición" : fmtNum(x.mm, 1)}</Td>
-                <Td>{ORIGEN[x.origen] ?? x.origen}</Td>
+                <Td data-etiqueta="Turno">{x.turno}:00</Td>
+                <Td data-etiqueta="Puesto">{x.puesto_nombre}</Td>
+                <Td isNumeric data-etiqueta="Lluvia">
+                  {x.mm === null ? "sin medición" : `${fmtNum(x.mm, 1)} mm`}
+                </Td>
+                <Td data-etiqueta="Origen">{etiquetaOrigenLluvia(x.origen)}</Td>
                 {!comun && (
-                  <Td>
+                  <Td data-etiqueta="Categoría">
                     <Insignia categoria={x.categoria} />
                   </Td>
                 )}
@@ -112,11 +111,14 @@ function TablaLluvia({ l }: { l: Lluvia }) {
 function BloqueAscenso({ a }: { a: Ascenso }) {
   return (
     <>
-      <Text fontSize="sm" mb={2}>
-        Altura de referencia: <strong>{fmtM(a.altura_actual_m)}</strong> {a.fecha_altura ? `(${fmtFecha(a.fecha_altura)}, DATO OBSERVADO)` : "(valor indicado, SIMULADO)"}.
-      </Text>
-      <TablaDesplazable etiqueta="Velocidades de ascenso por período" mb={4}>
-        <Table size="sm" aria-label="Velocidades de ascenso por período">
+      <Flex align="center" gap={2} wrap="wrap" mb={3}>
+        <Text>
+          Altura de referencia: <strong>{fmtM(a.altura_actual_m)}</strong> {a.fecha_altura ? `(${fmtFecha(a.fecha_altura)})` : "(valor indicado)"}.
+        </Text>
+        <Insignia categoria={a.fecha_altura ? "DATO OBSERVADO" : "SIMULADO"} />
+      </Flex>
+      <TablaDesplazable etiqueta="Velocidades de ascenso por período" mb={5}>
+        <Table size="sm" aria-label="Velocidades de ascenso por período" sx={APILAR}>
           <Thead>
             <Tr>
               <Th>Período</Th>
@@ -129,9 +131,9 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
             {a.periodos.map((p) => (
               <Tr key={p.periodo}>
                 <Td>{p.periodo}</Td>
-                <Td>{p.mayor_suba_1d ? `${fmtM(p.mayor_suba_1d.metros)} (${fmtFecha(p.mayor_suba_1d.fecha)})` : "sin dato"}</Td>
-                <Td>{p.mayor_suba_7d ? `${fmtM(p.mayor_suba_7d.metros)} (${fmtFecha(p.mayor_suba_7d.fecha)})` : "sin dato"}</Td>
-                <Td whiteSpace="normal">
+                <Td data-etiqueta="Mayor suba en 1 día">{p.mayor_suba_1d ? `${fmtM(p.mayor_suba_1d.metros)} (${fmtFecha(p.mayor_suba_1d.fecha)})` : "sin dato"}</Td>
+                <Td data-etiqueta="Mayor suba en 7 días">{p.mayor_suba_7d ? `${fmtM(p.mayor_suba_7d.metros)} (${fmtFecha(p.mayor_suba_7d.fecha)})` : "sin dato"}</Td>
+                <Td whiteSpace="normal" data-etiqueta="Cruces">
                   {Object.entries(p.cruces)
                     .map(([u, f]) => `${u.replace(".", ",")} m: ${f ? fmtFecha(f) : "no cruzó"}`)
                     .join(" · ")}
@@ -141,37 +143,35 @@ function BloqueAscenso({ a }: { a: Ascenso }) {
           </Tbody>
         </Table>
       </TablaDesplazable>
-      <Flex align="center" gap={2} mb={2}>
-        <Heading as="h3" size="xs">
+      <Flex align="center" gap={2} mb={2} wrap="wrap">
+        <Heading as="h3" size="bloque" textStyle="rotulo" color="texto">
           ¿Cuánto tiempo queda?
         </Heading>
         <Insignia categoria={a.categoria_proyeccion} />
       </Flex>
       <TablaDesplazable etiqueta="Tiempo restante hasta cada umbral">
-        <Table size="sm" aria-label="Tiempo restante hasta cada umbral">
+        <Table size="sm" aria-label="Tiempo restante hasta cada umbral" sx={APILAR}>
           <Thead>
             <Tr>
               <Th>Objetivo</Th>
               <Th isNumeric>Altura</Th>
               <Th>Tiempo restante (rango)</Th>
-              <Th>Categoría del umbral</Th>
             </Tr>
           </Thead>
           <Tbody>
             {a.tiempo_restante.map((t) => (
               <Tr key={t.objetivo}>
                 <Td whiteSpace="normal">{t.objetivo}</Td>
-                <Td isNumeric>{fmtM(t.valor_m)}</Td>
-                <Td>{t.ya_alcanzado ? "ya alcanzado" : fmtDias(t.dias_minimo, t.dias_maximo)}</Td>
-                <Td>
-                  <Insignia categoria={t.categoria_del_umbral} />
+                <Td isNumeric data-etiqueta="Altura">
+                  {fmtM(t.valor_m)}
                 </Td>
+                <Td data-etiqueta="Tiempo restante (rango)">{t.ya_alcanzado ? "ya alcanzado" : fmtDias(t.dias_minimo, t.dias_maximo)}</Td>
               </Tr>
             ))}
           </Tbody>
         </Table>
       </TablaDesplazable>
-      <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1px dashed" borderColor="cat.simulado.borde" borderRadius="lg" fontSize="sm" data-testid="supuesto-lineal">
+      <Box mt={3} p={3} bg="cat.simulado.bg" color="cat.simulado.fg" border="1px dashed" borderColor="cat.simulado.borde" borderRadius="lg" textStyle="microdato" data-testid="supuesto-lineal">
         <strong>Supuesto:</strong> {a.supuesto} El INA no publica pronósticos a más de {a.horizonte_pronostico_oficial_dias} días.
       </Box>
     </>
@@ -187,27 +187,37 @@ export default function Monitor() {
 
   return (
     <>
-      <CabeceraPagina titulo="Río y lluvia" icono={<IconoOlas tam="1.5rem" />} />
+      <CabeceraPagina
+        titulo="Río y lluvia"
+        icono={<IconoOlas tam="1.5rem" />}
+        ayuda="Cuánto subió el río de Puerto Formosa, a qué distancia está de la alerta y de la evacuación, y cuánta lluvia se informó."
+        actualizado={serie.datos ? `Último dato del río: ${fmtFecha(serie.datos.fecha_dato)} (corte de datos)` : undefined}
+      />
       <Seccion titulo="Puerto Formosa: serie diaria, umbrales y picos" categoria="DATO OBSERVADO" id="sec-serie">
         <Cargando carga={serie} hijos={(s) => <SerieYCifras s={s} />} />
       </Seccion>
       <Seccion titulo="Caudal modelado del río Paraguay (GloFAS)" categoria="DOCUMENTO DE REFERENCIA" id="sec-caudal">
         <CaudalGlofas />
       </Seccion>
-      <Seccion titulo="Velocidad de ascenso y tiempo restante" categoria="DATO OBSERVADO" id="sec-ascenso" derecha={
-        <Flex gap={2}>
-          <Button size="xs" variant="outline" onClick={() => setAlturaRef(undefined)} isDisabled={alturaRef === undefined}>
-            Usar la última lectura
-          </Button>
-          <Button size="xs" variant="outline" onClick={() => setAlturaRef(entrada.altura_formosa_m)} isDisabled={alturaRef === entrada.altura_formosa_m}>
-            Usar la altura del simulador ({fmtM(entrada.altura_formosa_m)})
-          </Button>
-        </Flex>
-      }>
+      <Seccion
+        titulo="Velocidad de ascenso y tiempo restante"
+        id="sec-ascenso"
+        sinCategoria
+        derecha={
+          <Flex gap={2} wrap="wrap" justify="flex-end">
+            <Button size="sm" variant="outline" onClick={() => setAlturaRef(undefined)} isDisabled={alturaRef === undefined}>
+              Usar la última lectura
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setAlturaRef(entrada.altura_formosa_m)} isDisabled={alturaRef === entrada.altura_formosa_m}>
+              Usar la altura del simulador ({fmtM(entrada.altura_formosa_m)})
+            </Button>
+          </Flex>
+        }
+      >
         <Cargando carga={ascenso} hijos={(a) => <BloqueAscenso a={a} />} />
       </Seccion>
       <Seccion titulo="Lluvia por origen" id="sec-lluvia">
-        <Cargando carga={lluvia} esVacio={(l) => l.n === 0} vacio="Sin dato observado en el kit y todavía no se cargó ningún parte. Cargá uno en la sección Lluvia." hijos={(l) => <TablaLluvia l={l} />} />
+        <Cargando carga={lluvia} esVacio={(l) => l.n === 0} vacio="Sin dato observado en el kit y todavía no se cargó ningún parte. Cargá uno en Partes de lluvia." hijos={(l) => <TablaLluvia l={l} />} />
       </Seccion>
     </>
   );

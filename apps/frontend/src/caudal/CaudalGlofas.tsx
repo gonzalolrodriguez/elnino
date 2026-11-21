@@ -1,8 +1,9 @@
-import { Alert, AlertIcon, Box, Button, ButtonGroup, Checkbox, Flex, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, Button, ButtonGroup, Flex, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EstadoCargando } from "../components/EstadoCargando";
 import { Insignia } from "../components/Insignia";
+import { Opcion } from "../components/Opcion";
 import { TablaDesplazable } from "../components/TablaDesplazable";
 import { fechaDeIndice, fechaLarga, indiceDeFecha, SERIE_K1, type SerieDiaria } from "../datos/kit";
 import { hexDe } from "../estilo/paleta";
@@ -164,11 +165,11 @@ function Grafico({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
           ))}
         </ButtonGroup>
         <Insignia categoria="DOCUMENTO DE REFERENCIA" />
-        <Checkbox isChecked={verAltura} onChange={(e) => setVerAltura(e.target.checked)} data-testid="caudal-ver-altura">
-          Superponer altura observada de la escala (K1, eje derecho en m)
-        </Checkbox>
         {verAltura && <Insignia categoria="DATO OBSERVADO" />}
       </Flex>
+      <Box maxW="30rem" mb={3}>
+        <Opcion etiqueta="Superponer la altura observada de la escala (serie K1, eje derecho en m)" isChecked={verAltura} onChange={setVerAltura} id="caudal-ver-altura" />
+      </Box>
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -213,7 +214,7 @@ function Grafico({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
         {post && iCorte >= i0 && iCorte <= i1 && (
           <g>
             <line x1={x(iCorte)} x2={x(iCorte)} y1={M.t} y2={H - M.b} stroke={C.eje} strokeDasharray="4 4" />
-            <text x={x(iCorte) + 4} y={M.t + 12} fontSize="11" fill={C.eje}>
+            <text x={x(iCorte) + 4} y={M.t + 12} fontSize="12" fill={C.eje}>
               corte 31/10/2026
             </text>
           </g>
@@ -238,17 +239,43 @@ function Grafico({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
         {actual !== null && <line x1={x(actual)} x2={x(actual)} y1={M.t} y2={H - M.b} stroke={C.cursor} strokeWidth="1" />}
       </svg>
 
+      <Flex gap={{ base: 3, md: 6 }} rowGap={1.5} wrap="wrap" mt={2} textStyle="microdato" aria-label="Series del gráfico" role="group" data-testid="caudal-leyenda">
+        <Flex align="center" gap={2}>
+          <svg width="28" height="8" aria-hidden="true">
+            <line x1="0" x2="28" y1="4" y2="4" stroke={C.caudal} strokeWidth="2" />
+          </svg>
+          Caudal modelado (GloFAS, eje izquierdo, m³/s)
+        </Flex>
+        {verAltura && (
+          <Flex align="center" gap={2}>
+            <svg width="28" height="8" aria-hidden="true">
+              <line x1="0" x2="28" y1="4" y2="4" stroke={C.altura} strokeWidth="2" strokeDasharray="6 3" />
+            </svg>
+            Altura observada (K1, eje derecho, m)
+          </Flex>
+        )}
+        {post && (
+          <Flex align="center" gap={2}>
+            <svg width="28" height="10" aria-hidden="true">
+              <rect x="0" y="0" width="28" height="10" fill={C.bandaAncha} />
+              <rect x="0" y="3" width="28" height="4" fill={C.bandaMedia} />
+            </svg>
+            Ensamble posterior al corte (mínimo–máximo y p25–p75)
+          </Flex>
+        )}
+      </Flex>
+
       <Box mt={3}>
-        <label htmlFor="cursor-caudal" style={{ fontSize: "0.875rem", fontWeight: 600, display: "block" }}>
+        <label htmlFor="cursor-caudal" style={{ fontSize: "0.8125rem", fontWeight: 600, display: "block" }}>
           Explorar día por día
         </label>
         <input id="cursor-caudal" type="range" min={i0} max={i1} value={actual ?? Math.min(i1, iCorte)} onChange={(e) => setCursor(Number(e.target.value))} style={{ width: "100%", minHeight: "2rem" }} />
-        <Text role="status" fontSize="sm" fontWeight={600} minH="1.5rem">
+        <Text role="status" fontWeight={600} minH="1.5rem">
           {lectura}
         </Text>
       </Box>
 
-      <Text as="figcaption" fontSize="sm" color="textoSuave" mt={1}>
+      <Text as="figcaption" textStyle="microdato" mt={2} maxW="70ch">
         Caudal diario modelado por GloFAS (Copernicus Emergency Management Service) vía Open-Meteo, en la celda de {fmt(c.celda_usada.lat, 3)}°, {fmt(c.celda_usada.lon, 3)}° (~5 km), del 01/01/2006 al 31/10/2026.
         {verAltura && " La línea punteada es la altura observada (K1) en metros, con su propio eje a la derecha: son series distintas y no se convierten entre sí."}
       </Text>
@@ -260,7 +287,7 @@ function TablaAnual({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
   const filas = useMemo(() => maximosAnuales(c, k1), [c, k1]);
   return (
     <Box as="details" mt={4} data-testid="caudal-tabla">
-      <Box as="summary" cursor="pointer" fontWeight={600} fontSize="sm" py={1}>
+      <Box as="summary" cursor="pointer" textStyle="rotulo" color="texto" py={1} minH="2.75rem" display="flex" alignItems="center">
         Ver los mismos datos en tabla (máximo anual)
       </Box>
       <TablaDesplazable etiqueta="Máximo anual de caudal modelado y de altura observada" maxH="20rem" overflowY="auto">
@@ -287,7 +314,7 @@ function TablaAnual({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
           </Tbody>
         </Table>
       </TablaDesplazable>
-      <Text fontSize="xs" color="textoSuave" mt={1}>
+      <Text textStyle="microdato" mt={1}>
         Caudal: DOCUMENTO DE REFERENCIA (GloFAS, modelado). Altura: DATO OBSERVADO (K1). Son series independientes: sus máximos no coinciden necesariamente en fecha.
       </Text>
     </Box>
@@ -301,24 +328,22 @@ function Contenido({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
       <Flex gap={6} wrap="wrap" mb={4} data-testid="caudal-cifras">
         {c.ultima && (
           <Box>
-            <Text fontSize="sm">Caudal modelado al {fechaLarga(c.ultima.fecha)}</Text>
-            <Text textStyle="cifra" fontSize="2xl" data-testid="caudal-ultima">
+            <Text textStyle="rotulo">Caudal modelado al {fechaLarga(c.ultima.fecha)}</Text>
+            <Text textStyle="cifraMedia" data-testid="caudal-ultima">
               {fmtCaudal(c.ultima.caudal_m3s)} m³/s
             </Text>
-            <Insignia categoria="DOCUMENTO DE REFERENCIA" />
           </Box>
         )}
         {c.picos.map((p) => (
           <Box key={p.anio}>
-            <Text fontSize="sm">Pico modelado de {p.anio} ({fechaLarga(p.fecha)})</Text>
-            <Text textStyle="cifra" fontSize="2xl" data-testid={`caudal-pico-${p.anio}`}>
+            <Text textStyle="rotulo">Pico modelado de {p.anio} ({fechaLarga(p.fecha)})</Text>
+            <Text textStyle="cifraMedia" data-testid={`caudal-pico-${p.anio}`}>
               {fmtCaudal(p.caudal_m3s)} m³/s
             </Text>
-            <Insignia categoria="DOCUMENTO DE REFERENCIA" />
           </Box>
         ))}
       </Flex>
-      <Alert status="info" variant="left-accent" fontSize="sm" mb={4} alignItems="flex-start" data-testid="caudal-nota">
+      <Alert status="info" variant="subtle" mb={4} alignItems="flex-start" data-testid="caudal-nota">
         <AlertIcon />
         <Box>
           <Text>{NOTA_CAUDAL}</Text>
@@ -328,7 +353,7 @@ function Contenido({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
         </Box>
       </Alert>
       {post && (
-        <Alert status="warning" variant="left-accent" fontSize="sm" mb={4} data-testid="caudal-posterior">
+        <Alert status="warning" variant="subtle" mb={4} data-testid="caudal-posterior">
           <AlertIcon />
           <Box>
             <Text fontWeight={600}>{post.rotulo}</Text>
@@ -340,7 +365,7 @@ function Contenido({ c, k1 }: { c: RespuestaCaudal; k1: SerieDiaria }) {
       )}
       <Grafico c={c} k1={k1} />
       <TablaAnual c={c} k1={k1} />
-      <Text fontSize="xs" color="textoSuave" mt={3}>
+      <Text textStyle="microdato" mt={3}>
         Fuente: {c.fuente}. Licencia: {c.licencia} Datos hasta el {fechaLarga(c.fecha_dato)}; descargados el {c.fecha_descarga.slice(0, 10)}.
       </Text>
     </>
@@ -353,7 +378,7 @@ export function CaudalGlofas({ k1 = SERIE_K1 }: { k1?: SerieDiaria }) {
   if (carga.estado === "cargando") return <EstadoCargando />;
   if (carga.estado === "error" || !carga.datos) {
     return (
-      <Text role="alert" fontSize="sm" data-testid="caudal-error">
+      <Text role="alert" data-testid="caudal-error">
         No se pudo cargar el caudal modelado (GloFAS). Reintentá más tarde; el resto de la información no depende de este dato.{" "}
         <Button size="xs" variant="outline" onClick={carga.recargar}>
           Reintentar
