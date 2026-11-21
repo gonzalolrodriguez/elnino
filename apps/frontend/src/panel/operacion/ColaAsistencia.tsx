@@ -89,7 +89,7 @@ const CABECERA = {
 /** Cifra con ícono. La palabra («personas») se ve en la tarjeta y queda solo para lectores en la columna alineada. */
 function Figura({ icono, valor, etiqueta, area }: { icono: ReactNode; valor: number; etiqueta: string; area: string }) {
   return (
-    <Flex data-area={area} align="center" gap={1.5} color={valor === 0 ? "textoSuave" : "texto"} fontSize="sm" sx={{ fontVariantNumeric: "tabular-nums" }}>
+    <Flex data-area={area} align="center" gap={1.5} color={valor === 0 ? "textoSuave" : "texto"} sx={{ fontVariantNumeric: "tabular-nums" }}>
       {icono}
       <Box as="span" fontWeight={valor === 0 ? 500 : 700}>
         {fmtNum(valor)}
@@ -150,10 +150,10 @@ function FilaSolicitud({
       </Flex>
 
       <Box data-area="meta">
-        <Box data-area="sector" fontSize="sm" fontWeight={600}>
+        <Box data-area="sector" fontWeight={600}>
           {s.sector_id ? <Chip tono="neutro">{s.sector_id}</Chip> : <Box as="span" color="textoSuave">Sin sector</Box>}
         </Box>
-        <Flex data-area="origen" align="center" gap={1.5} fontSize="sm" color="textoSuave" minW={0}>
+        <Flex data-area="origen" align="center" gap={1.5} textStyle="microdato" minW={0}>
           <Origen tam="1rem" />
           <Box as="span" lineHeight={1.25}>
             {etiquetaOrigenSolicitud(s.origen)}
@@ -167,7 +167,7 @@ function FilaSolicitud({
       </Box>
 
       {s.texto && (
-        <Text data-area="texto" fontSize="sm" color="textoSuave" noOfLines={mensajeAbierto ? undefined : 1}>
+        <Text data-area="texto" textStyle="microdato" noOfLines={mensajeAbierto ? undefined : 1}>
           «{s.texto}»
         </Text>
       )}
@@ -184,7 +184,7 @@ function FilaSolicitud({
             </Button>
           )
         ) : (
-          <Text fontSize="sm" color="textoSuave">
+          <Text textStyle="microdato">
             Sin pasos pendientes
           </Text>
         )}
@@ -210,7 +210,7 @@ function FilaSolicitud({
       {asignando && s.estado === "verificada" && (
         <Flex data-area="asignar" gap={2} align="flex-end" wrap="wrap" p={3} bg="fondo" borderRadius="lg" border="1px solid" borderColor="borde">
           <FormControl flex="1 1 12rem" minW={0}>
-            <FormLabel htmlFor={`asignar-${s.id}`} fontSize="sm" mb={1}>
+            <FormLabel htmlFor={`asignar-${s.id}`} textStyle="rotulo" color="texto" mb={1}>
               Cuadrilla para la solicitud {s.id}
             </FormLabel>
             <Select id={`asignar-${s.id}`} size="sm" {...TACTIL} bg="superficie" placeholder="Sin cuadrilla por ahora" value={cuadrilla} onChange={(e) => setCuadrilla(e.target.value)}>
@@ -222,7 +222,7 @@ function FilaSolicitud({
             </Select>
           </FormControl>
           <Button size="sm" {...TACTIL} isDisabled={ocupada} aria-label={`Confirmar la asignación de la solicitud ${s.id}`} onClick={() => alAvanzar(s, "asignada", cuadrilla ? Number(cuadrilla) : undefined)}>
-            Asignar
+            Confirmar la asignación
           </Button>
           <Button size="sm" {...TACTIL} variant="ghost" onClick={alCerrarAsignar}>
             Cancelar
