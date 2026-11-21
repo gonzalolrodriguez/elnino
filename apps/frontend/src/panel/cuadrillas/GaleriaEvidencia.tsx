@@ -43,7 +43,7 @@ export function GaleriaEvidencia({ tareaId, parteId, adjuntos }: { tareaId: numb
         const url = urls[a.n];
         if (!url) {
           return (
-            <Box key={a.n} w="7rem" h="7rem" display="flex" alignItems="center" justifyContent="center" textAlign="center" fontSize="xs" color="textoSuave" bg="pizarra.100" borderRadius="md" p={1}>
+            <Box key={a.n} w="7rem" h="7rem" display="flex" alignItems="center" justifyContent="center" textAlign="center" textStyle="microdato" bg="pizarra.100" borderRadius="md" p={1}>
               {fallidas.includes(a.n) ? "No se pudo cargar la evidencia" : "Cargando…"}
             </Box>
           );

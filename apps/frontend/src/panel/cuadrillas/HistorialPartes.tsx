@@ -30,7 +30,7 @@ export function HistorialPartes({ tareaId, requiereAtencion, alCambiar }: { tare
   return (
     <Box data-testid={`partes-tarea-${tareaId}`} p={{ base: 2.5, md: 3 }} bg="fondo" borderRadius="lg" border="1px solid" borderColor="borde" minW={0} fontWeight={400}>
       {requiereAtencion && (
-        <Alert status="warning" variant="subtle" fontSize="sm" mb={3} borderRadius="md" alignItems="flex-start">
+        <Alert status="warning" variant="subtle" mb={3} borderRadius="md" alignItems="flex-start">
           <AlertIcon mt="2px" />
           <AlertDescription>
             <AvisoAtencion /> La cuadrilla no pudo cerrar esta tarea. Revisá los partes y, si hace falta, reasignala a otra cuadrilla en la columna «Cuadrilla».
@@ -53,7 +53,7 @@ export function HistorialPartes({ tareaId, requiereAtencion, alCambiar }: { tare
                       <Chip tono={p.resuelta ? "ok" : "alerta"}>{p.resuelta ? "Resuelta" : "Sin resolver"}</Chip>
                     )}
                     {p.autor_rol && (
-                      <Text as="span" fontSize="sm" color="textoSuave">
+                      <Text as="span" textStyle="microdato">
                         {etiquetaRolOperativo(p.autor_rol)}
                       </Text>
                     )}
@@ -62,7 +62,7 @@ export function HistorialPartes({ tareaId, requiereAtencion, alCambiar }: { tare
                     </Text>
                   </Flex>
                   {p.observacion && (
-                    <Text fontSize="sm" mt={1.5} overflowWrap="anywhere">
+                    <Text mt={1.5} overflowWrap="anywhere">
                       {p.observacion}
                     </Text>
                   )}

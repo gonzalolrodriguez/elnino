@@ -66,7 +66,7 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
     <Box mt={3} p={3} borderRadius="lg" bg="fondo" border="1px solid" borderColor="borde" data-testid={`form-integrante-${cuadrilla.id}`}>
       <Flex gap={2} align="flex-end" wrap="wrap">
         <FormControl w={{ base: "full", sm: "13rem" }}>
-          <FormLabel htmlFor={`${base}-usuario`} fontSize="sm" mb={1}>
+          <FormLabel htmlFor={`${base}-usuario`} textStyle="rotulo" color="texto" mb={1}>
             Usuario de cuadrilla
           </FormLabel>
           {candidatos !== null && candidatos.length > 0 ? (
@@ -82,7 +82,7 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
           )}
         </FormControl>
         <FormControl w={{ base: "full", sm: "14rem" }}>
-          <FormLabel htmlFor={`${base}-rol`} fontSize="sm" mb={1}>
+          <FormLabel htmlFor={`${base}-rol`} textStyle="rotulo" color="texto" mb={1}>
             Rol operativo
           </FormLabel>
           <Select id={`${base}-rol`} size="md" bg="superficie" placeholder="Elegí un rol" value={rol} onChange={(e) => setRol(e.target.value)}>
@@ -98,7 +98,7 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
         </Button>
       </Flex>
       {(listaNoDisponible || (candidatos !== null && candidatos.length === 0)) && (
-        <Text fontSize="sm" color="textoSuave" mt={2}>
+        <Text textStyle="microdato" mt={2}>
           {listaNoDisponible
             ? "Tu rol no puede ver la lista de usuarios de cuadrilla: ingresá el número de usuario que te informó la administración."
             : "No hay usuarios de cuadrilla libres para sumar: ingresá un número de usuario si ya sabés cuál."}

@@ -37,12 +37,12 @@ function ListaAvisos({ cuadrillaId, recargar, puedeGestionar }: { cuadrillaId: n
               <Box as="li" key={a.id} p={3} borderRadius="lg" border="1px solid" borderColor="borde" bg="superficie" data-testid="aviso">
                 <Flex align="center" columnGap={2} rowGap={1} wrap="wrap">
                   <Chip tono={TONO_AVISO[a.tipo] ?? "neutro"}>{etiquetaTipoAviso(a.tipo)}</Chip>
-                  {a.creado_por_rol && <Text fontSize="sm" color="textoSuave">{etiquetaRolOperativo(a.creado_por_rol)}</Text>}
+                  {a.creado_por_rol && <Text textStyle="microdato">{etiquetaRolOperativo(a.creado_por_rol)}</Text>}
                   <Text as="time" dateTime={a.creado_en} textStyle="microdato" ml={{ md: "auto" }}>
                     {fechaHora(a.creado_en)}
                   </Text>
                 </Flex>
-                <Text fontSize="sm" mt={1.5} overflowWrap="anywhere">
+                <Text mt={1.5} overflowWrap="anywhere">
                   {a.texto}
                 </Text>
                 {a.items.length > 0 && (
@@ -144,14 +144,12 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia, puedeGestionar
           <RadioGroup value={tipo} onChange={(v) => setTipo(v as TipoAviso)}>
             <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" }} gap={2}>
               {TIPOS_AVISO.map((t) => (
-                <Box key={t.id} p={2.5} minH="2.75rem" borderRadius="lg" border="1px solid" borderColor={tipo === t.id ? "agua.700" : "borde"} bg={tipo === t.id ? "agua.50" : "superficie"}>
+                <Box key={t.id} p={2.5} minH="2.75rem" borderRadius="lg" border="1px solid" borderColor={tipo === t.id ? "primario" : "bordeControl"} bg={tipo === t.id ? "suave" : "superficie"}>
                   <Radio value={t.id} alignItems="flex-start">
-                    <Text fontWeight={700} fontSize="sm" lineHeight="1.3">
+                    <Text fontWeight={600} lineHeight="1.3">
                       {t.nombre}
                     </Text>
-                    <Text fontSize="xs" color="textoSuave">
-                      {t.ayuda}
-                    </Text>
+                    <Text textStyle="microdato">{t.ayuda}</Text>
                   </Radio>
                 </Box>
               ))}
@@ -186,7 +184,7 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia, puedeGestionar
             </Flex>
             <Flex gap={2} mt={2} align="flex-end">
               <Box flex="1">
-                <FormLabel htmlFor="aviso-otro" fontSize="sm" mb={1}>
+                <FormLabel htmlFor="aviso-otro" textStyle="rotulo" color="texto" mb={1}>
                   Otro ítem
                 </FormLabel>
                 <Input
@@ -229,7 +227,7 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia, puedeGestionar
             </Text>
             <MapaDesvio puntos={puntos} onChange={setPuntos} referencia={referencia} centro={centro} modo={modo} alCambiarModo={setModo} />
             {errores.geometria && (
-              <Text role="alert" color="alerta.700" fontSize="sm" fontWeight={600} mt={2}>
+              <Text role="alert" color="alerta.700" fontWeight={600} mt={2}>
                 {errores.geometria}
               </Text>
             )}

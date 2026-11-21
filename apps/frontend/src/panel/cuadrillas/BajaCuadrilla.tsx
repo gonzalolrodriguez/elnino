@@ -52,7 +52,7 @@ export function BajaCuadrilla({ cuadrilla, alCerrar, alBaja }: { cuadrilla: { id
                 <Text role="alert" color="alerta.700" fontWeight={600}>
                   {error.message}
                 </Text>
-                <Text fontSize="sm" mt={1}>
+                <Text mt={1}>
                   Cerrá o cancelá la tarea desde Operación y volvé a intentarlo.
                 </Text>
               </>

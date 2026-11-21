@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Checkbox,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -26,6 +25,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AlertaError, Campo } from "../../components/Formulario";
+import { Opcion } from "../../components/Opcion";
 import { MapaUbicacion } from "../../components/ElegirEnMapa";
 import { IconoMas } from "../../components/iconos/Iconos";
 import { Insignia } from "../../components/Insignia";
@@ -215,7 +215,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                 as="li"
                 key={n}
                 aria-current={i === paso ? "step" : undefined}
-                fontSize="sm"
+                fontSize="rotulo"
                 fontWeight={i === paso ? 700 : 500}
                 color={i === paso ? "agua.700" : "textoSuave"}
                 px={3}
@@ -246,14 +246,12 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                 <RadioGroup value={b.tipo_operativo} onChange={(v) => set("tipo_operativo", v as TipoOperativo)}>
                   <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }} gap={2}>
                     {TIPOS_OPERATIVO.map((t) => (
-                      <Box key={t.id} p={3} borderRadius="lg" border="1px solid" borderColor={b.tipo_operativo === t.id ? "agua.700" : "borde"} bg={b.tipo_operativo === t.id ? "agua.50" : "superficie"}>
+                      <Box key={t.id} p={3} minH="2.75rem" borderRadius="lg" border="1px solid" borderColor={b.tipo_operativo === t.id ? "primario" : "bordeControl"} bg={b.tipo_operativo === t.id ? "suave" : "superficie"}>
                         <Radio value={t.id} alignItems="flex-start" spacing={3}>
-                          <Text fontWeight={700} lineHeight="1.3">
+                          <Text fontWeight={600} lineHeight="1.3">
                             {t.nombre}
                           </Text>
-                          <Text fontSize="sm" color="textoSuave">
-                            {t.descripcion}
-                          </Text>
+                          <Text textStyle="microdato">{t.descripcion}</Text>
                         </Radio>
                       </Box>
                     ))}
@@ -290,7 +288,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                 <Text as="legend" fontWeight={600} mb={1}>
                   Base de la cuadrilla (opcional)
                 </Text>
-                <Text fontSize="sm" color="textoSuave" mb={2}>
+                <Text textStyle="microdato" mb={2}>
                   Desde dónde sale la cuadrilla. Tocá el mapa o escribí las coordenadas.
                 </Text>
                 <MapaUbicacion lon={b.lon} lat={b.lat} onChange={(p) => setB((x) => ({ ...x, lat: String(p.lat), lon: String(p.lon) }))} alto="16rem" estado={false} leyenda={false} />
@@ -313,21 +311,21 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
 
           {paso === 1 && (
             <Box data-testid="paso-integrantes">
-              <Text fontSize="sm" mb={1}>
+              <Text mb={1}>
                 Equipo interdisciplinario: cada integrante lleva un rol operativo y una profesión. Hay {cantidadPuesta} {cantidadPuesta === 1 ? "fila" : "filas"}, una por integrante.
               </Text>
               {sugeridas.length > 0 && (
-                <Text fontSize="sm" color="textoSuave" mb={3} data-testid="profesiones-sugeridas">
+                <Text textStyle="microdato" mb={3} data-testid="profesiones-sugeridas">
                   Para un operativo de {etiquetaTipoOperativo(b.tipo_operativo).toLowerCase()} se sugieren: {sugeridas.map((p) => etiquetaProfesion(p)).join(", ")}.
                 </Text>
               )}
               {errores.encargado && (
-                <Text role="alert" color="alerta.700" fontWeight={600} fontSize="sm" mb={2}>
+                <Text role="alert" color="alerta.700" fontWeight={600} mb={2}>
                   {errores.encargado}
                 </Text>
               )}
               {errores.cuentas && (
-                <Text role="alert" color="alerta.700" fontWeight={600} fontSize="sm" mb={2}>
+                <Text role="alert" color="alerta.700" fontWeight={600} mb={2}>
                   {errores.cuentas}
                 </Text>
               )}
@@ -345,7 +343,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                         </Flex>
                         <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" }} gap={3}>
                           <FormControl isInvalid={!!errores[`fila-${f.clave}-rol`]}>
-                            <FormLabel htmlFor={`${idb}-rol`} fontSize="sm">
+                            <FormLabel htmlFor={`${idb}-rol`} textStyle="rotulo" color="texto">
                               Rol operativo
                             </FormLabel>
                             <Select id={`${idb}-rol`} bg="superficie" placeholder="Elegí un rol" value={f.rol_operativo} onChange={(e) => setFila(f.clave, { rol_operativo: e.target.value })}>
@@ -358,7 +356,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                             <FormErrorMessage>{errores[`fila-${f.clave}-rol`]}</FormErrorMessage>
                           </FormControl>
                           <FormControl isInvalid={!!errores[`fila-${f.clave}-profesion`]}>
-                            <FormLabel htmlFor={`${idb}-prof`} fontSize="sm">
+                            <FormLabel htmlFor={`${idb}-prof`} textStyle="rotulo" color="texto">
                               Profesión
                             </FormLabel>
                             <Select id={`${idb}-prof`} bg="superficie" placeholder="Elegí una profesión" value={f.profesion} onChange={(e) => setFila(f.clave, { profesion: e.target.value })}>
@@ -382,7 +380,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                             <FormErrorMessage>{errores[`fila-${f.clave}-profesion`]}</FormErrorMessage>
                           </FormControl>
                           <FormControl>
-                            <FormLabel htmlFor={`${idb}-cuenta`} fontSize="sm">
+                            <FormLabel htmlFor={`${idb}-cuenta`} textStyle="rotulo" color="texto">
                               Cuenta institucional (opcional)
                             </FormLabel>
                             <Select
@@ -413,26 +411,25 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
 
           {paso === 2 && (
             <Box data-testid="paso-equipamiento">
-              <Text fontSize="sm" mb={3}>
+              <Text mb={3}>
                 Equipamiento sugerido para un operativo de {etiquetaTipoOperativo(b.tipo_operativo).toLowerCase()}. Destildá lo que no lleva y sumá lo que falte.
               </Text>
               <Box as="ul" listStyleType="none" m={0} p={0} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" }} gap={2}>
                 {Array.from(new Set([...(plantilla?.equipamiento ?? []), ...b.equipamiento])).map((item) => (
-                  <Box as="li" key={item} minH="2.75rem" display="flex" alignItems="center">
-                    <Checkbox
+                  <Box as="li" key={item}>
+                    <Opcion
+                      etiqueta={item}
                       isChecked={b.equipamiento.includes(item)}
-                      onChange={(e) => {
+                      onChange={(marcado) => {
                         setEquipTocado(true);
-                        set("equipamiento", e.target.checked ? [...b.equipamiento, item] : b.equipamiento.filter((x) => x !== item));
+                        set("equipamiento", marcado ? [...b.equipamiento, item] : b.equipamiento.filter((x) => x !== item));
                       }}
-                    >
-                      {item}
-                    </Checkbox>
+                    />
                   </Box>
                 ))}
               </Box>
               {errores.equipamiento && (
-                <Text role="alert" color="alerta.700" fontSize="sm" fontWeight={600} mt={2}>
+                <Text role="alert" color="alerta.700" fontWeight={600} mt={2}>
                   {errores.equipamiento}
                 </Text>
               )}
@@ -446,7 +443,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                 setExtra("");
               }}>
                 <FormControl flex="1">
-                  <FormLabel htmlFor="asi-extra" fontSize="sm">
+                  <FormLabel htmlFor="asi-extra" textStyle="rotulo" color="texto">
                     Otro equipamiento
                   </FormLabel>
                   <Input id="asi-extra" bg="superficie" value={extra} maxLength={60} placeholder="Ejemplo: cuerda de arrastre" onChange={(e) => setExtra(e.target.value)} />
@@ -463,7 +460,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
               <Text fontWeight={700} fontSize="lg" mb={2}>
                 {b.nombre.trim()}
               </Text>
-              <Box as="dl" display="grid" gridTemplateColumns={{ base: "1fr", sm: "11rem 1fr" }} gap={1} columnGap={4} fontSize="sm">
+              <Box as="dl" display="grid" gridTemplateColumns={{ base: "1fr", sm: "11rem 1fr" }} gap={1} columnGap={4}>
                 <dt>Tipo de operativo</dt>
                 <dd>{etiquetaTipoOperativo(b.tipo_operativo)}</dd>
                 <dt>Integrantes</dt>
@@ -481,7 +478,7 @@ export function AsistenteCuadrilla({ abierto, inicial, alCerrar, alGuardar }: { 
                   </>
                 )}
               </Box>
-              <Box as="ul" listStyleType="none" m={0} mt={4} p={0} display="flex" flexDirection="column" gap={1} fontSize="sm">
+              <Box as="ul" listStyleType="none" m={0} mt={4} p={0} display="flex" flexDirection="column" gap={1}>
                 {b.integrantes.map((f, i) => (
                   <Box as="li" key={f.clave}>
                     <strong>Integrante {i + 1}:</strong> {etiquetaRolOperativo(f.rol_operativo)}, {etiquetaProfesion(f.profesion)}

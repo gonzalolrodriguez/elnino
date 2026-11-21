@@ -55,17 +55,17 @@ export function MiniMapaDestino({ destino, centro, origen, centroNombre, distanc
         {c && <rect x={c.x - 6} y={c.y - 6} width="12" height="12" fill="#1E5AA0" stroke="#fff" strokeWidth="1.5" />}
         <circle cx={d.x} cy={d.y} r="7" fill="#2F7D5B" stroke="#fff" strokeWidth="1.5" />
       </Box>
-      <Flex gap={4} wrap="wrap" fontSize="xs" mt={1} color="textoSuave">
+      <Flex gap={4} wrap="wrap" textStyle="microdato" mt={1}>
         <span>● Destino marcado</span>
         {centro && <span>■ {centroNombre ?? "Centro elegido"}</span>}
         {origen && <span>▲ Origen del pedido</span>}
       </Flex>
       {centro ? (
-        <Text fontSize="sm" mt={1} data-testid="distancia-a-centro">
+        <Text mt={1} data-testid="distancia-a-centro">
           El destino quedó a <strong>{fmtDistancia(dist)}</strong> del centro.
         </Text>
       ) : (
-        <Text fontSize="sm" mt={1}>
+        <Text mt={1}>
           No se eligió un centro de recepción: no hay distancia para comparar.
         </Text>
       )}

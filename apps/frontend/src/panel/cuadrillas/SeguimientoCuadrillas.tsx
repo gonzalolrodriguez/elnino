@@ -73,7 +73,7 @@ export function SeguimientoCuadrillas({ vehiculos }: { vehiculos: Record<number,
                     {p.ruta?.simulada && <Chip tono="neutro">Recorrido simulado</Chip>}
                     {p.posicion_vieja && <Chip tono="aviso">Posición vieja</Chip>}
                   </Flex>
-                  <Text fontSize="sm" color="textoSuave">
+                  <Text textStyle="microdato">
                     {textoLlegada(p)}
                   </Text>
                   <Button as={RouterLink} to={`/comando/cuadrillas/${p.cuadrilla_id}`} size="sm" variant="outline" mt={2} {...TACTIL}>

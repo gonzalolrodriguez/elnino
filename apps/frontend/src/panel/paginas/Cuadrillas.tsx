@@ -10,6 +10,7 @@ import { CabeceraPagina } from "../CabeceraPagina";
 import { AsistenteCuadrilla } from "../cuadrillas/AsistenteCuadrilla";
 import { BajaCuadrilla } from "../cuadrillas/BajaCuadrilla";
 import { TACTIL } from "../cuadrillas/partes";
+import { ChipFiltro, GrupoFiltros } from "../operacion/lista";
 import { SeguimientoCuadrillas } from "../cuadrillas/SeguimientoCuadrillas";
 import { TarjetaCuadrilla } from "../cuadrillas/TarjetaCuadrilla";
 import { IconoActualizar } from "../iconos";
@@ -83,13 +84,22 @@ export default function Cuadrillas() {
         }
       />
 
-      <Flex role="group" aria-label="Vista de cuadrillas" gap={2} mb={4}>
-        <Button size="sm" {...TACTIL} borderRadius="full" variant={vista === "lista" ? "solid" : "outline"} aria-pressed={vista === "lista"} leftIcon={<IconoPersonas tam="1rem" />} onClick={() => setVista("lista")}>
-          Lista
-        </Button>
-        <Button size="sm" {...TACTIL} borderRadius="full" variant={vista === "mapa" ? "solid" : "outline"} aria-pressed={vista === "mapa"} leftIcon={<IconoMapa tam="1rem" />} onClick={() => setVista("mapa")}>
-          Mapa
-        </Button>
+      <Flex role="group" aria-label="Vista de cuadrillas" display="inline-flex" gap={1} p={1} mb={4} bg="suave" borderRadius="full">
+        {(["lista", "mapa"] as const).map((v) => (
+          <Button
+            key={v}
+            size="sm"
+            {...TACTIL}
+            borderRadius="full"
+            px={4}
+            variant={vista === v ? "solid" : "ghost"}
+            aria-pressed={vista === v}
+            leftIcon={v === "lista" ? <IconoPersonas tam="1rem" /> : <IconoMapa tam="1rem" />}
+            onClick={() => setVista(v)}
+          >
+            {v === "lista" ? "Lista" : "Mapa"}
+          </Button>
+        ))}
       </Flex>
 
       <Box mb={3}>
@@ -107,20 +117,24 @@ export default function Cuadrillas() {
             const visibles = aplicarFiltro(d.items, filtro);
             return (
               <>
-                <Flex as="div" role="group" aria-label="Filtrar cuadrillas" gap={2} wrap="wrap" mb={4}>
-                  {FILTROS.map((f) => (
-                    <Button key={f.id} size="sm" {...TACTIL} borderRadius="full" variant={filtro === f.id ? "solid" : "outline"} aria-pressed={filtro === f.id} onClick={() => setFiltro(f.id)}>
-                      {f.texto}
-                      {f.id !== "todas" ? ` (${aplicarFiltro(d.items, f.id).length})` : ""}
-                    </Button>
-                  ))}
-                </Flex>
+                <Box mb={4}>
+                  <GrupoFiltros rotulo="Mostrar">
+                    {FILTROS.map((f) => (
+                      <ChipFiltro key={f.id} activo={filtro === f.id} onClick={() => setFiltro(f.id)} cantidad={f.id === "todas" ? undefined : aplicarFiltro(d.items, f.id).length}>
+                        {f.texto}
+                      </ChipFiltro>
+                    ))}
+                  </GrupoFiltros>
+                </Box>
                 {visibles.length === 0 ? (
-                  <Text fontSize="sm" color="textoSuave" data-testid="cuadrillas-sin-resultados">
-                    Ninguna cuadrilla coincide con este filtro.
-                  </Text>
+                  <Flex direction="column" align="flex-start" gap={2} p={4} bg="superficie" borderRadius="xl" border="1px dashed" borderColor="bordeControl" data-testid="cuadrillas-sin-resultados">
+                    <Text fontWeight={700}>Ninguna cuadrilla coincide con este filtro.</Text>
+                    <Button size="sm" variant="outline" {...TACTIL} onClick={() => setFiltro("todas")}>
+                      Ver todas las cuadrillas
+                    </Button>
+                  </Flex>
                 ) : (
-                  <Box as="div" display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "repeat(2, minmax(0, 1fr))" }} gap={4} alignItems="start">
+                  <Box as="div" display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "repeat(2, minmax(0, 1fr))" }} gap={4} alignItems="stretch">
                     {visibles.map((c) => (
                       <TarjetaCuadrilla key={c.id} c={c} puedeGestionar={puedeGestionar} alCambiar={carga.recargar} alEditar={(id) => void abrirEdicion(id)} alBaja={setBaja} />
                     ))}

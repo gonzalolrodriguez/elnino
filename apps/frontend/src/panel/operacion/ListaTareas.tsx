@@ -96,7 +96,7 @@ function FilaTarea({
           </Text>
         </Box>
       </Flex>
-      <Box data-area="sector" fontSize="sm" fontWeight={600}>
+      <Box data-area="sector" fontWeight={600}>
         {t.sector_id ? <Chip tono="neutro">{t.sector_id}</Chip> : <Box as="span" color="textoSuave">Sin sector</Box>}
       </Box>
       <Box data-area="estado">
@@ -105,7 +105,7 @@ function FilaTarea({
         {t.ultimo_parte && <ChipParte parte={t.ultimo_parte} />}
       </Box>
       <Flex data-area="cuadrilla" direction="column" gap={1.5} minW={0}>
-        <Flex align="center" gap={1.5} fontSize="sm" minW={0}>
+        <Flex align="center" gap={1.5} minW={0}>
           <IconoPersonas tam="1rem" />
           {cuadrilla ? (
             <Link as={RouterLink} to={`/comando/cuadrillas/${cuadrilla.id}`} fontWeight={600} noOfLines={1}>
