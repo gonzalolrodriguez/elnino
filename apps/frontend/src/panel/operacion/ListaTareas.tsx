@@ -108,7 +108,7 @@ function FilaTarea({
         <Flex align="center" gap={1.5} minW={0}>
           <IconoPersonas tam="1rem" />
           {cuadrilla ? (
-            <Link as={RouterLink} to={`/comando/cuadrillas/${cuadrilla.id}`} fontWeight={600} noOfLines={1}>
+            <Link as={RouterLink} to={`/comando/cuadrillas/${cuadrilla.id}`} className="enlace-toque" fontWeight={600}>
               {cuadrilla.nombre}
             </Link>
           ) : (

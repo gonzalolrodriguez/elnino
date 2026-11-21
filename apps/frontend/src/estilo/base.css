@@ -94,7 +94,15 @@ summary:focus:not(:focus-visible),
     height: 1.5rem;
     flex: none;
   }
+  /* !important: gana a los `minHeight` en línea de cada control (el pulgar y la pista deben ser tocables). */
   input[type="range"] {
+    min-height: 2.75rem !important;
+  }
+  /* Enlaces sueltos (pie y enlaces en línea de tableros): alto táctil sin cambiar el texto. */
+  footer a,
+  .enlace-toque {
+    display: inline-flex;
+    align-items: center;
     min-height: 2.75rem;
   }
   /* Listas de enlaces y filas que se tocan: área de toque cómoda. */
