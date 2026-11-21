@@ -93,7 +93,8 @@ export function AvisosCuadrilla({ cuadrilla, tareaId, referencia, puedeGestionar
   const [enviando, setEnviando] = useState(false);
   const [version, setVersion] = useState(0);
 
-  const sugeridos = Array.from(new Set([...cuadrilla.equipamiento, ...ITEMS_SUGERIDOS]));
+  // Sin repetidos aunque cambie la capitalización («palas» del equipamiento y «Palas» de las sugerencias).
+  const sugeridos = [...cuadrilla.equipamiento, ...ITEMS_SUGERIDOS].filter((x, i, l) => l.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
   const conMapa = tipo === "desvio" || tipo === "seguridad";
 
   useEffect(() => {
