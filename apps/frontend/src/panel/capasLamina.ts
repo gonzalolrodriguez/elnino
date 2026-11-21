@@ -1,5 +1,5 @@
 import type { Layer } from "@deck.gl/core";
-import { GeoJsonLayer, PathLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 
 import { rgbaDe } from "../estilo/paleta";
 import { colorBordeRiesgo, colorLamina, discontinuar, elevacionVisualM, excedenteM, type RGBA } from "./lamina";
@@ -95,5 +95,41 @@ export function crearCapaAccesosCortados(accesos: Geo | null, estadoAccesos: Rec
     getWidth: 5,
     widthUnits: "pixels",
     capRounded: false,
+  });
+}
+
+export type MarcaCorte = { id: number; posicion: [number, number] };
+
+/** Punto medio (por vértices) de cada acceso cortado, para marcarlo con un círculo rojo además del trazo discontinuo. */
+export function puntosCorte(accesos: Geo | null, estadoAccesos: Record<number, string>, cerrados: number[]): MarcaCorte[] {
+  if (!accesos) return [];
+  const out: MarcaCorte[] = [];
+  for (const f of accesos.features) {
+    const p = f.properties as unknown as AccesoProps;
+    if (p.transitable && !accesoCortado(p.id, estadoAccesos, cerrados)) continue;
+    const g = f.geometry as { type: string; coordinates: unknown };
+    const lineas = (g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : []) as [number, number][][];
+    const ln = lineas.sort((a, b) => b.length - a.length)[0];
+    if (ln && ln.length > 0) out.push({ id: p.id, posicion: ln[Math.floor((ln.length - 1) / 2)] });
+  }
+  return out;
+}
+
+/** Marcas rojas con borde blanco sobre los accesos cortados (realce para la demo; el estado sale del backend). */
+export function crearCapaMarcasCorte(accesos: Geo | null, estadoAccesos: Record<number, string>, cerrados: number[]): Layer | null {
+  const marcas = puntosCorte(accesos, estadoAccesos, cerrados);
+  if (marcas.length === 0) return null;
+  return new ScatterplotLayer<MarcaCorte>({
+    id: "accesos-cortados-marca",
+    data: marcas,
+    pickable: false,
+    getPosition: (m) => m.posicion,
+    getRadius: 8,
+    radiusUnits: "pixels",
+    stroked: true,
+    getFillColor: rgbaDe("acceso.cerrado"),
+    getLineColor: [255, 255, 255, 255],
+    getLineWidth: 2.5,
+    lineWidthUnits: "pixels",
   });
 }

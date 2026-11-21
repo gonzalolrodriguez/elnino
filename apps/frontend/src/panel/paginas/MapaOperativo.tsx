@@ -14,7 +14,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { PERFILES_RUTEO } from "@evacuaciones/shared";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AlertaError, CampoSelect } from "../../components/Formulario";
 import { Opcion } from "../../components/Opcion";
@@ -23,7 +23,7 @@ import { Insignia } from "../../components/Insignia";
 import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { useCarga } from "../../lib/useCarga";
 import { useCargaViva } from "../../lib/vivo";
-import { api } from "../api";
+import { api, type ConsultaRuta } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import { LeyendaLamina } from "../LeyendaLamina";
 import { LeyendaSatelite, PanelSatelite } from "../PanelSatelite";
@@ -33,7 +33,7 @@ import { intensidadLluvia } from "../clima";
 import { RelojDual } from "../RelojDual";
 import { SelectorClima } from "../SelectorClima";
 import { Simulador } from "../Simulador";
-import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
+import type { AccesoProps, CapaOficial, Escenario, Ruta } from "../tipos";
 import { IconoMapa } from "../../components/iconos/Iconos";
 import { CabeceraPagina } from "../CabeceraPagina";
 import { Cargando, fmtFecha, fmtNum, NOMBRE_ACCESO, Seccion } from "../ui";
@@ -115,7 +115,11 @@ function PanelAcceso({ acceso, alCambiar }: { acceso: AccesoProps; alCambiar: ()
   );
 }
 
-function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, setOrigenManual }: {
+/** Lo que eligió el operador al trazar la ruta; el escenario (altura, lluvia, caminos) se agrega al consultar. */
+type SolicitudRuta = Pick<ConsultaRuta, "perfil" | "origen" | "centro_id">;
+
+function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, setOrigenManual, alTrazar }: {
+  alTrazar: (s: SolicitudRuta | null) => void;
   ruta: Ruta | null;
   setRuta: (r: Ruta | null) => void;
   origenManual: { lon: number; lat: number } | null;
@@ -148,9 +152,11 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
         caminos_cerrados: entrada.caminos_cerrados,
       });
       setRuta(r);
+      alTrazar({ perfil, origen, centro_id: Number(centroId) });
     } catch (e) {
       setError(e);
       setRuta(null);
+      alTrazar(null);
     } finally {
       setCalculando(false);
     }
@@ -301,6 +307,28 @@ function Leyenda() {
   );
 }
 
+type AvisoRecalculo = { titulo: string; lineas: string[] };
+
+const textoRuta = (r: Ruta) => (r.encontrada && r.distancia_m !== undefined ? `${fmtNum(r.distancia_m / 1000, 1)} km · ${fmtNum(r.tiempo_min ?? 0, 0)} min` : "sin ruta");
+
+/** Qué cambió al cerrar o abrir un acceso: sectores que quedan aislados o dejan de estarlo y la ruta antes y después. */
+function lineasRecalculo(antes: Escenario | null, despues: Escenario | null, rutaAntes: Ruta | null, rutaDespues: Ruta | null): string[] {
+  const out: string[] = [];
+  if (despues) {
+    const previos = new Set(antes?.resumen.aislados ?? []);
+    const nuevos = despues.resumen.aislados.filter((s) => !previos.has(s));
+    const liberados = [...previos].filter((s) => !despues.resumen.aislados.includes(s));
+    if (nuevos.length) out.push(`Quedan aislados: ${nuevos.join(", ")}.`);
+    if (liberados.length) out.push(`Dejan de estar aislados: ${liberados.join(", ")}.`);
+    if (!nuevos.length && !liberados.length) out.push(despues.resumen.aislados.length ? `Siguen aislados: ${despues.resumen.aislados.join(", ")}.` : "Ningún sector queda aislado.");
+  }
+  if (rutaDespues) {
+    const previa = rutaAntes ? ` (antes: ${textoRuta(rutaAntes)})` : "";
+    out.push(rutaDespues.encontrada ? `Ruta recalculada: ${textoRuta(rutaDespues)}${previa}.` : `Ruta recalculada: sin ruta disponible${rutaDespues.motivo ? ` (${rutaDespues.motivo})` : ""}${previa}.`);
+  }
+  return out;
+}
+
 export default function MapaOperativo() {
   const { escenario, entrada, laminaVisible, alturaVisual } = useEscenario();
   const sectores = useCarga(() => api.sectores());
@@ -349,10 +377,45 @@ export default function MapaOperativo() {
 
   const { simular } = useEscenario();
   const recargarAccesos = accesos.recargar;
+  // Marcar un acceso (guardado) o cerrarlo en la simulación recalcula el escenario y la ruta trazada (si las hay).
+  const [versionAccesos, setVersionAccesos] = useState(0);
   const alCambiar = useCallback(() => {
     recargarAccesos();
-    if (escenario) void simular();
-  }, [recargarAccesos, escenario, simular]);
+    setVersionAccesos((v) => v + 1);
+  }, [recargarAccesos]);
+  const [solicitudRuta, setSolicitudRuta] = useState<SolicitudRuta | null>(null);
+  const [aviso, setAviso] = useState<AvisoRecalculo | null>(null);
+  const [recalculando, setRecalculando] = useState(false);
+  const claveAccesos = `${[...entrada.caminos_cerrados].sort((a, b) => a - b).join(",")}|${versionAccesos}`;
+  const ultimaClave = useRef(claveAccesos);
+  const vigente = useRef({ escenario, ruta, solicitudRuta, entrada, simular });
+  vigente.current = { escenario, ruta, solicitudRuta, entrada, simular };
+  useEffect(() => {
+    if (ultimaClave.current === claveAccesos) return;
+    ultimaClave.current = claveAccesos;
+    const v = vigente.current;
+    if (!v.escenario && !v.solicitudRuta) return;
+    let activo = true;
+    setRecalculando(true);
+    void (async () => {
+      const nuevoEscenario = v.escenario ? await v.simular() : null;
+      let nuevaRuta: Ruta | null = null;
+      if (v.solicitudRuta) {
+        try {
+          nuevaRuta = await api.ruteo({ ...v.solicitudRuta, altura_formosa_m: v.entrada.altura_formosa_m, lluvia_mm: v.entrada.lluvia_mm, caminos_cerrados: v.entrada.caminos_cerrados });
+        } catch {
+          nuevaRuta = null;
+        }
+        if (activo) setRuta(nuevaRuta);
+      }
+      if (!activo) return;
+      setRecalculando(false);
+      setAviso({ titulo: "Accesos cambiados: escenario recalculado", lineas: lineasRecalculo(v.escenario, nuevoEscenario, v.ruta, nuevaRuta) });
+    })();
+    return () => {
+      activo = false;
+    };
+  }, [claveAccesos]);
 
   useEffect(() => {
     if (!modoOrigen) return;
@@ -370,6 +433,21 @@ export default function MapaOperativo() {
       />
       <Flex direction={{ base: "column", xl: "row-reverse" }} align={{ base: "stretch", xl: "flex-start" }} sx={{ "& > * + *": { marginTop: "1rem" }, "@media (min-width: 80em)": { "& > * + *": { marginTop: 0, marginRight: "1rem" } } }}>
         <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "calc(var(--altura-leyenda) + 1rem)" }}>
+          {(recalculando || aviso) && (
+            <Alert status={recalculando ? "info" : "warning"} mb={2} alignItems="flex-start" role="status" data-testid="aviso-recalculo">
+              <AlertIcon />
+              <Box flex="1">
+                <Text fontWeight={700}>{recalculando ? "Recalculando escenario y ruta…" : aviso?.titulo}</Text>
+                {!recalculando && aviso?.lineas.map((l) => <Text key={l}>{l}</Text>)}
+                <Text textStyle="microdato">SIMULADO. Acceso cerrado: trazo rojo discontinuo con un círculo rojo.</Text>
+              </Box>
+              {!recalculando && (
+                <Button size="xs" variant="ghost" onClick={() => setAviso(null)} aria-label="Cerrar el aviso">
+                  ✕
+                </Button>
+              )}
+            </Alert>
+          )}
           <Box
             position="relative"
             h={{ base: "60vh", xl: "75vh" }}
@@ -463,7 +541,7 @@ export default function MapaOperativo() {
             )} />
           </Seccion>
           <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo" plegable="Mostrar el trazado de rutas">
-            <PanelRuteo ruta={ruta} setRuta={setRuta} origenManual={origenManual} setOrigenManual={setOrigenManual} modoOrigen={modoOrigen} setModoOrigen={setModoOrigen} />
+            <PanelRuteo alTrazar={setSolicitudRuta} ruta={ruta} setRuta={setRuta} origenManual={origenManual} setOrigenManual={setOrigenManual} modoOrigen={modoOrigen} setModoOrigen={setModoOrigen} />
           </Seccion>
           <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados" plegable="Mostrar opciones de traslados">
             <Opcion etiqueta="Mostrar traslados cerrados (origen del pedido a destino marcado)" isChecked={verTraslados} onChange={setVerTraslados} />

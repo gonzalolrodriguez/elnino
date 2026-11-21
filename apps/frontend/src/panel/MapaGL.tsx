@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { hexDe, rgbaDe } from "../estilo/paleta";
 import { hayWebGL, useMenosMovimiento } from "../lib/entorno";
-import { accesoCortado, crearCapaAccesosCortados, crearCapasLamina } from "./capasLamina";
+import { accesoCortado, crearCapaAccesosCortados, crearCapaMarcasCorte, crearCapasLamina } from "./capasLamina";
 import type { CapaSatelite } from "./satelite";
 import type { AccesoProps, CapaOficial, Centro, Estacion, Geo, Ruta, SectorEscenario } from "./tipos";
 
@@ -292,6 +292,8 @@ export default function MapaGL(props: PropsMapa) {
       );
       const cortados = crearCapaAccesosCortados(accesos, estadoAccesos, cerradosSimulacion);
       if (cortados) out.push(cortados);
+      const marcas = crearCapaMarcasCorte(accesos, estadoAccesos, cerradosSimulacion);
+      if (marcas) out.push(marcas);
     }
     if (ruta?.geometria) {
       out.push(
