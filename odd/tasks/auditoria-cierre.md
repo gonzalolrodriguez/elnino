@@ -68,6 +68,20 @@ Cada ítem lleva archivo:línea y el cambio mínimo. "Bloquea demo" = se ve o fa
 | R9 | Códigos internos que aún asoman en el Tablero: "K1 limpio", "K10", "es un SUPUESTO" | `panel/tablero/*` (bloque de río, de sectores y de frescura) | Usar `etiquetaCodigo` ("serie histórica del río (K1)", "sectores de evaluación (K10)", "supuesto del equipo") | No |
 | R10 | Tablero con 22-24 insignias (objetivo: una por bloque); "Tres relojes" con tarjetas de distinta altura | `panel/tablero/bloques.tsx`, `components/TresRelojes.tsx` | Quitar la insignia por tarjeta de sector y dejar una en el título del bloque; `alignItems="stretch"` y misma altura en los tres relojes | No |
 
+### Estado de las correcciones (20/11/2026, rama del worktree)
+
+| # | Estado | Commit |
+|---|---|---|
+| R1 | Corregido: `ErrorBoundary` global por ruta (tarjeta con "Recargar" y la leyenda) + chequeo defensivo en `CaudalGlofas`; prueba nueva | `5fa557f` |
+| R6 | Corregido: Ruteo, Traslados, Cuadrillas y Capas oficiales plegados por defecto (`Seccion plegable`); mapa sticky ya existía desde `xl` (donde hay dos columnas; en `lg` el panel queda apilado). Alto de página 1440: ~2225 px | `e8f22da` |
+| R2, R4, R5, R3 | Corregido: reglas táctiles (`.enlace-toque`, pie, `range` con `!important`), título de tarea vacío | `8712d5a`, `4fc0a22` |
+| R7 | Corregido: nota de categorías plegada por defecto (y contraste del botón) | `8ae241c`, `4fc0a22` |
+| R8 | Corregido | `62ef6fa` |
+| R9 | Corregido: `sinCodigos()` en río, supuesto y frescura | `4fc0a22` |
+| R10 | Parcial: relojes de igual altura; las insignias ya iban una por bloque (19 en el Tablero, el resto son bloques distintos) | `4fc0a22` |
+
+Pendiente: enlaces de la landing (27 px), "Inicio" del pie con 33 px de ancho (alto 44), y el `h3` vacío de `/cuadrilla` en la captura es un artefacto de mi dato simulado de `/mi/cuadrilla` (sin `nombre`).
+
 Fuera de la lista: enlaces de las tarjetas de perfil en la landing (27 px) y "Ocultar" de la nota de categorías (19 px, solo escritorio con puntero fino, aceptado).
 
 ## Conclusión
