@@ -371,7 +371,7 @@ def test_resumen_de_cuadrillas_forma_y_sin_nombres(client, como, db):
         "requiere_atencion",
     }
     for i in mia["integrantes"]:
-        assert set(i) == {"usuario_id", "rol_operativo", "es_encargado"}
+        assert set(i) == {"id", "usuario_id", "rol_operativo", "profesion", "es_encargado"}
     assert any(i["es_encargado"] and i["usuario_id"] for i in mia["integrantes"])
     # ningún nombre ni correo de persona en la respuesta
     texto = r.text
@@ -387,13 +387,14 @@ def test_resumen_tarea_actual_y_cuadrilla_sin_tareas(client, como, token_admin, 
     c = next(c for c in items if c["id"] == ajena["cuadrilla_id"])
     assert c["tarea_actual"] is None and c["ultimo_parte"] is None
     assert c["dificultades_abiertas"] == 0
-    assert c["integrantes"] == [
-        {
-            "usuario_id": ajena["usuario"]["id"],
-            "rol_operativo": "encargado_cuadrilla",
-            "es_encargado": True,
-        }
-    ]
+    assert len(c["integrantes"]) == 1
+    i = c["integrantes"][0]
+    assert {k: i[k] for k in ("usuario_id", "rol_operativo", "es_encargado")} == {
+        "usuario_id": ajena["usuario"]["id"],
+        "rol_operativo": "encargado_cuadrilla",
+        "es_encargado": True,
+    }
+    assert isinstance(i["id"], int) and i["profesion"]
 
 
 def test_integrantes_agregar_y_quitar(client, como, token_admin, db):

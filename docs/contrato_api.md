@@ -384,14 +384,14 @@ Parte (`ParteTarea`):
 
 `requiere_atencion` se limpia cuando un operador cambia el estado o reasigna la tarea (`PATCH /tareas/{id}`), o cuando llega un parte `completa`.
 
-`GET /cuadrillas/resumen` devuelve `{ "items": [...] }`, un ítem por cuadrilla (sin nombres de personas, solo `usuario_id` y rol operativo):
+`GET /cuadrillas/resumen` devuelve `{ "items": [...] }`, un ítem por cuadrilla (sin nombres de personas: `id` del integrante, `usuario_id`, rol operativo y profesión; el `id` es el que usa `DELETE /cuadrillas/{id}/integrantes/{integrante_id}`):
 
 ```json
 { "id": 1, "nombre": "Cuadrilla humana SIMULADA 1", "tipo_incidente": "humana", "vehiculo": "4x4",
   "estado": "ocupada",
   "integrantes": [
-    { "usuario_id": 4, "rol_operativo": "encargado_cuadrilla", "es_encargado": true },
-    { "usuario_id": null, "rol_operativo": "sipec", "es_encargado": false } ],
+    { "id": 31, "usuario_id": 4, "rol_operativo": "encargado_cuadrilla", "profesion": "trabajo_social", "es_encargado": true },
+    { "id": 32, "usuario_id": null, "rol_operativo": "sipec", "profesion": "medicina", "es_encargado": false } ],
   "tarea_actual": { "id": 12, "estado": "pendiente", "solicitud_id": null, "sector_id": "S4", "requiere_atencion": true },
   "ultimo_parte": { "id": 8, "tarea_id": 12, "cuadrilla_id": 1, "tipo": "resultado", "resultado": "parcial",
     "observacion": "Se trasladaron dos de tres familias; la tercera quedó pendiente por el acceso.",
