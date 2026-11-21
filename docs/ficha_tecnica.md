@@ -24,6 +24,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Veredicto "¿alcanza el tiempo?" por sector, con holgura del 25 % y el ganado 48 h antes (supuestos), y lluvia prevista SIMULADA opcional para la ventana seca.
   - Las familias nunca se separan entre centros ni entre viajes. Hay un set aparte de hogares SIMULADOS para probarlo.
   - Desde la recomendación, "Preparar orden con estos sectores" abre Órdenes con los sectores marcados; la orden la sigue emitiendo el decisor.
+- **Agua observada por satélite** (capa del mapa operativo): ocho escenas de Sentinel-1 (radar) y Sentinel-2 (óptico) de 2016, 2019 y octubre de 2026 con la altura de K1 del día, el porcentaje de nubes y la cobertura de la zona; imagen `DOCUMENTO DE REFERENCIA` y máscara de agua derivada, sin validación a campo (puede confundir suelo húmedo, bañados o vegetación inundada; las áreas de S1 y S2 no son comparables). Se carga solo al activar la capa. Probado con una prueba de la web.
 - **Ruteo** vehicular, de camión jaula y de arreo con pgRouting sobre la red OSM del corredor; sin red cargada, estimación aproximada con su limitación a la vista.
 - **Arca Productiva** (calculadora ganadera): reproduce el caso de control (150 m², 1 camión con divisiones, 58,4 kg de maíz y 5,5 kg de pellet por día).
 - **Órdenes y bitácora K8:** solo el rol `decisor` emite órdenes; cada una crea notificaciones, tareas de cuadrilla y un borrador de bitácora con los seis campos obligatorios, exportable a Markdown.
