@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useSenalAvisos } from "@/lib/AlertasContext";
+import { ErrorApi } from "@/lib/api";
+
 import { guardarCache, leerCache } from "@/lib/cacheLocal";
 import { avisosNuevos, etiquetaTipoAviso, type AvisoCuadrilla, type CuadrillaDetalle } from "@/lib/cuadrillas";
 import { mensajeError } from "@/lib/errores";
@@ -14,8 +17,7 @@ import { useUsuario } from "@/lib/SesionContext";
  */
 export const claveAvisos = (usuarioId: number, cuadrillaId: number) => `avisos:${usuarioId}:${obtenerUrlServidor()}:${cuadrillaId}`;
 export const claveEquipoTildado = (usuarioId: number, avisoId: number) => `equipo:${usuarioId}:${obtenerUrlServidor()}:${avisoId}`;
-export const claveCuadrilla = (usuarioId: number, cuadrillaId: number) => `micuadrilla:${usuarioId}:${obtenerUrlServidor()}:${cuadrillaId}`;
-export const claveIdCuadrilla = (usuarioId: number) => `idcuadrilla:${usuarioId}:${obtenerUrlServidor()}`;
+export const claveCuadrillaPropia = (usuarioId: number) => `micuadrilla:${usuarioId}:${obtenerUrlServidor()}`;
 
 export const SONDEO_AVISOS_MS = 30_000;
 
@@ -30,6 +32,7 @@ function comoLista<T>(r: unknown): T[] {
  * Avisos del operativo a la cuadrilla. Sin conexión muestra la última copia guardada con su fecha. Se
  * sondea cada 30 s mientras la pantalla está abierta y, si llega un aviso nuevo sin leer, se dispara una
  * notificación local (la misma vía que las órdenes). La primera lectura solo fija la línea base.
+ * El evento de tiempo real `aviso_cuadrilla` (`useSenalAvisos`) la refresca al instante; el sondeo queda de respaldo.
  */
 export function useAvisosCuadrilla(cuadrillaId: number | null) {
   const usuario = useUsuario();
@@ -37,6 +40,7 @@ export function useAvisosCuadrilla(cuadrillaId: number | null) {
   const [copia, setCopia] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const vistos = useRef<Set<number> | null>(null);
+  const senal = useSenalAvisos();
 
   const cargar = useCallback(async () => {
     if (cuadrillaId === null) return;
@@ -75,71 +79,60 @@ export function useAvisosCuadrilla(cuadrillaId: number | null) {
     return () => clearInterval(sondeo);
   }, [cargar]);
 
+  useEffect(() => {
+    if (senal > 0) void cargar();
+  }, [senal, cargar]);
+
   return { avisos, copia, error, recargar: cargar };
 }
 
-/** Ficha de la cuadrilla del integrante (con la última copia guardada si no hay conexión). */
-export function useMiCuadrilla(cuadrillaId: number | null) {
+export type EstadoCuadrillaPropia = "cargando" | "ok" | "sin_cuadrilla" | "error";
+
+/**
+ * Cuadrilla del integrante, de `GET /mi/cuadrilla` (ya no se deduce de las tareas). Se guarda la última copia
+ * para verla sin conexión; un 404 es «todavía no integrás ninguna cuadrilla» (estado vacío, no error).
+ */
+export function useCuadrillaPropia() {
   const usuario = useUsuario();
+  const [estado, setEstado] = useState<EstadoCuadrillaPropia>("cargando");
   const [cuadrilla, setCuadrilla] = useState<CuadrillaDetalle | null>(null);
   const [copia, setCopia] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (cuadrillaId === null) return;
-    let vivo = true;
-    const clave = claveCuadrilla(usuario.id, cuadrillaId);
-    (async () => {
-      try {
-        const c = await api.cuadrilla(cuadrillaId);
-        if (!vivo) return;
-        setCuadrilla(c);
+  const cargar = useCallback(async () => {
+    const clave = claveCuadrillaPropia(usuario.id);
+    try {
+      const c = await api.miCuadrilla();
+      setCuadrilla(c);
+      setCopia(null);
+      setError(null);
+      setEstado("ok");
+      await guardarCache(clave, c);
+    } catch (e) {
+      if (e instanceof ErrorApi && e.estado === 404) {
+        setCuadrilla(null);
         setCopia(null);
         setError(null);
-        await guardarCache(clave, c);
-      } catch (e) {
-        const guardado = await leerCache<CuadrillaDetalle>(clave);
-        if (!vivo) return;
-        if (guardado?.valor && typeof guardado.valor === "object") {
-          setCuadrilla(guardado.valor);
-          setCopia(guardado.guardadoEn);
-        } else {
-          setError(mensajeError(e));
-        }
+        setEstado("sin_cuadrilla");
+        await guardarCache(clave, null);
+        return;
       }
-    })();
-    return () => {
-      vivo = false;
-    };
-  }, [cuadrillaId, usuario.id]);
-
-  return { cuadrilla, copia, error };
-}
-
-/**
- * Id de la cuadrilla del integrante: sale de sus tareas (`cuadrilla_id`). Se recuerda la última para que los
- * avisos y la ficha sigan viéndose sin conexión o cuando todavía no tiene tareas cargadas.
- */
-export function useIdCuadrilla(tareasCuadrilla: (number | null | undefined)[] | null): number | null {
-  const usuario = useUsuario();
-  const [id, setId] = useState<number | null>(null);
-  const deTareas = tareasCuadrilla?.find((x): x is number => typeof x === "number") ?? null;
+      const guardado = await leerCache<CuadrillaDetalle>(clave);
+      if (guardado?.valor && typeof guardado.valor === "object") {
+        setCuadrilla(guardado.valor);
+        setCopia(guardado.guardadoEn);
+        setError(null);
+        setEstado("ok");
+      } else {
+        setError(mensajeError(e));
+        setEstado("error");
+      }
+    }
+  }, [usuario.id]);
 
   useEffect(() => {
-    let vivo = true;
-    if (deTareas !== null) {
-      setId(deTareas);
-      void guardarCache(claveIdCuadrilla(usuario.id), deTareas);
-      return;
-    }
-    (async () => {
-      const guardado = await leerCache<number>(claveIdCuadrilla(usuario.id));
-      if (vivo && typeof guardado?.valor === "number") setId(guardado.valor);
-    })();
-    return () => {
-      vivo = false;
-    };
-  }, [deTareas, usuario.id]);
+    void cargar();
+  }, [cargar]);
 
-  return id;
+  return { estado, cuadrilla, cuadrillaId: cuadrilla?.id ?? null, copia, error, recargar: cargar };
 }

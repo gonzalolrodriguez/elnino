@@ -33,6 +33,8 @@ type Valor = {
   notificaciones: Notificacion[];
   noLeidas: number;
   canal: EstadoCanal;
+  /** Sube cada vez que llega un evento `aviso_cuadrilla`: las pantallas de la cuadrilla refrescan sus avisos. */
+  senalAvisos: number;
   recargar: () => Promise<void>;
   marcarLeida: (id: number) => Promise<void>;
 };
@@ -44,6 +46,7 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [canal, setCanal] = useState<EstadoCanal>("desconectado");
+  const [senalAvisos, setSenalAvisos] = useState(0);
   const vistas = useRef<Set<number> | null>(null);
 
   const recargar = useCallback(async () => {
@@ -76,6 +79,7 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
       renovar: renovarSesion,
       alEvento: (e) => {
         if (e.tipo === "orden") void recargar();
+        else if ((e.tipo as string) === "aviso_cuadrilla") setSenalAvisos((n) => n + 1);
       },
       alEstado: setCanal,
     });
@@ -109,10 +113,11 @@ export function AlertasProvider({ children }: { children: ReactNode }) {
       notificaciones,
       noLeidas: notificaciones.filter((n) => !n.leida).length,
       canal,
+      senalAvisos,
       recargar,
       marcarLeida,
     }),
-    [estado, notificaciones, canal, recargar, marcarLeida],
+    [estado, notificaciones, canal, senalAvisos, recargar, marcarLeida],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
@@ -121,4 +126,9 @@ export function useAlertas(): Valor {
   const v = useContext(Contexto);
   if (!v) throw new Error("useAlertas requiere AlertasProvider");
   return v;
+}
+
+/** Señal de avisos de cuadrilla del tiempo real; 0 si no hay proveedor (la pantalla sigue con su sondeo). */
+export function useSenalAvisos(): number {
+  return useContext(Contexto)?.senalAvisos ?? 0;
 }

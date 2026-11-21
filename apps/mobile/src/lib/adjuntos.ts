@@ -18,7 +18,8 @@ export const MAX_IMAGEN_BYTES = 5 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 
 export const MIME_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
-export const MIME_VIDEO = ["video/mp4"];
+/** Video MP4 y MOV (`video/quicktime`, el formato de los iPhone). */
+export const MIME_VIDEO = ["video/mp4", "video/quicktime"];
 
 export const formatearBytes = (bytes: number): string =>
   bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -46,7 +47,7 @@ export function mimeDeArchivo(uri: string, mimeInformado?: string | null): strin
 
 /**
  * Valida un archivo antes de agregarlo al parte: tipo admitido, tamaño y cupo (5 por parte).
- * Imagen JPEG/PNG/WebP hasta 5 MB; video MP4 hasta 20 MB.
+ * Imagen JPEG/PNG/WebP hasta 5 MB; video MP4 o MOV hasta 20 MB.
  */
 export function validarAdjunto(
   a: Pick<AdjuntoLocal, "tipo" | "mime" | "bytes">,
@@ -62,7 +63,7 @@ export function validarAdjunto(
     }
     return { ok: true };
   }
-  if (!MIME_VIDEO.includes(a.mime)) return { ok: false, mensaje: "Solo se admiten videos en formato MP4." };
+  if (!MIME_VIDEO.includes(a.mime)) return { ok: false, mensaje: "Solo se admiten videos en formato MP4 o MOV." };
   if (a.bytes !== null && a.bytes > MAX_VIDEO_BYTES) {
     return { ok: false, mensaje: `El video pesa ${formatearBytes(a.bytes)}; el máximo es ${formatearBytes(MAX_VIDEO_BYTES)}.` };
   }
@@ -70,4 +71,5 @@ export function validarAdjunto(
 }
 
 /** Nombre local para el campo `archivo` del formulario (el servidor genera el nombre definitivo). */
-export const nombreParaSubir = (a: Pick<AdjuntoLocal, "tipo">): string => (a.tipo === "video" ? "evidencia.mp4" : "evidencia.jpg");
+export const nombreParaSubir = (a: Pick<AdjuntoLocal, "tipo"> & { mime?: string }): string =>
+  a.tipo === "video" ? (a.mime === "video/quicktime" ? "evidencia.mov" : "evidencia.mp4") : "evidencia.jpg";

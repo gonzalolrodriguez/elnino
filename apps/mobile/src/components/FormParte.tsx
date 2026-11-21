@@ -152,7 +152,7 @@ export function FormParte({
         Evidencia: fotos o videos ({adjuntos.length} de {MAX_ADJUNTOS_PARTE})
       </Text>
       <Texto suave pequeno>
-        Foto hasta 5 MB o video MP4 hasta 20 MB. No saques fotos de caras ni de menores. Se suben después del parte, solas, cuando haya conexión.
+        Foto hasta 5 MB o video MP4 o MOV hasta 20 MB. No saques fotos de caras ni de menores. Se suben después del parte, solas, cuando haya conexión.
       </Texto>
       {adjuntos.map((a, i) => (
         <View key={a.uri} style={{ gap: 6 }}>

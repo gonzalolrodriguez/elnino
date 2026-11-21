@@ -50,9 +50,10 @@ describe("CanalEventos", () => {
 
     s.onmessage?.({ data: JSON.stringify({ tipo: "conectado", datos: { rol: "ciudadano" } }) });
     s.onmessage?.({ data: JSON.stringify({ tipo: "orden", datos: { id: 1, sectores: ["S4"] } }) });
+    s.onmessage?.({ data: JSON.stringify({ tipo: "aviso_cuadrilla", datos: { id: 3, cuadrilla_id: 2, tipo: "desvio", accion: "creado" } }) });
     s.onmessage?.({ data: JSON.stringify({ tipo: "desconocido" }) });
     s.onmessage?.({ data: "no es json" });
-    expect(eventos).toEqual(["conectado", "orden"]);
+    expect(eventos).toEqual(["conectado", "orden", "aviso_cuadrilla"]);
     canal.detener();
   });
 
