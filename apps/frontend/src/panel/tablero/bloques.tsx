@@ -646,11 +646,23 @@ export function TablaFrescura({ resumen }: { resumen: ResumenPanel }) {
                 {TEXTO_FRESCURA[x.ev.estado]}
                 {x.ev.dias !== null && x.ev.estado !== "al_corte" && x.ev.dias > 0 ? ` (hace ${x.ev.dias} d)` : ""}
               </Chip>
-              <Insignia categoria={x.cat} />
+              {x.cat !== "SIMULADO" && <Insignia categoria={x.cat} />}
             </Flex>
           </Flex>
         ))}
       </Box>
+      {filas.some((x) => x.cat === "SIMULADO") && (
+        <Flex align="center" gap={2} mt={3} wrap="wrap" textStyle="microdato" data-testid="frescura-simulado">
+          <Insignia categoria="SIMULADO" />
+          <span>
+            {filas
+              .filter((x) => x.cat === "SIMULADO")
+              .map((x) => x.capa)
+              .join(" y ")}
+            : datos de demostración.
+          </span>
+        </Flex>
+      )}
       <Text textStyle="microdato" mt={3}>
         Los datos observados llegan hasta el corte del {fmtFecha(f.fecha_corte)}; lo posterior solo se muestra con decisión de la mesa.
       </Text>
