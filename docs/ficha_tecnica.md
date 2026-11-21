@@ -34,7 +34,8 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 - **Portal público:**
   - Landing con el relieve real de la cuenca en 3D (SRTM, curvas de nivel, departamentos) y alternativa 2D.
   - El recorrido del agua desde el Pantanal hasta la confluencia con el Paraná se puede explorar: arrastrar, zoom y una barra para recorrer el río por sus hitos.
-  - Página Información (El Niño, serie K1, sectores y fuentes).
+  - Página Información (El Niño, serie K1, sectores y fuentes). En "Sectores de evaluación", el relieve real (SRTM, DOCUMENTO DE REFERENCIA) se ve en 3D con terrazas cada 1 m y el agua sube al mover la altura del río: K10 decide cuándo se compromete cada sector y el relieve, por dónde avanza el agua (ilustrativo, SIMULADO; no es un modelo hidráulico). Tiene alternativa 2D.
+  - Diseño unificado en todas las pantallas (web y app) según `DESIGN.md`: misma cabecera, contenedor, escala tipográfica, chips de estado con ícono y texto, una insignia de categoría por bloque, y 0 violaciones de axe (WCAG 2.1 AA) en las pantallas auditadas.
   - Franja "Cómo estamos hoy" en lenguaje llano, con "Emergencia: 103" visible. Con sesión iniciada, la landing muestra el acceso de cada rol en lugar del selector de perfil.
   - Registro de ciudadanía y de productores con consentimiento. La ubicación se toma del GPS, se marca en un mapa (con los sectores K10) o se escribe a mano.
   - **Mi cuenta como panel personal:**
@@ -47,7 +48,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Para el decisor: río frente a umbrales con tendencia y tiempo restante con su supuesto, estado de los cuatro sectores, pedidos por estado, sector y canal, ocupación de centros, cuadrillas, órdenes, lluvia por origen y antigüedad de cada dato.
   - Para el operador, la cola de pedidos va primero.
   - Menú ordenado por el flujo de trabajo: Situación, Decidir, Ejecutar y Respaldo y registro. La altura del río y la lluvia del escenario se cambian desde cualquier página.
-  - **Cuadrillas:** una página con cada cuadrilla, sus integrantes por rol (sin nombres), vehículo, tarea actual, último parte y dificultades abiertas. El operador asigna integrantes.
+  - **Gestión de cuadrillas:** alta en pasos (nombre, tipo de operativo: personas, familias, productores y ganado, apícola, bienes o traslado mixto; cantidad de integrantes; un encargado; rol y profesión de cada integrante para armar equipos interdisciplinarios; vehículo; equipamiento sugerido como palas, ruedas de auxilio, cadenas o chalecos), edición y baja. Ficha de cada cuadrilla con sus partes y la evidencia en fotos y video. Avisos del operativo a la cuadrilla (desvío dibujado en el mapa, qué llevar, instrucciones, seguridad) con confirmación de lectura en tiempo real. Mapa con el recorrido de todas las cuadrillas. Los integrantes se muestran por rol y profesión; el nombre de una cuenta institucional solo lo ven los mandos.
   - Para el administrador: usuarios, cuentas bloqueadas, integridad de la bitácora de accesos y estado del servicio.
 - **Constancias y validación cruzada de evacuaciones:**
   - La cuadrilla cierra cada tarea con una constancia: destino por GPS, centro, personas y animales trasladados, fotos, nota y rol firmante. Funciona sin conexión desde la app.
@@ -86,7 +87,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web. El solicitante ve en un mapa el recorrido por la red vial (evitando caminos cerrados), el vehículo avanzando y la llegada estimada (supuesto de velocidad). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea, vence a los 30 minutos y solo la ven el solicitante y los roles operativos. Para la demostración, sin un teléfono real, el servidor mueve al vehículo por la ruta desde una base SIMULADA, rotulado "SIMULADO · recorrido de demostración".
   - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.
   - **Lámina de agua ilustrativa:** en el simulador, cada sector se cubre según cuánto supera el río su altura de compromiso (K10). Los accesos cortados se ven discontinuos y hay un botón "Reproducir subida". No es un modelo hidráulico.
-- **Pruebas automáticas al 20/11/2026:** backend 426, web 329 y app 314, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
+- **Pruebas automáticas al 21/11/2026:** backend 487, web 419 y app 374, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
 Se vieron en un navegador, contra el backend real, la landing (con y sin sesión), Mi cuenta de una ciudadana de prueba con su pedido y el mapa de OpenStreetMap, y los tres relojes. El panel rediseñado, la página de cuadrillas y el recorrido animado se revisaron con capturas sobre datos simulados.
 
