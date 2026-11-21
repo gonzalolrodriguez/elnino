@@ -1,4 +1,4 @@
-import { Box, Checkbox, Radio, RadioGroup, Text, VisuallyHidden, Wrap, WrapItem } from "@chakra-ui/react";
+import { Box, Checkbox, Radio, RadioGroup, Text, VisuallyHidden, Wrap, WrapItem, useRadioGroupContext } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 /**
@@ -52,13 +52,7 @@ export function Opcion(props: OpcionProps) {
       )}
     </Box>
   );
-  if (props.tipo === "radio") {
-    return (
-      <Radio value={props.valor} id={id} name={name} isDisabled={isDisabled} isInvalid={isInvalid} {...MARCO}>
-        {cuerpo}
-      </Radio>
-    );
-  }
+  if (props.tipo === "radio") return <OpcionRadio {...props} cuerpo={cuerpo} />;
   return (
     <Checkbox
       id={id}
@@ -71,6 +65,23 @@ export function Opcion(props: OpcionProps) {
     >
       {cuerpo}
     </Checkbox>
+  );
+}
+
+/**
+ * En `Radio`, Chakra manda al `<input>` oculto los estilos que no son de layout (borde, fondo, `_checked`), así que el
+ * marco no se veía. El marco va en una caja propia que sabe si su valor es el elegido en el grupo.
+ */
+function OpcionRadio({ valor, id, name, isDisabled, isInvalid, cuerpo }: Comun & { tipo: "radio"; valor: string; cuerpo: ReactNode }) {
+  const grupo = useRadioGroupContext();
+  const marcado = grupo?.value === valor;
+  const { _checked, sx, ...marco } = MARCO;
+  return (
+    <Box {...marco} sx={sx} p={0} {...(marcado ? _checked : {})} data-checked={marcado ? "" : undefined} data-disabled={isDisabled ? "" : undefined}>
+      <Radio value={valor} id={id} name={name} isDisabled={isDisabled} isInvalid={isInvalid} w="100%" minH="2.75rem" px={3} py={2}>
+        {cuerpo}
+      </Radio>
+    </Box>
   );
 }
 
