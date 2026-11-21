@@ -25,3 +25,6 @@ ios/
 
 # Adjuntos de solicitudes (fotos subidas)
 uploads/
+
+# Copias de trabajo y configuración local de Claude Code (no se versionan ni se suben a EAS)
+.claude/
