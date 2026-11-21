@@ -387,5 +387,9 @@ export function CaudalGlofas({ k1 = SERIE_K1 }: { k1?: SerieDiaria }) {
     );
   }
   if (carga.datos.n === 0) return <Text>La serie de caudal no tiene datos.</Text>;
+  // Dato con forma inesperada: se trata como error de carga en vez de romper la pantalla.
+  if (!Array.isArray(carga.datos.fechas) || carga.datos.fechas.length === 0 || !carga.datos.celda_usada) {
+    return <Text role="alert">La serie de caudal llegó incompleta. Reintentá más tarde.</Text>;
+  }
   return <Contenido c={carga.datos} k1={k1} />;
 }
