@@ -63,14 +63,14 @@ function Fotos({ tareaId, adjuntos }: { tareaId: number; adjuntos: { n: number; 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tareaId, clave]);
-  if (adjuntos.length === 0) return <Text fontSize="sm">Sin fotos.</Text>;
+  if (adjuntos.length === 0) return <Text>Sin fotos.</Text>;
   return (
     <Flex gap={2} wrap="wrap" data-testid="fotos-constancia">
       {adjuntos.map((a) =>
         urls[a.n] ? (
           <Box key={a.n} as="img" src={urls[a.n]} alt={`Foto ${a.n} de la constancia`} w="7rem" h="7rem" objectFit="cover" borderRadius="md" border="1px solid" borderColor="borde" />
         ) : (
-          <Box key={a.n} w="7rem" h="7rem" display="flex" alignItems="center" justifyContent="center" textAlign="center" fontSize="xs" color="textoSuave" bg="pizarra.100" borderRadius="md" p={1}>
+          <Box key={a.n} w="7rem" h="7rem" display="flex" alignItems="center" justifyContent="center" textAlign="center" textStyle="microdato" bg="pizarra.100" borderRadius="md" p={1}>
             {fallidas.includes(a.n) ? `No se pudo cargar la foto ${a.n}` : "Cargando…"}
           </Box>
         ),
@@ -82,10 +82,10 @@ function Fotos({ tareaId, adjuntos }: { tareaId: number; adjuntos: { n: number; 
 function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <Box mb={2}>
-      <Text fontSize="xs" color="textoSuave">
+      <Text textStyle="microdato">
         {etiqueta}
       </Text>
-      <Box fontSize="sm">{children}</Box>
+      <Box>{children}</Box>
     </Box>
   );
 }
@@ -124,7 +124,7 @@ function ReabrirConfirmacion({ tareaId, alReabrir }: { tareaId: number; alReabri
                 Se borra la respuesta de la persona evacuada y se le envía una consulta nueva con un código nuevo. La respuesta anterior queda registrada. Hacelo si hubo un error al responder o si hace falta volver a preguntar.
               </Text>
               <FormControl>
-                <FormLabel htmlFor="motivo-reapertura" fontSize="sm">
+                <FormLabel htmlFor="motivo-reapertura" textStyle="rotulo" color="texto">
                   Motivo (opcional)
                 </FormLabel>
                 <Textarea id="motivo-reapertura" size="sm" maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
@@ -166,7 +166,7 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
                 <ChipEvacuacion estado={e.estado} />
                 <Insignia categoria="SIMULADO" />
               </Flex>
-              <Text fontSize="sm" color="textoSuave" mb={3}>
+              <Text textStyle="microdato" mb={3}>
                 {[e.sector_id ? `Sector ${e.sector_id}` : null, e.cuadrilla_nombre, e.solicitud_id ? `Pedido n.º ${e.solicitud_id}` : null, e.orden_id ? `Orden n.º ${e.orden_id}` : null].filter(Boolean).join(" · ")}
               </Text>
 
@@ -174,8 +174,8 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
                 <Alert status="warning" variant="left-accent" alignItems="flex-start" mb={4} data-testid="discrepancia">
                   <AlertIcon />
                   <Box>
-                    <AlertTitle fontSize="sm">Hay algo para revisar</AlertTitle>
-                    <AlertDescription fontSize="sm">
+                    <AlertTitle>Hay algo para revisar</AlertTitle>
+                    <AlertDescription>
                       <Box as="ul" m={0} pl={4}>
                         {e.discrepancia.motivos.map((m) => (
                           <li key={m}>{etiquetaMotivoDiscrepancia(m)}</li>
@@ -191,7 +191,7 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
               )}
 
               {!c ? (
-                <Text fontSize="sm" data-testid="sin-constancia">
+                <Text data-testid="sin-constancia">
                   {e.tarea_estado === "completada" ? "La cuadrilla cerró la tarea sin cargar constancia (destino, personas y fotos)." : "Todavía no hay constancia: la cuadrilla no cerró la tarea."}
                 </Text>
               ) : (
@@ -224,7 +224,7 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
                     </Dato>
                     <Dato etiqueta="Nota de la cuadrilla">{c.nota ?? "sin nota"}</Dato>
                   </Box>
-                  <Heading as="h3" size="xs" mb={1}>
+                  <Heading as="h3" size="sm" mb={1}>
                     Fotos
                   </Heading>
                   <Fotos tareaId={e.tarea_id} adjuntos={c.adjuntos} />
@@ -243,11 +243,11 @@ export function DetalleEvacuacion({ evacuacion, centros, alCerrar, alCambiar }: 
                   <ReabrirConfirmacion tareaId={e.tarea_id} alReabrir={alCambiar} />
                 </Box>
               ) : e.confirmacion ? (
-                <Text fontSize="sm" data-testid="confirmacion">
+                <Text data-testid="confirmacion">
                   Se le consultó el {fechaHora(e.confirmacion.solicitada_en)} y todavía no respondió. No bloquea la evacuación.
                 </Text>
               ) : (
-                <Text fontSize="sm" data-testid="confirmacion">
+                <Text data-testid="confirmacion">
                   No hay consulta a la persona evacuada para esta tarea.
                 </Text>
               )}
