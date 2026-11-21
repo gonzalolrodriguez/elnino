@@ -33,13 +33,14 @@ describe("insignias de categoría", () => {
 
   it("la nota del panel se pliega durante la sesión y se puede volver a abrir", () => {
     const { unmount } = envolver(<NotaCategorias />);
+    // Plegada por defecto: una sola línea compacta.
+    expect(screen.getByTestId("nota-categorias")).not.toHaveTextContent("salvo lo marcado como");
+    fireEvent.click(screen.getByRole("button", { name: "Ver cómo se marcan los datos" }));
     expect(screen.getByTestId("nota-categorias")).toHaveTextContent("salvo lo marcado como");
     fireEvent.click(screen.getByRole("button", { name: "Ocultar" }));
     expect(screen.getByTestId("nota-categorias")).not.toHaveTextContent("salvo lo marcado como");
     unmount();
     envolver(<NotaCategorias />);
     expect(screen.getByRole("button", { name: "Ver cómo se marcan los datos" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Ver cómo se marcan los datos" }));
-    expect(screen.getByTestId("nota-categorias")).toHaveTextContent("salvo lo marcado como");
   });
 });

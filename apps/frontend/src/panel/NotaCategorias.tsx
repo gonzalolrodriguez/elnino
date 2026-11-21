@@ -8,9 +8,10 @@ const CLAVE = "panel-nota-categorias-plegada";
 
 function leerPlegada(): boolean {
   try {
-    return window.sessionStorage.getItem(CLAVE) === "1";
+    // Plegada por defecto: el primer bloque del panel arranca más arriba. Solo se abre si la persona la expandió.
+    return window.sessionStorage.getItem(CLAVE) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -34,9 +35,9 @@ export function NotaCategorias() {
     setPlegada(nueva);
   };
   return (
-    <Box data-testid="nota-categorias" mb={4} fontSize="sm" color="textoSuave" role="note" aria-label="Qué significan las categorías de los datos">
+    <Box data-testid="nota-categorias" mb={plegada ? 1 : 4} fontSize="sm" color="textoSuave" role="note" aria-label="Qué significan las categorías de los datos">
       {plegada ? (
-        <Button type="button" variant="link" size="sm" fontWeight={500} onClick={alternar} aria-expanded={false} aria-controls="nota-categorias-texto">
+        <Button type="button" variant="link" size="sm" fontWeight={500} color="primarioHover" onClick={alternar} aria-expanded={false} aria-controls="nota-categorias-texto">
           Ver cómo se marcan los datos
         </Button>
       ) : (
