@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { hexDe, rgbaDe } from "../estilo/paleta";
 import { hayWebGL, useMenosMovimiento } from "../lib/entorno";
 import { accesoCortado, crearCapaAccesosCortados, crearCapasLamina } from "./capasLamina";
+import type { CapaSatelite } from "./satelite";
 import type { AccesoProps, CapaOficial, Centro, Estacion, Geo, Ruta, SectorEscenario } from "./tipos";
 
 export type PropsMapa = {
@@ -32,6 +33,8 @@ export type PropsMapa = {
   cuadrillas?: PuntoCuadrilla[];
   /** Lámina de agua ilustrativa (SIMULADO): altura que dibuja, si se ve y si se está reproduciendo la subida. */
   lamina?: { altura: number; visible: boolean; reproduciendo: boolean };
+  /** Agua observada por satélite (DOCUMENTO DE REFERENCIA): GeoJSON de la escena elegida, o `archivo: null` con la capa apagada. */
+  satelite?: CapaSatelite;
   onAcceso: (a: AccesoProps) => void;
   onPunto: (lon: number, lat: number) => void;
 };
@@ -74,6 +77,9 @@ const COLOR_TRASLADO: Record<string, RGBA> = {
 const COLOR_CURVA = hexDe("alerta.800");
 const COLOR_DEPARTAMENTO = hexDe("pizarra.700");
 const OPACIDAD_RELIEVE = 0.38;
+const COLOR_SATELITE = hexDe("agua.600");
+const BORDE_SATELITE = hexDe("agua.800");
+const CAPAS_SATELITE = ["satelite-agua-relleno", "satelite-agua-borde"];
 const ZOOM_LOCAL = 9.5; // desde aquí se muestran las curvas y el tinte del corredor; por debajo, los de la cuenca
 const TINTA = rgbaDe("acceso.ruta");
 const BLANCO = rgbaDe("superficie");
@@ -186,7 +192,7 @@ export default function MapaGL(props: PropsMapa) {
       style: ESTILO_BASE,
       bounds: LIMITES_INICIALES,
       fitBoundsOptions: { padding: 30 },
-      attributionControl: { compact: true, customAttribution: "Capas: IGN, BAHRA/INDEC, Mapa Educativo, REFES, © colaboradores de OpenStreetMap (ODbL). Relieve: AWS Terrain Tiles (SRTM y otras fuentes)" },
+      attributionControl: { compact: true, customAttribution: "Capas: IGN, BAHRA/INDEC, Mapa Educativo, REFES, © colaboradores de OpenStreetMap (ODbL). Relieve: AWS Terrain Tiles (SRTM y otras fuentes). Agua observada: contiene datos Copernicus Sentinel modificados (máscara derivada)" },
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     m.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
@@ -457,6 +463,38 @@ export default function MapaGL(props: PropsMapa) {
     if (listo.current) preparar();
     else m.once("load", preparar);
   }, [props.capas, props.capasActivas, props.fondoOsm]);
+
+  // Agua observada por satélite: la fuente GeoJSON se crea al encender la capa (MapLibre pide el archivo recién ahí) y
+  // al cambiar de fecha solo se reemplazan sus datos. Debajo de las curvas y de las capas operativas de Deck.gl.
+  const archivoSatelite = props.satelite?.archivo ?? null;
+  const zonaSatelite = props.satelite?.zona ?? null;
+  const satelitePrevio = useRef<string | null>(null);
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m) return;
+    const url = archivoSatelite ? `${import.meta.env.BASE_URL}${archivoSatelite}` : null;
+    const aplicar = () => {
+      if (url) {
+        const fuente = m.getSource("satelite-agua") as maplibregl.GeoJSONSource | undefined;
+        if (!fuente) {
+          m.addSource("satelite-agua", { type: "geojson", data: url });
+          const antes = m.getLayer("ancla-top") ? "ancla-top" : undefined;
+          m.addLayer({ id: CAPAS_SATELITE[0], type: "fill", source: "satelite-agua", paint: { "fill-color": COLOR_SATELITE, "fill-opacity": 0.5 } }, antes);
+          m.addLayer({ id: CAPAS_SATELITE[1], type: "line", source: "satelite-agua", paint: { "line-color": BORDE_SATELITE, "line-width": 0.8, "line-opacity": 0.75 } }, antes);
+        } else if (satelitePrevio.current !== url) {
+          fuente.setData(url);
+        }
+        if (satelitePrevio.current === null && zonaSatelite) {
+          const [o, s, e, n] = zonaSatelite;
+          m.fitBounds([[o, s], [e, n]], { padding: 30, duration: 0 });
+        }
+      }
+      for (const id of CAPAS_SATELITE) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", url ? "visible" : "none");
+      satelitePrevio.current = url;
+    };
+    if (listo.current) aplicar();
+    else m.once("load", aplicar);
+  }, [archivoSatelite, zonaSatelite]);
 
   // Rótulos HTML de las curvas maestras (cota en metros) y de los departamentos: el estilo no tiene servidor de fuentes.
   const hayCurvas = props.capasActivas.includes("curvas_nivel");

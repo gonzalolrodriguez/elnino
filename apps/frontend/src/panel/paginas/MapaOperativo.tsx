@@ -4,20 +4,20 @@ import {
   AlertIcon,
   Box,
   Button,
-  Checkbox,
+  Center,
   Flex,
   FormControl,
   FormErrorMessage,
   FormLabel,
   Input,
-  Select,
   Text,
   useToast,
 } from "@chakra-ui/react";
 import { PERFILES_RUTEO } from "@evacuaciones/shared";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import { AlertaError } from "../../components/Formulario";
+import { AlertaError, CampoSelect } from "../../components/Formulario";
+import { Opcion } from "../../components/Opcion";
 import { MuestraEstado } from "../../components/MuestraEstado";
 import { Insignia } from "../../components/Insignia";
 import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
@@ -26,6 +26,8 @@ import { useCargaViva } from "../../lib/vivo";
 import { api } from "../api";
 import { useEscenario } from "../EscenarioContext";
 import { LeyendaLamina } from "../LeyendaLamina";
+import { LeyendaSatelite, PanelSatelite } from "../PanelSatelite";
+import { cargarEscenasSatelite, type CapaSatelite } from "../satelite";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
 import { IconoMapa } from "../../components/iconos/Iconos";
@@ -75,33 +77,33 @@ function PanelAcceso({ acceso, alCambiar }: { acceso: AccesoProps; alCambiar: ()
 
   return (
     <Box data-testid="panel-acceso">
-      <Text fontSize="sm">
+      <Text>
         <strong>{acceso.nombre}</strong> · superficie {acceso.superficie}
         {acceso.sector_id ? ` · sector ${acceso.sector_id}` : ""}
       </Text>
-      <Text fontSize="sm" mb={2}>
+      <Text mb={3}>
         Estado: <strong>{acceso.transitable ? "transitable" : "no transitable"}</strong>
         {!acceso.transitable && acceso.motivo ? ` (${acceso.motivo})` : ""}
-        {acceso.actualizado_por_rol ? ` · actualizado por ${acceso.actualizado_por_rol} el ${fmtFecha(acceso.actualizado_en)}` : ""}.
+        {acceso.actualizado_por_rol ? ` · actualizado por ${etiquetaRolOperativo(acceso.actualizado_por_rol)} el ${fmtFecha(acceso.actualizado_en)}` : ""}.
       </Text>
       <FormControl isInvalid={motivoInvalido} mb={2}>
-        <FormLabel htmlFor="motivo-acceso" fontSize="sm" mb={0}>
+        <FormLabel htmlFor="motivo-acceso">
           Motivo (obligatorio para marcarlo no transitable)
         </FormLabel>
-        <Input id="motivo-acceso" size="sm" bg="superficie" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
+        <Input id="motivo-acceso" bg="superficie" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
         <FormErrorMessage>Indicá el motivo (al menos 3 caracteres).</FormErrorMessage>
       </FormControl>
       <Flex gap={2} wrap="wrap">
-        <Button size="sm" colorScheme="red" isLoading={guardando} onClick={() => void marcar(false)} isDisabled={!acceso.transitable}>
+        <Button colorScheme="red" isLoading={guardando} onClick={() => void marcar(false)} isDisabled={!acceso.transitable}>
           Marcar no transitable
         </Button>
-        <Button size="sm" variant="outline" isLoading={guardando} onClick={() => void marcar(true)} isDisabled={acceso.transitable}>
+        <Button variant="outline" isLoading={guardando} onClick={() => void marcar(true)} isDisabled={acceso.transitable}>
           Marcar transitable
         </Button>
-        <Checkbox size="sm" isChecked={entrada.caminos_cerrados.includes(acceso.id)} onChange={() => alternarCamino(acceso.id)}>
-          Cerrar solo en la simulación
-        </Checkbox>
       </Flex>
+      <Box mt={3}>
+        <Opcion etiqueta="Cerrar solo en la simulación" isChecked={entrada.caminos_cerrados.includes(acceso.id)} onChange={() => alternarCamino(acceso.id)} />
+      </Box>
       <Box mt={2}>
         <AlertaError error={error} />
       </Box>
@@ -152,53 +154,39 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
 
   return (
     <Box>
-      <Flex gap={2} wrap="wrap" mb={2}>
-        <FormControl w="auto">
-          <FormLabel htmlFor="ruta-perfil" fontSize="xs" mb={0}>
-            Perfil
-          </FormLabel>
-          <Select id="ruta-perfil" size="sm" bg="superficie" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
-            {PERFILES_RUTEO.map((p) => (
-              <option key={p} value={p}>
-                {PERFIL_TEXTO[p]}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl w="auto">
-          <FormLabel htmlFor="ruta-origen" fontSize="xs" mb={0}>
-            Origen
-          </FormLabel>
-          <Select id="ruta-origen" size="sm" bg="superficie" value={origenSector} onChange={(e) => { setOrigenSector(e.target.value); setOrigenManual(null); }}>
-            {(sectores.datos?.features ?? []).map((f) => (
-              <option key={String(f.properties.id)} value={String(f.properties.id)}>
-                Sector {String(f.properties.id)}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl w="auto">
-          <FormLabel htmlFor="ruta-destino" fontSize="xs" mb={0}>
-            Destino
-          </FormLabel>
-          <Select id="ruta-destino" size="sm" bg="superficie" placeholder="Centro de recepción" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
-            {(centros.datos?.centros ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-      </Flex>
+      <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(10rem, 1fr))" columnGap={3} rowGap={3} mb={3}>
+        <CampoSelect id="ruta-perfil" etiqueta="Perfil" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
+          {PERFILES_RUTEO.map((p) => (
+            <option key={p} value={p}>
+              {PERFIL_TEXTO[p]}
+            </option>
+          ))}
+        </CampoSelect>
+        <CampoSelect id="ruta-origen" etiqueta="Origen" value={origenSector} onChange={(e) => { setOrigenSector(e.target.value); setOrigenManual(null); }}>
+          {(sectores.datos?.features ?? []).map((f) => (
+            <option key={String(f.properties.id)} value={String(f.properties.id)}>
+              Sector {String(f.properties.id)}
+            </option>
+          ))}
+        </CampoSelect>
+        <CampoSelect id="ruta-destino" etiqueta="Destino" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
+          <option value="">Centro de recepción</option>
+          {(centros.datos?.centros ?? []).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </CampoSelect>
+      </Box>
       <Flex gap={2} wrap="wrap" align="center">
-        <Button size="sm" onClick={() => void trazar()} isLoading={calculando}>
+        <Button onClick={() => void trazar()} isLoading={calculando}>
           Trazar ruta
         </Button>
-        <Button size="sm" variant={modoOrigen ? "solid" : "outline"} onClick={() => setModoOrigen(!modoOrigen)} aria-pressed={modoOrigen}>
+        <Button variant={modoOrigen ? "solid" : "outline"} onClick={() => setModoOrigen(!modoOrigen)} aria-pressed={modoOrigen}>
           {modoOrigen ? "Hacé clic en el mapa" : "Elegir origen en el mapa"}
         </Button>
         {origenManual && (
-          <Button size="sm" variant="ghost" onClick={() => setOrigenManual(null)}>
+          <Button variant="ghost" onClick={() => setOrigenManual(null)}>
             Quitar origen del mapa
           </Button>
         )}
@@ -207,11 +195,11 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
         <AlertaError error={error} />
       </Box>
       {ruta && (
-        <Box mt={3} data-testid="resultado-ruta" fontSize="sm">
+        <Box mt={3} data-testid="resultado-ruta">
           <Flex gap={2} align="center" mb={1}>
             <strong>{ruta.encontrada ? "Ruta encontrada" : "Sin ruta"}</strong>
             <Insignia categoria="SIMULADO" />
-            <Text as="span" color="textoSuave">
+            <Text as="span" textStyle="microdato">
               método: {ruta.metodo === "pgrouting" ? "red vial (pgRouting)" : "aproximado"}
             </Text>
           </Flex>
@@ -222,13 +210,13 @@ function PanelRuteo({ ruta, setRuta, origenManual, setModoOrigen, modoOrigen, se
           )}
           {!ruta.encontrada && ruta.motivo && <Text>{ruta.motivo}</Text>}
           {ruta.limitacion && (
-            <Alert status="warning" mt={2} fontSize="sm" data-testid="ruta-limitacion">
+            <Alert status="warning" mt={2} data-testid="ruta-limitacion">
               <AlertIcon />
               <AlertDescription>{ruta.limitacion}</AlertDescription>
             </Alert>
           )}
           {ruta.advertencias.map((a) => (
-            <Text key={a} fontSize="xs" color="textoSuave">
+            <Text key={a} textStyle="microdato">
               {a}
             </Text>
           ))}
@@ -243,13 +231,13 @@ function RampaRelieve({ local, cuenca }: { local: [number, string][]; cuenca: [n
   const barra = (r: [number, string][]) => `linear-gradient(90deg, ${r.map((p) => p[1]).join(", ")})`;
   const redondo = (n: number) => Math.round(n);
   return (
-    <Box ml={6} my={1} aria-label="Escala de color del relieve" role="group">
-      <Text fontSize="xs" color="textoSuave">
+    <Box ml={1} my={1} aria-label="Escala de color del relieve" role="group">
+      <Text textStyle="microdato">
         Corredor de los sectores: {redondo(local[0][0])} m
         <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(local) }} />
         {redondo(local[local.length - 1][0])} m
       </Text>
-      <Text fontSize="xs" color="textoSuave">
+      <Text textStyle="microdato">
         Cuenca (vista general): {redondo(cuenca[1][0])} m
         <Box as="span" display="inline-block" w="7rem" h="8px" mx={2} style={{ background: barra(cuenca.slice(1)) }} />
         {redondo(cuenca[cuenca.length - 2][0])}+ m
@@ -262,32 +250,23 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
   return (
     <Box>
       {capas.map((c) => (
-        <Box key={c.id} mb={2}>
-          <Checkbox size="sm" isChecked={activas.includes(c.id)} onChange={() => alternar(c.id)}>
-            {c.etiqueta}{c.n > 0 && (
-              <Text as="span" color="textoSuave">
-                {" "}({fmtNum(c.n)})
-              </Text>
-            )}
-          </Checkbox>
-          <Flex ml={6} gap={2} align="center" wrap="wrap">
-            <Insignia categoria={c.categoria} />
-            <Text fontSize="xs" color="textoSuave">
+        <Box key={c.id} mb={4}>
+          <Opcion etiqueta={`${c.etiqueta}${c.n > 0 ? ` (${fmtNum(c.n)})` : ""}`} isChecked={activas.includes(c.id)} onChange={() => alternar(c.id)} />
+          <Flex ml={1} mt={1} gap={2} align="center" wrap="wrap">
+            <Text textStyle="microdato">
               Fuente: {c.nombre_fuente}. Fecha de actualización: {fmtFecha(c.fecha_actualizacion)}. {c.licencia.split(".")[0]}.
             </Text>
           </Flex>
           {c.id === "relieve" && c.rampa_local && c.rampa_cuenca && <RampaRelieve local={c.rampa_local} cuenca={c.rampa_cuenca} />}
           {c.nota && (
-            <Text ml={6} fontSize="xs" color="pizarra.700">
+            <Text ml={1} textStyle="microdato">
               {c.nota}
             </Text>
           )}
         </Box>
       ))}
-      <Checkbox size="sm" isChecked={osm} onChange={(e) => setOsm(e.target.checked)}>
-        Fondo OpenStreetMap (requiere internet)
-      </Checkbox>
-      <Text ml={6} fontSize="xs" color="textoSuave">
+      <Opcion etiqueta="Fondo OpenStreetMap (requiere internet)" isChecked={osm} onChange={setOsm} />
+      <Text ml={1} mt={1} textStyle="microdato">
         Sin conexión el mapa usa fondo liso y las capas incluidas en el repositorio. © colaboradores de OpenStreetMap (ODbL).
       </Text>
     </Box>
@@ -296,14 +275,14 @@ function SelectorCapas({ capas, activas, alternar, osm, setOsm }: { capas: CapaO
 
 function Leyenda() {
   const linea = (color: string, texto: string) => (
-    <Flex align="center" gap={2} fontSize="sm">
+    <Flex align="center" gap={2}>
       <Box w="1.25rem" h="4px" bg={color} aria-hidden="true" />
       {texto}
     </Flex>
   );
   return (
     <Flex wrap="wrap" aria-label="Leyenda del mapa" role="group" mt={3} align="center" columnGap={5} rowGap={2}>
-      <Flex align="center" gap={2} fontSize="sm">
+      <Flex align="center" gap={2}>
         sector: <MuestraEstado estado="comprometido" /> <MuestraEstado estado="en_riesgo" /> <MuestraEstado estado="normal" />
       </Flex>
       {linea("acceso.transitable", "acceso transitable")}
@@ -311,7 +290,7 @@ function Leyenda() {
       {linea("acceso.lluvia", "intransitable por lluvia")}
       {linea("acceso.anegado", "anegado")}
       {linea("acceso.ruta", "ruta calculada")}
-      <Text fontSize="sm" flexBasis="100%">
+      <Text textStyle="microdato" flexBasis="100%">
         Círculos verdes: centros de recepción (SIMULADO). Círculos oscuros con borde ámbar: estaciones K3 (DATO OBSERVADO). Borde grueso: sector aislado.
       </Text>
     </Flex>
@@ -327,6 +306,13 @@ export default function MapaOperativo() {
   const capas = useCarga(cargarCapas);
   const [capasActivas, setCapasActivas] = useState<string[]>(["localidades_parajes", "departamentos", "curvas_nivel", "relieve"]);
   const [osm, setOsm] = useState(false);
+  // Agua observada por satélite: la lista y el GeoJSON de cada fecha se piden solo al encender la capa.
+  const [verSatelite, setVerSatelite] = useState(false);
+  const [escenaId, setEscenaId] = useState<string | null>(null);
+  const satelite = useCarga(() => (verSatelite ? cargarEscenasSatelite() : Promise.resolve(null)), [verSatelite]);
+  const catalogoSatelite = verSatelite ? satelite.datos : null;
+  const escenaSatelite = catalogoSatelite ? (catalogoSatelite.escenas.find((e) => e.id === escenaId) ?? catalogoSatelite.escenas[catalogoSatelite.escenas.length - 1] ?? null) : null;
+  const capaSatelite = useMemo<CapaSatelite>(() => ({ archivo: escenaSatelite?.archivo ?? null, zona: catalogoSatelite?.zona ?? null }), [escenaSatelite, catalogoSatelite]);
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const [ruta, setRuta] = useState<Ruta | null>(null);
   const [modoOrigen, setModoOrigen] = useState(false);
@@ -373,7 +359,11 @@ export default function MapaOperativo() {
 
   return (
     <>
-      <CabeceraPagina titulo="Mapa operativo y simulador" icono={<IconoMapa tam="1.5rem" />} />
+      <CabeceraPagina
+        titulo="Mapa operativo y simulador"
+        icono={<IconoMapa tam="1.5rem" />}
+        ayuda="Probá cómo queda cada sector con una altura de río y una lluvia, marcá caminos no transitables y trazá rutas a los centros de recepción."
+      />
       <Flex direction={{ base: "column", xl: "row-reverse" }} align={{ base: "stretch", xl: "flex-start" }} sx={{ "& > * + *": { marginTop: "1rem" }, "@media (min-width: 80em)": { "& > * + *": { marginTop: 0, marginRight: "1rem" } } }}>
         <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "calc(var(--altura-leyenda) + 1rem)" }}>
           <Box
@@ -384,7 +374,14 @@ export default function MapaOperativo() {
             bg="superficie"
             sx={{ "@supports (height: 1dvh)": { height: "60dvh", "@media (min-width: 80em)": { height: "75dvh" } } }}
           >
-            <Suspense fallback={<Text p={4} role="status">Cargando mapa…</Text>}>
+            <Suspense
+              fallback={
+                <Center h="100%" minH="18rem" bg="pizarra.100" role="status" aria-label="Cargando el mapa" flexDirection="column" gap={2} color="textoSuave">
+                  <IconoMapa tam="2rem" />
+                  <Text textStyle="rotulo">Cargando el mapa…</Text>
+                </Center>
+              }
+            >
               <MapaGL
                 sectores={sectores.datos}
                 accesos={accesos.datos}
@@ -400,6 +397,7 @@ export default function MapaOperativo() {
                 modoOrigen={modoOrigen}
                 origenRuta={origenManual}
                 traslados={traslados}
+                satelite={capaSatelite}
                 cuadrillas={puntosCuadrillas}
                 lamina={{ altura: alturaVisual ?? entrada.altura_formosa_m, visible: laminaVisible, reproduciendo: alturaVisual !== null }}
                 onAcceso={(a) => setSeleccion(a.id)}
@@ -409,7 +407,8 @@ export default function MapaOperativo() {
           </Box>
           <Leyenda />
           {laminaVisible && <LeyendaLamina />}
-          <Text fontSize="xs" color="textoSuave" mt={1}>
+          {verSatelite && <LeyendaSatelite escena={escenaSatelite} />}
+          <Text textStyle="microdato" mt={2} maxW="70ch">
             Sectores K10 y accesos: SIMULADO. Capas territoriales: DOCUMENTO DE REFERENCIA (fuente y fecha en la lista de capas). Escala y fondo sin conexión; no hay claves de servicios externos.
           </Text>
         </Box>
@@ -417,6 +416,7 @@ export default function MapaOperativo() {
           <Seccion titulo="Simulador de escenario" categoria="SIMULADO" id="sec-sim">
             <Simulador accesos={listaAccesos} />
           </Seccion>
+          <PanelSatelite activa={verSatelite} setActiva={setVerSatelite} carga={satelite} escenaId={escenaSatelite?.id ?? null} setEscenaId={setEscenaId} />
           <Seccion titulo="Accesos y caminos" categoria="SIMULADO" id="sec-accesos">
             <Cargando carga={accesos} esVacio={() => listaAccesos.length === 0} vacio="No hay accesos cargados." hijos={() => (
               <>
@@ -431,7 +431,7 @@ export default function MapaOperativo() {
                         py={1}
                         px={2}
                         textAlign="left"
-                        fontSize="sm"
+                        
                         fontWeight={a.id === seleccion ? 700 : 400}
                         bg={a.id === seleccion ? "pizarra.100" : "transparent"}
                         onClick={() => setSeleccion(a.id)}
@@ -443,46 +443,42 @@ export default function MapaOperativo() {
                     </li>
                   ))}
                 </Box>
-                {accesoSel ? <PanelAcceso key={accesoSel.id} acceso={accesoSel} alCambiar={alCambiar} /> : <Text fontSize="sm" color="textoSuave">Elegí un acceso de la lista o hacé clic sobre él en el mapa para marcarlo no transitable.</Text>}
+                {accesoSel ? <PanelAcceso key={accesoSel.id} acceso={accesoSel} alCambiar={alCambiar} /> : <Text textStyle="microdato">Elegí un acceso de la lista o hacé clic sobre él en el mapa para marcarlo no transitable.</Text>}
               </>
             )} />
           </Seccion>
-          <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo">
+          <Seccion titulo="Ruteo" categoria="SIMULADO" id="sec-ruteo" plegable="Mostrar el trazado de rutas">
             <PanelRuteo ruta={ruta} setRuta={setRuta} origenManual={origenManual} setOrigenManual={setOrigenManual} modoOrigen={modoOrigen} setModoOrigen={setModoOrigen} />
           </Seccion>
-          <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados">
-            <Checkbox size="sm" isChecked={verTraslados} onChange={(e) => setVerTraslados(e.target.checked)}>
-              Mostrar traslados cerrados (origen del pedido a destino marcado)
-            </Checkbox>
+          <Seccion titulo="Traslados de evacuación" categoria="SIMULADO" id="sec-traslados" plegable="Mostrar opciones de traslados">
+            <Opcion etiqueta="Mostrar traslados cerrados (origen del pedido a destino marcado)" isChecked={verTraslados} onChange={setVerTraslados} />
             {verTraslados && evacuaciones.estado === "error" && (
-              <Text fontSize="sm" mt={2} role="alert">
+              <Text mt={2} role="alert">
                 No se pudieron cargar los traslados.
               </Text>
             )}
             {verTraslados && evacuaciones.estado === "ok" && (
-              <Text fontSize="xs" color="textoSuave" mt={2} data-testid="leyenda-traslados">
+              <Text textStyle="microdato" mt={2} data-testid="leyenda-traslados">
                 {traslados.length === 0 ? "Todavía no hay evacuaciones cerradas con origen y destino." : `${traslados.length} ${traslados.length === 1 ? "traslado" : "traslados"}. Línea verde: verificada por el evacuado; ámbar: cerrada sin confirmar; roja: con discrepancia a revisar. El punto marca el destino.`}
               </Text>
             )}
-            <Text fontSize="xs" color="textoSuave" mt={2}>
+            <Text textStyle="microdato" mt={2}>
               Solo para roles operativos: la ubicación del evacuado es un dato sensible.
             </Text>
           </Seccion>
-          <Seccion titulo="Cuadrillas en operación" categoria="SIMULADO" id="sec-cuadrillas">
-            <Checkbox size="sm" isChecked={verCuadrillas} onChange={(e) => setVerCuadrillas(e.target.checked)}>
-              Mostrar dónde está cada cuadrilla con una tarea en curso
-            </Checkbox>
+          <Seccion titulo="Cuadrillas en operación" categoria="SIMULADO" id="sec-cuadrillas" plegable="Mostrar opciones de cuadrillas">
+            <Opcion etiqueta="Mostrar dónde está cada cuadrilla con una tarea en curso" isChecked={verCuadrillas} onChange={setVerCuadrillas} />
             {verCuadrillas && posiciones.error !== null && (
-              <Text fontSize="sm" mt={2} role="alert" data-testid="error-cuadrillas">
+              <Text mt={2} role="alert" data-testid="error-cuadrillas">
                 {posiciones.datos ? "No pudimos actualizar las posiciones; se muestran las últimas recibidas." : "No se pudieron cargar las posiciones de las cuadrillas."}
               </Text>
             )}
             {verCuadrillas && posiciones.datos && (
               <Box mt={2} data-testid="leyenda-cuadrillas">
                 {posiciones.datos.posiciones.length === 0 ? (
-                  <Text fontSize="xs" color="textoSuave">Ninguna cuadrilla con tarea en curso está compartiendo su posición.</Text>
+                  <Text textStyle="microdato">Ninguna cuadrilla con tarea en curso está compartiendo su posición.</Text>
                 ) : (
-                  <Box as="ul" listStyleType="none" m={0} p={0} fontSize="xs">
+                  <Box as="ul" listStyleType="none" m={0} p={0} textStyle="microdato">
                     {posiciones.datos.posiciones.map((p) => (
                       <li key={p.cuadrilla_id}>
                         {p.nombre} ({p.roles.map(etiquetaRolOperativo).join(", ") || p.tipo_incidente}): {fechaHora(p.actualizada_en)}
@@ -491,16 +487,16 @@ export default function MapaOperativo() {
                     ))}
                   </Box>
                 )}
-                <Text color="textoSuave" fontSize="xs" mt={1}>
+                <Text textStyle="microdato" mt={1}>
                   Punto verde: posición reciente; ámbar: posición vieja (más de {posiciones.datos.supuestos.posicion_vieja_minutos} min, SUPUESTO).
                 </Text>
               </Box>
             )}
-            <Text fontSize="xs" color="textoSuave" mt={2}>
+            <Text textStyle="microdato" mt={2}>
               Solo para roles operativos y solo mientras la cuadrilla tiene una tarea en curso.
             </Text>
           </Seccion>
-          <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas">
+          <Seccion titulo="Capas oficiales" categoria="DOCUMENTO DE REFERENCIA" id="sec-capas" plegable="Mostrar capas oficiales">
             <Cargando carga={capas} hijos={(c) => (
               <SelectorCapas
                 capas={c.capas}

@@ -357,6 +357,36 @@
       "estado": "ok",
       "fuente_usada": "primaria",
       "notas": "DEM de ~75 m suavizado; precision vertical de varios metros. Muestra el gradiente regional de la llanura, no cotas de inundacion: el umbral de los sectores sigue siendo la altura de escala de K10 (SIMULADO)."
+    },
+    {
+      "id": "relieve_sectores",
+      "nombre": "Relieve fino de los sectores K10 (DEM z14, malla ~50 m)",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (z14)",
+      "licencia": "AWS Terrain Tiles: ver LEEME.md",
+      "bbox": [
+        -58.214,
+        -26.231,
+        -58.119,
+        -26.141
+      ],
+      "zoom": 14,
+      "tiles": 25,
+      "malla": [
+        191,
+        181
+      ],
+      "paso_grados": 0.0005,
+      "elevacion_min_m": 49.6,
+      "elevacion_max_m": 68.3,
+      "ruido_dem_m": 1.48,
+      "archivos": [
+        "relieve/dem_sectores.json"
+      ],
+      "fecha_descarga": "2026-11-20",
+      "categoria": "DOCUMENTO DE REFERENCIA",
+      "estado": "ok",
+      "fuente_usada": "primaria",
+      "notas": "Solo ordena DONDE avanza el agua dentro de cada sector; CUANDO se compromete lo define K10 (SIMULADO). Elevaciones del DEM, no de la escala del puerto."
     }
   ]
 }

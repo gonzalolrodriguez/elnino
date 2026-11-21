@@ -57,8 +57,8 @@ const RESUMEN: { items: CuadrillaResumen[] } = {
       vehiculo: "4x4",
       estado: "activa",
       integrantes: [
-        { usuario_id: 10, rol_operativo: "encargado_cuadrilla", es_encargado: true },
-        { usuario_id: 11, rol_operativo: "sipec", es_encargado: false },
+        { id: 101, usuario_id: 10, rol_operativo: "encargado_cuadrilla", es_encargado: true },
+        { id: 102, usuario_id: 11, rol_operativo: "sipec", es_encargado: false },
       ],
       tarea_actual: { id: 7, estado: "pendiente", solicitud_id: 4, sector_id: "S4", requiere_atencion: true },
       ultimo_parte: PARTE_DIFICULTAD,
@@ -70,7 +70,7 @@ const RESUMEN: { items: CuadrillaResumen[] } = {
       tipo_incidente: "ganadera",
       vehiculo: "camion_jaula",
       estado: "activa",
-      integrantes: [{ usuario_id: 12, rol_operativo: "veterinario", es_encargado: false }],
+      integrantes: [{ id: 103, usuario_id: 12, rol_operativo: "veterinario", es_encargado: false }],
       tarea_actual: null,
       ultimo_parte: null,
       dificultades_abiertas: 0,
@@ -126,7 +126,7 @@ describe("página Cuadrillas", () => {
       "GET /roles-operativos": ok({ roles: [{ codigo: "policia", nombre: "Policía", descripcion: null }] }),
       "GET /usuarios": ok([{ id: 20, email: "x@ejemplo.invalid", nombre_visible: "Nadie Real", rol: "cuadrilla", rol_operativo: null, estado: "activo", ultimo_login: null }]),
       "POST /cuadrillas/1/integrantes": ok({}, 201),
-      "DELETE /cuadrillas/1/integrantes/11": ok({}),
+      "DELETE /cuadrillas/1/integrantes/102": ok({}),
     });
     renderRuta("/comando/cuadrillas");
     const c1 = await screen.findByTestId("cuadrilla-1");
@@ -143,7 +143,9 @@ describe("página Cuadrillas", () => {
 
     fireEvent.click(within(await screen.findByTestId("cuadrilla-1")).getByRole("button", { name: "Quitar SIPEC de Cuadrilla humana 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar: quitar SIPEC" }));
-    await waitFor(() => expect(llamadas(f, "DELETE /cuadrillas/1/integrantes/11")).toHaveLength(1));
+    // Se quita por el id del INTEGRANTE (102), no por el del usuario (11).
+    await waitFor(() => expect(llamadas(f, "DELETE /cuadrillas/1/integrantes/102")).toHaveLength(1));
+    expect(llamadas(f, "DELETE /cuadrillas/1/integrantes/11")).toHaveLength(0);
   });
 
   it("si el operador no puede leer los usuarios, ingresa el número y se explica por qué", async () => {
@@ -193,7 +195,7 @@ describe("Operación: partes por tarea", () => {
       "PATCH /partes/3": ok({ ...PARTE_DIFICULTAD, resuelta: true }),
     });
     renderRuta("/comando/operacion");
-    const fila = (await screen.findByText("Evacuar familia")).closest("tr") as HTMLElement;
+    const fila = (await screen.findByText("Evacuar familia")).closest("li") as HTMLElement;
     expect(within(fila).getByTestId("requiere-atencion")).toBeInTheDocument();
     fireEvent.click(within(fila).getByRole("button", { name: "Ver partes de la tarea 7" }));
     const historial = await screen.findByTestId("partes-tarea-7");

@@ -1,16 +1,15 @@
-import { Box, Heading, Link, ListItem, Table, Tbody, Td, Text, Th, Thead, Tr, UnorderedList } from "@chakra-ui/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Box, Heading, Link, ListItem, Text, UnorderedList } from "@chakra-ui/react";
+import { useEffect, type ReactNode } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
+import { CaudalGlofas } from "../caudal/CaudalGlofas";
+import { CabeceraPublica } from "../components/CabeceraPublica";
 import { Insignia } from "../components/Insignia";
 import { Layout } from "../components/Layout";
-import { TablaDesplazable } from "../components/TablaDesplazable";
-import { MarcasUmbral } from "../components/MarcasUmbral";
-import { MuestraEstado } from "../components/MuestraEstado";
-import { K10_FECHA, MARGEN_RIESGO_M, SECTORES_K10, UMBRAL_ALERTA } from "../datos/kit";
-import { estadoSector, MapaSectores } from "../informacion/MapaSectores";
+import { UMBRAL_ALERTA } from "../datos/kit";
+import { SectoresInundacion } from "../informacion/SectoresInundacion";
 import { SerieK1 } from "../informacion/SerieK1";
-import { fmt, fmtMiles } from "../lib/entorno";
+import { fmt } from "../lib/entorno";
 import { useSerieFormosa } from "../lib/serie";
 
 const TEMAS = [
@@ -18,6 +17,7 @@ const TEMAS = [
   { id: "como-llega", titulo: "Cómo llega el agua a Formosa" },
   { id: "amenazas", titulo: "Dos amenazas distintas" },
   { id: "serie", titulo: "Puerto Formosa: umbrales y picos" },
+  { id: "caudal", titulo: "Caudal modelado (GloFAS)" },
   { id: "pronostico", titulo: "Pronóstico estacional 2026/27" },
   { id: "sectores", titulo: "Sectores de evaluación" },
   { id: "que-hacer", titulo: "Qué hacer" },
@@ -38,14 +38,14 @@ function Seccion({ id, titulo, children }: { id: string; titulo: string; childre
 function Hecho({ valor, texto, fuente }: { valor: string; texto: string; fuente: string }) {
   return (
     <Box py={4} borderBottom="1px solid" borderColor="borde" display="grid" gridTemplateColumns={{ base: "1fr", md: "9.5rem minmax(0, 1fr)" }} gap={{ base: 1, md: 6 }} maxW="48rem">
-      <Text textStyle="cifra" fontSize="2xl">
+      <Text textStyle="cifraMedia">
         {valor}
       </Text>
       <Box>
         <Text>{texto}</Text>
         <Box mt={2} display="flex" gap={2} alignItems="center" flexWrap="wrap">
           <Insignia categoria="DOCUMENTO DE REFERENCIA" />
-          <Text as="span" fontSize="xs" color="textoSuave">
+          <Text as="span" textStyle="microdato">
             {fuente}
           </Text>
         </Box>
@@ -67,13 +67,13 @@ function Indice() {
       pl={{ lg: 4 }}
       mb={{ base: 6, lg: 0 }}
     >
-      <Text fontWeight={700} fontSize="sm" mb={2}>
+      <Text textStyle="rotulo" color="texto" mb={2}>
         En esta página
       </Text>
       <Box as="ul" listStyleType="none" m={0} p={0} display={{ base: "grid", sm: "grid", lg: "block" }} gridTemplateColumns={{ base: "1fr", sm: "1fr 1fr" }} columnGap={6}>
         {TEMAS.map((t) => (
           <li key={t.id}>
-            <Link href={`#${t.id}`} display="block" py={1.5} fontSize="sm" textDecoration="none" color="textoSuave" _hover={{ color: "primario", textDecoration: "underline" }}>
+            <Link href={`#${t.id}`} display="block" py={1.5} fontSize="rotulo" textDecoration="none" color="textoSuave" _hover={{ color: "primario", textDecoration: "underline" }}>
               {t.titulo}
             </Link>
           </li>
@@ -85,7 +85,6 @@ function Indice() {
 
 export default function Informacion() {
   const { hash } = useLocation();
-  const [altura, setAltura] = useState(5.6);
   const { serie } = useSerieFormosa();
 
   useEffect(() => {
@@ -94,13 +93,11 @@ export default function Informacion() {
 
   return (
     <Layout titulo="Información">
-      <Box maxW="80rem" mx="auto">
-      <Heading as="h1" size="2xl" maxW="40rem">
-        Información para entender la crecida
-      </Heading>
-      <Text mt={4} maxW="40rem" fontSize="lg" color="pizarra.700">
-        El Niño, el río Paraguay y la lluvia local: qué es cada fenómeno, cómo se traduce en Formosa y qué dicen los datos hasta el corte del 31/10/2026.
-      </Text>
+      <Box>
+      <CabeceraPublica
+        titulo="Información para entender la crecida"
+        intro="El Niño, el río Paraguay y la lluvia local: qué es cada fenómeno, cómo se traduce en Formosa y qué dicen los datos hasta el corte del 31/10/2026."
+      />
 
       <Box mt={{ base: 6, lg: 8 }} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "13rem minmax(0, 1fr)" }} columnGap={{ lg: 10 }}>
         <Indice />
@@ -151,6 +148,13 @@ export default function Informacion() {
         <SerieK1 serie={serie} />
       </Seccion>
 
+      <Seccion id="caudal" titulo="Caudal modelado del río Paraguay (GloFAS)">
+        <Text maxW="40rem" mb={4}>
+          Además de la altura de la escala, el modelo global GloFAS estima el caudal del río. Es una referencia modelada, distinta de la altura observada.
+        </Text>
+        <CaudalGlofas k1={serie} />
+      </Seccion>
+
       <Seccion id="pronostico" titulo="Pronóstico estacional 2026/27">
         <Text maxW="40rem" mb={4}>
           El modelo CFS v2 de NOAA (ensamble de 20 corridas) estima condiciones de El Niño muy fuerte para el período noviembre de 2026
@@ -158,64 +162,13 @@ export default function Informacion() {
         </Text>
         <Hecho valor="+2,2" texto="Pico estimado del índice ONI. La probabilidad de que el ONI llegue a +2,0 °C o más es de 93 %." fuente="Pronóstico agroclimático estacional 2026/27 Formosa, CFS v2 (emisión 29/10/2026)" />
         <Hecho valor="8 de 14" texto="Campañas de años El Niño que quedaron en el tercio húmedo en Formosa; solo una cayó en el tercio seco (45 campañas analizadas). La fase ENOS cambia las probabilidades, no decide la campaña." fuente="Mismo pronóstico agroclimático (29/10/2026)" />
-        <Text mt={3} fontSize="sm" color="textoSuave" maxW="40rem">
+        <Text mt={3} textStyle="microdato" maxW="40rem">
           El INA no pronostica la altura del río más allá de 15 días: cualquier fecha de cruce de un umbral en 2027 sería un supuesto.
         </Text>
       </Seccion>
 
       <Seccion id="sectores" titulo="Sectores de evaluación">
-        <Box display="flex" gap={2} alignItems="center" mb={3} flexWrap="wrap">
-          <Insignia categoria="SIMULADO" />
-          <Text fontSize="sm">K10 v1.0 · {K10_FECHA}. No son barrios ni parajes reales.</Text>
-        </Box>
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", md: "minmax(0, 22rem) minmax(0, 1fr)" }} gap={8} alignItems="start">
-          <Box>
-            <MapaSectores altura={altura} />
-            <Box mt={3}>
-              <label htmlFor="altura-sim" style={{ fontSize: "0.875rem", fontWeight: 600, display: "block", marginBottom: "0.25rem" }}>
-                Altura simulada de Puerto Formosa: {fmt(altura)} m
-              </label>
-              <input id="altura-sim" type="range" min={0} max={12} step={0.1} value={altura} onChange={(e) => setAltura(Number(e.target.value))} style={{ width: "100%", minHeight: "2rem" }} />
-              <MarcasUmbral />
-              <Text fontSize="xs" color="textoSuave">
-                Escenario SIMULADO. En riesgo: a menos de {fmt(MARGEN_RIESGO_M)} m de la altura de compromiso (SUPUESTO). El 5,60 m es el valor
-                observado al corte.
-              </Text>
-            </Box>
-          </Box>
-          <Box minW={0}>
-            <TablaDesplazable etiqueta="Sectores de evaluación K10">
-            <Table size="sm" variant="simple" aria-label="Sectores de evaluación K10">
-              <Thead>
-                <Tr>
-                  <Th>Sector</Th>
-                  <Th isNumeric>Compromiso</Th>
-                  <Th isNumeric>Población</Th>
-                  <Th>Estado</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {SECTORES_K10.map((s) => (
-                  <Tr key={s.id}>
-                    <Td>
-                      <strong>{s.id}</strong> {s.nombre}
-                      <Text fontSize="xs" color="textoSuave">
-                        {s.acceso}
-                      </Text>
-                    </Td>
-                    <Td isNumeric>{fmt(s.compromiso_m)} m</Td>
-                    <Td isNumeric>{fmtMiles(s.poblacion)}</Td>
-                    <Td><MuestraEstado estado={estadoSector(s, altura)} /></Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-            </TablaDesplazable>
-            <Text fontSize="xs" color="textoSuave" mt={2}>
-              S4 se compromete 0,30 m antes del nivel de alerta: a 1,90 m del valor observado al corte.
-            </Text>
-          </Box>
-        </Box>
+        <SectoresInundacion />
       </Seccion>
 
       <Seccion id="que-hacer" titulo="Qué hacer">
@@ -243,6 +196,9 @@ export default function Informacion() {
             consultada el 29/10/2026: alerta.ina.gob.ar/pub/datos.
           </ListItem>
           <ListItem>Umbrales y ubicación de estaciones: INA, catálogo de estaciones, K3 (DATO OBSERVADO, consultado el 29/10/2026).</ListItem>
+          <ListItem>
+            Caudal diario modelado: GloFAS v4 (Copernicus Emergency Management Service) vía Open-Meteo Flood API, CC BY 4.0 (DOCUMENTO DE REFERENCIA, modelado, hasta el corte 31/10/2026).
+          </ListItem>
           <ListItem>Sectores: K10 v1.0 del 12/11/2026 (SIMULADO).</ListItem>
           <ListItem>SMN, Boletín N.º 1 sobre El Niño, 04/09/2026 (DOCUMENTO DE REFERENCIA).</ListItem>
           <ListItem>NOAA CPC, Discusión ENSO, 08/10/2026 (DOCUMENTO DE REFERENCIA).</ListItem>

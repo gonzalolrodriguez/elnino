@@ -1,7 +1,7 @@
 import { LEYENDA } from "@evacuaciones/shared";
 import { StyleSheet, Text, View } from "react-native";
 
-import { COLOR } from "@/components/tema";
+import { COLOR, TIPO } from "@/components/tema";
 import { useDiseno } from "@/lib/responsive";
 
 /**
@@ -33,5 +33,5 @@ export function LeyendaFija() {
 
 const styles = StyleSheet.create({
   banner: { backgroundColor: COLOR.tinta },
-  texto: { color: "#DCE8F5", fontSize: 11, lineHeight: 15, fontWeight: "600", textAlign: "center" },
+  texto: { ...TIPO.minimo, fontWeight: "600", color: COLOR.sobreOscuro, textAlign: "center" },
 });

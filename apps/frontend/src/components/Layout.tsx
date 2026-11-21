@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink, NavLink, useLocation } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
+import { ANCHO_CONTENEDOR, GUTTER, type AnchoContenedor } from "./Contenedor";
 import { Marca } from "./Marca";
 
 function Enlace({ to, children }: { to: string; children: ReactNode }) {
@@ -72,9 +73,9 @@ function Navegacion() {
       <Flex
         as="nav"
         aria-label="Navegación principal"
-        maxW="90rem"
+        maxW={ANCHO_CONTENEDOR.datos}
         mx="auto"
-        px={{ base: 4, md: 8 }}
+        px={GUTTER}
         py={2}
         align="center"
         justify="space-between"
@@ -96,7 +97,7 @@ function Navegacion() {
             <Marca />
           </Box>
           <Text as="span" fontSize="lg" fontWeight={700} lineHeight={1.1} letterSpacing="-0.02em">
-            Operación Agua
+            EvacuaFor
             <Text as="span" display="block" fontSize="xs" fontWeight={400} color="textoSuave" letterSpacing="0">
               Gestión de evacuaciones
             </Text>
@@ -197,7 +198,7 @@ const REPOSITORIO = "https://github.com/gonzalolrodriguez/elnino";
 function Pie() {
   return (
     <Box as="footer" role="contentinfo" bg="oscuro.bg" color="oscuro.suave" className="sobre-oscuro" fontSize="sm">
-      <Box maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} pt={{ base: 10, md: 14 }} pb={6}>
+      <Box maxW={ANCHO_CONTENEDOR.datos} mx="auto" px={GUTTER} pt={{ base: 10, md: 14 }} pb={6}>
         <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "1.5fr 1fr 1.2fr 1.5fr" }} gap={{ base: 8, lg: 10 }}>
           <Box minW={0}>
             <Flex align="center" color="oscuro.fg" mb={3}>
@@ -205,7 +206,7 @@ function Pie() {
                 <Marca />
               </Box>
               <Text as="span" fontSize="lg" fontWeight={700} letterSpacing="-0.02em">
-                Operación Agua
+                EvacuaFor
               </Text>
             </Flex>
             <Text color="oscuro.fg" fontWeight={600}>
@@ -263,10 +264,22 @@ function Pie() {
 }
 
 /** Diseño base: la leyenda obligatoria queda fija arriba en toda pantalla y se repite en el pie. */
-export function Layout({ children, contenedor = true, titulo }: { children: ReactNode; contenedor?: boolean; titulo?: string }) {
+export function Layout({
+  children,
+  contenedor = true,
+  ancho = "lectura",
+  titulo,
+}: {
+  children: ReactNode;
+  /** `false` deja el contenido a sangre (landing, panel): la página arma su propio contenedor. */
+  contenedor?: boolean;
+  /** Ancho del contenedor: `lectura` (72rem: público, formularios, ciudadano) o `datos` (90rem: paneles y tableros). */
+  ancho?: AnchoContenedor;
+  titulo?: string;
+}) {
   const { hash } = useLocation();
   useEffect(() => {
-    document.title = titulo ? `${titulo} · Operación Agua` : "Operación Agua · Gestión de evacuaciones";
+    document.title = titulo ? `${titulo} · EvacuaFor` : "EvacuaFor · Gestión de evacuaciones";
   }, [titulo]);
   // Los enlaces con ancla (p. ej. el pie) llevan a la sección aunque cambie de ruta.
   useEffect(() => {
@@ -292,9 +305,10 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
       >
         Saltar al contenido
       </Link>
+      {/* La cinta vive dentro de una región con nombre: así no queda fuera de ningún landmark (axe `region`). */}
       <Box
-        role="note"
-        aria-label="Aviso de prototipo"
+        as="section"
+        aria-label="Prototipo"
         position="sticky"
         top={0}
         zIndex={30}
@@ -302,12 +316,14 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
         color="leyenda.fg"
         py={1.5}
         px={4}
-        fontSize="0.75rem"
+        fontSize="xs"
         fontWeight={600}
         lineHeight={1.35}
         textAlign="center"
       >
-        {LEYENDA}
+        <Box role="note" aria-label="Aviso de prototipo">
+          {LEYENDA}
+        </Box>
       </Box>
       <Navegacion />
       <Box
@@ -316,7 +332,7 @@ export function Layout({ children, contenedor = true, titulo }: { children: Reac
         tabIndex={-1}
         flex="1"
         _focus={{ outline: "none" }}
-        {...(contenedor ? { maxW: "90rem", w: "100%", mx: "auto", px: { base: 4, md: 8 }, py: { base: 8, md: 12 } } : {})}
+        {...(contenedor ? { maxW: ANCHO_CONTENEDOR[ancho], w: "100%", mx: "auto", px: GUTTER, py: { base: 8, md: 12 } } : {})}
       >
         {children}
       </Box>

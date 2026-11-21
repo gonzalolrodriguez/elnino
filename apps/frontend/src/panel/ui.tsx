@@ -1,12 +1,21 @@
 import { Alert, AlertDescription, AlertIcon, AlertTitle, Box, type BoxProps, Button, Flex, Heading, Text } from "@chakra-ui/react";
-import type { Categoria } from "@evacuaciones/shared";
-import type { ReactNode } from "react";
+import { CATEGORIAS, type Categoria } from "@evacuaciones/shared";
+import { createContext, useContext, type ReactNode } from "react";
 
+import { Plegable } from "../components/Plegable";
 import { EstadoCargando } from "../components/EstadoCargando";
 import { AlertaError } from "../components/Formulario";
 import { ESTADOS } from "../estilo/estados";
 import { Insignia } from "../components/Insignia";
 import type { Carga } from "../lib/useCarga";
+
+/** Categoría que el bloque (`Seccion`) ya declara en su título: las cifras de su misma categoría no la repiten. */
+const CategoriaDelBloque = createContext<Categoria | undefined>(undefined);
+
+/** Categoría que comparten todos los elementos de un bloque, o `undefined` si hay mezcla (o ninguno). */
+export function categoriaComun(cats: readonly Categoria[]): Categoria | undefined {
+  return cats.length > 0 && cats.every((c) => c === cats[0]) ? cats[0] : undefined;
+}
 
 /** Formatea metros con coma decimal: 5.6 -> "5,60 m". */
 export function fmtM(v: number | null | undefined, dec = 2): string {
@@ -38,7 +47,7 @@ export const APILAR = {
     thead: { position: "absolute", left: "-9999px" },
     "tbody tr": { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "1rem", rowGap: "0.25rem", padding: "0.75rem 0", borderBottom: "1px solid var(--chakra-colors-pizarra-100)" },
     "tbody td": { display: "block", border: "none", padding: "0.125rem 0", textAlign: "left !important", whiteSpace: "normal" },
-    "tbody td::before": { content: "attr(data-etiqueta)", display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--chakra-colors-textoSuave)" },
+    "tbody td::before": { content: "attr(data-etiqueta)", display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "var(--chakra-colors-textoSuave)" },
     "tbody td:first-of-type": { gridColumn: "1 / -1", fontWeight: 700 },
     "tbody td:first-of-type::before": { display: "none" },
     "tbody td[colspan]": { gridColumn: "1 / -1" },
@@ -67,7 +76,7 @@ export function Chip({ tono = "neutro", icono, children, ...resto }: { tono?: To
       px={2.5}
       py="2px"
       borderRadius="full"
-      fontSize="0.8125rem"
+      fontSize="rotulo"
       fontWeight={600}
       lineHeight={1.4}
       whiteSpace="nowrap"
@@ -102,30 +111,39 @@ export function Seccion({
   id,
   icono,
   mb = 5,
+  sinCategoria,
+  plegable,
 }: {
   titulo: string;
   children: ReactNode;
+  /** Categoría de todo el bloque: se rotula una sola vez, en el título. */
   categoria?: Categoria;
+  /** Bloque de categorías mezcladas: no rotula el título y cada cifra lleva la suya. */
+  sinCategoria?: boolean;
   derecha?: ReactNode;
   id?: string;
   icono?: ReactNode;
   mb?: number;
+  /** Si se indica, el contenido queda plegado por defecto bajo este rótulo (bloques largos y secundarios). */
+  plegable?: string;
 }) {
   return (
     <Box as="section" aria-labelledby={id ?? undefined} layerStyle="tarjeta" p={{ base: 4, md: 5 }} mb={mb} minW={0}>
       <Flex align="center" columnGap={3} rowGap={1.5} mb={4} wrap="wrap">
         {icono && <FichaIcono icono={icono} />}
-        <Heading as="h2" id={id} size="sm" textStyle="tituloBloque" fontSize="1.125rem">
+        <Heading as="h2" id={id} size="bloque" textStyle="tituloBloque">
           {titulo}
         </Heading>
-        {categoria && <Insignia categoria={categoria} />}
+        {categoria && !sinCategoria && <Insignia categoria={categoria} />}
         {derecha && (
           <Box ml="auto" textStyle="microdato">
             {derecha}
           </Box>
         )}
       </Flex>
-      {children}
+      <CategoriaDelBloque.Provider value={sinCategoria ? undefined : categoria}>
+        {plegable ? <Plegable titulo={plegable}>{children}</Plegable> : children}
+      </CategoriaDelBloque.Provider>
     </Box>
   );
 }
@@ -138,6 +156,7 @@ export function Cifra({
   fuente,
   fecha,
   testId,
+  omitirCategoria,
 }: {
   etiqueta: string;
   valor: ReactNode;
@@ -145,14 +164,21 @@ export function Cifra({
   fuente?: string;
   fecha?: string | null;
   testId?: string;
+  /**
+   * No dibuja la insignia (la fila o el bloque ya rotulan la categoría). Por defecto se omite solo cuando el bloque
+   * declara SIMULADO y la cifra también lo es: lo normal del prototipo no se repite. DATO OBSERVADO nunca se oculta solo.
+   */
+  omitirCategoria?: boolean;
 }) {
+  const delBloque = useContext(CategoriaDelBloque);
+  const omitir = omitirCategoria ?? (delBloque === CATEGORIAS.SIMULADO && categoria === CATEGORIAS.SIMULADO);
   return (
     <Box minW="9rem" flex="1 1 9rem">
       <Text textStyle="rotulo">{etiqueta}</Text>
       <Text textStyle="cifraMedia" data-testid={testId} my={1}>
         {valor}
       </Text>
-      <Insignia categoria={categoria} />
+      {!omitir && <Insignia categoria={categoria} />}
       {(fuente || fecha) && (
         <Text textStyle="microdato" mt="2px">
           {[fuente, fecha ? fmtFecha(fecha) : null].filter(Boolean).join(" · ")}

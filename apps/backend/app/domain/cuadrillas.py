@@ -79,3 +79,100 @@ def tipos_necesarios(hay_personas: bool, bovinos: int, colmenas: int) -> list[st
     if colmenas > 0:
         tipos.append("apicola")
     return tipos
+
+
+# ---- gestión completa de cuadrillas (tipo operativo, profesión, encargado) ----------------------
+
+TIPOS_OPERATIVOS = (
+    "personas",
+    "familias",
+    "productores_ganado",
+    "apicola",
+    "bienes",
+    "traslado_mixto",
+)
+
+PROFESIONES = (
+    "medicina",
+    "enfermeria",
+    "veterinaria",
+    "zootecnia",
+    "trabajo_social",
+    "policia",
+    "bomberos",
+    "defensa_civil",
+    "prefectura",
+    "chofer",
+    "tecnico_energia",
+    "logistica",
+    "otra",
+)
+
+ROL_ENCARGADO = "encargado_cuadrilla"
+
+# El tipo operativo afina al tipo de incidente (que reparte las órdenes y elige los roles).
+_INCIDENTE_DE = {
+    "personas": "humana",
+    "familias": "humana",
+    "bienes": "humana",
+    "traslado_mixto": "humana",
+    "productores_ganado": "ganadera",
+    "apicola": "apicola",
+}
+_OPERATIVO_DE = {"humana": "personas", "ganadera": "productores_ganado", "apicola": "apicola"}
+
+# Rol del catálogo que corresponde por defecto a cada profesión (``otra`` no tiene: se pide el rol).
+ROL_DE_PROFESION = {
+    "medicina": "sipec",
+    "enfermeria": "sipec",
+    "veterinaria": "veterinario",
+    "zootecnia": "inta",
+    "trabajo_social": "trabajo_social",
+    "policia": "policia",
+    "bomberos": "defensa_civil",
+    "defensa_civil": "defensa_civil",
+    "prefectura": "prefectura",
+    "chofer": "transporte",
+    "tecnico_energia": "tecnico_energia",
+    "logistica": "coordinador_sector",
+}
+
+# Profesión por defecto de cada rol del catálogo (misma correspondencia que la migración 0011).
+PROFESION_DE_ROL = {
+    "sipec": "medicina",
+    "trabajo_social": "trabajo_social",
+    "desarrollo_humano": "trabajo_social",
+    "policia": "policia",
+    "prefectura": "prefectura",
+    "defensa_civil": "defensa_civil",
+    "veterinario": "veterinaria",
+    "senasa": "veterinaria",
+    "inta": "zootecnia",
+    "paippa": "zootecnia",
+    "produccion": "zootecnia",
+    "transporte": "chofer",
+    "tecnico_energia": "tecnico_energia",
+    "vialidad": "logistica",
+    "coordinador_sector": "logistica",
+    ROL_ENCARGADO: "logistica",
+}
+
+
+def incidente_de(tipo_operativo: str) -> str:
+    if tipo_operativo not in _INCIDENTE_DE:
+        raise ValueError(f"Tipo operativo desconocido: {tipo_operativo}")
+    return _INCIDENTE_DE[tipo_operativo]
+
+
+def operativo_de(tipo_incidente: str) -> str:
+    if tipo_incidente not in _OPERATIVO_DE:
+        raise ValueError(f"Tipo de incidente desconocido: {tipo_incidente}")
+    return _OPERATIVO_DE[tipo_incidente]
+
+
+def profesion_de_rol(rol: str) -> str:
+    return PROFESION_DE_ROL.get(rol, "otra")
+
+
+def rol_de_profesion(profesion: str) -> str | None:
+    return ROL_DE_PROFESION.get(profesion)

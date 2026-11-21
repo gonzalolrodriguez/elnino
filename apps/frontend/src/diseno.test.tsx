@@ -20,9 +20,9 @@ describe("insignias de categoría", () => {
     expect(within(insignia).getByText("Categoría:", { exact: false })).toBeInTheDocument();
   });
 
-  it("SIMULADO se distingue por borde punteado y no solo por color", () => {
+  it("SIMULADO se distingue por subrayado punteado y no solo por color", () => {
     montar(<Insignia categoria="SIMULADO" />);
-    expect(getComputedStyle(screen.getByText("SIMULADO")).borderStyle).toBe("dashed");
+    expect(getComputedStyle(screen.getByText("SIMULADO")).textDecorationLine).toBe("underline");
   });
 });
 

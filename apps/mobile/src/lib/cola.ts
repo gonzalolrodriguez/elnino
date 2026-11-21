@@ -5,6 +5,7 @@
  * y en memoria en las pruebas.
  */
 
+import type { AdjuntoLocal } from "@/lib/adjuntos";
 import type { ResultadoParte, TipoParte } from "@/lib/partes";
 import type { RespuestaEvacuado } from "@/lib/servicios";
 
@@ -68,11 +69,27 @@ export type DatosParte = {
   tipo: TipoParte;
   resultado?: ResultadoParte;
   observacion?: string;
+  /**
+   * Evidencia (fotos y videos) todavía no subida. Va en dos tiempos como las fotos del cierre: primero el
+   * parte y después cada archivo (`POST /tareas/{id}/partes/{parte_id}/adjuntos`); el subido se quita de acá.
+   */
+  adjuntos?: AdjuntoLocal[];
+};
+
+/**
+ * El operativo avisó a la cuadrilla y un integrante lo marcó como leído (`POST /avisos/{id}/leido`).
+ * Se encola para que la marca llegue aunque la cuadrilla esté sin señal.
+ */
+export type DatosAvisoLeido = {
+  clase: "aviso_leido";
+  aviso_id: number;
+  cuadrilla_id?: number;
 };
 
 /** Lo que guarda la cola. Una solicitud no tiene `clase` (formato original, sigue siendo válido). */
-export type DatosCola = DatosSolicitud | DatosCierre | DatosConfirmacion | DatosParte;
+export type DatosCola = DatosSolicitud | DatosCierre | DatosConfirmacion | DatosParte | DatosAvisoLeido;
 
+export const esAvisoLeido = (d: DatosCola): d is DatosAvisoLeido => "clase" in d && d.clase === "aviso_leido";
 export const esCierre = (d: DatosCola): d is DatosCierre => "clase" in d && d.clase === "cierre";
 export const esConfirmacion = (d: DatosCola): d is DatosConfirmacion => "clase" in d && d.clase === "confirmacion";
 export const esParte = (d: DatosCola): d is DatosParte => "clase" in d && d.clase === "parte";
@@ -176,6 +193,7 @@ export function esperaBackoffMs(intentos: number): number {
 
 function fotosPendientes(item: ItemCola): string[] {
   if (esCierre(item.datos)) return item.datos.fotos;
+  if (esParte(item.datos)) return (item.datos.adjuntos ?? []).map((a) => a.uri);
   return item.fotoUri && !item.fotoSubida ? [item.fotoUri] : [];
 }
 
@@ -320,7 +338,8 @@ export class ColaOffline {
 
       let detener = false;
       let actual: ItemCola = { ...item, servidorId };
-      const sujeto = esCierre(item.datos) ? "La constancia" : "La solicitud";
+      const sujeto = esCierre(item.datos) ? "La constancia" : esParte(item.datos) ? "El parte" : "La solicitud";
+      const archivo = esParte(item.datos) ? "el archivo" : "la foto";
       for (const uri of fotosPendientes(actual)) {
         const f = await this.dep.subirFoto(servidorId, uri, actual.datos);
         if (f.ok) {
@@ -328,13 +347,13 @@ export class ColaOffline {
         } else if (f.tipo === "rechazo") {
           // Lo principal ya llegó: la foto rechazada no debe reintentarse ni bloquear el envío.
           actual = await this.quitarFoto(actual, uri, false, {
-            ultimoError: `${sujeto} se envió, pero el servidor no aceptó la foto: ${f.mensaje}`,
+            ultimoError: `${sujeto} se envió, pero el servidor no aceptó ${archivo}: ${f.mensaje}`,
           });
         } else if (f.tipo === "red" && this.agotado(item)) {
           // Tras muchos intentos se abandona la foto y se sigue con la cola.
           actual = await this.quitarFoto(actual, uri, false, {
             intentos: item.intentos + 1,
-            ultimoError: `${sujeto} se envió, pero la foto no pudo subirse: ${f.mensaje}`,
+            ultimoError: `${sujeto} se envió, pero ${archivo} no pudo subirse: ${f.mensaje}`,
           });
         } else {
           await this.reprogramar(item, f.mensaje);
@@ -363,6 +382,8 @@ export class ColaOffline {
     let nuevo: Partial<Omit<ItemCola, "id">>;
     if (esCierre(item.datos)) {
       nuevo = { datos: { ...item.datos, fotos: item.datos.fotos.filter((f) => f !== uri) }, ...cambios };
+    } else if (esParte(item.datos)) {
+      nuevo = { datos: { ...item.datos, adjuntos: (item.datos.adjuntos ?? []).filter((a) => a.uri !== uri) }, ...cambios };
     } else {
       nuevo = subida ? { fotoSubida: true, ...cambios } : { fotoUri: null, ...cambios };
     }

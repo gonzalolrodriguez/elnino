@@ -54,7 +54,7 @@ export type EstadoTarea = (typeof ESTADOS_TAREA)[number];
 export const PERFILES_RUTEO = ["vehicular", "camion_jaula", "arreo"] as const;
 export type PerfilRuteo = (typeof PERFILES_RUTEO)[number];
 
-export const EVENTOS_WS = ["escenario", "solicitud", "orden", "tarea"] as const;
+export const EVENTOS_WS = ["escenario", "solicitud", "orden", "tarea", "aviso_cuadrilla"] as const;
 export type EventoWs = (typeof EVENTOS_WS)[number];
 
 /** Código con que el servidor cierra el WebSocket si el primer mensaje no trae un token válido. */

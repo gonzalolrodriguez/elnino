@@ -1,9 +1,12 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { Icono } from "@/components/Icono";
+import { MarcarEnMapa } from "@/components/mapa/MarcarEnMapa";
+import { Disco } from "@/components/Piezas";
 import { Boton, COLOR, ErrorCaja, Insignia, Tarjeta, Texto } from "@/components/ui";
-import { RADIO } from "@/components/tema";
+import { RADIO, TIPO } from "@/components/tema";
 import { useCola } from "@/lib/ColaContext";
 import { datosPedidoRapido, personasParaPedidoRapido, SEGUNDOS_CONFIRMACION } from "@/lib/ayudaRapida";
 import { abrirSMS } from "@/lib/ayudaSms";
@@ -42,18 +45,21 @@ export function AyudaAhora({
   const [error, setError] = useState<string | null>(null);
   const enCurso = useRef(false);
 
-  const mandar = useCallback(async () => {
+  const [manual, setManual] = useState<Coordenadas | null>(null);
+
+  /** Sin `puntoManual` toma el GPS; con él (marcado en el mapa) no hace falta el GPS. */
+  const mandar = useCallback(async (puntoManual?: Coordenadas) => {
     if (enCurso.current) return;
     enCurso.current = true;
     setError(null);
     setFase({ tipo: "enviando" });
     try {
-      const gps = await obtenerUbicacion();
-      const punto = gps.ok ? gps.coordenadas : null;
+      const gps = puntoManual ? null : await obtenerUbicacion();
+      const punto = puntoManual ?? (gps?.ok ? gps.coordenadas : null);
       const personas = await personasParaPedidoRapido(usuario.rol, `grupo_integrantes:${usuario.id}:${obtenerUrlServidor()}`);
       const datos = datosPedidoRapido(punto, personas, referencia);
       if (!datos) {
-        setFase({ tipo: "sin_ubicacion", motivo: gps.ok ? "error" : gps.motivo });
+        setFase({ tipo: "sin_ubicacion", motivo: !gps || gps.ok ? "error" : gps.motivo });
         return;
       }
       const r = await enviar(datos, null);
@@ -118,15 +124,22 @@ export function AyudaAhora({
             setFase({ tipo: "confirmando", segundos: SEGUNDOS_CONFIRMACION });
           }}
           style={({ pressed }) => ({
-            minHeight: 72,
-            borderRadius: RADIO.boton,
+            minHeight: 84,
+            borderRadius: RADIO.tarjeta,
+            flexDirection: "row",
             justifyContent: "center",
             alignItems: "center",
+            gap: 12,
             paddingHorizontal: 16,
-            backgroundColor: pressed ? "#8F1D14" : COLOR.error,
+            paddingVertical: 14,
+            backgroundColor: pressed ? COLOR.errorPresionado : COLOR.error,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <Text maxFontSizeMultiplier={1.5} style={{ color: "#fff", fontSize: 22, fontWeight: "700", textAlign: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLOR.velo, alignItems: "center", justifyContent: "center" }}>
+            <Icono nombre="alerta" tam={28} color={COLOR.papel} />
+          </View>
+          <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.destacado, color: COLOR.papel, flexShrink: 1 }}>
             Necesito ayuda ahora
           </Text>
         </Pressable>
@@ -143,10 +156,13 @@ export function AyudaAhora({
         <>
           <Text
             accessibilityLiveRegion="polite"
-            style={{ fontSize: 18, fontWeight: "700", color: COLOR.texto }}
+            style={{ ...TIPO.subtitulo, color: COLOR.texto }}
           >
             Se enviará tu pedido de ayuda en {fase.segundos} s
           </Text>
+          <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ height: 8, borderRadius: 4, backgroundColor: COLOR.borde, overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 4, width: `${Math.round((fase.segundos / SEGUNDOS_CONFIRMACION) * 100)}%`, backgroundColor: COLOR.error }} />
+          </View>
           <Texto suave>Se toma tu ubicación y se avisa al panel operativo. Podés cancelar ahora.</Texto>
           <Boton titulo="Enviar ahora" onPress={() => void mandar()} />
           <Boton titulo="Cancelar" variante="secundario" onPress={() => setFase({ tipo: "reposo" })} />
@@ -166,6 +182,8 @@ export function AyudaAhora({
           }
         >
           <Boton titulo="Escribir una referencia" variante="secundario" onPress={alNecesitarDetalle} />
+          <MarcarEnMapa punto={manual} alCambiar={(p) => setManual({ lat: p.lat, lon: p.lon })} />
+          {manual ? <Boton titulo="Enviar el pedido con este punto" onPress={() => void mandar(manual)} /> : null}
           <Texto suave pequeno>
             Sin datos móviles también podés usar «¿Sin datos? Enviar por SMS» más abajo, o llamar al 103.
           </Texto>
@@ -176,10 +194,16 @@ export function AyudaAhora({
 
       {fase.tipo === "listo" ? (
         <>
-          <Text accessibilityLiveRegion="polite" style={{ color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.ok, fontWeight: "700", fontSize: 17 }}>
-            {fase.estado === "encolada" ? "Pedido guardado en el teléfono" : "Pedido enviado"}
-            {fase.id !== null ? ` · n.º ${fase.id}` : ""}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Disco tono={fase.estado === "encolada" ? "aviso" : "ok"} icono={fase.estado === "encolada" ? "reloj" : "tilde"} tam={40} />
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{ flex: 1, ...TIPO.subtitulo, color: fase.estado === "encolada" ? COLOR.avisoTexto : COLOR.okTexto }}
+            >
+              {fase.estado === "encolada" ? "Pedido guardado en el teléfono" : "Pedido enviado"}
+              {fase.id !== null ? ` · n.º ${fase.id}` : ""}
+            </Text>
+          </View>
           <Insignia categoria="SIMULADO" />
           <Texto suave>
             {fase.estado === "encolada"
@@ -193,11 +217,11 @@ export function AyudaAhora({
           ) : null}
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="Ver Mis solicitudes"
+            accessibilityLabel="Ver Mis pedidos"
             onPress={() => router.push("/solicitudes")}
             style={{ minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center" }}
           >
-            <Text style={{ color: COLOR.primario, fontWeight: "600", fontSize: 15 }}>Ver Mis solicitudes</Text>
+            <Text style={{ ...TIPO.cuerpoFuerte, color: COLOR.primario }}>Ver Mis pedidos</Text>
           </Pressable>
           <Boton titulo="Listo" variante="secundario" onPress={() => setFase({ tipo: "reposo" })} />
         </>

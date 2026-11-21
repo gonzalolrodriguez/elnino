@@ -4,7 +4,8 @@ import { Linking, View } from "react-native";
 import { EnlaceConexion } from "@/components/EnlaceConexion";
 import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { EnlaceQueHacer } from "@/components/EnlaceQueHacer";
-import { Boton, Cargando, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Disco, Encabezado } from "@/components/Piezas";
+import { Boton, Cargando, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
 import { useDiseno } from "@/lib/responsive";
 import { useSesion } from "@/lib/SesionContext";
 
@@ -19,7 +20,8 @@ export default function Bienvenida() {
   return (
     <Pantalla>
       <View style={{ flex: 1, justifyContent: "center", gap: d.paso * 1.5 }}>
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
+          <Disco tono="info" icono="gota" tam={56} />
           <Titulo>Plataforma de Gestión de Evacuaciones</Titulo>
           <Texto suave>
             Pedí asistencia, recibí alertas de tu sector y consultá tu centro de recepción sugerido.
@@ -30,12 +32,12 @@ export default function Bienvenida() {
           <Boton titulo="Registrarme" variante="secundario" onPress={() => router.push("/registro")} />
         </View>
         <Tarjeta>
-          <Subtitulo>¿Necesitás ayuda ahora? No hace falta cuenta</Subtitulo>
+          <Encabezado icono="alerta">¿Necesitás ayuda ahora? No hace falta cuenta</Encabezado>
           <Texto suave>
             Funciona sin internet: podés llamar o armar un mensaje de texto con tu ubicación.
           </Texto>
-          <Boton titulo="Llamar al 103" onPress={() => void Linking.openURL("tel:103")} />
-          <Boton titulo="Pedir ayuda por SMS" variante="secundario" onPress={() => router.push("/ayuda-sms")} />
+          <Boton titulo="Llamar al 103" icono="alerta" onPress={() => void Linking.openURL("tel:103")} />
+          <Boton titulo="Pedir ayuda por SMS" variante="secundario" icono="bandeja" onPress={() => router.push("/ayuda-sms")} />
           <EnlaceBrujula />
           <EnlaceQueHacer />
         </Tarjeta>

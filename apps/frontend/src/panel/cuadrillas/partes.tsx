@@ -1,8 +1,12 @@
-import { Flex } from "@chakra-ui/react";
 import type { ComponentType } from "react";
 
-import { IconoAlerta, IconoHistorial, IconoReloj, IconoTilde, IconoTriangulo, type PropsIcono } from "../../components/iconos/Iconos";
+import { IconoAlerta, IconoCamion, IconoHistorial, IconoReloj, IconoTilde, IconoTriangulo, type PropsIcono } from "../../components/iconos/Iconos";
+import { etiquetaEstadoTarea } from "../../lib/etiquetas";
 import type { ParteTarea } from "../tipos";
+import { Chip, type TonoChip } from "../ui";
+
+/** Altura mínima de 44 px en el celular para los botones chicos del panel (objetivo táctil, WCAG 2.5.5). */
+export const TACTIL = { minH: { base: "2.75rem", md: "2rem" } } as const;
 
 /** Clave visual de un parte: los resultados se distinguen por su resultado; el resto, por su tipo. */
 export type ClaveParte = "avance" | "dificultad" | "completa" | "parcial" | "no_realizada" | "reprogramada";
@@ -11,31 +15,48 @@ export function claveParte(p: Pick<ParteTarea, "tipo" | "resultado">): ClavePart
   return p.tipo === "resultado" ? (p.resultado ?? "completa") : p.tipo;
 }
 
-type Tono = "agua" | "verde" | "alerta" | "rojo";
-export const CONFIG_PARTE: Record<ClaveParte, { texto: string; Icono: ComponentType<PropsIcono>; tono: Tono }> = {
-  avance: { texto: "Avance", Icono: IconoHistorial, tono: "agua" },
-  dificultad: { texto: "Dificultad", Icono: IconoTriangulo, tono: "alerta" },
-  completa: { texto: "Tarea completa", Icono: IconoTilde, tono: "verde" },
-  parcial: { texto: "Resultado parcial", Icono: IconoAlerta, tono: "alerta" },
-  no_realizada: { texto: "No realizada", Icono: IconoAlerta, tono: "rojo" },
-  reprogramada: { texto: "Reprogramada", Icono: IconoReloj, tono: "alerta" },
-};
-
-const COLORES: Record<Tono, { bg: string; color: string }> = {
-  agua: { bg: "agua.100", color: "agua.800" },
-  verde: { bg: "verde.100", color: "verde.800" },
-  alerta: { bg: "alerta.100", color: "alerta.800" },
-  rojo: { bg: "evacuacion.100", color: "evacuacion.800" },
+export const CONFIG_PARTE: Record<ClaveParte, { texto: string; Icono: ComponentType<PropsIcono>; tono: TonoChip }> = {
+  avance: { texto: "Avance", Icono: IconoHistorial, tono: "info" },
+  dificultad: { texto: "Dificultad", Icono: IconoTriangulo, tono: "aviso" },
+  completa: { texto: "Tarea completa", Icono: IconoTilde, tono: "ok" },
+  parcial: { texto: "Resultado parcial", Icono: IconoAlerta, tono: "aviso" },
+  no_realizada: { texto: "No realizada", Icono: IconoAlerta, tono: "alerta" },
+  reprogramada: { texto: "Reprogramada", Icono: IconoReloj, tono: "aviso" },
 };
 
 /** Etiqueta con ícono y texto (el estado nunca depende solo del color). */
 export function ChipParte({ parte }: { parte: Pick<ParteTarea, "tipo" | "resultado"> }) {
   const c = CONFIG_PARTE[claveParte(parte)];
   return (
-    <Flex as="span" display="inline-flex" align="center" gap={1.5} px={2.5} py="1px" borderRadius="full" fontSize="sm" fontWeight={600} whiteSpace="nowrap" {...COLORES[c.tono]} data-testid="chip-parte">
-      <c.Icono tam="1rem" />
+    <Chip tono={c.tono} icono={<c.Icono tam="1rem" />} data-testid="chip-parte">
       {c.texto}
-    </Flex>
+    </Chip>
+  );
+}
+
+const TONO_TAREA: Record<string, { tono: TonoChip; Icono: ComponentType<PropsIcono> }> = {
+  pendiente: { tono: "neutro", Icono: IconoReloj },
+  en_curso: { tono: "info", Icono: IconoCamion },
+  completada: { tono: "ok", Icono: IconoTilde },
+  cancelada: { tono: "neutro", Icono: IconoAlerta },
+};
+
+/** Estado de una tarea: ícono y texto, el color solo refuerza. */
+export function ChipEstadoTarea({ estado, testId }: { estado: string; testId?: string }) {
+  const c = TONO_TAREA[estado] ?? TONO_TAREA.pendiente;
+  return (
+    <Chip tono={c.tono} icono={<c.Icono tam="0.9rem" />} data-testid={testId}>
+      {etiquetaEstadoTarea(estado)}
+    </Chip>
+  );
+}
+
+/** Aviso para lo que requiere atención del operador: ícono, texto y color. */
+export function AvisoAtencion({ children = "Requiere atención" }: { children?: string }) {
+  return (
+    <Chip tono="aviso" icono={<IconoTriangulo tam="1rem" />} fontWeight={700} data-testid="requiere-atencion">
+      {children}
+    </Chip>
   );
 }
 

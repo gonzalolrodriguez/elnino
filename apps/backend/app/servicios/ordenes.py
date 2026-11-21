@@ -63,7 +63,7 @@ def cuadrilla_menos_cargada(db: Session, tipo: str) -> int | None:
     return db.execute(
         select(Cuadrilla.id)
         .outerjoin(Tarea, Tarea.cuadrilla_id == Cuadrilla.id)
-        .where(Cuadrilla.tipo_incidente == tipo)
+        .where(Cuadrilla.tipo_incidente == tipo, Cuadrilla.estado != "baja")
         .group_by(Cuadrilla.id)
         .order_by(abiertas, Cuadrilla.id)
         .limit(1)

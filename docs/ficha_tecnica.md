@@ -1,7 +1,7 @@
 # Ficha técnica · AI LAB Misión: Código Formosa
 PROTOTIPO · AI LAB Misión: Código Formosa · no es una herramienta oficial · Entrega: viernes 20/11/2026, 18 h
 
-**Nombre de la herramienta:** Plataforma de Gestión de Evacuaciones (Operación Agua)
+**Nombre de la herramienta:** EvacuaFor · Plataforma de gestión de evacuaciones ante la crecida
 **Equipo · institución · integrantes y rol de cada uno:** Equipo 3 · Instituto Politécnico Formosa (IPF).
 - Gonzalo Rodríguez: backend (API, datos, base PostGIS y seguridad).
 - Dylan Cabrera: frontend web.
@@ -16,6 +16,7 @@ Lo usa el Comité de la Misión (los tres técnicos de la mesa interinstituciona
 Lo que sigue se probó con pruebas automáticas o con una ejecución real, según se indica. Todo lo que calcula la herramienta es `SIMULADO`; los datos del kit conservan su categoría.
 
 - **Limpieza de K1 reproducible** (`python -m app.ingest.limpieza_k1`): 8.347 filas de entrada, 8.335 finales (8.334 válidos y 1 en cuarentena); máximo 9,81 m (05–06/01/2016); registro en `docs/registro_limpieza.md`. Probado con pruebas del backend.
+- **Caudal modelado del río Paraguay (GloFAS)** (`GET /serie/caudal-glofas`): caudal diario en m³/s de Puerto Formosa y Puerto Pilcomayo del 01/01/2006 al 31/10/2026, con los picos modelados de 2016 y 2019 y, opcional, la altura observada de K1 en un eje aparte; en el Monitor y en Información, rotulado `DOCUMENTO DE REFERENCIA`. Probado con pruebas del backend y de la web.
 - **Simulador de escenario** (`POST /simulacion/escenario`): con 7,60 m y 40 mm, S4 queda comprometido y aislado, S1 y S3 en riesgo, S2 normal y el río normal a 0,20 m de la alerta; una altura de 13 m se rechaza con 422. Verificado en un backend real y con pruebas.
 - **Caminos no transitables:** el operador marca un acceso como cerrado con su motivo y el escenario lo recalcula (`PATCH /accesos/{id}`). El cierre también excluye los tramos de la red vial asociados a ese acceso en el ruteo con pgRouting (probado con pruebas del backend).
 - **Recomendador y comparador de alternativas:** personas por sector (K10 más familias registradas en el polígono), asignación a centros por capacidad con quiénes quedan sin lugar, viajes por vehículo y tres alternativas lado a lado. Es una recomendación, no una orden.
@@ -23,6 +24,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Veredicto "¿alcanza el tiempo?" por sector, con holgura del 25 % y el ganado 48 h antes (supuestos), y lluvia prevista SIMULADA opcional para la ventana seca.
   - Las familias nunca se separan entre centros ni entre viajes. Hay un set aparte de hogares SIMULADOS para probarlo.
   - Desde la recomendación, "Preparar orden con estos sectores" abre Órdenes con los sectores marcados; la orden la sigue emitiendo el decisor.
+- **Agua observada por satélite** (capa del mapa operativo): ocho escenas de Sentinel-1 (radar) y Sentinel-2 (óptico) de 2016, 2019 y octubre de 2026 con la altura de K1 del día, el porcentaje de nubes y la cobertura de la zona; imagen `DOCUMENTO DE REFERENCIA` y máscara de agua derivada, sin validación a campo (puede confundir suelo húmedo, bañados o vegetación inundada; las áreas de S1 y S2 no son comparables). Se carga solo al activar la capa. Probado con una prueba de la web.
 - **Ruteo** vehicular, de camión jaula y de arreo con pgRouting sobre la red OSM del corredor; sin red cargada, estimación aproximada con su limitación a la vista.
 - **Arca Productiva** (calculadora ganadera): reproduce el caso de control (150 m², 1 camión con divisiones, 58,4 kg de maíz y 5,5 kg de pellet por día).
 - **Órdenes y bitácora K8:** solo el rol `decisor` emite órdenes; cada una crea notificaciones, tareas de cuadrilla y un borrador de bitácora con los seis campos obligatorios, exportable a Markdown.
@@ -32,7 +34,8 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
 - **Portal público:**
   - Landing con el relieve real de la cuenca en 3D (SRTM, curvas de nivel, departamentos) y alternativa 2D.
   - El recorrido del agua desde el Pantanal hasta la confluencia con el Paraná se puede explorar: arrastrar, zoom y una barra para recorrer el río por sus hitos.
-  - Página Información (El Niño, serie K1, sectores y fuentes).
+  - Página Información (El Niño, serie K1, sectores y fuentes). En "Sectores de evaluación", el relieve real (SRTM, DOCUMENTO DE REFERENCIA) se ve en 3D con terrazas cada 1 m y el agua sube al mover la altura del río: K10 decide cuándo se compromete cada sector y el relieve, por dónde avanza el agua (ilustrativo, SIMULADO; no es un modelo hidráulico). Tiene alternativa 2D.
+  - Diseño unificado en todas las pantallas (web y app) según `DESIGN.md`: misma cabecera, contenedor, escala tipográfica, chips de estado con ícono y texto, una insignia de categoría por bloque, y 0 violaciones de axe (WCAG 2.1 AA) en las pantallas auditadas.
   - Franja "Cómo estamos hoy" en lenguaje llano, con "Emergencia: 103" visible. Con sesión iniciada, la landing muestra el acceso de cada rol en lugar del selector de perfil.
   - Registro de ciudadanía y de productores con consentimiento. La ubicación se toma del GPS, se marca en un mapa (con los sectores K10) o se escribe a mano.
   - **Mi cuenta como panel personal:**
@@ -45,7 +48,7 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - Para el decisor: río frente a umbrales con tendencia y tiempo restante con su supuesto, estado de los cuatro sectores, pedidos por estado, sector y canal, ocupación de centros, cuadrillas, órdenes, lluvia por origen y antigüedad de cada dato.
   - Para el operador, la cola de pedidos va primero.
   - Menú ordenado por el flujo de trabajo: Situación, Decidir, Ejecutar y Respaldo y registro. La altura del río y la lluvia del escenario se cambian desde cualquier página.
-  - **Cuadrillas:** una página con cada cuadrilla, sus integrantes por rol (sin nombres), vehículo, tarea actual, último parte y dificultades abiertas. El operador asigna integrantes.
+  - **Gestión de cuadrillas:** alta en pasos (nombre, tipo de operativo: personas, familias, productores y ganado, apícola, bienes o traslado mixto; cantidad de integrantes; un encargado; rol y profesión de cada integrante para armar equipos interdisciplinarios; vehículo; equipamiento sugerido como palas, ruedas de auxilio, cadenas o chalecos), edición y baja. Ficha de cada cuadrilla con sus partes y la evidencia en fotos y video. Avisos del operativo a la cuadrilla (desvío dibujado en el mapa, qué llevar, instrucciones, seguridad) con confirmación de lectura en tiempo real. Mapa con el recorrido de todas las cuadrillas. Los integrantes se muestran por rol y profesión; el nombre de una cuenta institucional solo lo ven los mandos.
   - Para el administrador: usuarios, cuentas bloqueadas, integridad de la bitácora de accesos y estado del servicio.
 - **Constancias y validación cruzada de evacuaciones:**
   - La cuadrilla cierra cada tarea con una constancia: destino por GPS, centro, personas y animales trasladados, fotos, nota y rol firmante. Funciona sin conexión desde la app.
@@ -79,12 +82,12 @@ Lo que sigue se probó con pruebas automáticas o con una ejecución real, segú
   - "Necesito ayuda ahora": un toque, cuenta regresiva cancelable de 5 s, GPS automático y envío por la cola sin conexión.
   - Barra fija en todas las pantallas con el 103, el estado de conexión y los pedidos pendientes.
   - Mis pedidos con línea de tiempo, cuadrilla, vehículo y llegada estimada.
-- **Distintivos SAPUKAY:**
+- **Distintivos de EvacuaFor:**
   - **Tres relojes:** río (DATO OBSERVADO, distancia a la alerta y rango de días con supuesto lineal), barro (SUPUESTO: la tierra se corta con 30 mm y S4 se compromete 30 cm antes de la alerta) y El Niño (DOCUMENTO DE REFERENCIA, CFS v2). Están en la landing y en el tablero.
   - **Cuadrilla en camino:** con una tarea en curso, la cuadrilla comparte su posición desde la app o la web. El solicitante ve en un mapa el recorrido por la red vial (evitando caminos cerrados), el vehículo avanzando y la llegada estimada (supuesto de velocidad). El panel tiene una capa de cuadrillas. La posición solo se guarda mientras dura la tarea, vence a los 30 minutos y solo la ven el solicitante y los roles operativos. Para la demostración, sin un teléfono real, el servidor mueve al vehículo por la ruta desde una base SIMULADA, rotulado "SIMULADO · recorrido de demostración".
   - **Brújula sin conexión:** en la app, una flecha apunta al centro asignado o al más cercano, guardado en el teléfono, con la distancia en línea recta y la advertencia de que no es un camino.
   - **Lámina de agua ilustrativa:** en el simulador, cada sector se cubre según cuánto supera el río su altura de compromiso (K10). Los accesos cortados se ven discontinuos y hay un botón "Reproducir subida". No es un modelo hidráulico.
-- **Pruebas automáticas al 20/11/2026:** backend 426, web 329 y app 314, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
+- **Pruebas automáticas al 21/11/2026:** backend 487, web 420 y app 374, todas en verde, con ruff, tsc y eslint limpios. Un APK anterior generado con EAS Build se instaló y abrió en un teléfono Android físico, verificado por adb.
 
 Se vieron en un navegador, contra el backend real, la landing (con y sin sesión), Mi cuenta de una ciudadana de prueba con su pedido y el mapa de OpenStreetMap, y los tres relojes. El panel rediseñado, la página de cuadrillas y el recorrido animado se revisaron con capturas sobre datos simulados.
 
@@ -126,6 +129,7 @@ No se comprobó todavía:
 - **No decide ni ordena una evacuación:** la orden la emite una persona con rol autorizado y queda registrada; la plataforma solo recomienda y simula.
 - **No tiene** lluvia observada, pronóstico hidrológico a más de 15 días, cotas, barrios ni centros reales, ni alturas anteriores a 2006 (1983, 1992 y 1998 no se muestran). Lo declara el panel "Límites".
 - **Todo lo calculado es `SIMULADO`:** sectores K10, accesos, centros y su capacidad, recursos, personas, lluvia de demostración, ISAD, recomendaciones, alternativas y tiempos. El ISAD es un índice relativo y no reemplaza el criterio de compromiso de K10.
+- **El caudal GloFAS es modelado, no observado ni un pronóstico oficial:** es caudal (m³/s) de una celda de ~5 km, no altura de escala, y no se convierte a metros porque el kit no trae una curva altura-caudal oficial. No pudimos obtener el pronóstico tal como se emitió el 31/10/2026 (la fuente solo ofrece la ejecución vigente al descargar), así que hasta el corte no hay pronóstico ni banda de incertidumbre; lo posterior al corte está apagado por defecto.
 - **El tiempo restante** es una proyección lineal a tasa constante, con rango y supuesto; no es un pronóstico.
 - **K1 es un dataset pedagógico** con alteraciones deliberadas: no es una serie oficial ni apta para operar. Un valor imposible (98,1 m el 15/07/2012) quedó en cuarentena y los 25 días sin dato de 2018 no se interpolaron. El pico de 2019 (9,72 m) figura el 02/06 en la serie, mientras otros documentos citan el 03/06 por el huso horario.
 - **K7 se audita solo en parte:** la capa de cursos de agua del IGN de Formosa no incluye el Paraná ni Corrientes, por lo que dos de las siete relaciones quedan "no verificables con la capa disponible"; las distancias se calculan con una proyección aproximada.

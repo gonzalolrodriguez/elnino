@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { COLOR, RADIO } from "@/components/tema";
+import { COLOR, RADIO, TIPO } from "@/components/tema";
 
 export const MENSAJE_HTTP =
   "Conexión sin cifrar (http). Tu contraseña viaja sin protección: usala solo en la red de la demo y con datos de prueba.";
@@ -13,7 +13,7 @@ export function AvisoHttp() {
       accessibilityLiveRegion="polite"
       style={{ backgroundColor: COLOR.avisoFondo, borderRadius: RADIO.boton, padding: 12 }}
     >
-      <Text style={{ color: COLOR.avisoTexto, fontSize: 13, lineHeight: 18, fontWeight: "600" }}>
+      <Text style={{ ...TIPO.pequeno, fontWeight: "600", color: COLOR.avisoTexto }}>
         {MENSAJE_HTTP}
       </Text>
     </View>

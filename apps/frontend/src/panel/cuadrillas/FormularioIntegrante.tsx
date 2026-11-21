@@ -63,14 +63,14 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
 
   const base = `integrante-${cuadrilla.id}`;
   return (
-    <Box mt={2} p={3} borderRadius="lg" bg="fondo" data-testid={`form-integrante-${cuadrilla.id}`}>
+    <Box mt={3} p={3} borderRadius="lg" bg="fondo" border="1px solid" borderColor="borde" data-testid={`form-integrante-${cuadrilla.id}`}>
       <Flex gap={2} align="flex-end" wrap="wrap">
-        <FormControl w="13rem">
-          <FormLabel htmlFor={`${base}-usuario`} fontSize="sm" mb={0}>
+        <FormControl w={{ base: "full", sm: "13rem" }}>
+          <FormLabel htmlFor={`${base}-usuario`} textStyle="rotulo" color="texto" mb={1}>
             Usuario de cuadrilla
           </FormLabel>
           {candidatos !== null && candidatos.length > 0 ? (
-            <Select id={`${base}-usuario`} size="sm" bg="superficie" placeholder="Elegí un usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)}>
+            <Select id={`${base}-usuario`} size="md" bg="superficie" placeholder="Elegí un usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)}>
               {candidatos.map((c) => (
                 <option key={c.id} value={c.id}>
                   {`Usuario n.º ${c.id}${c.rol_operativo ? ` · ${etiquetaRolOperativo(c.rol_operativo)}` : ""}`}
@@ -78,14 +78,14 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
               ))}
             </Select>
           ) : (
-            <Input id={`${base}-usuario`} size="sm" bg="superficie" type="number" min={1} inputMode="numeric" placeholder="N.º de usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
+            <Input id={`${base}-usuario`} size="md" bg="superficie" type="number" min={1} inputMode="numeric" placeholder="N.º de usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
           )}
         </FormControl>
-        <FormControl w="14rem">
-          <FormLabel htmlFor={`${base}-rol`} fontSize="sm" mb={0}>
+        <FormControl w={{ base: "full", sm: "14rem" }}>
+          <FormLabel htmlFor={`${base}-rol`} textStyle="rotulo" color="texto" mb={1}>
             Rol operativo
           </FormLabel>
-          <Select id={`${base}-rol`} size="sm" bg="superficie" placeholder="Elegí un rol" value={rol} onChange={(e) => setRol(e.target.value)}>
+          <Select id={`${base}-rol`} size="md" bg="superficie" placeholder="Elegí un rol" value={rol} onChange={(e) => setRol(e.target.value)}>
             {roles.map((r) => (
               <option key={r.codigo} value={r.codigo}>
                 {etiquetaRolOperativo(r.codigo) || r.nombre}
@@ -93,12 +93,12 @@ export function FormularioIntegrante({ cuadrilla, alAgregar }: { cuadrilla: Cuad
             ))}
           </Select>
         </FormControl>
-        <Button size="sm" onClick={() => void agregar()} isDisabled={!valido} isLoading={enviando}>
+        <Button size="md" w={{ base: "full", sm: "auto" }} onClick={() => void agregar()} isDisabled={!valido} isLoading={enviando}>
           Agregar integrante
         </Button>
       </Flex>
       {(listaNoDisponible || (candidatos !== null && candidatos.length === 0)) && (
-        <Text fontSize="sm" color="textoSuave" mt={2}>
+        <Text textStyle="microdato" mt={2}>
           {listaNoDisponible
             ? "Tu rol no puede ver la lista de usuarios de cuadrilla: ingresá el número de usuario que te informó la administración."
             : "No hay usuarios de cuadrilla libres para sumar: ingresá un número de usuario si ya sabés cuál."}

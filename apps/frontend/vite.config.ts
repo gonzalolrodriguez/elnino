@@ -39,6 +39,9 @@ export default defineConfig(({ mode }) => ({
   // El CSS se compila para el mismo piso de navegadores (esbuild baja `inset`, colores modernos, etc.).
   build: { cssTarget: ["chrome70", "safari12", "firefox78"] },
   server: { port: 5173 },
+  // MapLibre 6 carga su worker como módulo aparte; si Vite lo pre-empaqueta, en desarrollo el worker da 404
+  // y las capas GeoJSON (sectores, satélite, rutas) no se dibujan.
+  optimizeDeps: { exclude: ["maplibre-gl"] },
   test: {
     environment: "jsdom",
     globals: true,

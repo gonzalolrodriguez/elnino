@@ -4,16 +4,14 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import { rutaInicio, useAuth } from "../auth/AuthContext";
 
-import { AlertaError, Campo, Consentimiento } from "../components/Formulario";
-import { Insignia } from "../components/Insignia";
-import { AvisoFueraDeFormosa, BotonUbicacion } from "../components/BotonUbicacion";
-import { ElegirEnMapa } from "../components/ElegirEnMapa";
+import { AlertaError, Campo, Consentimiento, GrupoCampos } from "../components/Formulario";
+import { IconoMenos } from "../components/iconos/Iconos";
+import { SelectorUbicacion } from "../components/SelectorUbicacion";
+import { AvisoFueraDeFormosa } from "../components/BotonUbicacion";
 import { Layout } from "../components/Layout";
-import { Plegable } from "../components/Plegable";
-import { ResumenSectores } from "../components/PaginaFormulario";
+import { BloqueApoyo, PaginaFormulario, ResumenSectores } from "../components/PaginaFormulario";
 import { TarjetaFormulario } from "../components/TarjetaFormulario";
 import { sectorDe } from "../datos/kit";
-import { MapaSectores } from "../informacion/MapaSectores";
 import { solicitar } from "../lib/api";
 import { coordenadaATexto, decimal, enfocarPrimerError, enRango, entero, validarAcceso, validarCoordenadas, type Errores } from "../lib/validacion";
 
@@ -122,129 +120,107 @@ export default function RegistroProductor() {
 
   return (
     <Layout titulo="Registro de productores">
-      <Heading as="h1" size="xl" mb={2}>
-        Registro de productores
-      </Heading>
-      <Text mb={6} maxW="40rem">
-        Declará tu establecimiento y tu hacienda para que el traslado de animales se planifique antes de que los caminos se saturen.
-        Plataforma prototipo: usá datos de prueba.
-      </Text>
-      <form onSubmit={enviar} noValidate aria-label="Registro de productor">
-        <Box display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 34rem) minmax(0, 1fr)" }} gap={{ base: 8, lg: 10 }} alignItems="start">
-          <TarjetaFormulario maxW="none">
-          <VStack spacing={4} align="stretch">
-            <AlertaError error={errorApi} />
-            <Campo id="nombre_visible" etiqueta="Nombre para mostrar" value={v.nombre_visible} onChange={set("nombre_visible")} error={errores.nombre_visible} isRequired />
-            <Campo id="email" etiqueta="Correo electrónico" type="email" value={v.email} onChange={set("email")} error={errores.email} autoComplete="email" isRequired />
-            <Campo id="password" etiqueta="Contraseña" type="password" value={v.password} onChange={set("password")} error={errores.password} ayuda="Al menos 10 caracteres." autoComplete="new-password" isRequired />
-            <Heading as="h2" size="sm" pt={2}>
-              Establecimiento
-            </Heading>
-            <Campo id="nombre" etiqueta="Nombre del establecimiento" value={v.nombre} onChange={set("nombre")} error={errores.nombre} isRequired />
-            <Campo id="renspa" etiqueta="RENSPA (opcional)" value={v.renspa} onChange={set("renspa")} error={errores.renspa} />
-            <Heading as="h3" size="xs">
-              Ubicación de la tranquera
-            </Heading>
-            <BotonUbicacion primario onUbicacion={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))} />
-            <ElegirEnMapa lon={v.lon} lat={v.lat} onChange={(p) => setV((x) => ({ ...x, lon: coordenadaATexto(p.lon), lat: coordenadaATexto(p.lat) }))} />
-            <Plegable titulo="O escribí las coordenadas a mano" abierto={errores.lat || errores.lon ? true : undefined}>
-              <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" gap={4} pb={2}>
-                <Campo id="lat" etiqueta="Latitud" inputMode="decimal" value={v.lat} onChange={set("lat")} error={errores.lat} placeholder="-26,18" />
-                <Campo id="lon" etiqueta="Longitud" inputMode="decimal" value={v.lon} onChange={set("lon")} error={errores.lon} placeholder="-58,139" />
+      <PaginaFormulario
+        titulo="Registro de productores"
+        intro="Declará tu establecimiento y tu hacienda para que el traslado de animales se planifique antes de que los caminos se saturen. Plataforma prototipo: usá datos de prueba."
+        aside={
+          <>
+            <BloqueApoyo titulo="Para qué usamos tus datos">
+              <Box as="ul" m={0} pl={5} color="textoSuave">
+                <li>Ubicar tu tranquera en un sector de evaluación.</li>
+                <li>Calcular camiones, lugar de resguardo y raciones para tu hacienda.</li>
+                <li>Avisarte cuando tu sector esté en riesgo o se emita una orden.</li>
               </Box>
-            </Plegable>
-            <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
-            <Box>
-              <Button size="xs" variant="outline" type="button" onClick={() => setV({ ...v, ...EJEMPLO })}>
-                Usar el ejemplo del sector S4
-              </Button>
-              <Text fontSize="sm" mt={2} role="status">
-                {puntoValido
-                  ? sector
-                    ? `Cae en el sector ${sector.id} · ${sector.nombre} (SIMULADO).`
-                    : "El punto no cae dentro de ningún sector K10."
-                  : "Ingresá las coordenadas o hacé clic en el mapa."}
-              </Text>
-            </Box>
-
-            <Heading as="h2" size="sm" pt={2}>
-              Hacienda
-            </Heading>
-            {filas.length === 0 && <Text fontSize="sm">Todavía no cargaste hacienda. Podés agregarla ahora o más tarde.</Text>}
-            {filas.map((f, i) => (
-              <Box key={f.clave} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr)", md: "8rem minmax(0, 1fr) 6rem auto" }} gap={2} alignItems="end">
-                <FormControl>
-                  <FormLabel htmlFor={`esp-${f.clave}`} fontSize="xs">
-                    Especie {i + 1}
-                  </FormLabel>
-                  <Select id={`esp-${f.clave}`} bg="superficie" value={f.especie} onChange={(e) => cambiarFila(f.clave, "especie", e.target.value)}>
-                    {ESPECIES.map((x) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl isInvalid={!!errores[`cat-${f.clave}`]}>
-                  <FormLabel htmlFor={`cat-${f.clave}`} fontSize="xs">
-                    Categoría
-                  </FormLabel>
-                  <Input id={`cat-${f.clave}`} bg="superficie" list="categorias" value={f.categoria_animal} onChange={(e) => cambiarFila(f.clave, "categoria_animal", e.target.value)} />
-                  <FormErrorMessage>{errores[`cat-${f.clave}`]}</FormErrorMessage>
-                </FormControl>
-                <FormControl isInvalid={!!errores[`cant-${f.clave}`]}>
-                  <FormLabel htmlFor={`cant-${f.clave}`} fontSize="xs">
-                    Cantidad
-                  </FormLabel>
-                  <Input id={`cant-${f.clave}`} bg="superficie" inputMode="numeric" value={f.cantidad} onChange={(e) => cambiarFila(f.clave, "cantidad", e.target.value)} />
-                  <FormErrorMessage>{errores[`cant-${f.clave}`]}</FormErrorMessage>
-                </FormControl>
-                <IconButton aria-label={`Quitar hacienda ${i + 1}`} icon={<span aria-hidden="true">×</span>} variant="outline" onClick={() => setFilas(filas.filter((x) => x.clave !== f.clave))} />
+            </BloqueApoyo>
+            <BloqueApoyo titulo="Tus derechos">
+              <Text color="textoSuave">Podés pedir el acceso, la rectificación y la supresión de tus datos (Ley 25.326).</Text>
+            </BloqueApoyo>
+            <ResumenSectores />
+          </>
+        }
+      >
+        <TarjetaFormulario maxW="none">
+          <form onSubmit={enviar} noValidate aria-label="Registro de productor">
+            <VStack spacing={8} align="stretch">
+              <AlertaError error={errorApi} />
+              <GrupoCampos leyenda="Tus datos de acceso">
+                <Campo id="nombre_visible" etiqueta="Nombre para mostrar" value={v.nombre_visible} onChange={set("nombre_visible")} error={errores.nombre_visible} isRequired />
+                <Campo id="email" etiqueta="Correo electrónico" type="email" value={v.email} onChange={set("email")} error={errores.email} autoComplete="email" isRequired />
+                <Campo id="password" etiqueta="Contraseña" type="password" value={v.password} onChange={set("password")} error={errores.password} ayuda="Al menos 10 caracteres." autoComplete="new-password" isRequired />
+              </GrupoCampos>
+              <GrupoCampos leyenda="Establecimiento">
+                <Campo id="nombre" etiqueta="Nombre del establecimiento" value={v.nombre} onChange={set("nombre")} error={errores.nombre} isRequired />
+                <Campo id="renspa" etiqueta="RENSPA (opcional)" value={v.renspa} onChange={set("renspa")} error={errores.renspa} />
+              </GrupoCampos>
+              <GrupoCampos leyenda="Ubicación de la tranquera" ayuda="Marcá dónde está la entrada del establecimiento: así sabemos en qué sector queda.">
+                <SelectorUbicacion
+                  idBase="tranquera"
+                  lon={v.lon}
+                  lat={v.lat}
+                  errorLon={errores.lon}
+                  errorLat={errores.lat}
+                  onPunto={(lo, la) => setV((x) => ({ ...x, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) }))}
+                  onTexto={(campo, valor) => setV((x) => ({ ...x, [campo]: valor }))}
+                />
+                <AvisoFueraDeFormosa lon={puntoValido ? lon : null} lat={puntoValido ? lat : null} />
+                <Box>
+                  <Button size="sm" variant="outline" type="button" onClick={() => setV({ ...v, ...EJEMPLO })}>
+                    Usar el ejemplo del sector S4
+                  </Button>
+                </Box>
+              </GrupoCampos>
+              <GrupoCampos leyenda="Hacienda" ayuda={filas.length === 0 ? "Todavía no cargaste hacienda. Podés agregarla ahora o más tarde." : undefined}>
+                {filas.map((f, i) => (
+                  <Box key={f.clave} display="grid" gridTemplateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr)", md: "9rem minmax(0, 1fr) 7rem auto" }} gap={3} alignItems="end">
+                    <FormControl>
+                      <FormLabel htmlFor={`esp-${f.clave}`}>Especie {i + 1}</FormLabel>
+                      <Select id={`esp-${f.clave}`} bg="superficie" value={f.especie} onChange={(e) => cambiarFila(f.clave, "especie", e.target.value)}>
+                        {ESPECIES.map((x) => (
+                          <option key={x}>{x}</option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl isInvalid={!!errores[`cat-${f.clave}`]}>
+                      <FormLabel htmlFor={`cat-${f.clave}`}>Categoría</FormLabel>
+                      <Input id={`cat-${f.clave}`} bg="superficie" list="categorias" value={f.categoria_animal} onChange={(e) => cambiarFila(f.clave, "categoria_animal", e.target.value)} />
+                      <FormErrorMessage>{errores[`cat-${f.clave}`]}</FormErrorMessage>
+                    </FormControl>
+                    <FormControl isInvalid={!!errores[`cant-${f.clave}`]}>
+                      <FormLabel htmlFor={`cant-${f.clave}`}>Cantidad</FormLabel>
+                      <Input id={`cant-${f.clave}`} bg="superficie" inputMode="numeric" value={f.cantidad} onChange={(e) => cambiarFila(f.clave, "cantidad", e.target.value)} />
+                      <FormErrorMessage>{errores[`cant-${f.clave}`]}</FormErrorMessage>
+                    </FormControl>
+                    <IconButton aria-label={`Quitar hacienda ${i + 1}`} icon={<IconoMenos />} variant="outline" onClick={() => setFilas(filas.filter((x) => x.clave !== f.clave))} />
+                  </Box>
+                ))}
+                <datalist id="categorias">
+                  {["vaca con cría", "vaca preñada", "ternero", "vaquillona", "toro"].map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+                <Box>
+                  <Button size="sm" variant="outline" type="button" onClick={() => setFilas([...filas, nuevaFila()])}>
+                    Agregar hacienda
+                  </Button>
+                </Box>
+              </GrupoCampos>
+              <Box display="grid" rowGap={4}>
+                <Consentimiento marcado={consentimiento} onChange={setConsentimiento} error={errores.consentimiento} />
+                <Button type="submit" isLoading={enviando} loadingText="Registrando" w={{ base: "100%", sm: "auto" }} justifySelf="start">
+                  Crear cuenta y registrar establecimiento
+                </Button>
+                <Text color="textoSuave">
+                  ¿Ya tenés cuenta?{" "}
+                  <Link as={RouterLink} to="/login">
+                    Ingresá
+                  </Link>
+                  .
+                </Text>
               </Box>
-            ))}
-            <datalist id="categorias">
-              {["vaca con cría", "vaca preñada", "ternero", "vaquillona", "toro"].map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-            <Box>
-              <Button size="sm" variant="outline" type="button" onClick={() => setFilas([...filas, nuevaFila()])}>
-                Agregar hacienda
-              </Button>
-            </Box>
-
-            <Consentimiento marcado={consentimiento} onChange={setConsentimiento} error={errores.consentimiento} />
-            <Button type="submit" isLoading={enviando} loadingText="Registrando">
-              Crear cuenta y registrar establecimiento
-            </Button>
-            <Text fontSize="sm">
-              ¿Ya tenés cuenta?{" "}
-              <Link as={RouterLink} to="/login">
-                Ingresá
-              </Link>
-              .
-            </Text>
-          </VStack>
-          </TarjetaFormulario>
-
-          <Box position={{ lg: "sticky" }} top={{ lg: "calc(var(--altura-leyenda) + 1.5rem)" }}>
-            <Box display="flex" gap={2} alignItems="center" mb={2}>
-              <Heading as="h2" size="sm">
-                Elegir en el mapa
-              </Heading>
-              <Insignia categoria="SIMULADO" />
-            </Box>
-            <MapaSectores
-              marcador={puntoValido ? { lon, lat } : null}
-              onElegir={(lo, la) => setV({ ...v, lon: coordenadaATexto(lo), lat: coordenadaATexto(la) })}
-            />
-            <Text fontSize="xs" mt={2}>
-              Los sectores son de K10, simulados. El mapa solo sirve para elegir la ubicación de la tranquera.
-            </Text>
-            <Box mt={5} display={{ base: "none", xl: "block" }}>
-              <ResumenSectores />
-            </Box>
-          </Box>
-        </Box>
-      </form>
+            </VStack>
+          </form>
+        </TarjetaFormulario>
+      </PaginaFormulario>
     </Layout>
   );
 }

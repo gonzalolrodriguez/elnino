@@ -33,7 +33,7 @@ function DosColumnas({ principal, lateral }: { principal: ReactNode; lateral: Re
   );
 }
 
-function Contenido({ r, decisor, senal }: { r: ResumenPanel; decisor: boolean; senal: number }) {
+function Contenido({ r, decisor, senal, relojes }: { r: ResumenPanel; decisor: boolean; senal: number; relojes: ReactNode }) {
   const columnas = (
     <DosColumnas
       principal={
@@ -72,6 +72,7 @@ function Contenido({ r, decisor, senal }: { r: ResumenPanel; decisor: boolean; s
           <TarjetasSectores bloque={r.sectores} />
         </>
       )}
+      {relojes}
       {columnas}
       {r.evacuaciones && <BloqueEvacuaciones bloque={r.evacuaciones} />}
     </>
@@ -118,13 +119,6 @@ export default function Tablero() {
         }
       />
 
-      <TresRelojes
-        variante="compacta"
-        alturaM={entrada.altura_formosa_m}
-        alturaCategoria={escenarioSimulado ? CATEGORIAS.SIMULADO : CATEGORIAS.OBSERVADO}
-        lluviaMm={entrada.lluvia_mm > 0 ? entrada.lluvia_mm : undefined}
-      />
-
       {carga.cargando && (
         <Center py={10} role="status" aria-label="Cargando">
           <Spinner />
@@ -147,7 +141,21 @@ export default function Tablero() {
         </Alert>
       )}
 
-      {carga.datos !== null && <Contenido r={carga.datos} decisor={decisor} senal={senal} />}
+      {carga.datos !== null && (
+        <Contenido
+          r={carga.datos}
+          decisor={decisor}
+          senal={senal}
+          relojes={
+            <TresRelojes
+              variante="compacta"
+              alturaM={entrada.altura_formosa_m}
+              alturaCategoria={escenarioSimulado ? CATEGORIAS.SIMULADO : CATEGORIAS.OBSERVADO}
+              lluviaMm={entrada.lluvia_mm > 0 ? entrada.lluvia_mm : undefined}
+            />
+          }
+        />
+      )}
     </>
   );
 }

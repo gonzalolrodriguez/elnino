@@ -98,11 +98,13 @@ rampas, rangos e intervalos que usa el frontend en `relieve/meta.json`.
 
 ```bash
 python apps/backend/scripts/descargar_relieve.py        # ~1 min, requiere internet
+python apps/backend/scripts/descargar_relieve.py --sectores  # solo la malla fina z14 de los sectores K10 (dem_sectores.json, id relieve_sectores)
 cd apps/frontend && node scripts/preparar-datos.mjs      # copia a public/relieve/ y publica las capas del mapa
 ```
 
 | Archivo | Contenido | Tamaño aprox. |
 |---|---|---|
+| `relieve/dem_sectores.json` | Malla fina (z14, 191 x 181 celdas de 0,0005°, int16 en decímetros, base64) de los cuatro sectores K10 más ~1 km; ordena dónde avanza el agua en `/informacion` (copia en `apps/frontend/public/relieve/`) | 93 KB |
 | `relieve/dem_cuenca_malla.json` | Malla de elevaciones de la cuenca (177 x 277 celdas de 0,05°, int16 en decímetros, base64) para el 3D | 128 KB |
 | `relieve/curvas_cuenca.geojson` | Curvas de nivel de la cuenca (`elev_m`, `maestra`): cada 25 m hasta 200 m y cada 100 m por encima | 208 KB |
 | `relieve/tinte_cuenca.png` | Tinte hipsométrico con sombreado, equirrectangular (3D y SVG) | 464 KB |

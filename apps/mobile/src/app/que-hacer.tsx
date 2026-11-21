@@ -1,7 +1,9 @@
 import { useRouter } from "expo-router";
 import { Linking, Text } from "react-native";
 
-import { Boton, COLOR, Insignia, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Encabezado } from "@/components/Piezas";
+import { Boton, COLOR, Insignia, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 
 /** Teléfonos de emergencia. Fuente: argentina.gob.ar, consultada el 19/11/2026. */
 export const TELEFONOS = [
@@ -40,7 +42,7 @@ function Lista({ items }: { items: string[] }) {
   return (
     <>
       {items.map((t) => (
-        <Text key={t} style={{ fontSize: 16, lineHeight: 23, color: COLOR.texto }}>
+        <Text key={t} style={{ ...TIPO.cuerpo, color: COLOR.texto }}>
           {"•"} {t}
         </Text>
       ))}
@@ -63,7 +65,7 @@ export default function QueHacer() {
       </Texto>
 
       <Tarjeta>
-        <Subtitulo>A quién llamar</Subtitulo>
+        <Encabezado icono="alerta">A quién llamar</Encabezado>
         {TELEFONOS.map((t) => (
           <Boton
             key={t.numero}
@@ -79,17 +81,17 @@ export default function QueHacer() {
       </Tarjeta>
 
       <Tarjeta>
-        <Subtitulo>Si el río sube o llueve mucho</Subtitulo>
+        <Encabezado icono="gota">Si el río sube o llueve mucho</Encabezado>
         <Lista items={SI_SUBE_EL_RIO} />
       </Tarjeta>
 
       <Tarjeta>
-        <Subtitulo>Qué llevar</Subtitulo>
+        <Encabezado icono="tarea">Qué llevar</Encabezado>
         <Lista items={QUE_LLEVAR} />
       </Tarjeta>
 
       <Tarjeta>
-        <Subtitulo>Si no tenés internet: avisar por SMS</Subtitulo>
+        <Encabezado icono="bandeja">Si no tenés internet: avisar por SMS</Encabezado>
         <Lista items={POR_SMS} />
         <Texto suave pequeno>
           El canal de mensajes de esta demostración es SIMULADO: no llega a ninguna autoridad real. En una

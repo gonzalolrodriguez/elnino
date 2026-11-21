@@ -1,0 +1,343 @@
+{
+  "descripcion": "Agua observada por satélite (Sentinel-1/2) sobre el corredor de Puerto Formosa",
+  "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+  "fecha_descarga": "2026-11-20",
+  "fecha_corte": "2026-10-31",
+  "fuente": {
+    "catalogo_stac": "https://planetarycomputer.microsoft.com/api/stac/v1",
+    "colecciones": {
+      "S1": "sentinel-1-rtc",
+      "S2": "sentinel-2-l2a"
+    },
+    "respaldo": "Earth Search (AWS) https://earth-search.aws.element84.com/v1",
+    "licencia": "Copernicus Sentinel (libre y gratuito); sentinel-1-rtc: CC BY 4.0 (Microsoft)",
+    "atribucion": "Contiene datos Copernicus Sentinel modificados [año]"
+  },
+  "zona": {
+    "bbox_wgs84": [
+      -58.4,
+      -26.4,
+      -57.95,
+      -25.95
+    ],
+    "crs_trabajo": "EPSG:32721",
+    "resolucion_m": 20.0
+  },
+  "parametros": {
+    "area_minima_m2": 5000.0,
+    "umbral_mndwi_limites": [
+      -0.15,
+      0.15
+    ],
+    "umbral_vv_db_limites": [
+      -21.0,
+      -14.0
+    ],
+    "scl_invalidas": [
+      0,
+      1,
+      3,
+      8,
+      9,
+      10,
+      11
+    ],
+    "limite_bytes_geojson": 500000
+  },
+  "escenas": [
+    {
+      "id": "s1_2016-01-09",
+      "archivo": "agua_s1_2016-01-09.geojson",
+      "vista": "agua_s1_2016-01-09.png",
+      "escena_id": [
+        "S1A_IW_GRDH_1SDV_20160109T091233_20160109T091306_009415_00DA40_rtc"
+      ],
+      "bytes_geojson": 465782,
+      "bytes_png": 243257,
+      "simplificacion_m": 30.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s1_2016-01-09",
+        "sensor": "Sentinel-1 (SAR, VV)",
+        "escena_id": "S1A_IW_GRDH_1SDV_20160109T091233_20160109T091306_009415_00DA40_rtc",
+        "fecha_escena": "2016-01-09",
+        "evento": "Pico de 2016 (cuatro días después del máximo del 05/01)",
+        "nube_pct": null,
+        "nube_pct_escena": null,
+        "cobertura_aoi_pct": 80.2,
+        "metodo": "Sentinel-1 RTC · VV en dB · mediana 3x3 · umbral de Otsu",
+        "umbral": -14.0,
+        "umbral_unidad": "VV dB",
+        "umbral_otsu_crudo": -13.066,
+        "umbral_recortado": true,
+        "altura_k1_m": 9.8,
+        "fecha_k1": "2016-01-09",
+        "area_agua_km2": 243.07,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Ruido de moteado (speckle) filtrado con mediana 3x3. La escena cubre solo 80.2 % de la zona. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2016]",
+        "fuente": "Microsoft Planetary Computer (sentinel-1-rtc)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s2_2016-01-23",
+      "archivo": "agua_s2_2016-01-23.geojson",
+      "vista": "agua_s2_2016-01-23.png",
+      "escena_id": [
+        "S2A_MSIL2A_20160123T140902_R067_T21JUL_20210527T215255",
+        "S2A_MSIL2A_20160123T140902_R067_T21JUM_20210527T215259",
+        "S2A_MSIL2A_20160123T140902_R067_T21JVL_20210527T215253",
+        "S2A_MSIL2A_20160123T140902_R067_T21JVM_20210527T215257"
+      ],
+      "bytes_geojson": 476435,
+      "bytes_png": 235437,
+      "simplificacion_m": 30.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s2_2016-01-23",
+        "sensor": "Sentinel-2 (MSI, L2A)",
+        "escena_id": "S2A_MSIL2A_20160123T140902_R067_T21JUL_20210527T215255; S2A_MSIL2A_20160123T140902_R067_T21JUM_20210527T215259; S2A_MSIL2A_20160123T140902_R067_T21JVL_20210527T215253; S2A_MSIL2A_20160123T140902_R067_T21JVM_20210527T215257",
+        "fecha_escena": "2016-01-23",
+        "evento": "Descenso posterior al pico de 2016 (18 días después del máximo; la escena del 10/01 no cubre la zona)",
+        "nube_pct": 0.1,
+        "nube_pct_escena": 0.1,
+        "cobertura_aoi_pct": 99.4,
+        "metodo": "Sentinel-2 L2A · MNDWI (B03, B11) · máscara SCL de nubes y sombras · umbral de Otsu",
+        "umbral": -0.15,
+        "umbral_unidad": "MNDWI",
+        "umbral_otsu_crudo": -0.259,
+        "umbral_recortado": true,
+        "altura_k1_m": 9.4,
+        "fecha_k1": "2016-01-23",
+        "area_agua_km2": 208.22,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Nubes y sombras enmascaradas (0.1 % de la zona con dato): esas zonas figuran sin agua, no como tierra seca. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2016]",
+        "fuente": "Microsoft Planetary Computer (sentinel-2-l2a)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s1_2019-05-28",
+      "archivo": "agua_s1_2019-05-28.geojson",
+      "vista": "agua_s1_2019-05-28.png",
+      "escena_id": [
+        "S1B_IW_GRDH_1SDV_20190528T092010_20190528T092035_016442_01EF36_rtc"
+      ],
+      "bytes_geojson": 417594,
+      "bytes_png": 294281,
+      "simplificacion_m": 30.0,
+      "area_minima_ha": 2.0,
+      "propiedades": {
+        "id": "s1_2019-05-28",
+        "sensor": "Sentinel-1 (SAR, VV)",
+        "escena_id": "S1B_IW_GRDH_1SDV_20190528T092010_20190528T092035_016442_01EF36_rtc",
+        "fecha_escena": "2019-05-28",
+        "evento": "Subida previa al pico de 2019",
+        "nube_pct": null,
+        "nube_pct_escena": null,
+        "cobertura_aoi_pct": 100.0,
+        "metodo": "Sentinel-1 RTC · VV en dB · mediana 3x3 · umbral de Otsu",
+        "umbral": -14.0,
+        "umbral_unidad": "VV dB",
+        "umbral_otsu_crudo": -13.535,
+        "umbral_recortado": true,
+        "altura_k1_m": 9.64,
+        "fecha_k1": "2019-05-28",
+        "area_agua_km2": 277.6,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Ruido de moteado (speckle) filtrado con mediana 3x3. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2019]",
+        "fuente": "Microsoft Planetary Computer (sentinel-1-rtc)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s2_2019-06-03",
+      "archivo": "agua_s2_2019-06-03.geojson",
+      "vista": "agua_s2_2019-06-03.png",
+      "escena_id": [
+        "S2A_MSIL2A_20190603T135111_R024_T21JUL_20201005T213156",
+        "S2A_MSIL2A_20190603T135111_R024_T21JUM_20201005T213153",
+        "S2A_MSIL2A_20190603T135111_R024_T21JVL_20201005T213204",
+        "S2A_MSIL2A_20190603T135111_R024_T21JVM_20201005T213203"
+      ],
+      "bytes_geojson": 459692,
+      "bytes_png": 142007,
+      "simplificacion_m": 30.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s2_2019-06-03",
+        "sensor": "Sentinel-2 (MSI, L2A)",
+        "escena_id": "S2A_MSIL2A_20190603T135111_R024_T21JUL_20201005T213156; S2A_MSIL2A_20190603T135111_R024_T21JUM_20201005T213153; S2A_MSIL2A_20190603T135111_R024_T21JVL_20201005T213204; S2A_MSIL2A_20190603T135111_R024_T21JVM_20201005T213203",
+        "fecha_escena": "2019-06-03",
+        "evento": "Pico de 2019 (un día después del máximo del 02/06)",
+        "nube_pct": 28.2,
+        "nube_pct_escena": 12.7,
+        "cobertura_aoi_pct": 46.4,
+        "metodo": "Sentinel-2 L2A · MNDWI (B03, B11) · máscara SCL de nubes y sombras · umbral de Otsu",
+        "umbral": -0.028,
+        "umbral_unidad": "MNDWI",
+        "umbral_otsu_crudo": -0.028,
+        "umbral_recortado": false,
+        "altura_k1_m": 9.72,
+        "fecha_k1": "2019-06-03",
+        "area_agua_km2": 141.75,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Nubes y sombras enmascaradas (28.2 % de la zona con dato): esas zonas figuran sin agua, no como tierra seca. La escena cubre solo 46.4 % de la zona. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2019]",
+        "fuente": "Microsoft Planetary Computer (sentinel-2-l2a)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s1_2019-10-07",
+      "archivo": "agua_s1_2019-10-07.geojson",
+      "vista": "agua_s1_2019-10-07.png",
+      "escena_id": [
+        "S1B_IW_GRDH_1SDV_20191007T092016_20191007T092041_018367_02299F_rtc"
+      ],
+      "bytes_geojson": 269188,
+      "bytes_png": 299304,
+      "simplificacion_m": 15.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s1_2019-10-07",
+        "sensor": "Sentinel-1 (SAR, VV)",
+        "escena_id": "S1B_IW_GRDH_1SDV_20191007T092016_20191007T092041_018367_02299F_rtc",
+        "fecha_escena": "2019-10-07",
+        "evento": "Línea de base de aguas bajas (octubre de 2019)",
+        "nube_pct": null,
+        "nube_pct_escena": null,
+        "cobertura_aoi_pct": 100.0,
+        "metodo": "Sentinel-1 RTC · VV en dB · mediana 3x3 · umbral de Otsu",
+        "umbral": -14.0,
+        "umbral_unidad": "VV dB",
+        "umbral_otsu_crudo": -13.887,
+        "umbral_recortado": true,
+        "altura_k1_m": 2.07,
+        "fecha_k1": "2019-10-07",
+        "area_agua_km2": 71.96,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Ruido de moteado (speckle) filtrado con mediana 3x3. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2019]",
+        "fuente": "Microsoft Planetary Computer (sentinel-1-rtc)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s2_2019-10-09",
+      "archivo": "agua_s2_2019-10-09.geojson",
+      "vista": "agua_s2_2019-10-09.png",
+      "escena_id": [
+        "S2B_MSIL2A_20191009T140059_R067_T21JUL_20201004T003016",
+        "S2B_MSIL2A_20191009T140059_R067_T21JUM_20201004T003019",
+        "S2B_MSIL2A_20191009T140059_R067_T21JVL_20201004T003008",
+        "S2B_MSIL2A_20191009T140059_R067_T21JVM_20201004T003011"
+      ],
+      "bytes_geojson": 322304,
+      "bytes_png": 248892,
+      "simplificacion_m": 15.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s2_2019-10-09",
+        "sensor": "Sentinel-2 (MSI, L2A)",
+        "escena_id": "S2B_MSIL2A_20191009T140059_R067_T21JUL_20201004T003016; S2B_MSIL2A_20191009T140059_R067_T21JUM_20201004T003019; S2B_MSIL2A_20191009T140059_R067_T21JVL_20201004T003008; S2B_MSIL2A_20191009T140059_R067_T21JVM_20201004T003011",
+        "fecha_escena": "2019-10-09",
+        "evento": "Línea de base de aguas bajas (octubre de 2019)",
+        "nube_pct": 0.0,
+        "nube_pct_escena": 0.0,
+        "cobertura_aoi_pct": 99.9,
+        "metodo": "Sentinel-2 L2A · MNDWI (B03, B11) · máscara SCL de nubes y sombras · umbral de Otsu",
+        "umbral": -0.078,
+        "umbral_unidad": "MNDWI",
+        "umbral_otsu_crudo": -0.078,
+        "umbral_recortado": false,
+        "altura_k1_m": 2.07,
+        "fecha_k1": "2019-10-09",
+        "area_agua_km2": 67.13,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Nubes y sombras enmascaradas (0.0 % de la zona con dato): esas zonas figuran sin agua, no como tierra seca. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2019]",
+        "fuente": "Microsoft Planetary Computer (sentinel-2-l2a)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s1_2026-10-25",
+      "archivo": "agua_s1_2026-10-25.geojson",
+      "vista": "agua_s1_2026-10-25.png",
+      "escena_id": [
+        "S1C_IW_GRDH_1SDV_20261025T092001_20261025T092026_010039_014091_rtc",
+        "S1C_IW_GRDH_1SDV_20261025T092026_20261025T092051_010039_014091_rtc"
+      ],
+      "bytes_geojson": 393866,
+      "bytes_png": 302666,
+      "simplificacion_m": 15.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s1_2026-10-25",
+        "sensor": "Sentinel-1 (SAR, VV)",
+        "escena_id": "S1C_IW_GRDH_1SDV_20261025T092001_20261025T092026_010039_014091_rtc; S1C_IW_GRDH_1SDV_20261025T092026_20261025T092051_010039_014091_rtc",
+        "fecha_escena": "2026-10-25",
+        "evento": "Octubre de 2026 (previo al corte)",
+        "nube_pct": null,
+        "nube_pct_escena": null,
+        "cobertura_aoi_pct": 100.0,
+        "metodo": "Sentinel-1 RTC · VV en dB · mediana 3x3 · umbral de Otsu",
+        "umbral": -14.0,
+        "umbral_unidad": "VV dB",
+        "umbral_otsu_crudo": -9.785,
+        "umbral_recortado": true,
+        "altura_k1_m": 5.4,
+        "fecha_k1": "2026-10-25",
+        "area_agua_km2": 79.84,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Ruido de moteado (speckle) filtrado con mediana 3x3. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2026]",
+        "fuente": "Microsoft Planetary Computer (sentinel-1-rtc)",
+        "fecha_descarga": "2026-11-20"
+      }
+    },
+    {
+      "id": "s2_2026-10-26",
+      "archivo": "agua_s2_2026-10-26.geojson",
+      "vista": "agua_s2_2026-10-26.png",
+      "escena_id": [
+        "S2A_MSIL2A_20261026T135121_R024_T21JUL_20261026T202408",
+        "S2A_MSIL2A_20261026T135121_R024_T21JUM_20261026T202408",
+        "S2A_MSIL2A_20261026T135121_R024_T21JVL_20261026T202408",
+        "S2A_MSIL2A_20261026T135121_R024_T21JVM_20261026T202408"
+      ],
+      "bytes_geojson": 182110,
+      "bytes_png": 135087,
+      "simplificacion_m": 15.0,
+      "area_minima_ha": 0.5,
+      "propiedades": {
+        "id": "s2_2026-10-26",
+        "sensor": "Sentinel-2 (MSI, L2A)",
+        "escena_id": "S2A_MSIL2A_20261026T135121_R024_T21JUL_20261026T202408; S2A_MSIL2A_20261026T135121_R024_T21JUM_20261026T202408; S2A_MSIL2A_20261026T135121_R024_T21JVL_20261026T202408; S2A_MSIL2A_20261026T135121_R024_T21JVM_20261026T202408",
+        "fecha_escena": "2026-10-26",
+        "evento": "Octubre de 2026 (previo al corte)",
+        "nube_pct": 24.7,
+        "nube_pct_escena": 8.4,
+        "cobertura_aoi_pct": 47.1,
+        "metodo": "Sentinel-2 L2A · MNDWI (B03, B11) · máscara SCL de nubes y sombras · umbral de Otsu",
+        "umbral": -0.016,
+        "umbral_unidad": "MNDWI",
+        "umbral_otsu_crudo": -0.016,
+        "umbral_recortado": false,
+        "altura_k1_m": 5.44,
+        "fecha_k1": "2026-10-26",
+        "area_agua_km2": 42.63,
+        "categoria": "DOCUMENTO DE REFERENCIA (imagen) · producto derivado (máscara de agua)",
+        "incertidumbre": "Máscara de agua derivada con umbral automático (Otsu) a 20 m; no validada a campo. Puede confundir suelo muy húmedo y bañados con agua y omitir vegetación inundada (SAR y MNDWI). Nubes y sombras enmascaradas (24.7 % de la zona con dato): esas zonas figuran sin agua, no como tierra seca. La escena cubre solo 47.1 % de la zona. No es un pronóstico.",
+        "atribucion": "Contiene datos Copernicus Sentinel modificados [2026]",
+        "fuente": "Microsoft Planetary Computer (sentinel-2-l2a)",
+        "fecha_descarga": "2026-11-20"
+      }
+    }
+  ],
+  "estado": "ok"
+}

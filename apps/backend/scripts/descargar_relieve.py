@@ -20,6 +20,7 @@ Fuentes (ver ``manifiesto.json`` y ``LEEME.md``):
 Uso (desde la raiz del repositorio):
 
     python apps/backend/scripts/descargar_relieve.py
+    python apps/backend/scripts/descargar_relieve.py --sectores   # solo la malla fina de los sectores K10 (z14)
 
 Reglas: nunca se inventan elevaciones; si una fuente falla se registra en el manifiesto y no se
 genera la capa. Solo requiere ``httpx``, ``numpy`` y ``shapely`` (ya presentes en el venv del
@@ -78,6 +79,11 @@ PASO_LOCAL = 0.0007  # grados (~ 75 m)
 SIGMA_LOCAL = (
     4  # celdas (~ 300 m): atenua el ruido del DEM (+-varios m) sin borrar el desnivel regional
 )
+# Malla fina de los sectores K10 (visualizacion de inundacion de /informacion)
+Z_SECTORES = 14
+MARGEN_SECTORES = 0.009  # grados (~1 km) alrededor de la union de los cuatro sectores
+PASO_SECTORES = 0.0005  # grados (~50 m)
+SIGMA_SECTORES = 2.0  # celdas (~110 m): el DEM de origen (SRTM ~30 m) tiene ruido de ~2 m; menos motas en las curvas de 1 m
 PASO_CURVAS_LOCAL = 2.0  # metros: el DEM tiene ruido de ~2 m (desvio crudo-suavizado) y error vertical de varios m; 1 m seria sobreinterpretar
 
 # Rampa hipsometrica de la cuenca (m -> color). Lightness creciente; pensada para fondo oscuro.
@@ -539,6 +545,76 @@ def coleccion(feats, nombre, fuente, licencia, nota):
     }
 
 
+
+def malla_sectores(http: httpx.Client) -> dict:
+    """Malla de elevaciones (z14) de la union de los sectores K10 mas ~1 km de margen.
+
+    Salida: ``data/geo/relieve/dem_sectores.json`` (decimetros int16 en base64, filas de norte a sur) y la
+    copia para la web en ``apps/frontend/public/relieve/dem_sectores.json``. No inventa elevaciones: si
+    la descarga falla, el error se propaga y no se escribe nada.
+    """
+    k10 = json.loads((RAIZ / "data" / "kit" / "K10_sectores_simulados.geojson").read_text(encoding="utf-8"))
+    pts = [p for f in k10["features"] for p in f["geometry"]["coordinates"][0]]
+    lon0, lon1 = min(p[0] for p in pts) - MARGEN_SECTORES, max(p[0] for p in pts) + MARGEN_SECTORES
+    lat0, lat1 = min(p[1] for p in pts) - MARGEN_SECTORES, max(p[1] for p in pts) + MARGEN_SECTORES
+    caja = (round(lon0, 4), round(lat0, 4), round(lon1, 4), round(lat1, 4))
+    log(f"[sectores] DEM terrarium z{Z_SECTORES}, caja {caja}")
+    m = descargar_mosaico(http, caja, Z_SECTORES)
+    lons, lats = malla(caja, PASO_SECTORES)
+    crudo = muestrear(m, lons, lats)
+    z = gauss(crudo, SIGMA_SECTORES)
+    ruido = float(np.std(crudo - z))
+    log(f"  malla {len(lons)}x{len(lats)}; min {z.min():.1f} max {z.max():.1f}; ruido {ruido:.2f} m")
+    # bbox = extension real de los nodos (la malla va de nodo a nodo)
+    caja = (round(float(lons[0]), 5), round(float(lats[-1]), 5), round(float(lons[-1]), 5), round(float(lats[0]), 5))
+    obj = {
+        "categoria": CATEGORIA,
+        "fuente": f"AWS Terrain Tiles (terrarium) z{Z_SECTORES}; SRTM (NASA/USGS) y otras fuentes",
+        "licencia": "Ver atribucion de AWS Terrain Tiles en LEEME.md",
+        "fecha_descarga": FECHA,
+        "bbox": list(caja),
+        "nx": len(lons),
+        "ny": len(lats),
+        "paso_grados": PASO_SECTORES,
+        "filas": "norte a sur",
+        "unidad": "decimetros (int16 little-endian en base64)",
+        "suavizado_sigma_celdas": SIGMA_SECTORES,
+        "ruido_dem_m": round(ruido, 2),
+        "min_m": round(float(z.min()), 1),
+        "max_m": round(float(z.max()), 1),
+        "nota": "Elevaciones sobre el nivel del mar (DEM), no sobre el cero de la escala de Puerto Formosa. Precision vertical de varios metros.",
+        "datos_b64": base64.b64encode(np.round(z * 10).astype("<i2").tobytes()).decode("ascii"),
+    }
+    escribir_json(SALIDA / "dem_sectores.json", obj)
+    tam = escribir_json(RAIZ / "apps" / "frontend" / "public" / "relieve" / "dem_sectores.json", obj)
+    ruta_man = GEO / "manifiesto.json"
+    man = json.loads(ruta_man.read_text(encoding="utf-8"))
+    entrada = {
+        "id": "relieve_sectores",
+        "nombre": "Relieve fino de los sectores K10 (DEM z14, malla ~50 m)",
+        "url": TILES_URL + f" (z{Z_SECTORES})",
+        "licencia": "AWS Terrain Tiles: ver LEEME.md",
+        "bbox": list(caja),
+        "zoom": Z_SECTORES,
+        "tiles": m["n_tiles"],
+        "malla": [len(lons), len(lats)],
+        "paso_grados": PASO_SECTORES,
+        "elevacion_min_m": round(float(z.min()), 1),
+        "elevacion_max_m": round(float(z.max()), 1),
+        "ruido_dem_m": round(ruido, 2),
+        "archivos": ["relieve/dem_sectores.json"],
+        "fecha_descarga": FECHA,
+        "categoria": CATEGORIA,
+        "estado": "ok",
+        "fuente_usada": "primaria",
+        "notas": "Solo ordena DONDE avanza el agua dentro de cada sector; CUANDO se compromete lo define K10 (SIMULADO). Elevaciones del DEM, no de la escala del puerto.",
+    }
+    man["capas"] = [c for c in man["capas"] if c["id"] != entrada["id"]] + [entrada]
+    ruta_man.write_text(json.dumps(man, ensure_ascii=False, indent=2), encoding="utf-8")
+    log(f"  escrito dem_sectores.json ({tam} bytes) y copia web")
+    return {"zoom": Z_SECTORES, "tiles": m["n_tiles"], "malla": [len(lons), len(lats)], "bytes": tam}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -546,7 +622,18 @@ def main() -> int:
     ap.add_argument(
         "--paso-local", type=float, default=None, help="intervalo (m) de las curvas locales"
     )
+    ap.add_argument(
+        "--sectores", action="store_true", help="solo la malla fina (z14) de los sectores K10; no toca las demas capas"
+    )
     args = ap.parse_args()
+    if args.sectores:
+        with httpx.Client(
+            headers={"User-Agent": USER_AGENT},
+            timeout=httpx.Timeout(120.0, connect=30.0),
+            follow_redirects=True,
+        ) as http:
+            log(json.dumps(malla_sectores(http)))
+        return 0
     resumen: dict = {}
     manifiesto: list[dict] = []
     with httpx.Client(

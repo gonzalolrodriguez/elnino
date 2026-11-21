@@ -656,6 +656,8 @@ export type ParteTarea = {
   creado_en: string;
   /** Solo aplica a las dificultades. */
   resuelta: boolean | null;
+  /** Evidencia multimedia (fotos y video) del parte. */
+  adjuntos?: AdjuntoParte[];
 };
 
 export type ParteReciente = ParteTarea & { sector_id: string | null; solicitud_id: number | null; cuadrilla_nombre: string; tarea_estado: string };
@@ -666,8 +668,112 @@ export type CuadrillaResumen = {
   tipo_incidente: string;
   vehiculo: string | null;
   estado: string;
-  integrantes: { usuario_id: number; rol_operativo: string; es_encargado: boolean }[];
+  integrantes: { id: number; usuario_id: number | null; rol_operativo: string; es_encargado: boolean; profesion?: string }[];
+  /** Los agrega la gestión completa de cuadrillas; un servidor anterior no los envía. */
+  tipo_operativo?: TipoOperativo;
+  cantidad_integrantes?: number;
   tarea_actual: { id: number; estado: string; solicitud_id: number | null; sector_id: string | null; requiere_atencion: boolean } | null;
   ultimo_parte: ParteTarea | null;
   dificultades_abiertas: number;
 };
+
+// ---------- Gestión completa de cuadrillas (odd/tasks/gestion-cuadrillas.md) ----------
+
+export type TipoOperativo = "personas" | "familias" | "productores_ganado" | "apicola" | "bienes" | "traslado_mixto";
+
+/** Integrante de una cuadrilla. `nombre_visible` solo llega a operador, decisor y admin. */
+export type Integrante = {
+  id: number;
+  usuario_id: number | null;
+  rol_operativo: string;
+  profesion: string;
+  es_encargado: boolean;
+  nombre_visible: string | null;
+};
+
+export type CuadrillaCompleta = {
+  id: number;
+  nombre: string;
+  tipo_operativo: TipoOperativo;
+  tipo_incidente: string;
+  cantidad_integrantes: number;
+  vehiculo: string | null;
+  equipamiento: string[];
+  estado: string;
+  base: { lat: number; lon: number } | null;
+  notas: string | null;
+  integrantes: Integrante[];
+  creado_en: string;
+};
+
+export type CuerpoIntegrante = { usuario_id: number | null; rol_operativo: string; profesion: string; es_encargado: boolean };
+
+export type CuerpoCuadrilla = {
+  nombre: string;
+  tipo_operativo: TipoOperativo;
+  tipo_incidente: string;
+  cantidad_integrantes: number;
+  vehiculo: string | null;
+  equipamiento: string[];
+  base: { lat: number; lon: number } | null;
+  notas: string | null;
+};
+
+/** `GET /cuadrillas/plantillas`: equipamiento y profesiones sugeridos por tipo de operativo (SUPUESTO). */
+export type PlantillaOperativo = { equipamiento: string[]; profesiones: string[] };
+export type Plantillas = Partial<Record<TipoOperativo, PlantillaOperativo>>;
+/** Respuesta de `GET /cuadrillas/plantillas`. */
+export type RespuestaPlantillas = {
+  plantillas: Plantillas;
+  tipos_operativos: TipoOperativo[];
+  profesiones: string[];
+  vehiculos: string[];
+  categoria: string;
+  fuente: string;
+};
+
+/** `DELETE /cuadrillas/{id}`: baja lógica con historial, borrado sin él. */
+export type RespuestaBajaCuadrilla = { id: number; estado: "baja" | "eliminada"; eliminada: boolean; tareas_sin_cuadrilla: number };
+
+export type TipoAviso = "desvio" | "equipamiento" | "instruccion" | "seguridad";
+export type GeometriaAviso = { type: "LineString"; coordinates: [number, number][] } | { type: "Point"; coordinates: [number, number] };
+/** Aviso del operativo a una cuadrilla (`GET /cuadrillas/{id}/avisos`). Quién lo leyó se ve por rol, nunca por nombre. */
+export type AvisoCuadrilla = {
+  id: number;
+  cuadrilla_id: number;
+  tipo: TipoAviso;
+  texto: string;
+  items: string[];
+  geometria: GeometriaAviso | null;
+  tarea_id: number | null;
+  creado_en: string;
+  creado_por_rol: string | null;
+  /** Lectura del primer integrante que lo abrió; `null` mientras nadie lo leyó. */
+  leido_en: string | null;
+  leido_por_rol: string | null;
+  categoria?: string;
+};
+export type CuerpoAviso = { tipo: TipoAviso; texto: string; items: string[]; geometria: GeometriaAviso | null; tarea_id: number | null };
+
+/** Evidencia de un parte: `tipo` es `imagen` o `video`; `mime` el tipo real (MP4 o MOV en video). */
+export type AdjuntoParte = { n: number; tipo: "imagen" | "video" | string; mime?: string; bytes: number };
+
+/** Recorrido de una cuadrilla hacia su tarea (misma forma que en `/mi/pedidos`). */
+export type RutaCuadrilla = {
+  coordenadas: [number, number][];
+  distancia_km: number;
+  llegada_estimada_min: number | null;
+  metodo: "red_vial" | "aproximado";
+  simulada: boolean;
+  progreso: number;
+  velocidad_kmh: number;
+  calculada_en?: string;
+};
+export type PosicionSeguimiento = PosicionCuadrilla & {
+  tipo_operativo?: TipoOperativo | null;
+  vehiculo?: string | null;
+  simulada?: boolean;
+  ruta?: RutaCuadrilla | null;
+  destino?: { lat: number; lon: number } | null;
+};
+export type RespuestaSeguimientoCuadrillas = Omit<RespuestaPosiciones, "posiciones"> & { posiciones: PosicionSeguimiento[] };

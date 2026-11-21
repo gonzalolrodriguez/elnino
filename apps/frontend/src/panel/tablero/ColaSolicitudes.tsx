@@ -48,7 +48,7 @@ export function ColaSolicitudes({ senal }: { senal: number }) {
       id="tab-cola"
       icono={<IconoBandeja />}
       derecha={
-        <Link as={RouterLink} to={enlace} fontSize="sm" fontWeight={600} color="primarioHover">
+        <Link as={RouterLink} to={enlace} className="enlace-toque" fontSize="sm" fontWeight={600} color="primarioHover">
           Atender en Solicitudes y cuadrillas
         </Link>
       }

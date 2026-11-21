@@ -1,6 +1,8 @@
 import { Box, Button, Flex, Heading, Link, Text } from "@chakra-ui/react";
 import { CATEGORIAS } from "@evacuaciones/shared";
 
+import { ANCHO_CONTENEDOR, GUTTER } from "../components/Contenedor";
+import { IconoTilde } from "../components/iconos/Iconos";
 import { Insignia } from "../components/Insignia";
 import { CIFRAS_FORMOSA, UMBRAL_ALERTA } from "../datos/kit";
 
@@ -26,9 +28,9 @@ export function FranjaEstado() {
   const { texto, fecha } = fraseEstado();
   return (
     <Box as="section" aria-labelledby="titulo-estado" data-testid="franja-estado" bg="superficie" borderBottom="1px solid" borderColor="borde">
-      <Flex maxW="90rem" mx="auto" px={{ base: 4, md: 8 }} py={{ base: 5, md: 6 }} gap={{ base: 4, lg: 10 }} direction={{ base: "column", lg: "row" }} align={{ lg: "center" }}>
+      <Flex maxW={ANCHO_CONTENEDOR.lectura} mx="auto" px={GUTTER} py={{ base: 5, md: 6 }} gap={{ base: 4, lg: 10 }} direction={{ base: "column", lg: "row" }} align={{ lg: "center" }}>
         <Box flex="1.2">
-          <Heading as="h2" id="titulo-estado" size="sm" mb={1}>
+          <Heading as="h2" id="titulo-estado" size="bloque" mb={1}>
             Cómo estamos hoy
           </Heading>
           <Text fontSize={{ base: "md", md: "lg" }} data-testid="frase-estado">
@@ -37,9 +39,9 @@ export function FranjaEstado() {
         </Box>
         <Box as="ul" listStyleType="none" m={0} p={0} flex="1" display="grid" gap={1.5} aria-label="Qué hacer ahora">
           {ACCIONES.map((a) => (
-            <Text as="li" key={a} fontSize="sm" fontWeight={600}>
-              <Box as="span" aria-hidden="true" mr={2} color="primario">
-                •
+            <Text as="li" key={a} fontWeight={600} display="flex" alignItems="center" gap={2}>
+              <Box as="span" aria-hidden="true" display="inline-flex" color="verde.600">
+                <IconoTilde tam="1.1em" />
               </Box>
               {a}
             </Text>

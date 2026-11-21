@@ -3,7 +3,9 @@ import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 
 import { EnlaceConexion } from "@/components/EnlaceConexion";
-import { Boton, Campo, COLOR, ErrorCaja, Opcion, Opciones, Pantalla, Subtitulo, Texto, Titulo } from "@/components/ui";
+import { Encabezado } from "@/components/Piezas";
+import { Boton, Campo, COLOR, ErrorCaja, Opcion, Opciones, Pantalla, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import { obtenerUbicacion, type Coordenadas } from "@/lib/dispositivo";
 import { leerEntero } from "@/lib/ayudaSms";
 import { esErrorConexion, mensajeError } from "@/lib/errores";
@@ -149,7 +151,7 @@ export default function Registro() {
 
       {tipo === "ciudadano" ? (
         <>
-          <Subtitulo>Grupo familiar</Subtitulo>
+          <Encabezado icono="casa">Grupo familiar</Encabezado>
           <Texto suave>Podés completarlo o cambiarlo después en tu perfil.</Texto>
           <Campo etiqueta="Integrantes" value={integrantes} onChangeText={setIntegrantes} keyboardType="number-pad" />
           <Campo etiqueta="Menores" value={menores} onChangeText={setMenores} keyboardType="number-pad" />
@@ -160,7 +162,7 @@ export default function Registro() {
       ) : (
         <>
           <Campo etiqueta="Nombre del establecimiento" value={nombreEst} onChangeText={setNombreEst} />
-          <Subtitulo>Stock inicial</Subtitulo>
+          <Encabezado icono="mascota">Stock inicial</Encabezado>
           <Texto suave>Opcional; podés editarlo después.</Texto>
           <Campo etiqueta="Especie" value={especie} onChangeText={setEspecie} />
           <Campo etiqueta="Categoría" value={categoriaAnimal} onChangeText={setCategoriaAnimal} />
@@ -177,6 +179,7 @@ export default function Registro() {
               : "Usar mi ubicación como domicilio (opcional)"
         }
         variante="secundario"
+        icono="punto"
         onPress={usarUbicacion}
       />
 
@@ -187,7 +190,7 @@ export default function Registro() {
           onValueChange={setConsentimiento}
           accessibilityLabel="Consentimiento informado"
         />
-        <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: COLOR.suave }}>
+        <Text style={{ flex: 1, ...TIPO.pequeno, color: COLOR.suave }}>
           Acepto el tratamiento de mis datos personales con finalidad exclusiva de gestión de
           emergencias, con derecho de acceso, rectificación y supresión (Ley 25.326).
         </Text>

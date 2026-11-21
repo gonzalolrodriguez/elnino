@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
+import { AvisosOperativo } from "@/components/AvisosOperativo";
 import { EnlaceBrujula } from "@/components/EnlaceBrujula";
 import { FormCierre } from "@/components/FormCierre";
 import { FormParte } from "@/components/FormParte";
 import { HistorialPartes } from "@/components/HistorialPartes";
+import { Icono } from "@/components/Icono";
+import { MiCuadrilla } from "@/components/MiCuadrilla";
+import { Aviso, Chip, Chips, Disco, type Tono } from "@/components/Piezas";
 import { SoloRol } from "@/components/SoloRol";
 import {
   Boton,
@@ -28,6 +32,14 @@ import { mensajeError } from "@/lib/errores";
 import { etiquetaEstadoTarea } from "@/lib/etiquetas";
 import { descripcionParte, exigeConstancia, type TipoParte } from "@/lib/partes";
 import { api, type Tarea } from "@/lib/servicios";
+import { useCuadrillaPropia } from "@/lib/useCuadrilla";
+
+const TONO_TAREA: Record<Tarea["estado"], { tono: Tono; icono: "reloj" | "camion" | "tilde" | "cruz" }> = {
+  pendiente: { tono: "neutro", icono: "reloj" },
+  en_curso: { tono: "info", icono: "camion" },
+  completada: { tono: "ok", icono: "tilde" },
+  cancelada: { tono: "neutro", icono: "cruz" },
+};
 
 function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar: (t: Tarea) => void; alCerrada: () => void }) {
   const { items, descartar } = useCola();
@@ -66,51 +78,93 @@ function TarjetaTarea({ tarea, alCambiar, alCerrada }: { tarea: Tarea; alCambiar
 
   return (
     <Tarjeta>
-      <Text style={{ fontWeight: "700", fontSize: 16 }}>{tarea.titulo}</Text>
-      <Text style={{ fontWeight: "600", color: tarea.estado === "completada" ? COLOR.ok : COLOR.primario }}>
-        {etiquetaEstadoTarea(tarea.estado)}
-        {tarea.sector_id ? ` · sector ${tarea.sector_id}` : ""}
+      <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={{ fontWeight: "700", fontSize: 18, lineHeight: 24, letterSpacing: -0.2, color: COLOR.texto }}>
+        {tarea.titulo}
       </Text>
+      <Chips>
+        <Chip tono={TONO_TAREA[tarea.estado].tono} icono={TONO_TAREA[tarea.estado].icono} texto={etiquetaEstadoTarea(tarea.estado)} />
+        {tarea.sector_id ? <Chip icono="punto" texto={`Sector ${tarea.sector_id}`} /> : null}
+      </Chips>
       {tarea.requiere_atencion ? (
-        <View accessibilityRole="alert" style={{ backgroundColor: COLOR.avisoFondo, borderRadius: 8, padding: 10 }}>
-          <Text style={{ color: COLOR.avisoTexto, fontWeight: "700" }}>
-            ⚠ Requiere atención: la tarea volvió a pendiente y el operador la va a reprogramar.
-          </Text>
+        <Aviso tono="aviso" icono="advertencia">
+          Requiere atención: la tarea volvió a pendiente y el operador la va a reprogramar.
+        </Aviso>
+      ) : null}
+      {tarea.descripcion ? (
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+          <View style={{ marginTop: 2 }}>
+            <Icono nombre="punto" tam={20} color={COLOR.primario} />
+          </View>
+          <Texto>{tarea.descripcion}</Texto>
         </View>
       ) : null}
-      {tarea.descripcion ? <Texto>{tarea.descripcion}</Texto> : null}
+
+      {error ? <ErrorCaja mensaje={error} /> : null}
+      <FilaBotones>
+        {tarea.estado === "pendiente" ? (
+          <Boton titulo="Iniciar" icono="camion" onPress={() => void aplicar({ estado: "en_curso" })} cargando={trabajando} />
+        ) : null}
+        {tarea.estado === "en_curso" ? (
+          <Boton titulo="Completar" icono="tilde" onPress={() => void aplicar({ estado: "completada" })} cargando={trabajando} />
+        ) : null}
+      </FilaBotones>
 
       {(tarea.checklist ?? []).map((c, i) => (
         <Pressable
           key={`${tarea.id}-${i}`}
           accessibilityRole="checkbox"
+          accessibilityLabel={c.item}
           accessibilityState={{ checked: c.hecho, disabled: trabajando || cerrada }}
           disabled={trabajando || cerrada}
           onPress={() => alternar(i)}
-          style={{ flexDirection: "row", gap: 8, paddingVertical: 10, minHeight: 48, alignItems: "center" }}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            gap: 12,
+            paddingVertical: 8,
+            minHeight: 48,
+            alignItems: "center",
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
-          <Text>{c.hecho ? "[x]" : "[ ]"}</Text>
-          <Text style={{ flex: 1 }}>{c.item}</Text>
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              borderWidth: 2,
+              borderColor: c.hecho ? COLOR.primario : COLOR.trazo,
+              backgroundColor: c.hecho ? COLOR.primario : COLOR.superficie,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {c.hecho ? <Icono nombre="tilde" tam={18} color={COLOR.papel} /> : null}
+          </View>
+          <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, fontSize: 16, lineHeight: 22, color: c.hecho ? COLOR.suave : COLOR.texto, textDecorationLine: c.hecho ? "line-through" : "none" }}>
+            {c.item}
+          </Text>
         </Pressable>
       ))}
-
-      {error ? <ErrorCaja mensaje={error} /> : null}
-      <FilaBotones>
-        {tarea.estado === "pendiente" ? (
-          <Boton titulo="Iniciar" onPress={() => void aplicar({ estado: "en_curso" })} cargando={trabajando} />
-        ) : null}
-        {tarea.estado === "en_curso" ? (
-          <Boton titulo="Completar" onPress={() => void aplicar({ estado: "completada" })} cargando={trabajando} />
-        ) : null}
-      </FilaBotones>
       {cierreLocal ? (
         <Texto>Cierre con constancia guardado en el teléfono: se envía solo cuando haya conexión.</Texto>
       ) : null}
-      {pendientesParte.map((i) => (
-        <Texto key={i.id} suave>
-          Pendiente de envío: {i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "parte"}. Se manda solo cuando haya conexión.
-        </Texto>
-      ))}
+      {pendientesParte.map((i) => {
+        const archivos = i.datos && esParte(i.datos) ? (i.datos.adjuntos?.length ?? 0) : 0;
+        return (
+          <View key={i.id} style={{ gap: 2 }}>
+            <Texto suave>
+              {i.servidorId === null
+                ? `Pendiente de envío: ${i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "parte"}. Se manda solo cuando haya conexión.`
+                : `${i.datos && esParte(i.datos) ? descripcionParte(i.datos) : "Parte"}: el parte ya llegó al operador.`}
+            </Texto>
+            {archivos > 0 ? (
+              <Texto suave pequeno>
+                {archivos === 1 ? "Falta subir 1 archivo de evidencia" : `Faltan subir ${archivos} archivos de evidencia`}: se suben solos cuando haya conexión.
+              </Texto>
+            ) : null}
+          </View>
+        );
+      })}
       {rechazadosParte.map((i) => (
         <View key={i.id} style={{ gap: 6 }}>
           <Text style={{ fontWeight: "600" }}>
@@ -183,9 +237,12 @@ function CompartirUbicacion() {
           : null;
   return (
     <Tarjeta>
-      <Text style={{ fontWeight: "700", fontSize: 16 }}>
-        {compartir && estado.fase === "compartiendo" ? "Compartiendo tu ubicación con el solicitante" : "No estás compartiendo tu ubicación"}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Disco tono={compartir && estado.fase === "compartiendo" ? "ok" : "neutro"} icono="punto" tam={40} />
+        <Text style={{ flex: 1, fontWeight: "700", fontSize: 17, lineHeight: 23, color: COLOR.texto }}>
+          {compartir && estado.fase === "compartiendo" ? "Compartiendo tu ubicación con el solicitante" : "No estás compartiendo tu ubicación"}
+        </Text>
+      </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <Switch
           value={compartir}
@@ -194,7 +251,11 @@ function CompartirUbicacion() {
         />
         <Text style={{ flex: 1 }}>{compartir ? "Pausá el envío con el interruptor." : "Activalo para volver a compartirla."}</Text>
       </View>
-      {motivo ? <Text style={{ color: COLOR.avisoTexto }}>{motivo}</Text> : null}
+      {motivo ? (
+        <Aviso tono="aviso" icono="advertencia">
+          {motivo}
+        </Aviso>
+      ) : null}
       <Texto suave pequeno>
         Se envía cada 30 segundos mientras la app esté abierta en primer plano (no se usa el segundo plano). La ven quien pidió ayuda y los operadores,
         solo mientras la tarea está en curso; no se guarda un historial.
@@ -209,6 +270,9 @@ function ListaTareas() {
   const rechazados = items.filter((i) => esCierre(i.datos) && i.estado === "rechazada");
   const [tareas, setTareas] = useState<Tarea[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // La cuadrilla sale de `GET /mi/cuadrilla` (no de las tareas); 404 = todavía no integra ninguna.
+  const propia = useCuadrillaPropia();
+  const cuadrillaId = propia.cuadrillaId;
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -226,14 +290,17 @@ function ListaTareas() {
   return (
     <Pantalla dosColumnas>
       <Titulo>Tareas de la cuadrilla</Titulo>
+      {cuadrillaId !== null ? <AvisosOperativo cuadrillaId={cuadrillaId} /> : null}
       <EnlaceBrujula />
+      {propia.cuadrilla ? <MiCuadrilla cuadrilla={propia.cuadrilla} copia={propia.copia} /> : null}
+      {propia.estado === "sin_cuadrilla" ? <Vacio icono="personas" texto="Todavía no integrás ninguna cuadrilla. Cuando la administración te sume a una, la vas a ver acá." /> : null}
       <Texto suave>
         Los cambios de estado requieren conexión. Los partes y el cierre con constancia se pueden cargar
         sin conexión: quedan en el teléfono y se envían solos.
       </Texto>
       {error ? <ErrorCaja mensaje={error} onReintentar={cargar} /> : null}
       {!error && tareas === null ? <Cargando texto="Cargando tareas…" /> : null}
-      {tareas && tareas.length === 0 ? <Vacio texto="No tenés tareas asignadas." /> : null}
+      {tareas && tareas.length === 0 ? <Vacio icono="tarea" texto="No tenés tareas asignadas." /> : null}
       {tareas?.some((t) => t.estado === "en_curso") ? <CompartirUbicacion /> : null}
       <Rejilla>
       {(tareas ?? []).map((t) => (

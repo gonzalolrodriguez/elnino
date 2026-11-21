@@ -126,6 +126,57 @@ export const CANAL_CONFIRMACION: Record<string, string> = {
 };
 export const etiquetaCanalConfirmacion = de(CANAL_CONFIRMACION);
 
+/**
+ * Origen de un dato o de un pedido, sea cual sea su familia (solicitud, lluvia, canal de confirmación): busca el
+ * código en cada catálogo y, si no está, lo humaniza. Úsese cuando una columna mezcla orígenes de distinta fuente.
+ */
+export function etiquetaOrigen(codigo: string | null | undefined): string {
+  if (codigo === null || codigo === undefined || codigo === "") return "";
+  return ORIGEN_SOLICITUD[codigo] ?? ORIGEN_LLUVIA[codigo] ?? CANAL_CONFIRMACION[codigo] ?? humanizar(codigo);
+}
+
+/** Códigos internos del kit y del equipo, con el nombre que entiende quien lee (DESIGN.md, Copy y voz). */
+export const CODIGO: Record<string, string> = {
+  K1: "Serie histórica del río",
+  K2: "Alturas del río Paraguay (INA)",
+  K3: "Estaciones y umbrales",
+  K4: "Reporte del INA",
+  K5: "Boletín ENSO",
+  K6: "Informe de inteligencia artificial",
+  K7: "Red hidrográfica",
+  K8: "Escenarios y bitácora",
+  K9: "Fuentes del kit",
+  K10: "Sectores de evaluación",
+  SUPUESTO: "Supuesto del equipo",
+};
+
+/**
+ * Nombre llano de un código interno: "K1" pasa a "Serie histórica del río (K1)". Con `conCodigo: false` devuelve solo
+ * el nombre. Si el código no es del catálogo, prueba con roles y orígenes y, al final, lo humaniza.
+ */
+export function etiquetaCodigo(codigo: string | null | undefined, { conCodigo = true }: { conCodigo?: boolean } = {}): string {
+  if (codigo === null || codigo === undefined || codigo === "") return "";
+  const clave = codigo.trim().toUpperCase();
+  const nombre = CODIGO[clave];
+  if (nombre) return conCodigo && clave !== "SUPUESTO" ? `${nombre} (${clave})` : nombre;
+  return ROL_OPERATIVO[codigo] ?? ROL[codigo] ?? etiquetaOrigen(codigo);
+}
+
+/**
+ * Pasa a lenguaje llano un texto de la API que trae códigos internos: "K1 · serie limpia; umbrales K3" pasa a
+ * "Serie histórica del río · serie limpia; Estaciones y umbrales" y "es un SUPUESTO" a "es un supuesto del equipo".
+ */
+export function sinCodigos(texto: string | null | undefined): string {
+  if (!texto) return "";
+  return texto
+    .replace(/\b[A-Za-z0-9_]+\.(?:geojson|csv|pdf|json|xlsx)\b/g, "")
+    .replace(/\bK(\d+)\b/g, (cod) => CODIGO[cod] ?? cod)
+    .replace(/\bSUPUESTO\b/g, "supuesto del equipo")
+    .replace(/\s+·\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 /** Fecha y hora en horario de Argentina (UTC-3): "19/11/2026, 21:40". */
 export function fechaHora(iso: string | null | undefined): string {
   if (!iso) return "sin fecha";

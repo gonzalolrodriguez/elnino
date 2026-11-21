@@ -1,6 +1,7 @@
 import { Box, Button, Flex, Text, VisuallyHidden } from "@chakra-ui/react";
 import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
+import { CONTROLES_MAPA_TACTIL } from "../../components/ElegirEnMapa";
 import { EstadoCargando } from "../../components/EstadoCargando";
 import { acumuladas, largoTotal, minutosRestantes } from "../../lib/animacionRuta";
 import { hayWebGL, useMenosMovimiento } from "../../lib/entorno";
@@ -114,7 +115,7 @@ export function MapaPedido(props: Omit<PropsMapaPedido, "pedido" | "reducido" | 
 
   return (
     <Box data-testid="mapa-pedido">
-      <Box position="relative" h={{ base: "17rem", md: "20rem" }} borderRadius="xl" overflow="hidden" border="1px solid" borderColor="borde" bg="suave" role="group" aria-label={ruta ? "Mapa del recorrido de la cuadrilla hasta tu pedido" : "Mapa de tu pedido"}>
+      <Box position="relative" h={{ base: "17rem", md: "20rem" }} borderRadius="xl" overflow="hidden" border="1px solid" borderColor="borde" bg="suave" sx={CONTROLES_MAPA_TACTIL} role="group" aria-label={ruta ? "Mapa del recorrido de la cuadrilla hasta tu pedido" : "Mapa de tu pedido"}>
         <Suspense fallback={<EstadoCargando py={10} />}>
           <MapaPedidoGL pedido={punto} cuadrilla={cuadrilla} centro={centro} ruta={ruta} vehiculo={vehiculo} reducido={reducido} seguir={seguir} alCambiarSeguir={setSeguir} alAvanzar={alAvanzar} />
         </Suspense>

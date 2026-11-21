@@ -1,6 +1,6 @@
 import { Box, Flex, Heading, Link, Text, VisuallyHidden } from "@chakra-ui/react";
 import { CATEGORIAS } from "@evacuaciones/shared";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth, type Usuario } from "../auth/AuthContext";
 import { EstadoCargando } from "../components/EstadoCargando";
@@ -32,7 +32,8 @@ import { Notificaciones, OrdenesVigentes, MiCentro, type Dic } from "./micuenta/
 import { EditarGrupo, type Grupo } from "./micuenta/EditarGrupo";
 import { BandaSector, type MiSector } from "./micuenta/EstadoSector";
 import { MiPedido } from "./micuenta/MiPedido";
-import { Panel, FichaIcono, Vacio } from "./micuenta/Panel";
+import { Establecimientos } from "./micuenta/Establecimientos";
+import { Dato, Panel, FichaIcono, RejillaDatos, Vacio } from "./micuenta/Panel";
 import { PedidosAnteriores } from "./micuenta/PedidosAnteriores";
 import { PedirAyuda } from "./micuenta/PedirAyuda";
 
@@ -123,31 +124,16 @@ const fechaLarga = () => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-/** Una cifra del grupo familiar: ícono, número grande y rótulo. */
-function Dato({ icono, valor, rotulo }: { icono: ReactNode; valor: unknown; rotulo: string }) {
-  return (
-    <Flex direction="column" gap={1.5} minW={0}>
-      <Box aria-hidden="true" display="flex" color="agua.700">
-        {icono}
-      </Box>
-      <Text textStyle="cifraMedia" fontSize="2rem">
-        {valor === undefined || valor === null ? "—" : String(valor)}
-      </Text>
-      <Text textStyle="rotulo">{rotulo}</Text>
-    </Flex>
-  );
-}
-
 function ResumenGrupo({ d }: { d: Dic }) {
   const conDomicilio = typeof d.lat === "number" && typeof d.lon === "number";
   return (
     <>
-      <Box display="grid" gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))" }} gap={{ base: 5, sm: 4 }} sx={{ "& > *": { paddingLeft: { sm: 4 } }, "& > *:first-of-type": { paddingLeft: 0 } }}>
+      <RejillaDatos>
         <Dato icono={<IconoPersonas tam="1.5rem" />} valor={d.integrantes} rotulo="Integrantes" />
         <Dato icono={<IconoMenor tam="1.5rem" />} valor={d.menores} rotulo="Menores" />
         <Dato icono={<IconoMayor tam="1.5rem" />} valor={d.mayores} rotulo="Personas mayores" />
         <Dato icono={<IconoMascota tam="1.5rem" />} valor={d.mascotas} rotulo="Mascotas" />
-      </Box>
+      </RejillaDatos>
       <Flex gap={2.5} wrap="wrap" align="center" mt={5} fontSize="sm">
         <Flex as="span" align="center" gap={1.5} px={3} py={1} borderRadius="full" bg={conDomicilio ? "agua.100" : "alerta.50"} color={conDomicilio ? "agua.800" : "alerta.800"} fontWeight={600}>
           {conDomicilio ? <IconoTilde tam="1rem" strokeWidth={2.25} /> : <IconoPunto tam="1rem" />}
@@ -224,7 +210,7 @@ export default function MiCuenta() {
 
   return (
     <Layout titulo="Mi cuenta">
-      <Box maxW="76rem" mx="auto">
+      <Box>
         <VisuallyHidden as="h1">Mi cuenta</VisuallyHidden>
         <Flex justify="space-between" align={{ base: "stretch", sm: "flex-end" }} direction={{ base: "column", sm: "row" }} gap={4} mb={{ base: 6, md: 8 }}>
           <Box minW={0}>
@@ -238,7 +224,6 @@ export default function MiCuenta() {
           </Box>
           <Link
             href="tel:103"
-            aria-label="Emergencia: llamar al 103"
             display="inline-flex"
             alignItems="center"
             justifyContent="center"
@@ -261,7 +246,7 @@ export default function MiCuenta() {
             <Flex aria-hidden="true" align="center" justify="center" w="2.5rem" h="2.5rem" borderRadius="full" bg="evacuacion.700" color="papel">
               <IconoTelefono />
             </Flex>
-            <span>Emergencia: 103</span>
+            <span>Emergencia: llamar al 103</span>
           </Link>
         </Flex>
 
@@ -363,24 +348,8 @@ export default function MiCuenta() {
             {esProductor && (
               <Panel etiqueta="Mis establecimientos" titulo="Mis establecimientos" icono={<IconoEdificio />} order={{ base: 7, lg: 0 }} w="100%">
                 <EstadoRecurso recurso={estabs} />
-                {estabs.estado === "vacio" && <Vacio icono={<IconoEdificio />}>Todavía no registraste establecimientos.</Vacio>}
-                {estabs.estado === "ok" && (
-                  <Box as="ul" listStyleType="none" m={0} p={0}>
-                    {estabs.datos.map((e, i) => (
-                      <Box as="li" key={String(e.id ?? i)} py={3} borderTop={i === 0 ? "none" : "1px solid"} borderColor="borde">
-                        <Pares
-                          d={e}
-                          claves={[
-                            ["nombre", "Establecimiento"],
-                            ["renspa", "RENSPA"],
-                            ["acceso_habitual", "Acceso habitual"],
-                            ["sector_id", "Sector (K10, SIMULADO)"],
-                          ]}
-                        />
-                      </Box>
-                    ))}
-                  </Box>
-                )}
+                {estabs.estado === "vacio" && <Vacio icono={<IconoEdificio />}>Todavía no registraste establecimientos. Cuando los cargues, vamos a poder avisarte y planificar el traslado del ganado.</Vacio>}
+                {estabs.estado === "ok" && <Establecimientos lista={estabs.datos} />}
               </Panel>
             )}
           </Flex>

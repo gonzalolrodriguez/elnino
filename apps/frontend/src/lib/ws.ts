@@ -5,7 +5,7 @@ import { etiquetaEstadoEvacuacion, etiquetaEstadoSolicitud, etiquetaEstadoTarea,
 
 const TIPO_ORDEN: Record<string, string> = { alerta: "Alerta", evacuacion_preventiva: "Evacuación preventiva", evacuacion: "Evacuación" };
 
-export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea" | "constancia" | "discrepancia"; datos: Record<string, unknown> };
+export type EventoTiempoReal = { tipo: "escenario" | "solicitud" | "orden" | "tarea" | "constancia" | "discrepancia" | "aviso_cuadrilla"; datos: Record<string, unknown> };
 export type EstadoWs = "desconectado" | "conectando" | "conectado";
 
 const CIERRE_NO_AUTORIZADO = 1008;
@@ -51,7 +51,7 @@ export function useTiempoReal(token: string | null, alEvento: (e: EventoTiempoRe
           if (msg.tipo === "conectado") {
             intentos = 0;
             setEstado("conectado");
-          } else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea" || msg.tipo === "constancia" || msg.tipo === "discrepancia") {
+          } else if (msg.tipo === "escenario" || msg.tipo === "solicitud" || msg.tipo === "orden" || msg.tipo === "tarea" || msg.tipo === "constancia" || msg.tipo === "discrepancia" || msg.tipo === "aviso_cuadrilla") {
             callback.current({ tipo: msg.tipo, datos: msg.datos ?? {} });
           }
         } catch {
@@ -95,6 +95,7 @@ const TITULOS: Record<EventoTiempoReal["tipo"], string> = {
   tarea: "Tarea actualizada",
   constancia: "Constancia de evacuación",
   discrepancia: "Evacuación para revisar",
+  aviso_cuadrilla: "Aviso a la cuadrilla",
 };
 
 export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle: string } {
@@ -111,6 +112,8 @@ export function describirEvento(e: EventoTiempoReal): { titulo: string; detalle:
   } else if (e.tipo === "discrepancia") {
     const motivos = Array.isArray(d.motivos) ? d.motivos.map((m) => etiquetaMotivoDiscrepancia(String(m))).join(" ") : "";
     detalle = `Tarea ${d.tarea_id ?? ""}${d.sector_id ? ` (sector ${String(d.sector_id)})` : ""}: ${motivos || "hay algo para revisar."}`;
+  } else if (e.tipo === "aviso_cuadrilla") {
+    detalle = d.accion === "leido" ? "Un integrante leyó un aviso del operativo." : "Hay un aviso nuevo del operativo para la cuadrilla.";
   } else {
     detalle = d.estado ? `Tarea ${d.id ?? ""}: ${etiquetaEstadoTarea(String(d.estado)).toLowerCase()}.` : "Se crearon o reasignaron tareas.";
   }

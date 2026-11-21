@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 
-import { COLOR } from "@/components/tema";
+import { COLOR, ESPACIO, RADIO, TIPO } from "@/components/tema";
 import { usePendientes } from "@/lib/EstadoCola";
 import { escucharRed, hayRed } from "@/lib/red";
 import { TOQUE_MIN, useDiseno } from "@/lib/responsive";
@@ -58,15 +58,15 @@ export function BarraAyuda() {
         style={({ pressed }) => ({
           minHeight: TOQUE_MIN,
           minWidth: TOQUE_MIN,
-          paddingHorizontal: 14,
+          paddingHorizontal: ESPACIO.l,
           justifyContent: "center",
           alignItems: "center",
-          borderRadius: 12,
+          borderRadius: RADIO.boton,
           backgroundColor: pressed ? COLOR.primarioPresionado : COLOR.primario,
           marginVertical: 2,
         })}
       >
-        <Text maxFontSizeMultiplier={1.5} style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+        <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.cuerpoFuerte, fontWeight: "700", color: COLOR.papel }}>
           103
         </Text>
       </Pressable>
@@ -76,8 +76,7 @@ export function BarraAyuda() {
         accessibilityLiveRegion="polite"
         style={{
           flex: 1,
-          fontSize: 13,
-          lineHeight: 18,
+          ...TIPO.pequeno,
           fontWeight: "600",
           color: sinRed || cola ? COLOR.avisoTexto : COLOR.suave,
         }}

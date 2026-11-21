@@ -12,7 +12,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1 import (
     auth,
     canales,
+    caudal,
     centinela,
+    cuadrillas,
     datos,
     evacuaciones,
     lluvia,
@@ -133,10 +135,12 @@ def crear_app() -> FastAPI:
         datos,
         lluvia,
         canales,
+        caudal,
         operacion,
         partes,
         evacuaciones,
         seguimiento,
+        cuadrillas,  # después de partes y seguimiento: sus /cuadrillas/<fija> ganan a /{id}
         solicitudes,
         mi,
         centinela,

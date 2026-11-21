@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Input, InputGroup, InputRightElement, Text } from "@chakra-ui/react";
 import { useState } from "react";
 
 import { IconoOlas } from "../components/iconos/Iconos";
@@ -23,6 +23,8 @@ export function AvisoEscenario() {
   const { escenarioSimulado, entrada, alturaObservada, volverAObservado, fijarAltura, fijarLluvia } = useEscenario();
   // En pantallas angostas los controles se pliegan; el resumen y el aviso quedan siempre a la vista.
   const [abierto, setAbierto] = useState(false);
+  // Campo numérico con coma decimal ("5,60"): mientras se escribe se respeta lo tipeado y al salir se normaliza.
+  const [borrador, setBorrador] = useState<string | null>(null);
   const lluviaSimulada = entrada.lluvia_origen === "simulado" || entrada.lluvia_origen === "manual";
 
   return (
@@ -31,7 +33,7 @@ export function AvisoEscenario() {
       aria-label="Escenario del panel"
       data-testid="barra-escenario"
       position="sticky"
-      top={{ base: "2.9rem", md: "2rem" }}
+      top="calc(var(--altura-leyenda) + 0.25rem)"
       zIndex={20}
       mb={4}
       px={4}
@@ -75,8 +77,8 @@ export function AvisoEscenario() {
       </Flex>
       <Flex id="controles-escenario" display={{ base: abierto ? "flex" : "none", md: "flex" }} mt={2} gap={{ base: 3, md: 6 }} wrap="wrap" align="flex-end">
         <Box flex="1 1 16rem">
-          <Text as="label" htmlFor="barra-altura-num" fontSize="xs" fontWeight={600} display="block">
-            Altura del río en el escenario (m) · SIMULADO si difiere de {fmtM(alturaObservada)}
+          <Text as="label" htmlFor="barra-altura-num" textStyle="rotulo" color="inherit" display="block">
+            Altura del río en el escenario · SIMULADO si difiere de {fmtM(alturaObservada)}
           </Text>
           <Flex gap={2} align="center">
             <input
@@ -89,24 +91,29 @@ export function AvisoEscenario() {
               onChange={(e) => fijarAltura(Number(e.target.value))}
               style={{ flex: 1, minWidth: 0 }}
             />
-            <input
-              id="barra-altura-num"
-              type="number"
-              inputMode="decimal"
-              min={ALTURA_MIN}
-              max={ALTURA_MAX}
-              step={0.05}
-              value={entrada.altura_formosa_m}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (e.target.value !== "" && Number.isFinite(v)) fijarAltura(acotar(v, ALTURA_MIN, ALTURA_MAX));
-              }}
-              style={{ width: "5rem", padding: "0.25rem 0.375rem", border: "1px solid var(--chakra-colors-borde, #ccc)", borderRadius: "0.375rem", background: "inherit", color: "inherit" }}
-            />
+            <InputGroup w="7rem" flexShrink={0}>
+              <Input
+                id="barra-altura-num"
+                inputMode="decimal"
+                autoComplete="off"
+                bg="superficie"
+                pr="2.25rem"
+                value={borrador ?? fmtNum(entrada.altura_formosa_m, 2)}
+                onChange={(e) => {
+                  setBorrador(e.target.value);
+                  const v = Number(e.target.value.replace(",", "."));
+                  if (e.target.value.trim() !== "" && Number.isFinite(v)) fijarAltura(acotar(v, ALTURA_MIN, ALTURA_MAX));
+                }}
+                onBlur={() => setBorrador(null)}
+              />
+              <InputRightElement pointerEvents="none" color="textoSuave" fontSize="sm" aria-hidden="true">
+                m
+              </InputRightElement>
+            </InputGroup>
           </Flex>
         </Box>
         <Box flex="1 1 12rem">
-          <Text as="label" htmlFor="barra-lluvia" fontSize="xs" fontWeight={600} display="block">
+          <Text as="label" htmlFor="barra-lluvia" textStyle="rotulo" color="inherit" display="block">
             Lluvia del escenario: {fmtNum(entrada.lluvia_mm)} mm ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
           </Text>
           <input

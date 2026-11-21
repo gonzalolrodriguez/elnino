@@ -102,7 +102,7 @@ describe("páginas de formulario: formulario más panel de apoyo", () => {
     await screen.findByTestId("panel-apoyo");
     const css = cssEmitido();
     expect(css).toMatch(/grid-template-columns:minmax\(0, ?1fr\);/);
-    expect(css).toMatch(/@media screen and \(min-width: ?62em\)\{[^}]*grid-template-columns:minmax\(0, ?34rem\) minmax\(0, ?24rem\)/);
+    expect(css).toMatch(/@media screen and \(min-width: ?62em\)\{[^}]*grid-template-columns:minmax\(0, ?40rem\) minmax\(0, ?24rem\)/);
   });
 
   it("el panel de apoyo no inventa cifras: lista los sectores K10 rotulados SIMULADO", async () => {

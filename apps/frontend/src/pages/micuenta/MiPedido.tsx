@@ -46,16 +46,16 @@ function CabeceraSeguimiento({ p }: { p: Pedido }) {
   const llegada = formatearLlegada(s.llegada_estimada_min);
   const distancia = formatearDistancia(s.distancia_m);
   return (
-    <Flex direction={{ base: "column", lg: "row" }} align={{ lg: "flex-end" }} justify="space-between" gap={{ base: 4, lg: 8 }}>
-      <Text fontSize={{ base: "xl", md: "2xl" }} fontWeight={700} lineHeight={1.2} letterSpacing="-0.015em" maxW="22rem">
+    <Box>
+      <Text fontSize={{ base: "xl", md: "2xl" }} fontWeight={700} lineHeight={1.2} letterSpacing="-0.015em" maxW="26rem" sx={{ textWrap: "balance" }}>
         {ahora}
       </Text>
-      <Flex gap={{ base: 8, md: 12 }} wrap="wrap" data-testid="seguimiento-estado">
+      <Flex gap={{ base: 8, md: 12 }} wrap="wrap" mt={5} data-testid="seguimiento-estado">
         {llegada && <CifraSeguimiento rotulo="Llegada estimada" valor={llegada} />}
         {distancia && <CifraSeguimiento rotulo="Distancia a tu pedido" valor={distancia} />}
         {!llegada && !distancia && <Text fontSize="sm">La cuadrilla está en camino.</Text>}
       </Flex>
-    </Flex>
+    </Box>
   );
 }
 
@@ -86,8 +86,8 @@ function NotasSeguimiento({ p }: { p: Pedido }) {
           <Text>La última posición tiene más de {s.supuestos.posicion_vieja_minutos} minutos, así que la distancia y la llegada pueden no ser confiables. Si es urgente, llamá al 103.</Text>
         </Flex>
       )}
-      <Text fontSize="xs" color="textoSuave" mt={2}>
-        Es una estimación (SUPUESTO: línea recta por un factor de desvío de {String(s.supuestos.factor_desvio).replace(".", ",")} y una velocidad media de {s.supuestos.velocidad_cuadrilla_kmh} km/h), no una promesa de llegada.
+      <Text textStyle="microdato" mt={2}>
+        Es una estimación (supuesto del equipo: línea recta por un factor de desvío de {String(s.supuestos.factor_desvio).replace(".", ",")} y una velocidad media de {s.supuestos.velocidad_cuadrilla_kmh} km/h), no una promesa de llegada.
       </Text>
     </Box>
   );
@@ -106,7 +106,7 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
           <Heading as="h2" id="mi-pedido" size="md" color="oscuro.fg">
             Mi pedido activo
           </Heading>
-          <Insignia categoria={CATEGORIAS.SIMULADO} />
+          <Insignia categoria={CATEGORIAS.SIMULADO} onDark />
         </Flex>
         <Text color="oscuro.suave" fontSize="sm" mb={5}>
           Pedido n.º {p.id} · {etiquetaTipoSolicitud(p.tipo)}
@@ -138,7 +138,6 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
                         {vehiculo}
                       </Flex>
                     )}
-                    <Insignia categoria={CATEGORIAS.SIMULADO} />
                   </Flex>
                 </Box>
               </Flex>
@@ -156,7 +155,6 @@ export function MiPedido({ pedido: p, alResponder }: { pedido: Pedido; alRespond
                   <Text fontSize="sm" color="textoSuave">
                     Centro de destino: <strong>{p.centro.nombre}</strong>
                   </Text>
-                  <Insignia categoria={CATEGORIAS.SIMULADO} />
                 </Box>
               </Flex>
             )}

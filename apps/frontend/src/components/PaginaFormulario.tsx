@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { K10_FECHA, SECTORES_K10 } from "../datos/kit";
 import { fmt } from "../lib/entorno";
+import { CabeceraPublica } from "./CabeceraPublica";
 import { Insignia } from "./Insignia";
 import { Plegable } from "./Plegable";
 
@@ -16,7 +17,7 @@ export function PaginaFormulario({
   intro,
   children,
   aside,
-  anchoFormulario = "34rem",
+  anchoFormulario = "40rem",
   anchoAside = "24rem",
 }: {
   titulo: string;
@@ -27,17 +28,12 @@ export function PaginaFormulario({
   anchoAside?: string;
 }) {
   return (
-    <Box maxW="80rem" mx="auto" w="100%" data-testid="pagina-formulario">
-      <Box maxW="46rem" mb={6}>
-        <Heading as="h1" size="xl" mb={2}>
-          {titulo}
-        </Heading>
-        {intro && <Text>{intro}</Text>}
-      </Box>
+    <Box w="100%" data-testid="pagina-formulario">
+      <CabeceraPublica titulo={titulo} intro={intro} />
       <Box
         display="grid"
         gridTemplateColumns={{ base: "minmax(0, 1fr)", lg: `minmax(0, ${anchoFormulario}) minmax(0, ${anchoAside})` }}
-        columnGap={{ lg: 10, xl: 14 }}
+        columnGap={{ lg: 16 }}
         rowGap={8}
         alignItems="start"
         justifyContent="start"
@@ -62,7 +58,7 @@ export function PaginaFormulario({
 export function BloqueApoyo({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <Box mb={7}>
-      <Heading as="h2" size="sm" mb={2}>
+      <Heading as="h2" size="bloque" mb={2}>
         {titulo}
       </Heading>
       {children}
@@ -74,24 +70,24 @@ export function BloqueApoyo({ titulo, children }: { titulo: string; children: Re
 export function ResumenSectores() {
   return (
     <Box mb={7} borderTop="1px solid" borderColor="borde" pt={1}>
-      <Plegable titulo={<Heading as="h2" size="sm">Sectores de evaluación</Heading>}>
+      <Plegable titulo={<Heading as="h2" size="bloque">Sectores de evaluación</Heading>}>
         <Box mb={2}>
           <Insignia categoria="SIMULADO" />
-          <Text as="span" fontSize="xs" color="textoSuave" ml={2}>
-            K10 v1.0 · {K10_FECHA}
+          <Text as="span" textStyle="microdato" ml={2}>
+            Sectores de la mesa (K10) v1.0 · {K10_FECHA}
           </Text>
         </Box>
         <Box as="ul" listStyleType="none" m={0} p={0} fontSize="sm">
           {SECTORES_K10.map((s) => (
             <Box as="li" key={s.id} py={1.5} borderBottom="1px solid" borderColor="pizarra.100">
               <strong>{s.id}</strong> {s.nombre}
-              <Text color="textoSuave" fontSize="xs">
+              <Text textStyle="microdato">
                 Se compromete a {fmt(s.compromiso_m)} m en Puerto Formosa. {s.acceso}.
               </Text>
             </Box>
           ))}
         </Box>
-        <Text fontSize="xs" color="textoSuave" mt={2} pb={2}>
+        <Text textStyle="microdato" mt={2} pb={2}>
           No son barrios ni parajes reales: así los armó la mesa para esta evaluación.
         </Text>
       </Plegable>

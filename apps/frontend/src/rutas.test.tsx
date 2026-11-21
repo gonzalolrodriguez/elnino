@@ -79,7 +79,8 @@ describe("Información", () => {
     renderRuta("/informacion");
     expect(await screen.findByRole("heading", { name: "Puerto Formosa: umbrales y picos" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Altura diaria de la escala de Puerto Formosa/ })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /cuatro sectores simulados K10/ })).toBeInTheDocument();
+    // Con el relieve fino cargado es el mapa 2D/3D; si no carga, el esquema plano: en ambos casos nombra los cuatro sectores K10.
+    expect(await screen.findByRole("img", { name: /cuatro sectores (simulados )?K10/ })).toBeInTheDocument();
     expect(screen.getAllByText("SIMULADO").length).toBeGreaterThan(0);
   });
 });
@@ -88,7 +89,7 @@ describe("sección Información", () => {
   it("/el-nino redirige a /informacion", async () => {
     renderRuta("/el-nino");
     expect(await screen.findByRole("heading", { level: 1, name: "Información para entender la crecida" })).toBeInTheDocument();
-    expect(document.title).toBe("Información · Operación Agua");
+    expect(document.title).toBe("Información · EvacuaFor");
   });
 
   it("la navegación principal dice Información y apunta a /informacion", () => {

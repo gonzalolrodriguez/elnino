@@ -1,8 +1,11 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Text } from "react-native";
 
 import { FlechaBrujula } from "@/components/FlechaBrujula";
-import { Boton, Cargando, Enlace, Insignia, Pantalla, Subtitulo, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { Aviso, Encabezado } from "@/components/Piezas";
+import { Boton, Cargando, COLOR, Enlace, Insignia, Pantalla, Tarjeta, Texto, Titulo } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import {
   descripcionDireccion,
   distanciaM,
@@ -70,7 +73,7 @@ export default function Brujula() {
       <Pantalla>
         <Titulo>¿Hacia dónde voy?</Titulo>
         <Tarjeta>
-          <Subtitulo>Todavía no hay un destino guardado</Subtitulo>
+          <Encabezado icono="info">Todavía no hay un destino guardado</Encabezado>
           <Texto suave>
             Esta brújula usa el centro de recepción que la aplicación guarda en el teléfono cuando tenés conexión. Abrila una vez con
             datos para que quede disponible sin señal.
@@ -95,7 +98,7 @@ export default function Brujula() {
       <Titulo>¿Hacia dónde voy?</Titulo>
 
       <Tarjeta>
-        <Subtitulo>{punto.nombre}</Subtitulo>
+        <Encabezado icono="casa">{punto.nombre}</Encabezado>
         <Texto suave pequeno>
           {asignado ? "Tu centro de recepción asignado" : "El centro más cercano entre los guardados (no tenés uno asignado)"}
         </Texto>
@@ -113,9 +116,9 @@ export default function Brujula() {
             {flecha !== null ? (
               <FlechaBrujula grados={flecha} etiqueta={descripcionDireccion(rumbo, distancia, punto.nombre)} />
             ) : null}
-            <Texto>
+            <Text maxFontSizeMultiplier={1.5} style={{ ...TIPO.destacado, color: COLOR.texto, textAlign: "center" }}>
               {flecha !== null ? `Distancia en línea recta: ${formatearDistanciaBrujula(distancia)}` : `Está ${rumboEnTexto(rumbo, distancia)}`}
-            </Texto>
+            </Text>
             {flecha !== null ? (
               <Texto suave pequeno>
                 Está {rumboEnTexto(rumbo, distancia)}.
@@ -137,7 +140,9 @@ export default function Brujula() {
       </Tarjeta>
 
       <Tarjeta>
-        <Texto>{AVISO_SEGURIDAD}</Texto>
+        <Aviso tono="aviso" icono="advertencia">
+          {AVISO_SEGURIDAD}
+        </Aviso>
         <Texto suave pequeno>
           {datos.desdeCache
             ? `Sin conexión: datos guardados el ${formatearGuardado(datos.guardadoEn)}.`

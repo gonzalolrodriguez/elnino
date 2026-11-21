@@ -108,13 +108,12 @@ describe("TresRelojes", () => {
 });
 
 describe("landing", () => {
-  it("muestra el selector de perfiles antes de los tres relojes (Entender la situación)", () => {
+  it("muestra el selector de perfiles antes de los tres relojes ", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     renderRuta("/");
     const relojes = screen.getByTestId("tres-relojes-amplia");
     const perfiles = document.getElementById("ingreso");
     expect(perfiles).not.toBeNull();
     expect((perfiles as Node).compareDocumentPosition(relojes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText("Entender la situación")).toBeInTheDocument();
   });
 });

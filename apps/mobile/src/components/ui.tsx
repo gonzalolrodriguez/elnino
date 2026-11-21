@@ -13,11 +13,12 @@ import {
   type TextInputProps,
 } from "react-native";
 
-import { CIFRAS, COLOR, RADIO, TIPO } from "@/components/tema";
+import { Icono, type NombreIcono } from "@/components/Icono";
+import { CIFRAS, COLOR, ESPACIO, RADIO, TIPO } from "@/components/tema";
 import { ANCHO_MAX, TOQUE_MIN, useDiseno } from "@/lib/responsive";
 import type { Categoria } from "@/lib/servicios";
 
-export { COLOR, RADIO, TIPO } from "@/components/tema";
+export { COLOR, ESPACIO, RADIO, TIPO } from "@/components/tema";
 
 /**
  * `true` dentro de la barra de pestañas: ella ya reserva la zona segura inferior (gestos / botones
@@ -25,19 +26,28 @@ export { COLOR, RADIO, TIPO } from "@/components/tema";
  */
 export const EnPestanasContext = createContext(false);
 
-/** Cada categoría tiene su tono propio (texto sobre fondo suave) para distinguirse sin gritar. */
-const ESTILO_CATEGORIA: Record<Categoria, { color: string; fondo: string }> = {
-  "DATO OBSERVADO": { color: "#174A86", fondo: COLOR.cielo },
-  "DOCUMENTO DE REFERENCIA": { color: "#0B5D55", fondo: "#E3F3F0" },
-  SIMULADO: { color: COLOR.avisoTexto, fondo: COLOR.avisoFondo },
+/**
+ * La categoría se distingue por forma y texto, igual que en la web (nunca solo por color):
+ *  - DATO OBSERVADO: pastilla rellena en azul río; es lo único real y tiene que destacar.
+ *  - DOCUMENTO DE REFERENCIA: pastilla sin relleno con borde continuo.
+ *  - SIMULADO: callada, borde punteado y sin relleno (es lo normal en el prototipo).
+ */
+const ESTILO_CATEGORIA: Record<Categoria, { color: string; fondo: string; borde: string; trazo: "solid" | "dotted"; peso: "600" | "700" }> = {
+  "DATO OBSERVADO": { color: COLOR.papel, fondo: COLOR.primario, borde: COLOR.primario, trazo: "solid", peso: "700" },
+  "DOCUMENTO DE REFERENCIA": { color: COLOR.texto, fondo: "transparent", borde: COLOR.bordeCampo, trazo: "solid", peso: "600" },
+  SIMULADO: { color: COLOR.suave, fondo: "transparent", borde: COLOR.bordeCampo, trazo: "dotted", peso: "600" },
 };
 
-/** Categoría visible en cada cifra o capa (regla 2 de la mesa). */
+/** Categoría visible en cada cifra o capa (regla 2 de la mesa). Una por bloque; la de datos observados va junto a la cifra. */
 export function Insignia({ categoria }: { categoria: Categoria }) {
   const e = ESTILO_CATEGORIA[categoria];
   return (
-    <View style={[estilos.insignia, { backgroundColor: e.fondo }]}>
-      <Text maxFontSizeMultiplier={1.5} style={[estilos.insigniaTexto, { color: e.color }]}>
+    <View
+      accessible
+      accessibilityLabel={`Categoría: ${categoria}`}
+      style={[estilos.insignia, { backgroundColor: e.fondo, borderColor: e.borde, borderStyle: e.trazo }]}
+    >
+      <Text maxFontSizeMultiplier={1.5} style={[estilos.insigniaTexto, { color: e.color, fontWeight: e.peso }]}>
         {categoria}
       </Text>
     </View>
@@ -118,7 +128,7 @@ export function Rejilla({ children }: { children: ReactNode }) {
 /** Fila de botones que se acomoda en varias líneas cuando no entran (fuente grande, pantallas chicas). */
 export function FilaBotones({ children }: { children: ReactNode }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ESPACIO.s }}>
       {Children.toArray(children).map((h, i) => (
         <View key={i} style={{ flexGrow: 1, flexBasis: 140 }}>
           {h}
@@ -171,12 +181,15 @@ export function Boton({
   deshabilitado,
   variante = "primario",
   cargando,
+  icono,
 }: {
   titulo: string;
   onPress: () => void;
   deshabilitado?: boolean;
   variante?: "primario" | "secundario" | "peligro";
   cargando?: boolean;
+  /** Ícono decorativo a la izquierda del texto (el significado sigue estando en el texto). */
+  icono?: NombreIcono;
 }) {
   const apagado = deshabilitado || cargando;
   const secundario = variante === "secundario";
@@ -193,14 +206,17 @@ export function Boton({
         variante === "peligro" && { backgroundColor: COLOR.error },
         pressed && !apagado && PULSADO,
         pressed && !apagado && !secundario && variante === "primario" && { backgroundColor: COLOR.primarioPresionado },
-        pressed && !apagado && secundario && { backgroundColor: "#D5E5F6" },
+        pressed && !apagado && secundario && { backgroundColor: COLOR.secundarioPresionado },
         apagado && { opacity: 0.5 },
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color={secundario ? COLOR.primario : "#fff"} />
+        <ActivityIndicator color={secundario ? COLOR.primario : COLOR.papel} />
       ) : (
-        <Text style={[estilos.botonTexto, secundario && { color: COLOR.primario }]}>{titulo}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, flexShrink: 1 }}>
+          {icono ? <Icono nombre={icono} tam={20} color={secundario ? COLOR.primario : COLOR.papel} /> : null}
+          <Text style={[estilos.botonTexto, secundario && { color: COLOR.primario }, { flexShrink: 1 }]}>{titulo}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -232,7 +248,7 @@ export function Enlace({
 
 /** Grupo de opciones excluyentes (tipo de pedido, tipo de cuenta). */
 export function Opciones({ children }: { children: ReactNode }) {
-  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>;
+  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: ESPACIO.s }}>{children}</View>;
 }
 
 /** Una opción del grupo: pastilla rellena en río si está elegida, en cielo si no. */
@@ -257,7 +273,7 @@ export function Opcion({
         pressed && PULSADO,
       ]}
     >
-      <Text style={[estilos.opcionTexto, elegida && { color: "#fff" }]}>{titulo}</Text>
+      <Text style={[estilos.opcionTexto, elegida && { color: COLOR.papel }]}>{titulo}</Text>
     </Pressable>
   );
 }
@@ -306,9 +322,12 @@ export function Cargando({ texto = "Cargando…" }: { texto?: string }) {
   );
 }
 
-export function Vacio({ texto }: { texto: string }) {
+export function Vacio({ texto, icono = "bandeja" }: { texto: string; icono?: NombreIcono }) {
   return (
     <View style={estilos.centro}>
+      <View style={estilos.discoVacio}>
+        <Icono nombre={icono} tam={24} color={COLOR.primario} />
+      </View>
       <Text style={[estilos.texto, { color: COLOR.suave, textAlign: "center" }]}>{texto}</Text>
     </View>
   );
@@ -325,7 +344,12 @@ export function ErrorCaja({
 }) {
   return (
     <View style={estilos.errorCaja} accessibilityRole="alert">
-      <Text style={estilos.errorTexto}>{mensaje}</Text>
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+        <View style={{ marginTop: 1 }}>
+          <Icono nombre="alerta" tam={22} color={COLOR.errorTexto} />
+        </View>
+        <Text style={[estilos.errorTexto, { flex: 1 }]}>{mensaje}</Text>
+      </View>
       {onReintentar ? <Boton titulo="Reintentar" variante="secundario" onPress={onReintentar} /> : null}
       {children}
     </View>
@@ -338,11 +362,11 @@ const estilos = StyleSheet.create({
   pequeno: { ...TIPO.pequeno },
   subtitulo: { ...TIPO.subtitulo, color: COLOR.texto },
   tarjeta: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: COLOR.borde,
     borderRadius: RADIO.tarjeta,
-    padding: 16,
-    gap: 8,
+    padding: ESPACIO.l,
+    gap: 10,
     backgroundColor: COLOR.superficie,
   },
   boton: {
@@ -355,9 +379,9 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
   },
   botonSecundario: { backgroundColor: COLOR.cielo },
-  botonTexto: { color: "#fff", fontWeight: "600", fontSize: 16, textAlign: "center" },
+  botonTexto: { ...TIPO.cuerpoFuerte, color: COLOR.papel, textAlign: "center" },
   enlace: { minHeight: TOQUE_MIN, justifyContent: "center", alignItems: "center", paddingHorizontal: 12 },
-  enlaceTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600", textAlign: "center" },
+  enlaceTexto: { ...TIPO.cuerpoFuerte, color: COLOR.primario, textAlign: "center" },
   opcion: {
     backgroundColor: COLOR.cielo,
     borderRadius: RADIO.pastilla,
@@ -366,8 +390,8 @@ const estilos = StyleSheet.create({
     minHeight: TOQUE_MIN,
     justifyContent: "center",
   },
-  opcionTexto: { color: COLOR.primario, fontSize: 15, fontWeight: "600" },
-  etiqueta: { ...TIPO.etiqueta, color: COLOR.suave },
+  opcionTexto: { ...TIPO.cuerpoFuerte, color: COLOR.primario },
+  etiqueta: { ...TIPO.etiqueta, color: COLOR.texto },
   campo: {
     borderWidth: 1,
     borderColor: COLOR.bordeCampo,
@@ -375,24 +399,26 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     minHeight: TOQUE_MIN,
-    fontSize: 16,
+    ...TIPO.cuerpo,
     color: COLOR.texto,
     backgroundColor: COLOR.superficie,
   },
-  error: { color: COLOR.error, fontSize: 14 },
+  error: { ...TIPO.etiqueta, color: COLOR.errorTexto },
   errorCaja: {
     backgroundColor: COLOR.errorFondo,
     borderRadius: RADIO.boton,
     padding: 14,
     gap: 10,
   },
-  errorTexto: { color: COLOR.error, fontSize: 15, fontWeight: "600", lineHeight: 21 },
-  centro: { padding: 24, alignItems: "center", gap: 8 },
+  errorTexto: { ...TIPO.cuerpoFuerte, color: COLOR.errorTexto },
+  centro: { padding: ESPACIO.xl, alignItems: "center", gap: 10 },
+  discoVacio: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLOR.cielo, alignItems: "center", justifyContent: "center" },
   insignia: {
     alignSelf: "flex-start",
+    borderWidth: 1,
     borderRadius: RADIO.pastilla,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
-  insigniaTexto: { fontSize: 12, fontWeight: "700" },
+  insigniaTexto: { ...TIPO.minimo },
 });

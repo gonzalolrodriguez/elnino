@@ -1,8 +1,8 @@
 {
   "categoria": "SIMULADO",
-  "fecha": "2026-11-17",
-  "fuente": "SIMULADO · cuadrillas de prueba (vehículo por tipo de incidente, también SIMULADO); composición parcial a propósito para mostrar los roles faltantes",
-  "nota": "Los roles son del catálogo roles_operativos (sin nombres de funcionarios).",
+  "fecha": "2026-11-20",
+  "fuente": "SIMULADO · cuadrillas de prueba (vehículo, equipamiento y base también SIMULADOS); las dos primeras tienen composición parcial a propósito para mostrar los roles faltantes",
+  "nota": "Los roles son del catálogo roles_operativos y cada integrante se identifica por rol y profesión (sin nombres de funcionarios ni de personas).",
   "cuadrillas": [
     {
       "nombre": "Cuadrilla humana SIMULADA 1",
@@ -24,6 +24,74 @@
         {"rol_operativo": "veterinario"},
         {"rol_operativo": "transporte"}
       ]
+    },
+    {
+      "nombre": "Equipo interdisciplinario SIMULADO A",
+      "tipo_operativo": "familias",
+      "cantidad_integrantes": 5,
+      "vehiculo": "colectivo",
+      "equipamiento": ["botiquín de primeros auxilios", "chalecos salvavidas", "linternas", "bidones de agua", "frazadas", "radio portátil"],
+      "base": {"lon": -58.183, "lat": -26.185},
+      "notas": "SIMULADO · asistencia y traslado de familias de los sectores del casco urbano",
+      "integrantes": [
+        {"profesion": "trabajo_social", "rol_operativo": "encargado_cuadrilla", "es_encargado": true},
+        {"profesion": "medicina"},
+        {"profesion": "enfermeria"},
+        {"profesion": "chofer"},
+        {"profesion": "policia"}
+      ]
+    },
+    {
+      "nombre": "Equipo interdisciplinario SIMULADO B",
+      "tipo_operativo": "productores_ganado",
+      "cantidad_integrantes": 5,
+      "vehiculo": "camion_jaula",
+      "equipamiento": ["jaulas", "mangas portátiles", "bebederos", "forraje", "sogas", "ruedas de auxilio", "cadenas", "palas"],
+      "base": {"lon": -58.17, "lat": -26.195},
+      "notas": "SIMULADO · traslado de productores y rodeos desde el sector rural este",
+      "integrantes": [
+        {"profesion": "veterinaria", "rol_operativo": "encargado_cuadrilla", "es_encargado": true},
+        {"profesion": "zootecnia"},
+        {"profesion": "chofer"},
+        {"profesion": "chofer"},
+        {"profesion": "logistica"}
+      ]
+    },
+    {
+      "nombre": "Equipo interdisciplinario SIMULADO C",
+      "tipo_operativo": "traslado_mixto",
+      "cantidad_integrantes": 6,
+      "vehiculo": "4x4",
+      "equipamiento": ["botiquín de primeros auxilios", "jaulas", "forraje", "bidones de agua", "ruedas de auxilio", "cadenas", "sogas", "palas", "lonas", "generador"],
+      "base": {"lon": -58.193, "lat": -26.215},
+      "notas": "SIMULADO · traslado mixto de personas, animales y bienes materiales",
+      "integrantes": [
+        {"profesion": "logistica", "rol_operativo": "encargado_cuadrilla", "es_encargado": true},
+        {"profesion": "medicina"},
+        {"profesion": "veterinaria"},
+        {"profesion": "chofer"},
+        {"profesion": "bomberos"},
+        {"profesion": "tecnico_energia"}
+      ]
+    }
+  ],
+  "avisos": [
+    {
+      "cuadrilla": "Cuadrilla humana SIMULADA 1",
+      "tipo": "desvio",
+      "texto": "Camino de tierra anegado hacia el Sector Rural Este: tomen el desvío marcado (SIMULADO).",
+      "items": [],
+      "geometria": {
+        "type": "LineString",
+        "coordinates": [[-58.151, -26.176], [-58.145, -26.179], [-58.139, -26.1825], [-58.133, -26.185]]
+      }
+    },
+    {
+      "cuadrilla": "Cuadrilla humana SIMULADA 1",
+      "tipo": "equipamiento",
+      "texto": "Para el operativo del Sector Rural Este lleven este equipamiento (SIMULADO).",
+      "items": ["ruedas de auxilio", "palas", "cadenas", "bidones de agua", "chalecos salvavidas"],
+      "geometria": null
     }
   ]
 }

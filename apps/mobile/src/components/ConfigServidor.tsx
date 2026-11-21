@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 
 import { AvisoHttp } from "@/components/ServidorEnUso";
 import { Boton, COLOR, Campo, RADIO, Subtitulo, Tarjeta, Texto } from "@/components/ui";
+import { TIPO } from "@/components/tema";
 import {
   cargarServidor,
   direccionServidor,
@@ -146,7 +147,7 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
         const r = normalizarUrlServidor(texto);
         return r.ok && esUrlHttp(r.url) ? <AvisoHttp /> : null;
       })()}
-      <Text style={{ fontSize: 13, lineHeight: 18, color: COLOR.suave }}>
+      <Text style={{ ...TIPO.pequeno, color: COLOR.suave }}>
         Ej.: http://192.168.1.50:8000 — la IP de la computadora que corre el backend, en la misma red Wi-Fi.
       </Text>
 
@@ -194,7 +195,7 @@ export function ConfigServidor({ sesion }: { sesion?: SesionServidor }) {
               <Texto>
                 Tenés {sesion.pendientes} solicitud(es) sin enviar. Si las conservás, quedan en este teléfono
                 esperando a este servidor: nunca se envían a otro servidor y se reanudan solo si volvés a
-                este con la misma cuenta. Podés descartarlas desde «Mis solicitudes».
+                este con la misma cuenta. Podés descartarlas desde «Mis pedidos».
               </Texto>
               <Boton
                 titulo="Conservar pendientes"

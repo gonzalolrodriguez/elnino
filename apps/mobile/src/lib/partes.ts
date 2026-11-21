@@ -1,3 +1,4 @@
+import { MAX_ADJUNTOS_PARTE, type AdjuntoLocal } from "@/lib/adjuntos";
 import type { DatosParte } from "@/lib/cola";
 
 /**
@@ -19,6 +20,8 @@ export type ParteTarea = {
   autor_rol: string | null;
   creado_en: string;
   resuelta: boolean | null;
+  /** Evidencia ya subida (ausente en backends anteriores). */
+  adjuntos?: { n: number; tipo: string; bytes: number }[];
 };
 
 export const OBSERVACION_MIN = 3;
@@ -55,6 +58,7 @@ export function armarParte(entrada: {
   tipo: TipoParte;
   resultado: ResultadoParte | null;
   observacion: string;
+  adjuntos?: AdjuntoLocal[];
 }): { ok: true; datos: DatosParte } | { ok: false; mensaje: string } {
   if (entrada.tipo === "resultado" && !entrada.resultado) {
     return { ok: false, mensaje: "Elegí cómo terminó la tarea." };
@@ -73,6 +77,10 @@ export function armarParte(entrada: {
   if (obs.length > OBSERVACION_MAX) {
     return { ok: false, mensaje: `La observación admite hasta ${OBSERVACION_MAX} caracteres.` };
   }
+  const adjuntos = entrada.adjuntos ?? [];
+  if (adjuntos.length > MAX_ADJUNTOS_PARTE) {
+    return { ok: false, mensaje: `Cada parte admite hasta ${MAX_ADJUNTOS_PARTE} archivos.` };
+  }
   return {
     ok: true,
     datos: {
@@ -81,6 +89,7 @@ export function armarParte(entrada: {
       tipo: entrada.tipo,
       ...(entrada.tipo === "resultado" && entrada.resultado ? { resultado: entrada.resultado } : {}),
       ...(obs ? { observacion: obs } : {}),
+      ...(adjuntos.length > 0 ? { adjuntos } : {}),
     },
   };
 }

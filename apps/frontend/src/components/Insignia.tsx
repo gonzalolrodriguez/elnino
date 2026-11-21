@@ -2,41 +2,45 @@ import { Box, VisuallyHidden } from "@chakra-ui/react";
 import { CATEGORIAS, type Categoria } from "@evacuaciones/shared";
 
 /**
- * Cada categoría se distingue por forma y por texto, no solo por color:
- *  - DATO OBSERVADO: relleno cielo y borde continuo azul
- *  - DOCUMENTO DE REFERENCIA: fondo blanco y borde continuo gris
- *  - SIMULADO: borde punteado ámbar y fondo rayado en diagonal
+ * Jerarquía visual de las categorías (la regla de la mesa pide mostrarlas, no gritarlas):
+ *  - DATO OBSERVADO: relleno azul sólido con texto claro; es la excepción valiosa y tiene que destacar.
+ *  - DOCUMENTO DE REFERENCIA: sin relleno, borde continuo gris.
+ *  - SIMULADO: texto gris tenue con subrayado punteado, sin caja; es lo corriente en el panel.
+ * Siempre lleva el texto completo (nunca abreviado) y contraste de 4,5:1 o más.
  */
-const ESTILOS: Record<Categoria, Record<string, string>> = {
-  [CATEGORIAS.OBSERVADO]: { bg: "cat.observado.bg", color: "cat.observado.fg", border: "1px solid", borderColor: "cat.observado.borde" },
-  [CATEGORIAS.REFERENCIA]: { bg: "cat.referencia.bg", color: "cat.referencia.fg", border: "1px solid", borderColor: "cat.referencia.borde" },
+const ESTILOS: Record<Categoria, Record<string, unknown>> = {
+  [CATEGORIAS.OBSERVADO]: { bg: "cat.observadoOscuro.bg", color: "cat.observadoOscuro.fg", border: "1px solid", borderColor: "cat.observadoOscuro.bg", borderRadius: "full", px: 2.5, fontWeight: 700 },
+  [CATEGORIAS.REFERENCIA]: { bg: "transparent", color: "cat.referencia.fg", border: "1px solid", borderColor: "cat.referencia.borde", borderRadius: "full", px: 2.5, fontWeight: 600 },
   [CATEGORIAS.SIMULADO]: {
-    bg: "cat.simulado.bg",
-    color: "cat.simulado.fg",
-    border: "1px dashed",
-    borderColor: "cat.simulado.borde",
-    bgImage: "repeating-linear-gradient(135deg, transparent 0 5px, var(--chakra-colors-alerta-100) 5px 6px)",
+    bg: "transparent",
+    color: "pizarra.600",
+    textDecoration: "underline dotted",
+    textUnderlineOffset: "3px",
+    textDecorationThickness: "1px",
+    px: 0.5,
+    fontWeight: 500,
   },
 };
 
-const ESTILOS_SOBRE_OSCURO: Partial<Record<Categoria, Record<string, string>>> = {
-  [CATEGORIAS.OBSERVADO]: { bg: "cat.observadoOscuro.bg", color: "cat.observadoOscuro.fg", border: "1px solid", borderColor: "cat.observadoOscuro.borde" },
-  [CATEGORIAS.REFERENCIA]: { bg: "cat.referenciaOscuro.bg", color: "cat.referenciaOscuro.fg", border: "1px solid", borderColor: "cat.referenciaOscuro.borde" },
+const ESTILOS_SOBRE_OSCURO: Partial<Record<Categoria, Record<string, unknown>>> = {
+  [CATEGORIAS.OBSERVADO]: { bg: "cat.observadoOscuro.bg", color: "cat.observadoOscuro.fg", border: "1px solid", borderColor: "cat.observadoOscuro.borde", borderRadius: "full", px: 2.5, fontWeight: 700 },
+  [CATEGORIAS.REFERENCIA]: { bg: "cat.referenciaOscuro.bg", color: "cat.referenciaOscuro.fg", border: "1px solid", borderColor: "cat.referenciaOscuro.borde", borderRadius: "full", px: 2.5, fontWeight: 600 },
+  [CATEGORIAS.SIMULADO]: { bg: "transparent", color: "limo.100", textDecoration: "underline dotted", textUnderlineOffset: "3px", px: 0.5, fontWeight: 500 },
 };
 
-/** Categoría visible de cada cifra, serie o capa (regla 2 de la mesa). Lleva el prefijo "Categoría:" para lectores de pantalla. */
-export function Insignia({ categoria, onDark = false }: { categoria: Categoria; onDark?: boolean }) {
+/**
+ * Categoría visible de cada cifra, serie o capa (regla 2 de la mesa). Lleva el prefijo "Categoría:" para lectores de pantalla.
+ * `variante="compacta"` quita el relleno vertical para usarla dentro de celdas y filas.
+ */
+export function Insignia({ categoria, onDark = false, variante = "normal" }: { categoria: Categoria; onDark?: boolean; variante?: "normal" | "compacta" }) {
   const estilo = (onDark ? ESTILOS_SOBRE_OSCURO[categoria] : undefined) ?? ESTILOS[categoria];
   return (
     <Box
       as="span"
       data-categoria={categoria}
       display="inline-block"
-      px={2.5}
-      py="1px"
-      borderRadius="full"
+      py={variante === "compacta" ? 0 : "1px"}
       fontSize="0.75rem"
-      fontWeight={600}
       lineHeight={1.5}
       letterSpacing="0.02em"
       whiteSpace="nowrap"

@@ -142,8 +142,8 @@ describe("pestaña Monitor", () => {
     expect(screen.getByText(/Evacuación \(8,30 m\): sin estimación/)).toBeTruthy();
     expect(screen.getByText(/Supuesto: Ascenso lineal/)).toBeTruthy();
     expect(screen.getByText(/Sector Rural Este: En riesgo · aislado/)).toBeTruthy();
-    expect(screen.getByText("Total: 5")).toBeTruthy();
-    expect(screen.getByText("Recibida: 3")).toBeTruthy();
+    expect(screen.getByLabelText("Total: 5")).toBeTruthy();
+    expect(screen.getByLabelText("Recibida: 3")).toBeTruthy();
     expect(screen.getByText(/Ocupación: 300 de 1\.500 \(20 %\)/)).toBeTruthy();
     expect(screen.getByText("Última lectura de lluvia: sin dato de lluvia")).toBeTruthy();
     expect(mockGuardarCache).toHaveBeenCalledTimes(1);

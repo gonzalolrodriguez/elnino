@@ -15,6 +15,8 @@ conexión recibe solo lo que su rol puede ver:
   solo ids, sin coordenadas: el panel consulta ``GET /cuadrillas/posiciones``.
 - ``parte_tarea``: solo operador, decisor y admin; lleva ids, tipo y resultado, nunca la
   observación de la cuadrilla (el panel consulta ``GET /partes/recientes``).
+- ``aviso_cuadrilla``: operador, decisor, admin y solo los integrantes de la cuadrilla avisada
+  (``destinatarios``); lleva ids y tipo, nunca el texto (``GET /cuadrillas/{id}/avisos``).
 
 Cada envío es concurrente y tiene su propio plazo (``PLAZO_ENVIO_S``): un cliente lento o colgado no
 retrasa a los demás ni al hilo que publicó; si no responde a tiempo se lo desconecta.
@@ -101,6 +103,11 @@ class Difusor:
         for c in conexiones:
             if tipo in ("posicion_cuadrilla", "parte_tarea"):  # solo roles operativos
                 if c.rol in ROLES_OPERATIVOS:
+                    elegidos.append(c)
+            elif tipo == "aviso_cuadrilla":  # operativos y los integrantes de esa cuadrilla
+                if c.rol in ROLES_OPERATIVOS or (
+                    destinatarios is not None and c.usuario_id in destinatarios
+                ):
                     elegidos.append(c)
             elif (
                 c.rol in ROLES_MANDOS

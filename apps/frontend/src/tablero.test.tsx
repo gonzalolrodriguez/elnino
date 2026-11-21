@@ -167,11 +167,17 @@ describe("Tablero", () => {
     renderRuta("/comando");
     expect(await screen.findByTestId("tablero-altura")).toHaveTextContent("5,60 m");
     expect(screen.getByTestId("escala-rio")).toHaveAttribute("aria-label", expect.stringContaining("alerta en 7,80 m"));
-    expect(screen.getByTestId("tablero-supuesto")).toHaveTextContent("es un SUPUESTO, no un pronóstico");
+    expect(screen.getByTestId("tablero-supuesto")).toHaveTextContent("es un supuesto del equipo, no un pronóstico");
     expect(screen.getByText("6 a 20 días")).toBeInTheDocument();
     for (const id of ["S1", "S2", "S3", "S4"]) expect(screen.getByTestId(`tablero-sector-${id}`)).toBeInTheDocument();
     expect(screen.getByTestId("tablero-sector-S4")).toHaveTextContent("en riesgo");
-    expect(screen.getByTestId("tablero-sector-S4")).toHaveTextContent("SIMULADO");
+    // La categoría va una vez en el encabezado del bloque y no en cada tarjeta; cada bloque expone la suya.
+    const bloqueSectores = screen.getByRole("region", { name: "Sectores" });
+    expect(bloqueSectores.querySelector('[data-categoria="SIMULADO"]')).not.toBeNull();
+    expect(screen.getByTestId("tablero-sector-S4").querySelector("[data-categoria]")).toBeNull();
+    for (const nombre of ["Río en Puerto Formosa", "Sectores"]) {
+      expect(screen.getByRole("region", { name: nombre }).querySelector("[data-categoria]")).not.toBeNull();
+    }
     expect(screen.getByTestId("tablero-mas-antigua")).toHaveTextContent("2 h 15 min");
     expect(screen.getByTestId("tablero-a-verificar")).toHaveTextContent("2");
     expect(screen.getByRole("link", { name: "Ver las recibidas" })).toHaveAttribute("href", "/comando/operacion?estado=recibida");

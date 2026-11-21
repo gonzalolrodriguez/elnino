@@ -1,5 +1,5 @@
 import type { Tarea } from "../panel/tipos";
-import { solicitar } from "./api";
+import { API_BASE, ApiError, obtenerToken, solicitar } from "./api";
 
 /** Contrato de los partes de tarea (ver odd/tasks/partes-cuadrilla.md). Sin nombres de personas: el autor es un rol operativo. */
 export type TipoParte = "avance" | "dificultad" | "resultado";
@@ -15,7 +15,12 @@ export type Parte = {
   autor_rol: string | null;
   creado_en: string;
   resuelta: boolean | null;
+  /** Evidencia multimedia del parte (`GET /tareas/{id}/partes/{parte_id}/adjuntos/{n}`). */
+  adjuntos?: AdjuntoParte[];
 };
+
+/** Adjunto ya subido: `tipo` es `imagen` o `video`; `mime` el tipo real (MP4 o MOV en video). */
+export type AdjuntoParte = { n: number; tipo: string; mime?: string; bytes: number };
 
 export type CuerpoParte = { tipo: TipoParte; resultado: ResultadoParte | null; observacion: string | null };
 
@@ -59,4 +64,87 @@ export function validarParte(tipo: TipoParte, resultado: ResultadoParte | null, 
     return { error: obligatoria ? `Contá qué pasó: la observación es obligatoria (de ${MIN_OBSERVACION} a ${MAX_OBSERVACION} caracteres).` : `Si agregás un texto, que tenga al menos ${MIN_OBSERVACION} caracteres.` };
   }
   return { cuerpo: { tipo, resultado: tipo === "resultado" ? resultado : null, observacion: texto === "" ? null : texto } };
+}
+
+// --- Evidencia multimedia en los partes (ver odd/tasks/gestion-cuadrillas.md) ----------------------------------
+export const MAX_ADJUNTOS_PARTE = 5;
+export const MAX_BYTES_IMAGEN = 5 * 1024 * 1024;
+export const MAX_BYTES_VIDEO = 20 * 1024 * 1024;
+export const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
+/** Video MP4 y MOV (`video/quicktime`, el formato de los iPhone). */
+export const TIPOS_VIDEO = ["video/mp4", "video/quicktime"];
+/** Para el atributo `accept` del selector: cámara o galería. */
+export const ACEPTA_ADJUNTOS = "image/jpeg,image/png,image/webp,video/mp4,video/quicktime,.mov";
+
+/** Acepta el `tipo` del servidor (`video`) o un mime (`video/mp4`). */
+export const esVideo = (tipo: string): boolean => tipo === "video" || tipo.startsWith("video/");
+
+/** "850 KB", "4,2 MB". */
+export function formatearBytes(b: number): string {
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB`;
+  return `${(b / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
+/** Algunos navegadores no informan el tipo de un `.mov`: se deduce de la extensión (el servidor vuelve a validar el contenido). */
+export function tipoEfectivo(f: { name: string; type: string }): string {
+  if (f.type) return f.type;
+  return /\.mov$/i.test(f.name) ? "video/quicktime" : /\.mp4$/i.test(f.name) ? "video/mp4" : "";
+}
+
+/** Revisa un archivo antes de subirlo: tipo permitido y tamaño máximo. Devuelve el motivo del rechazo o `null`. El servidor vuelve a validar el tipo real. */
+export function validarAdjunto(f: { name: string; type: string; size: number }): string | null {
+  const tipo = tipoEfectivo(f);
+  if (TIPOS_IMAGEN.includes(tipo)) {
+    return f.size > MAX_BYTES_IMAGEN ? `${f.name}: la imagen pesa ${formatearBytes(f.size)} y el máximo es 5 MB.` : null;
+  }
+  if (TIPOS_VIDEO.includes(tipo)) {
+    return f.size > MAX_BYTES_VIDEO ? `${f.name}: el video pesa ${formatearBytes(f.size)} y el máximo es 20 MB.` : null;
+  }
+  return `${f.name}: solo se aceptan imágenes JPEG, PNG o WebP y videos MP4 o MOV.`;
+}
+
+/** Suma archivos nuevos a los ya elegidos respetando el máximo de 5. Devuelve la lista nueva y los motivos de los rechazados. */
+export function sumarAdjuntos<T extends { name: string; type: string; size: number }>(actuales: T[], nuevos: T[]): { lista: T[]; errores: string[] } {
+  const lista = [...actuales];
+  const errores: string[] = [];
+  for (const f of nuevos) {
+    const motivo = validarAdjunto(f);
+    if (motivo) errores.push(motivo);
+    else if (lista.length >= MAX_ADJUNTOS_PARTE) errores.push(`${f.name}: ya elegiste ${MAX_ADJUNTOS_PARTE} archivos, que es el máximo por parte.`);
+    else lista.push(f);
+  }
+  return { lista, errores };
+}
+
+function cabecerasAuth(): Record<string, string> {
+  const token = obtenerToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** Sube un archivo de evidencia al parte ya creado (multipart, campo `archivo`). */
+export async function subirAdjuntoParte(tareaId: number, parteId: number, archivo: File): Promise<AdjuntoParte | null> {
+  const f = new FormData();
+  const tipo = tipoEfectivo(archivo);
+  f.append("archivo", archivo.type === tipo ? archivo : new File([archivo], archivo.name, { type: tipo }));
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/tareas/${tareaId}/partes/${parteId}/adjuntos`, { method: "POST", headers: cabecerasAuth(), body: f, credentials: "include" });
+  } catch {
+    throw new ApiError(0, "sin_conexion", "No hay conexión con el servicio. Revisá tu red e intentá de nuevo.");
+  }
+  const datos = (await r.json().catch(() => null)) as ({ error?: { mensaje?: string } } & Partial<AdjuntoParte>) | null;
+  if (!r.ok) throw new ApiError(r.status, "error", datos?.error?.mensaje ?? `No se pudo subir el archivo (error ${r.status}).`);
+  return datos && typeof datos.n === "number" ? (datos as AdjuntoParte) : null;
+}
+
+/** Descarga un adjunto con la sesión (lleva token: no sirve `<img src>` directo). */
+export async function descargarAdjuntoParte(tareaId: number, parteId: number, n: number): Promise<Blob> {
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}/tareas/${tareaId}/partes/${parteId}/adjuntos/${n}`, { headers: cabecerasAuth(), credentials: "include" });
+  } catch {
+    throw new ApiError(0, "sin_conexion", "No hay conexión con el servicio.");
+  }
+  if (!r.ok) throw new ApiError(r.status, "error", `No se pudo cargar el adjunto (error ${r.status}).`);
+  return r.blob();
 }

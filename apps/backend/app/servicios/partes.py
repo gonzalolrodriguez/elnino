@@ -26,6 +26,7 @@ from app.db.modelos import (
     Usuario,
 )
 from app.servicios import ordenes as srv_ordenes
+from app.servicios.adjuntos_parte import adjunto_publico
 
 CATEGORIA = "SIMULADO"
 ROL_ENCARGADO = "encargado_cuadrilla"
@@ -47,6 +48,7 @@ def parte_a_dict(p: ParteTarea) -> dict:
         "autor_rol": p.autor_rol,
         "creado_en": p.creado_en.isoformat(),
         "resuelta": p.resuelta,
+        "adjuntos": [adjunto_publico(a) for a in (p.adjuntos or [])],
     }
 
 
@@ -212,7 +214,11 @@ def novedades_de_tareas(db: Session, tareas: list[Tarea]) -> dict[int, dict]:
 
 def resumen_cuadrillas(db: Session) -> list[dict]:
     """Cada cuadrilla con sus designados (por rol), su tarea actual y su último parte."""
-    cuadrillas = db.execute(select(Cuadrilla).order_by(Cuadrilla.id)).scalars().all()
+    cuadrillas = (
+        db.execute(select(Cuadrilla).where(Cuadrilla.estado != "baja").order_by(Cuadrilla.id))
+        .scalars()
+        .all()
+    )
     if not cuadrillas:
         return []
     ids = [c.id for c in cuadrillas]
@@ -224,9 +230,11 @@ def resumen_cuadrillas(db: Session) -> list[dict]:
     ).scalars():
         integrantes[i.cuadrilla_id].append(
             {
+                "id": i.id,
                 "usuario_id": i.usuario_id,
                 "rol_operativo": i.rol_operativo,
-                "es_encargado": i.rol_operativo == ROL_ENCARGADO,
+                "profesion": i.profesion,
+                "es_encargado": i.es_encargado,
             }
         )
     # Tarea actual: la abierta más relevante (en curso, luego las que piden atención, luego la última).

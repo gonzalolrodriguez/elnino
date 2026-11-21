@@ -218,3 +218,49 @@ writeFileSync(
   }),
 );
 console.log(`public/capas/provincia_contorno.json: ${Math.round(statSync(resolve(pub, "provincia_contorno.json")).size / 1024)} KB`);
+
+// --- Agua observada por satélite (Sentinel-1/2) de data/geo/satelite/, para la capa del mapa operativo ---
+// Salidas en public/capas/satelite/: los GeoJSON de cada escena (copiados sin modificar) y escenas.json con el
+// resumen por fecha (sensor, área, altura K1 del día, nube, cobertura). El mapa los pide recién al activar la capa.
+const sat = resolve(geo, "satelite");
+if (existsSync(resolve(sat, "manifiesto.json")) && existsSync(resolve(sat, "resumen.csv"))) {
+  const pubSat = resolve(pub, "satelite");
+  mkdirSync(pubSat, { recursive: true });
+  const mSat = JSON.parse(readFileSync(resolve(sat, "manifiesto.json"), "utf-8"));
+  const filasSat = readFileSync(resolve(sat, "resumen.csv"), "utf-8").replace(/^﻿/, "").trim().split(/\r?\n/).slice(1).map((l) => l.split(","));
+  const num = (v) => (v === "" || v === undefined ? null : Number(v));
+  const escenas = filasSat.map(([fecha, sensor, area, k1, fechaK1, nube, cobertura, archivo]) => {
+    const e = mSat.escenas?.find((x) => x.archivo === archivo);
+    copyFileSync(resolve(sat, archivo), resolve(pubSat, archivo));
+    return {
+      id: e?.id ?? archivo.replace(/^agua_|\.geojson$/g, ""),
+      fecha,
+      sensor,
+      tipo: sensor === "Sentinel-1" ? "radar" : "óptico",
+      area_agua_km2: num(area),
+      altura_k1_m: num(k1),
+      fecha_k1: fechaK1,
+      nube_pct: num(nube),
+      cobertura_aoi_pct: num(cobertura),
+      evento: e?.propiedades?.evento ?? "",
+      archivo: `capas/satelite/${archivo}`,
+    };
+  });
+  writeFileSync(
+    resolve(pubSat, "escenas.json"),
+    JSON.stringify(
+      {
+        categoria: "DOCUMENTO DE REFERENCIA",
+        fuente: mSat.fuente?.catalogo_stac ?? "",
+        licencia: mSat.fuente?.licencia ?? "",
+        fecha_descarga: mSat.fecha_descarga ?? "",
+        fecha_corte: mSat.fecha_corte ?? "",
+        zona: mSat.zona?.bbox_wgs84 ?? null,
+        escenas,
+      },
+      null,
+      1,
+    ),
+  );
+  console.log(`public/capas/satelite: ${escenas.length} escenas`);
+}

@@ -1,6 +1,6 @@
-# SAPUKAY · distintivos para la entrega (rama `dev-gonzalo`)
+# EvacuaFor · distintivos para la entrega (rama `dev-gonzalo`)
 
-**Pedido del usuario (20/11/2026, madrugada):** implementar las cuatro ideas del documento SAPUKAY que no existen en el sistema, en dos tandas de agentes en paralelo, sobre la rama `dev-gonzalo`. Plazo: sábado 21/11, 9:00.
+**Pedido del usuario (20/11/2026, madrugada):** implementar las cuatro ideas del documento de ideas del equipo (antes llamado SAPUKAY; el producto ahora se llama EvacuaFor) que no existen en el sistema, en dos tandas de agentes en paralelo, sobre la rama `dev-gonzalo`. Plazo: sábado 21/11, 9:00.
 
 **Fuente:** `SAPUKAY — Super-Sistema de Evacuación (Operación Agua · Desafío 6).docx` y su presentación HTML (escritorio del usuario, fuera del repo). Las cifras del documento sin fuente (1983/1992/1998, cupo gratuito de WhatsApp, Yacyretá, "retardo de 3 a 6 meses", ventana seca de 50 mm) **no** se usan.
 

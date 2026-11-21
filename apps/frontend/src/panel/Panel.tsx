@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import DetalleCuadrilla from "./cuadrillas/DetalleCuadrilla";
 import { PanelLayout } from "./PanelLayout";
 import Bitacora from "./paginas/Bitacora";
 import Centinela from "./paginas/Centinela";
@@ -27,6 +28,7 @@ export default function Panel() {
         <Route path="produccion" element={<Produccion />} />
         <Route path="operacion" element={<Operacion />} />
         <Route path="cuadrillas" element={<Cuadrillas />} />
+        <Route path="cuadrillas/:id" element={<DetalleCuadrilla />} />
         <Route path="lluvia" element={<Lluvia />} />
         <Route path="evacuaciones" element={<Evacuaciones />} />
         <Route path="ordenes" element={<Ordenes />} />
