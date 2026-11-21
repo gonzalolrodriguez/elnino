@@ -28,7 +28,7 @@ function Rutas() {
   const { pathname } = useLocation();
   return (
     <AuthProvider>
-      <ErrorBoundary key={pathname}>
+      <ErrorBoundary ruta={pathname}>
       <Suspense
         fallback={
           <Layout>

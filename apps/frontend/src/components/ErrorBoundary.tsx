@@ -20,14 +20,21 @@ export function PantallaError() {
   );
 }
 
-/** Límite de error global: captura fallos de dibujado de cualquier ruta y muestra una alternativa amable. */
-export class ErrorBoundary extends Component<{ children: ReactNode }, { fallo: boolean }> {
+/**
+ * Límite de error global: captura fallos de dibujado de cualquier ruta y muestra una alternativa amable.
+ * Se rearma cuando cambia `ruta` sin remontar a sus hijos: usar `key={pathname}` remontaba toda la app en cada
+ * navegación y se perdía el estado compartido (por ejemplo, el escenario del panel).
+ */
+export class ErrorBoundary extends Component<{ children: ReactNode; ruta?: string }, { fallo: boolean }> {
   state = { fallo: false };
   static getDerivedStateFromError() {
     return { fallo: true };
   }
   componentDidCatch(error: unknown) {
     console.error("Error de pantalla", error);
+  }
+  componentDidUpdate(previas: { ruta?: string }) {
+    if (this.state.fallo && previas.ruta !== this.props.ruta) this.setState({ fallo: false });
   }
   render() {
     return this.state.fallo ? <PantallaError /> : this.props.children;
