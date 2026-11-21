@@ -162,6 +162,21 @@ export function etiquetaCodigo(codigo: string | null | undefined, { conCodigo = 
   return ROL_OPERATIVO[codigo] ?? ROL[codigo] ?? etiquetaOrigen(codigo);
 }
 
+/**
+ * Pasa a lenguaje llano un texto de la API que trae códigos internos: "K1 · serie limpia; umbrales K3" pasa a
+ * "Serie histórica del río · serie limpia; Estaciones y umbrales" y "es un SUPUESTO" a "es un supuesto del equipo".
+ */
+export function sinCodigos(texto: string | null | undefined): string {
+  if (!texto) return "";
+  return texto
+    .replace(/\b[A-Za-z0-9_]+\.(?:geojson|csv|pdf|json|xlsx)\b/g, "")
+    .replace(/\bK(\d+)\b/g, (cod) => CODIGO[cod] ?? cod)
+    .replace(/\bSUPUESTO\b/g, "supuesto del equipo")
+    .replace(/\s+·\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 /** Fecha y hora en horario de Argentina (UTC-3): "19/11/2026, 21:40". */
 export function fechaHora(iso: string | null | undefined): string {
   if (!iso) return "sin fecha";

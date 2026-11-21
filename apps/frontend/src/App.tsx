@@ -2,6 +2,7 @@ import { Center, Spinner } from "@chakra-ui/react";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useInRouterContext, useLocation } from "react-router-dom";
 
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./auth/AuthContext";
 import { RutaProtegida } from "./auth/RutaProtegida";
@@ -24,8 +25,10 @@ function RedirigirAInformacion() {
 }
 
 function Rutas() {
+  const { pathname } = useLocation();
   return (
     <AuthProvider>
+      <ErrorBoundary key={pathname}>
       <Suspense
         fallback={
           <Layout>
@@ -78,6 +81,7 @@ function Rutas() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }

@@ -6,7 +6,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { IconoAlerta, IconoBandeja, IconoCamion, IconoEdificio, IconoGota, IconoMascota, IconoMegafono, IconoOlas, IconoPersonas, IconoReloj, IconoTilde, IconoTriangulo, IconoPunto, IconoRumbo } from "../../components/iconos/Iconos";
 import { Insignia } from "../../components/Insignia";
 import { TablaDesplazable } from "../../components/TablaDesplazable";
-import { etiquetaOrigenLluvia, etiquetaOrigenSolicitud, etiquetaEstadoSolicitud, etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
+import { etiquetaOrigenLluvia, etiquetaOrigenSolicitud, etiquetaEstadoSolicitud, etiquetaRolOperativo, fechaHora, sinCodigos } from "../../lib/etiquetas";
 import { duracionCorta } from "../../lib/vivo";
 import { IconoCerrado } from "../iconos";
 import type { ResumenCentro, ResumenCuadrilla, ResumenEvacuaciones, ResumenPanel, ResumenRio, ResumenSector } from "../tipos";
@@ -54,7 +54,7 @@ export function BarraEscenario({ rio, resumida = false }: { rio: ResumenRio; res
   }
   const tiempos = rio.tiempo_a_umbrales ?? [];
   return (
-    <Seccion titulo="Río en Puerto Formosa" categoria={rio.categoria} id="tab-rio" icono={<IconoOlas />} derecha={[rio.fuente, fmtFecha(rio.fecha_lectura)].join(" · ")}>
+    <Seccion titulo="Río en Puerto Formosa" categoria={rio.categoria} id="tab-rio" icono={<IconoOlas />} derecha={[sinCodigos(rio.fuente), fmtFecha(rio.fecha_lectura)].join(" · ")}>
       <Flex gap={{ base: 5, lg: 10 }} direction={{ base: "column", lg: "row" }}>
         <Box flex="1.3" minW={0}>
           <Flex align="baseline" columnGap={4} rowGap={1} wrap="wrap" mb={3}>
@@ -93,7 +93,7 @@ export function BarraEscenario({ rio, resumida = false }: { rio: ResumenRio; res
           )}
           {rio.supuesto_proyeccion && (
             <Text textStyle="microdato" mt={3} data-testid="tablero-supuesto">
-              <strong>Supuesto:</strong> {rio.supuesto_proyeccion}
+              <strong>Supuesto:</strong> {sinCodigos(rio.supuesto_proyeccion)}
             </Text>
           )}
         </Box>
@@ -225,7 +225,7 @@ export function AccesosCerrados({ sectores }: { sectores: ResumenSector[] }) {
         </Box>
       )}
       <Text mt={3} fontSize="sm">
-        <Link as={RouterLink} to="/comando/mapa" color="primarioHover" fontWeight={600}>
+        <Link as={RouterLink} to="/comando/mapa" className="enlace-toque" color="primarioHover" fontWeight={600}>
           Marcar o liberar caminos en el mapa
         </Link>
       </Text>
@@ -265,7 +265,7 @@ export function BloqueSolicitudesResumen({ sol }: { sol: ResumenPanel["solicitud
               <Text textStyle="cifraMedia" data-testid="tablero-a-verificar" mt={1}>
                 {fmtNum(sol.a_verificar)}
               </Text>
-              <Link as={RouterLink} to="/comando/operacion?estado=recibida" fontSize="sm" color="primarioHover" fontWeight={600}>
+              <Link as={RouterLink} to="/comando/operacion?estado=recibida" className="enlace-toque" fontSize="sm" color="primarioHover" fontWeight={600}>
                 Ver las recibidas
               </Link>
             </Box>
@@ -359,7 +359,7 @@ export function BloqueCuadrillas({ bloque }: { bloque: ResumenPanel["cuadrillas"
           <AlertIcon />
           <AlertDescription>
             {fmtNum(bloque.tareas_sin_cuadrilla)} {bloque.tareas_sin_cuadrilla === 1 ? "tarea sin cuadrilla asignada" : "tareas sin cuadrilla asignada"}.{" "}
-            <Link as={RouterLink} to="/comando/operacion" fontWeight={600}>
+            <Link as={RouterLink} to="/comando/operacion" className="enlace-toque" fontWeight={600}>
               Asignar
             </Link>
           </AlertDescription>
@@ -446,7 +446,7 @@ export function BloqueOrdenes({ bloque, decisor }: { bloque: ResumenPanel["orden
           <AlertIcon />
           <AlertDescription>
             {fmtNum(bloque.bitacora_borradores)} {bloque.bitacora_borradores === 1 ? "borrador de bitácora espera" : "borradores de bitácora esperan"} la firma de una decisión.{" "}
-            <Link as={RouterLink} to="/comando/bitacora" fontWeight={600}>
+            <Link as={RouterLink} to="/comando/bitacora" className="enlace-toque" fontWeight={600}>
               Completar en la bitácora
             </Link>
           </AlertDescription>
@@ -540,7 +540,7 @@ export function BloqueEvacuaciones({ bloque }: { bloque: ResumenEvacuaciones }) 
   const animales = bloque.animales_trasladados_total ?? Object.values(bloque.animales_trasladados ?? {}).reduce((s, n) => s + n, 0);
   const abiertas = bloque.discrepancias_abiertas ?? 0;
   return (
-    <Seccion titulo="Evacuaciones" categoria={bloque.categoria} id="tab-evacuaciones" icono={<IconoCamion />} derecha={<Link as={RouterLink} to="/comando/evacuaciones" fontSize="sm" fontWeight={600} color="primarioHover">Ver el detalle</Link>}>
+    <Seccion titulo="Evacuaciones" categoria={bloque.categoria} id="tab-evacuaciones" icono={<IconoCamion />} derecha={<Link as={RouterLink} to="/comando/evacuaciones" className="enlace-toque" fontSize="sm" fontWeight={600} color="primarioHover">Ver el detalle</Link>}>
       <SimpleGrid minChildWidth="10.5rem" spacing={5} mb={4}>
         <Cifra testId="evac-personas" etiqueta="Personas trasladadas" valor={fmtNum(bloque.personas_trasladadas ?? 0)} categoria={bloque.categoria} />
         <Cifra testId="evac-animales" etiqueta="Animales trasladados" valor={fmtNum(animales)} categoria={bloque.categoria} />
@@ -552,7 +552,7 @@ export function BloqueEvacuaciones({ bloque }: { bloque: ResumenEvacuaciones }) 
           <AlertIcon />
           <AlertDescription>
             {fmtNum(abiertas)} {abiertas === 1 ? "evacuación para revisar" : "evacuaciones para revisar"}: es una marca, no una acusación.{" "}
-            <Link as={RouterLink} to="/comando/evacuaciones" fontWeight={600}>
+            <Link as={RouterLink} to="/comando/evacuaciones" className="enlace-toque" fontWeight={600}>
               Revisar
             </Link>
           </AlertDescription>
@@ -619,7 +619,7 @@ export function TablaFrescura({ resumen }: { resumen: ResumenPanel }) {
   const filas = [
     { id: "rio", capa: "Río (Puerto Formosa)", fecha: f.rio_ultima_lectura, ev: evaluarFrescura(f.rio_ultima_lectura, resumen.generado_en, f.fecha_corte, 2), cat: resumen.rio.categoria },
     { id: "lluvia", capa: "Lluvia", fecha: f.lluvia_ultima_lectura, ev: evaluarFrescura(f.lluvia_ultima_lectura, resumen.generado_en, f.fecha_corte, 7), cat: resumen.lluvia_7d.categoria },
-    { id: "k10", capa: "Sectores (K10)", fecha: f.k10_sectores, ev: { estado: "fija" as EstadoFrescura, dias: null as number | null }, cat: "SIMULADO" as const },
+    { id: "k10", capa: "Sectores de evaluación", fecha: f.k10_sectores, ev: { estado: "fija" as EstadoFrescura, dias: null as number | null }, cat: "SIMULADO" as const },
   ];
   const vencidas = filas.filter((x) => x.ev.estado === "vieja" || x.ev.estado === "sin_dato");
   return (

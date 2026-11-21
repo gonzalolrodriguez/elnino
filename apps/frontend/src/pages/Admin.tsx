@@ -49,7 +49,7 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: RolOpera
       <Td data-etiqueta="Rol">{etiquetaRol(u.rol)}</Td>
       <Td data-etiqueta="Rol operativo">
         {institucional ? (
-          <Select aria-label={`Rol operativo de ${u.email}`} bg="superficie" minW="9rem" maxW="10rem" value={u.rol_operativo ?? ""} onChange={(e) => void modificar({ rol_operativo: e.target.value || null })}>
+          <Select aria-label={`Rol operativo de ${u.email}`} bg="superficie" minW="11rem" maxW="13rem" value={u.rol_operativo ?? ""} onChange={(e) => void modificar({ rol_operativo: e.target.value || null })}>
             <option value="">Sin rol operativo</option>
             {roles.map((r) => (
               <option key={r.codigo} value={r.codigo}>
@@ -64,7 +64,8 @@ function FilaUsuario({ u, roles, alCambiar }: { u: UsuarioAdmin; roles: RolOpera
       </Td>
       <Td data-etiqueta="Estado">
         <Flex gap={1.5} wrap="wrap">
-          {u.estado === "activo" ? (
+          {/* Una cuenta bloqueada muestra solo su chip "Bloqueada" (el estado crudo repetiría lo mismo). */}
+          {bloqueada ? null : u.estado === "activo" ? (
             <Chip tono="ok" icono={<IconoTilde tam="0.9em" />}>
               {etiquetaEstadoUsuario(u.estado)}
             </Chip>

@@ -60,7 +60,7 @@ function TarjetaTarea({ tarea, alCambiar, alRecargar }: { tarea: TareaConPartes;
   return (
     <Box as="article" aria-label={`Tarea ${tarea.id}`} layerStyle="tarjeta" p={{ base: 4, md: 5 }}>
       <Heading as="h3" size="bloque" textStyle="tituloBloque" mb={2}>
-        {tarea.titulo}
+        {tarea.titulo || `Tarea n.º ${tarea.id}`}
       </Heading>
       <Flex columnGap={3} rowGap={1} align="center" wrap="wrap" mb={1}>
         <ChipEstadoTarea estado={tarea.estado} testId={`estado-${tarea.id}`} />

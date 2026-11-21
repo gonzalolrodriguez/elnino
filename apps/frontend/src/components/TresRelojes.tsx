@@ -319,14 +319,15 @@ export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CA
           gridTemplateColumns={amplia ? { base: "minmax(0, 1fr)", lg: "repeat(3, minmax(0, 1fr))" } : { base: "minmax(0, 1fr)", lg: "repeat(3, minmax(0, 1fr))" }}
           columnGap={amplia ? 0 : 4}
           gap={amplia ? { base: 4, lg: 5 } : undefined}
-          alignItems={amplia ? "stretch" : undefined}
+          alignItems="stretch"
         >
           {relojes.map((r, i) => (
             <Box
               key={r.id}
               data-testid={`reloj-${r.id}`}
-              display={amplia ? "flex" : undefined}
-              flexDirection={amplia ? "column" : undefined}
+              display="flex"
+              flexDirection="column"
+              h="100%"
               {...(amplia ? { layerStyle: "tarjeta", p: { base: 5, md: 6 } } : {})}
               py={amplia ? undefined : { base: 3, lg: 0 }}
               pl={amplia ? undefined : { base: 0, lg: i === 0 ? 0 : 4 }}
@@ -356,7 +357,7 @@ export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CA
                 </Box>
               )}
               {!amplia && (
-                <Box mt={1.5}>
+                <Box mt="auto" pt={1.5}>
                   <Pie categorias={r.categorias} fuente={r.fuente} />
                 </Box>
               )}
