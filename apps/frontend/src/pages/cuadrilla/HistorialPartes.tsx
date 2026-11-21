@@ -8,61 +8,57 @@ import { etiquetaRolOperativo, fechaHora } from "../../lib/etiquetas";
 import { ETIQUETA_RESULTADO, partesDeTarea, type Parte } from "../../lib/partes";
 import { useCarga } from "../../lib/useCarga";
 import { TACTIL } from "../../panel/cuadrillas/partes";
+import { Chip, type TonoChip } from "../../panel/ui";
 import { MiniaturaAdjunto } from "./AdjuntosParte";
 
 const VISIBLES = 5;
 
-type Vista = { icono: ReactElement; etiqueta: string; fondo: string; color: string };
+type Vista = { icono: ReactElement; etiqueta: string; tono: TonoChip };
 
-/** Ícono, texto y color del parte: el significado va siempre en el texto, el color solo refuerza. */
+/** Ícono, texto y tono del parte: el significado va siempre en el texto, el color solo refuerza. */
 function vistaDe(p: Parte): Vista {
   if (p.tipo === "dificultad") {
     return p.resuelta
-      ? { icono: <IconoTilde tam="1rem" />, etiqueta: "Dificultad resuelta", fondo: "verde.100", color: "verde.800" }
-      : { icono: <IconoTriangulo tam="1rem" />, etiqueta: "Dificultad abierta", fondo: "alerta.100", color: "alerta.900" };
+      ? { icono: <IconoTilde tam="0.9rem" />, etiqueta: "Dificultad resuelta", tono: "ok" }
+      : { icono: <IconoTriangulo tam="0.9rem" />, etiqueta: "Dificultad abierta", tono: "aviso" };
   }
   if (p.tipo === "resultado") {
     const r = p.resultado;
     const etiqueta = r ? `Resultado: ${ETIQUETA_RESULTADO[r].toLowerCase()}` : "Resultado";
-    if (r === "completa") return { icono: <IconoTilde tam="1rem" />, etiqueta, fondo: "verde.100", color: "verde.800" };
-    if (r === "reprogramada") return { icono: <IconoReloj tam="1rem" />, etiqueta, fondo: "agua.100", color: "agua.800" };
-    return { icono: <IconoAlerta tam="1rem" />, etiqueta, fondo: "alerta.100", color: "alerta.900" };
+    if (r === "completa") return { icono: <IconoTilde tam="0.9rem" />, etiqueta, tono: "ok" };
+    if (r === "reprogramada") return { icono: <IconoReloj tam="0.9rem" />, etiqueta, tono: "info" };
+    return { icono: <IconoAlerta tam="0.9rem" />, etiqueta, tono: "aviso" };
   }
-  return { icono: <IconoRumbo tam="1rem" />, etiqueta: "Avance", fondo: "limo.100", color: "limo.800" };
+  return { icono: <IconoRumbo tam="0.9rem" />, etiqueta: "Avance", tono: "info" };
 }
 
 function FilaParte({ p }: { p: Parte }) {
   const v = vistaDe(p);
   const abierta = p.tipo === "dificultad" && !p.resuelta;
   return (
-    <Flex as="li" gap={3} data-testid={`parte-${p.id}`} data-abierta={abierta} p={abierta ? 2.5 : 0} borderRadius="lg" bg={abierta ? "alerta.50" : undefined} border={abierta ? "1px solid" : undefined} borderColor={abierta ? "alerta.200" : undefined}>
-      <Flex aria-hidden="true" align="center" justify="center" flex="none" w="2rem" h="2rem" borderRadius="full" bg={v.fondo} color={v.color}>
-        {v.icono}
+    <Box as="li" data-testid={`parte-${p.id}`} data-abierta={abierta} p={abierta ? 3 : 0} borderRadius="lg" bg={abierta ? "alerta.50" : undefined} border={abierta ? "1px solid" : undefined} borderColor={abierta ? "alerta.200" : undefined}>
+      <Flex align="center" columnGap={2} rowGap={1} wrap="wrap">
+        <Chip tono={v.tono} icono={v.icono}>
+          {v.etiqueta}
+        </Chip>
+        <Text as="time" textStyle="microdato" dateTime={p.creado_en}>
+          {fechaHora(p.creado_en)}
+          {p.autor_rol ? ` · ${etiquetaRolOperativo(p.autor_rol)}` : ""}
+        </Text>
       </Flex>
-      <Box minW={0} flex="1">
-        <Flex align="center" gap={2} wrap="wrap">
-          <Text as="span" fontSize="sm" fontWeight={700} px={2} borderRadius="full" bg={v.fondo} color={v.color}>
-            {v.etiqueta}
-          </Text>
-          <Text as="time" textStyle="microdato" dateTime={p.creado_en}>
-            {fechaHora(p.creado_en)}
-            {p.autor_rol ? ` · ${etiquetaRolOperativo(p.autor_rol)}` : ""}
-          </Text>
+      {p.observacion && (
+        <Text mt={1.5} whiteSpace="pre-wrap" overflowWrap="anywhere" maxW="70ch">
+          {p.observacion}
+        </Text>
+      )}
+      {(p.adjuntos ?? []).length > 0 && (
+        <Flex gap={2} mt={2} wrap="wrap" role="group" aria-label={`Evidencia del parte ${p.id}`}>
+          {(p.adjuntos ?? []).map((ad) => (
+            <MiniaturaAdjunto key={ad.n} tareaId={p.tarea_id} parteId={p.id} adjunto={ad} />
+          ))}
         </Flex>
-        {p.observacion && (
-          <Text fontSize="sm" mt={1} whiteSpace="pre-wrap" overflowWrap="anywhere">
-            {p.observacion}
-          </Text>
-        )}
-        {(p.adjuntos ?? []).length > 0 && (
-          <Flex gap={2} mt={2} wrap="wrap" role="group" aria-label={`Evidencia del parte ${p.id}`}>
-            {(p.adjuntos ?? []).map((ad) => (
-              <MiniaturaAdjunto key={ad.n} tareaId={p.tarea_id} parteId={p.id} adjunto={ad} />
-            ))}
-          </Flex>
-        )}
-      </Box>
-    </Flex>
+      )}
+    </Box>
   );
 }
 
@@ -75,7 +71,7 @@ export function HistorialPartes({ tareaId, refresco }: { tareaId: number; refres
     <Box data-testid={`historial-${tareaId}`}>
       <Flex align="center" gap={2} mb={2} color="textoSuave">
         <IconoHistorial tam="1rem" />
-        <Text as="h4" fontSize="sm" fontWeight={700} color="texto">
+        <Text as="h4" textStyle="rotulo" color="texto">
           Historial de partes
         </Text>
       </Flex>
@@ -89,7 +85,7 @@ export function HistorialPartes({ tareaId, refresco }: { tareaId: number; refres
         </Box>
       )}
       {carga.estado === "ok" && carga.datos.length === 0 && (
-        <Text fontSize="sm" color="textoSuave">
+        <Text textStyle="microdato">
           Todavía no informaste nada sobre esta tarea.
         </Text>
       )}
