@@ -206,6 +206,10 @@ Se recorrieron las fuentes de la web (`apps/frontend/src`), de la app (`apps/mob
 |---|---|---|---|---|
 | Horizonte máximo de la proyección del tiempo restante | 60 días | Supuesto `dias_proyeccion_horizonte` (`supuestos.yaml`); el INA no pronostica a más de 15 días | Simulado | 17/11/2026 |
 | Ritmo de lluvia del reloj dual río/barro | 2, 5 (por defecto) o 10 mm/h constantes, elegible en pantalla | Supuesto `ritmo_lluvia_mm_h` (`supuestos.yaml`); sirve solo para la cuenta regresiva del reloj del barro, no es un pronóstico | Simulado | 21/11/2026 |
+| Clima «Seco» del simulador | 4,96 m, sin lluvia | Lectura de K1 del 22/05/2026 (DATO OBSERVADO) usada como escenario | Simulado (escenario) | 21/11/2026 |
+| Clima «El Niño» del simulador | 7,60 m y 40 mm | Ejemplo del escenario de la plataforma (CLAUDE.md §8.1) | Simulado | 21/11/2026 |
+| Clima «Tormenta extrema» del simulador | 8,30 m y 90 mm | 8,30 m: umbral de evacuación (K3); 90 mm: lluvia SIMULADA por encima del corte del ripio (80 mm) | Simulado | 21/11/2026 |
+| Niebla y lluvia dibujadas de los climas | Parámetros de dibujo (sin unidades físicas) | `apps/frontend/src/panel/clima.ts`; ambiente ilustrativo, no es un radar ni un pronóstico | Simulado | 21/11/2026 |
 | Cuenta regresiva del reloj dual (horas hasta compromiso y aislamiento por sector) | Rango entre la tasa de ascenso rápida (0,36 m/día) y la lenta (0,1077 m/día); lluvia al ritmo elegido; umbrales 30 y 80 mm | Proyección lineal, SUPUESTO; mismas reglas de accesos que `app/domain/escenario.py` | Simulado | 21/11/2026 |
 | Rango de los controles del simulador | Altura de 0 a 12 m (validación del backend); lluvia de 0 a 200 mm en el deslizador (el backend admite de 0 a 1.000 mm) | CLAUDE.md §8.1 (rango de entrada); no son datos | Simulado | 17/11/2026 |
 | Ubicación de ejemplo en el formulario de registro de productores | Longitud -58,139 y latitud -26,18 (dentro de S4) | Punto de ejemplo elegido por el equipo dentro del polígono K10 de S4; no corresponde a una parcela ni a una persona | Simulado | 17/11/2026 |

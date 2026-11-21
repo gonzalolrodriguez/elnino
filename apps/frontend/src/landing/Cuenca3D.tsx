@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { hexDe } from "../estilo/paleta";
+import { climaPorId, type ClimaId } from "../panel/clima";
 import {
   bordesDe,
   cargarMalla,
@@ -837,6 +838,30 @@ function Escena({ datos, malla, alListo, alTerminar, control, reducido }: PropsE
   );
 }
 
+const NIEBLA_GRIS = hexDe("pizarra.500");
+
+/** Clima ilustrativo (SIMULADO): agrisa y acerca la niebla. Sin clima o en «seco», la escena queda como siempre. */
+function AmbienteClima({ clima }: { clima: ClimaId }) {
+  const { scene } = useThree();
+  useEffect(() => {
+    const fog = scene.fog;
+    if (!(fog instanceof THREE.Fog)) return;
+    const a = climaPorId(clima).ambiente;
+    const color = new THREE.Color(C.fondo).lerp(new THREE.Color(NIEBLA_GRIS), a.mezclaNiebla);
+    fog.color.copy(color);
+    fog.near = a.niebla?.cerca ?? 6.5;
+    fog.far = a.niebla?.lejos ?? 19;
+    if (scene.background instanceof THREE.Color) scene.background.copy(color);
+    return () => {
+      fog.color.set(C.fondo);
+      fog.near = 6.5;
+      fog.far = 19;
+      if (scene.background instanceof THREE.Color) scene.background.set(C.fondo);
+    };
+  }, [scene, clima]);
+  return null;
+}
+
 type PropsCuenca3D = {
   datos: DatosRelieve;
   onTerminar?: () => void;
@@ -849,9 +874,11 @@ type PropsCuenca3D = {
   reducido?: boolean;
   /** Se llama cuando alguien intenta hacer zoom con la rueda sin haber activado el mapa. */
   onPista?: () => void;
+  /** Clima ilustrativo (SIMULADO) que modula la niebla de la escena. */
+  clima?: ClimaId;
 };
 
-export default function Cuenca3D({ datos, onTerminar, onFallo, onListo, control, reducido = false, onPista }: PropsCuenca3D) {
+export default function Cuenca3D({ datos, onTerminar, onFallo, onListo, control, reducido = false, onPista, clima }: PropsCuenca3D) {
   const [malla, setMalla] = useState<Malla | null>(null);
   const [listo, setListo] = useState(false);
   const [calidad, setCalidad] = useState(2);
@@ -936,6 +963,7 @@ export default function Cuenca3D({ datos, onTerminar, onFallo, onListo, control,
             setListo(true);
             onListo?.();
           }} alTerminar={() => onTerminar?.()} control={control} reducido={reducido} />
+          {clima && <AmbienteClima clima={clima} />}
         </Canvas>
       )}
     </div>

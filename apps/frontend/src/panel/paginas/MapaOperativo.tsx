@@ -28,7 +28,10 @@ import { useEscenario } from "../EscenarioContext";
 import { LeyendaLamina } from "../LeyendaLamina";
 import { LeyendaSatelite, PanelSatelite } from "../PanelSatelite";
 import { cargarEscenasSatelite, type CapaSatelite } from "../satelite";
+import { LluviaVisual } from "../../components/LluviaVisual";
+import { intensidadLluvia } from "../clima";
 import { RelojDual } from "../RelojDual";
+import { SelectorClima } from "../SelectorClima";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
 import { IconoMapa } from "../../components/iconos/Iconos";
@@ -368,6 +371,7 @@ export default function MapaOperativo() {
       <Flex direction={{ base: "column", xl: "row-reverse" }} align={{ base: "stretch", xl: "flex-start" }} sx={{ "& > * + *": { marginTop: "1rem" }, "@media (min-width: 80em)": { "& > * + *": { marginTop: 0, marginRight: "1rem" } } }}>
         <Box flex="1" w="100%" minW={0} position={{ xl: "sticky" }} top={{ xl: "calc(var(--altura-leyenda) + 1rem)" }}>
           <Box
+            position="relative"
             h={{ base: "60vh", xl: "75vh" }}
             minH="18rem"
             border="1px solid"
@@ -405,8 +409,14 @@ export default function MapaOperativo() {
                 onPunto={(lon, lat) => { setOrigenManual({ lon, lat }); setModoOrigen(false); }}
               />
             </Suspense>
+            <LluviaVisual intensidad={intensidadLluvia(entrada.lluvia_mm)} />
           </Box>
           <Leyenda />
+          {entrada.lluvia_mm > 0 && (
+            <Text textStyle="microdato" mt={1} data-testid="leyenda-lluvia-visual">
+              Lluvia dibujada sobre el mapa: ambiente ilustrativo de {fmtNum(entrada.lluvia_mm)} mm (SIMULADO), no es un radar.
+            </Text>
+          )}
           {laminaVisible && <LeyendaLamina />}
           {verSatelite && <LeyendaSatelite escena={escenaSatelite} />}
           <Text textStyle="microdato" mt={2} maxW="70ch">
@@ -415,6 +425,7 @@ export default function MapaOperativo() {
         </Box>
         <Box w={{ base: "100%", xl: "26rem" }} flexShrink={0}>
           <Seccion titulo="Simulador de escenario" categoria="SIMULADO" id="sec-sim">
+            <SelectorClima />
             <Simulador accesos={listaAccesos} />
           </Seccion>
           <Seccion titulo="Reloj dual: río y barro" categoria="SIMULADO" id="sec-reloj-dual">

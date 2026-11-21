@@ -4,6 +4,8 @@ import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, ty
 import { Link as RouterLink } from "react-router-dom";
 
 import { ANCHO_CONTENEDOR, GUTTER } from "../components/Contenedor";
+import { LluviaVisual } from "../components/LluviaVisual";
+import { CLIMAS, climaPorId, type ClimaId } from "../panel/clima";
 import { puedeUsar3D, useMenosMovimiento } from "../lib/entorno";
 import { LeyendaRelieve } from "../relieve/LeyendaRelieve";
 import { useRelieve } from "../relieve/useRelieve";
@@ -109,6 +111,8 @@ export function Hero() {
   const [listo3D, setListo3D] = useState(false);
   const [resaltado, setResaltado] = useState<IdHito | null>(null);
   const [pista, setPista] = useState(false);
+  // Clima ilustrativo (SIMULADO) de la escena: solo cambia el ambiente visual, no hay escenario calculado en la portada.
+  const [clima, setClima] = useState<ClimaId>("seco");
   const temporizadorPista = useRef<number>(0);
   const mostrarPista = useCallback(() => {
     setPista(true);
@@ -162,7 +166,7 @@ export function Hero() {
         {usar3D ? (
           <Limite3D alFallar={alFallar3D}>
             <Suspense fallback={null}>
-              <Cuenca3D datos={datos} onFallo={alFallar3D} control={control} reducido={menosMovimiento} onPista={mostrarPista} onListo={() => setListo3D(true)} />
+              <Cuenca3D datos={datos} onFallo={alFallar3D} control={control} reducido={menosMovimiento} onPista={mostrarPista} onListo={() => setListo3D(true)} clima={clima} />
             </Suspense>
           </Limite3D>
         ) : quiere3D ? null : (
@@ -171,6 +175,7 @@ export function Hero() {
             <CuencaSVG datos={datos} resaltado={resaltado} />
           </Box>
         )}
+        <LluviaVisual intensidad={climaPorId(clima).ambiente.lluvia} sobreOscuro />
         {/* Velos: a la izquierda dan contraste al titular y abajo funden la escena con el resto de la página. */}
         <Box
           aria-hidden="true"
@@ -196,6 +201,18 @@ export function Hero() {
       </Box>
       {datos && (
         <Box order={{ base: 4, lg: 0 }} position={{ base: "relative", lg: "absolute" }} left={{ lg: "max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem))" }} bottom={{ lg: 6 }} zIndex={2} px={{ base: 4, lg: 0 }} pt={{ base: 3, lg: 0 }} data-evitar-etiquetas="">
+          <Box mb={2} data-testid="clima-portada">
+            <Box display="flex" gap={1.5} flexWrap="wrap" role="group" aria-label="Clima ilustrativo de la escena (SIMULADO)">
+              {CLIMAS.map((c) => (
+                <Button key={c.id} size="xs" variant={clima === c.id ? "acento" : "sobreOscuro"} aria-pressed={clima === c.id} onClick={() => setClima(c.id)}>
+                  <span aria-hidden="true">{c.icono}</span>&nbsp;{c.etiqueta}
+                </Button>
+              ))}
+            </Box>
+            <Text fontSize="xs" color="oscuro.suave" mt={1}>
+              Clima ilustrativo (SIMULADO): cambia la niebla y la lluvia dibujadas, no los datos.
+            </Text>
+          </Box>
           <LeyendaRelieve meta={datos.meta} vista={usar3D ? "3d" : "2d"} />
         </Box>
       )}
