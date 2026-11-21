@@ -47,7 +47,7 @@ const ARCO = (() => {
 type Marca = { f: number; color: string };
 
 /** Arco de 270 grados: pista, relleno animado una sola vez al entrar en pantalla y marcas de umbral. El texto central va encima. */
-function Dial({ f, color, marcas = [], orden, tamano, centro, etiqueta }: { f: number; color: string; marcas?: Marca[]; orden: number; tamano: string; centro: ReactNode; etiqueta: string }) {
+export function Dial({ f, color, marcas = [], orden, tamano, centro, etiqueta }: { f: number; color: string; marcas?: Marca[]; orden: number; tamano: string; centro: ReactNode; etiqueta: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const quieto = useMenosMovimiento();
   const sinObservador = typeof IntersectionObserver === "undefined";

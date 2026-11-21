@@ -28,6 +28,7 @@ import { useEscenario } from "../EscenarioContext";
 import { LeyendaLamina } from "../LeyendaLamina";
 import { LeyendaSatelite, PanelSatelite } from "../PanelSatelite";
 import { cargarEscenasSatelite, type CapaSatelite } from "../satelite";
+import { RelojDual } from "../RelojDual";
 import { Simulador } from "../Simulador";
 import type { AccesoProps, CapaOficial, Ruta } from "../tipos";
 import { IconoMapa } from "../../components/iconos/Iconos";
@@ -415,6 +416,9 @@ export default function MapaOperativo() {
         <Box w={{ base: "100%", xl: "26rem" }} flexShrink={0}>
           <Seccion titulo="Simulador de escenario" categoria="SIMULADO" id="sec-sim">
             <Simulador accesos={listaAccesos} />
+          </Seccion>
+          <Seccion titulo="Reloj dual: río y barro" categoria="SIMULADO" id="sec-reloj-dual">
+            <RelojDual accesos={listaAccesos} />
           </Seccion>
           <PanelSatelite activa={verSatelite} setActiva={setVerSatelite} carga={satelite} escenaId={escenaSatelite?.id ?? null} setEscenaId={setEscenaId} />
           <Seccion titulo="Accesos y caminos" categoria="SIMULADO" id="sec-accesos">

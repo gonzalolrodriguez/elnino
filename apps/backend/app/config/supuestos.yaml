@@ -156,3 +156,8 @@ cuadrillas_plantillas:
 adjuntos_parte:
   valor: {imagen_max_mb: 5, video_max_mb: 20, max_por_parte: 5}
   fuente: "SUPUESTO (topes de la evidencia multimedia de un parte: fotos JPEG/PNG/WebP y video MP4; decisión del equipo, sin norma)"
+
+# --- Reloj dual río/barro (panel web) ---
+ritmo_lluvia_mm_h:
+  valor: {defecto: 5, opciones: [2, 5, 10]}
+  fuente: "SUPUESTO (ritmo constante de lluvia para la cuenta regresiva del reloj del barro en el panel web; lo usa apps/frontend/src/panel/proyeccion.ts; no es un pronóstico)"
