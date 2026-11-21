@@ -57,7 +57,7 @@ export function NovedadesCuadrillas({ limite = 8 }: { limite?: number }) {
                           {fechaHora(p.creado_en)}
                         </Text>
                       </Flex>
-                      <Text fontSize="sm" mt={1.5}>
+                      <Text mt={1.5}>
                         <Link as={RouterLink} to={`/comando/cuadrillas#cuadrilla-${p.cuadrilla_id}`} fontWeight={700}>
                           {p.cuadrilla_nombre}
                         </Link>
@@ -65,7 +65,7 @@ export function NovedadesCuadrillas({ limite = 8 }: { limite?: number }) {
                         {p.autor_rol ? ` · ${etiquetaRolOperativo(p.autor_rol)}` : ""}
                       </Text>
                       {p.observacion && (
-                        <Text fontSize="sm" color="textoSuave" mt={0.5} overflowWrap="anywhere">
+                        <Text textStyle="microdato" mt={0.5} overflowWrap="anywhere">
                           {truncar(p.observacion)}
                         </Text>
                       )}

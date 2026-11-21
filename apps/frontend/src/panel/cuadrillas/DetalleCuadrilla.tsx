@@ -87,7 +87,7 @@ export default function DetalleCuadrilla() {
                 {c.vehiculo && <Chip tono="neutro">{etiquetaVehiculo(c.vehiculo)}</Chip>}
                 <Chip tono="neutro">{c.cantidad_integrantes} integrantes</Chip>
               </Flex>
-              <Box as="dl" display="grid" gridTemplateColumns={{ base: "1fr", sm: "9rem 1fr" }} columnGap={4} rowGap={1} fontSize="sm">
+              <Box as="dl" display="grid" gridTemplateColumns={{ base: "1fr", sm: "9rem 1fr" }} columnGap={4} rowGap={1}>
                 <dt>Tipo de operativo</dt>
                 <dd>{etiquetaTipoOperativo(c.tipo_operativo)}</dd>
                 <dt>Base</dt>
@@ -103,7 +103,7 @@ export default function DetalleCuadrilla() {
 
             <Seccion titulo="Integrantes" id="sec-integrantes" icono={<IconoPersonas tam="1.25rem" />}>
               {c.integrantes.length === 0 ? (
-                <Text fontSize="sm" color="textoSuave">
+                <Text textStyle="microdato">
                   Sin integrantes cargados.
                 </Text>
               ) : (
@@ -134,7 +134,7 @@ export default function DetalleCuadrilla() {
 
             <Seccion titulo="Equipamiento" id="sec-equipamiento" icono={<IconoCaja tam="1.25rem" />}>
               {c.equipamiento.length === 0 ? (
-                <Text fontSize="sm" color="textoSuave">
+                <Text textStyle="microdato">
                   Sin equipamiento cargado.
                 </Text>
               ) : (
@@ -151,7 +151,7 @@ export default function DetalleCuadrilla() {
             <Seccion titulo="Tarea actual y partes" id="sec-tarea" icono={<IconoCamion tam="1.25rem" />}>
               {tarea ? (
                 <>
-                  <Flex align="center" gap={2} wrap="wrap" mb={3} fontSize="sm">
+                  <Flex align="center" gap={2} wrap="wrap" mb={3}>
                     <Link as={RouterLink} to={`/comando/operacion?tarea=${tarea.id}#sec-tareas`} fontWeight={700}>
                       Tarea n.º {tarea.id}
                     </Link>
@@ -162,7 +162,7 @@ export default function DetalleCuadrilla() {
                   <HistorialPartes tareaId={tarea.id} requiereAtencion={tarea.requiere_atencion} alCambiar={resumen.recargar} />
                 </>
               ) : (
-                <Flex align="center" gap={2} fontSize="sm" color="textoSuave">
+                <Flex align="center" gap={2} textStyle="microdato">
                   <IconoHistorial tam="1rem" />
                   <Text>La cuadrilla no tiene tarea en curso.</Text>
                 </Flex>

@@ -49,7 +49,7 @@ export function MapaDesvio({
         </Button>
       </Flex>
       {sinMapa ? (
-        <Alert status="info" role="status" fontSize="sm" alignItems="flex-start" mb={2}>
+        <Alert status="info" role="status" alignItems="flex-start" mb={2}>
           <AlertIcon />
           El mapa no está disponible en este dispositivo. Escribí las coordenadas de cada punto.
         </Alert>
@@ -60,7 +60,7 @@ export function MapaDesvio({
           </Suspense>
         </Box>
       )}
-      <Text fontSize="xs" color="textoSuave" mt={1}>
+      <Text textStyle="microdato" mt={1}>
         {modo === "linea" ? "Hacé clic en el mapa para sumar puntos al desvío." : "Hacé clic en el mapa para marcar el punto."} La línea gris es el recorrido actual de la cuadrilla, si lo tiene. Mapa base: OpenStreetMap (ODbL).
       </Text>
       <Flex gap={2} wrap="wrap" mt={2} align="center">
@@ -75,20 +75,20 @@ export function MapaDesvio({
         <Button size="sm" {...TACTIL} variant="outline" onClick={() => onChange([])} isDisabled={puntos.length === 0}>
           Borrar trazado
         </Button>
-        <Text fontSize="sm" role="status" aria-live="polite" data-testid="desvio-estado">
+        <Text role="status" aria-live="polite" data-testid="desvio-estado">
           {puntos.length === 0 ? "Sin puntos" : modo === "punto" || puntos.length === 1 ? "1 punto marcado" : `${puntos.length} puntos en el desvío`}
         </Text>
       </Flex>
       {sinMapa && (
         <Flex gap={2} mt={2} align="flex-end" wrap="wrap">
           <FormControl w="9rem">
-            <FormLabel htmlFor="desvio-lat" fontSize="sm" mb={1}>
+            <FormLabel htmlFor="desvio-lat" textStyle="rotulo" color="texto" mb={1}>
               Latitud
             </FormLabel>
             <Input id="desvio-lat" bg="superficie" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
           </FormControl>
           <FormControl w="9rem">
-            <FormLabel htmlFor="desvio-lon" fontSize="sm" mb={1}>
+            <FormLabel htmlFor="desvio-lon" textStyle="rotulo" color="texto" mb={1}>
               Longitud
             </FormLabel>
             <Input id="desvio-lon" bg="superficie" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} />

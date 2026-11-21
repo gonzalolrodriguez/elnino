@@ -52,7 +52,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
   }
 
   return (
-    <Box as="article" id={`cuadrilla-${c.id}`} aria-labelledby={tituloId} layerStyle="tarjeta" p={{ base: 4, md: 5 }} minW={0} scrollMarginTop="5rem" data-testid={`cuadrilla-${c.id}`}>
+    <Box as="article" id={`cuadrilla-${c.id}`} aria-labelledby={tituloId} layerStyle="tarjeta" p={{ base: 4, md: 5 }} minW={0} display="flex" flexDirection="column" h="100%" scrollMarginTop="5rem" data-testid={`cuadrilla-${c.id}`}>
       <Flex gap={3.5} align="flex-start">
         <FichaIcono tono={t ? "info" : "ok"} tam="3rem" icono={<IconoVehiculo vehiculo={c.vehiculo} tam="1.5rem" />} />
         <Box minW={0} flex="1">
@@ -77,13 +77,13 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
       <Box mt={4} pt={3} borderTop="1px solid" borderColor="borde">
         <Rotulo icono={<IconoPersonas tam="1rem" />}>Integrantes (por rol)</Rotulo>
         {c.integrantes.length === 0 ? (
-          <Text fontSize="sm" color="textoSuave">
+          <Text textStyle="microdato">
             Sin integrantes.
           </Text>
         ) : (
           <Box as="ul" listStyleType="none" m={0} p={0} display="flex" flexDirection="column" gap={1.5}>
             {c.integrantes.map((i) => (
-              <Flex as="li" key={i.id} align="center" columnGap={2} rowGap={1} wrap="wrap" fontSize="sm" minH="2rem">
+              <Flex as="li" key={i.id} align="center" columnGap={2} rowGap={1} wrap="wrap" minH="2rem">
                 <Text as="span" fontWeight={600}>
                   {etiquetaRolOperativo(i.rol_operativo)}
                 </Text>
@@ -108,7 +108,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
                       </Button>
                     </Flex>
                   ) : (
-                    <Button size="sm" {...TACTIL} variant="outline" ml="auto" onClick={() => setQuitando(i.id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
+                    <Button size="sm" {...TACTIL} variant="ghost" color="evacuacion.800" ml="auto" onClick={() => setQuitando(i.id)} aria-label={`Quitar ${etiquetaRolOperativo(i.rol_operativo)} de ${c.nombre}`}>
                       Quitar
                     </Button>
                   ))}
@@ -140,7 +140,7 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
       <Box mt={4} pt={3} borderTop="1px solid" borderColor="borde">
         <Rotulo icono={<IconoVehiculo vehiculo={c.vehiculo} tam="1rem" />}>Tarea actual</Rotulo>
         {t ? (
-          <Flex align="center" columnGap={2} rowGap={1.5} wrap="wrap" fontSize="sm">
+          <Flex align="center" columnGap={2} rowGap={1.5} wrap="wrap">
             <Link as={RouterLink} to={`/comando/operacion?tarea=${t.id}#sec-tareas`} fontWeight={700} display="inline-flex" alignItems="center" minH={{ base: "2.75rem", md: "auto" }}>
               Tarea n.º {t.id}
             </Link>
@@ -149,16 +149,16 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
             {t.requiere_atencion && <AvisoAtencion />}
           </Flex>
         ) : (
-          <Text fontSize="sm" color="textoSuave">
+          <Text textStyle="microdato">
             Libre: sin tarea asignada.
           </Text>
         )}
       </Box>
 
-      <Box mt={3} pt={3} borderTop="1px solid" borderColor="borde">
+      <Box mt={3} pt={3} mb={4} borderTop="1px solid" borderColor="borde">
         <Rotulo icono={<IconoHistorial tam="1rem" />}>Último parte</Rotulo>
         {c.ultimo_parte ? (
-          <Box fontSize="sm" data-testid={`ultimo-parte-${c.id}`}>
+          <Box data-testid={`ultimo-parte-${c.id}`}>
             <Flex align="center" columnGap={2} rowGap={1} wrap="wrap">
               <ChipParte parte={c.ultimo_parte} />
               {c.ultimo_parte.autor_rol && <span>{etiquetaRolOperativo(c.ultimo_parte.autor_rol)}</span>}
@@ -173,13 +173,13 @@ export function TarjetaCuadrilla({ c, puedeGestionar, alCambiar, alEditar, alBaj
             )}
           </Box>
         ) : (
-          <Text fontSize="sm" color="textoSuave">
+          <Text textStyle="microdato">
             Todavía no informó nada.
           </Text>
         )}
       </Box>
 
-      <Flex mt={4} pt={3} borderTop="1px solid" borderColor="borde" gap={2} wrap="wrap" align="center">
+      <Flex mt="auto" pt={3} borderTop="1px solid" borderColor="borde" gap={2} wrap="wrap" align="center">
         <Button as={RouterLink} to={`/comando/cuadrillas/${c.id}`} size="sm" {...TACTIL} variant="outline" aria-label={`Ver detalle de ${c.nombre}`}>
           Ver detalle
         </Button>
