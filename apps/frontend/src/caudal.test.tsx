@@ -81,7 +81,7 @@ describe("caudal modelado GloFAS", () => {
     montar();
     await screen.findByTestId("caudal-grafico");
     expect(screen.queryByTestId("caudal-trazo-altura")).toBeNull();
-    fireEvent.click(screen.getByTestId("caudal-ver-altura"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Superponer la altura observada/ }));
     await waitFor(() => expect(screen.getByTestId("caudal-trazo-altura")).toBeInTheDocument());
     expect(document.querySelector('[data-categoria="DATO OBSERVADO"]')).not.toBeNull();
   });

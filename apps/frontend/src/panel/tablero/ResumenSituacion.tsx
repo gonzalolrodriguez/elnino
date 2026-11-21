@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import type { Categoria } from "@evacuaciones/shared";
+import { CATEGORIAS, type Categoria } from "@evacuaciones/shared";
 import type { ReactNode } from "react";
 
 import { IconoAlerta, IconoBandeja, IconoCamion, IconoOlas, IconoPersonas, IconoTilde, IconoTriangulo } from "../../components/iconos/Iconos";
@@ -109,56 +109,66 @@ export function indicadoresDe(r: ResumenPanel): Indicador[] {
  */
 export function ResumenSituacion({ resumen }: { resumen: ResumenPanel }) {
   const celdas = indicadoresDe(resumen);
+  // Lo SIMULADO es lo normal del prototipo: se rotula una sola vez para todo el grupo. Lo observado y lo de referencia
+  // llevan su insignia junto a la cifra, porque es lo único que no es de demostración.
+  const simuladas = celdas.filter((c) => c.categoria === CATEGORIAS.SIMULADO);
   return (
-    <Box
-      as="ul"
-      role="region"
-      aria-label="Resumen de la situación"
-      data-testid="resumen-situacion"
-      listStyleType="none"
-      m={0}
-      p={0}
-      mb={5}
-      display="grid"
-      gap="1px"
-      bg="borde"
-      border="1px solid"
-      borderColor="borde"
-      borderRadius="xl"
-      overflow="hidden"
-      gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", xl: `repeat(${celdas.length}, minmax(0, 1fr))` }}
-      sx={{
-        "& > li:last-child:nth-of-type(odd)": { gridColumn: "1 / -1" },
-        "@media (min-width: 48em)": {
-          "& > li:last-child:nth-of-type(odd)": { gridColumn: "auto" },
-          "& > li:last-child:nth-of-type(3n+2)": { gridColumn: "span 2" },
-          "& > li:last-child:nth-of-type(3n+1)": { gridColumn: "1 / -1" },
-        },
-        "@media (min-width: 80em)": { "& > li:last-child": { gridColumn: "auto !important" } },
-      }}
-    >
-      {celdas.map((c) => (
-        <Flex as="li" key={c.id} direction="column" gap={1.5} bg="superficie" p={{ base: 3.5, md: 4 }} minW={0} data-testid={`kpi-${c.id}`}>
-          <Flex align="flex-start" gap={2} color="textoSuave">
-            {c.icono}
-            <Text textStyle="rotulo">
-              {c.etiqueta}
+    <Box as="section" aria-label="Resumen de la situación" data-testid="resumen-situacion" mb={5}>
+      <Box
+        as="ul"
+        listStyleType="none"
+        m={0}
+        p={0}
+        display="grid"
+        gap="1px"
+        bg="borde"
+        border="1px solid"
+        borderColor="borde"
+        borderRadius="xl"
+        overflow="hidden"
+        gridTemplateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", xl: `repeat(${celdas.length}, minmax(0, 1fr))` }}
+        sx={{
+          "& > li:last-child:nth-of-type(odd)": { gridColumn: "1 / -1" },
+          "@media (min-width: 48em)": {
+            "& > li:last-child:nth-of-type(odd)": { gridColumn: "auto" },
+            "& > li:last-child:nth-of-type(3n+2)": { gridColumn: "span 2" },
+            "& > li:last-child:nth-of-type(3n+1)": { gridColumn: "1 / -1" },
+          },
+          "@media (min-width: 80em)": { "& > li:last-child": { gridColumn: "auto !important" } },
+        }}
+      >
+        {celdas.map((c) => (
+          <Flex as="li" key={c.id} direction="column" gap={1.5} bg="superficie" p={{ base: 3.5, md: 4 }} minW={0} data-testid={`kpi-${c.id}`}>
+            <Flex align="flex-start" gap={2} color="textoSuave">
+              {c.icono}
+              <Text textStyle="rotulo">{c.etiqueta}</Text>
+            </Flex>
+            <Text textStyle="cifraMedia" fontSize={{ base: "1.5rem", md: "1.875rem" }} lineHeight={1.05}>
+              {c.valor}
             </Text>
+            <Text textStyle="microdato">{c.detalle}</Text>
+            <Flex gap={1.5} wrap="wrap" align="center" mt="auto" pt={1}>
+              {c.chip && (
+                <Chip tono={c.chip.tono} icono={c.chip.icono}>
+                  {c.chip.texto}
+                </Chip>
+              )}
+              {c.categoria !== CATEGORIAS.SIMULADO && <Insignia categoria={c.categoria} />}
+            </Flex>
           </Flex>
-          <Text textStyle="cifraMedia" fontSize={{ base: "1.5rem", md: "1.875rem" }} lineHeight={1.05}>
-            {c.valor}
-          </Text>
-          <Text textStyle="microdato">{c.detalle}</Text>
-          <Flex gap={1.5} wrap="wrap" align="center" mt="auto" pt={1}>
-            {c.chip && (
-              <Chip tono={c.chip.tono} icono={c.chip.icono}>
-                {c.chip.texto}
-              </Chip>
-            )}
-            <Insignia categoria={c.categoria} />
-          </Flex>
+        ))}
+      </Box>
+      {simuladas.length > 0 && (
+        <Flex align="center" gap={2} mt={2} wrap="wrap" textStyle="microdato" data-testid="resumen-simulado">
+          <Insignia categoria={CATEGORIAS.SIMULADO} />
+          <span>Datos de demostración: {listaY(simuladas.map((c) => c.etiqueta.toLowerCase()))}.</span>
         </Flex>
-      ))}
+      )}
     </Box>
   );
+}
+
+/** "a, b y c" */
+function listaY(items: string[]): string {
+  return items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
 }

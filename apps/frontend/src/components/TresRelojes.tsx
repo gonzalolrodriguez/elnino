@@ -309,7 +309,7 @@ export function TresRelojes({ variante = "amplia", alturaM, alturaCategoria = CA
             <Text color="textoSuave">A veces hay que evacuar con el río todavía bajo: el barro corta el camino primero. Cada reloj mide una cuenta regresiva distinta.</Text>
           </Box>
         ) : (
-          <Heading as="h3" id={`titulo-relojes-${variante}`} size="sm" mb={3}>
+          <Heading as="h2" id={`titulo-relojes-${variante}`} size="bloque" textStyle="tituloBloque" mb={3}>
             Tres relojes
           </Heading>
         )}

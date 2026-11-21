@@ -1,0 +1,119 @@
+{
+ "categoria": "DOCUMENTO DE REFERENCIA",
+ "fuente": "https://planetarycomputer.microsoft.com/api/stac/v1",
+ "licencia": "Copernicus Sentinel (libre y gratuito); sentinel-1-rtc: CC BY 4.0 (Microsoft)",
+ "fecha_descarga": "2026-11-20",
+ "fecha_corte": "2026-10-31",
+ "zona": [
+  -58.4,
+  -26.4,
+  -57.95,
+  -25.95
+ ],
+ "escenas": [
+  {
+   "id": "s1_2016-01-09",
+   "fecha": "2016-01-09",
+   "sensor": "Sentinel-1",
+   "tipo": "radar",
+   "area_agua_km2": 243.07,
+   "altura_k1_m": 9.8,
+   "fecha_k1": "2016-01-09",
+   "nube_pct": null,
+   "cobertura_aoi_pct": 80.2,
+   "evento": "Pico de 2016 (cuatro días después del máximo del 05/01)",
+   "archivo": "capas/satelite/agua_s1_2016-01-09.geojson"
+  },
+  {
+   "id": "s2_2016-01-23",
+   "fecha": "2016-01-23",
+   "sensor": "Sentinel-2",
+   "tipo": "óptico",
+   "area_agua_km2": 208.22,
+   "altura_k1_m": 9.4,
+   "fecha_k1": "2016-01-23",
+   "nube_pct": 0.1,
+   "cobertura_aoi_pct": 99.4,
+   "evento": "Descenso posterior al pico de 2016 (18 días después del máximo; la escena del 10/01 no cubre la zona)",
+   "archivo": "capas/satelite/agua_s2_2016-01-23.geojson"
+  },
+  {
+   "id": "s1_2019-05-28",
+   "fecha": "2019-05-28",
+   "sensor": "Sentinel-1",
+   "tipo": "radar",
+   "area_agua_km2": 277.6,
+   "altura_k1_m": 9.64,
+   "fecha_k1": "2019-05-28",
+   "nube_pct": null,
+   "cobertura_aoi_pct": 100,
+   "evento": "Subida previa al pico de 2019",
+   "archivo": "capas/satelite/agua_s1_2019-05-28.geojson"
+  },
+  {
+   "id": "s2_2019-06-03",
+   "fecha": "2019-06-03",
+   "sensor": "Sentinel-2",
+   "tipo": "óptico",
+   "area_agua_km2": 141.75,
+   "altura_k1_m": 9.72,
+   "fecha_k1": "2019-06-03",
+   "nube_pct": 28.2,
+   "cobertura_aoi_pct": 46.4,
+   "evento": "Pico de 2019 (un día después del máximo del 02/06)",
+   "archivo": "capas/satelite/agua_s2_2019-06-03.geojson"
+  },
+  {
+   "id": "s1_2019-10-07",
+   "fecha": "2019-10-07",
+   "sensor": "Sentinel-1",
+   "tipo": "radar",
+   "area_agua_km2": 71.96,
+   "altura_k1_m": 2.07,
+   "fecha_k1": "2019-10-07",
+   "nube_pct": null,
+   "cobertura_aoi_pct": 100,
+   "evento": "Línea de base de aguas bajas (octubre de 2019)",
+   "archivo": "capas/satelite/agua_s1_2019-10-07.geojson"
+  },
+  {
+   "id": "s2_2019-10-09",
+   "fecha": "2019-10-09",
+   "sensor": "Sentinel-2",
+   "tipo": "óptico",
+   "area_agua_km2": 67.13,
+   "altura_k1_m": 2.07,
+   "fecha_k1": "2019-10-09",
+   "nube_pct": 0,
+   "cobertura_aoi_pct": 99.9,
+   "evento": "Línea de base de aguas bajas (octubre de 2019)",
+   "archivo": "capas/satelite/agua_s2_2019-10-09.geojson"
+  },
+  {
+   "id": "s1_2026-10-25",
+   "fecha": "2026-10-25",
+   "sensor": "Sentinel-1",
+   "tipo": "radar",
+   "area_agua_km2": 79.84,
+   "altura_k1_m": 5.4,
+   "fecha_k1": "2026-10-25",
+   "nube_pct": null,
+   "cobertura_aoi_pct": 100,
+   "evento": "Octubre de 2026 (previo al corte)",
+   "archivo": "capas/satelite/agua_s1_2026-10-25.geojson"
+  },
+  {
+   "id": "s2_2026-10-26",
+   "fecha": "2026-10-26",
+   "sensor": "Sentinel-2",
+   "tipo": "óptico",
+   "area_agua_km2": 42.63,
+   "altura_k1_m": 5.44,
+   "fecha_k1": "2026-10-26",
+   "nube_pct": 24.7,
+   "cobertura_aoi_pct": 47.1,
+   "evento": "Octubre de 2026 (previo al corte)",
+   "archivo": "capas/satelite/agua_s2_2026-10-26.geojson"
+  }
+ ]
+}

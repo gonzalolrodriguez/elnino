@@ -151,6 +151,22 @@ Landing 3D y 2D, mapa operativo (`/comando/mapa`) y mapa de sectores de `/inform
 | Profundidad mínima y grosor de la película de agua | Profundidad mínima visual de 0,15 m por celda anegada; la película se dibuja pegada al terreno con un grosor máximo de 0,5 m (ya exagerado) y el color indica la profundidad relativa (hasta 2,5 m). Solo ilustración | Decisión de visualización (`PROFUNDIDAD_MIN_M`, `GROSOR_VISUAL_M`) | Simulado | 20/11/2026 |
 | Duración de «Reproducir crecida» | De 5,60 m (observado al corte) a 8,30 m (umbral de evacuación K3) en 8 s; es una animación del escenario SIMULADO, no un pronóstico de velocidad de ascenso | Decisión de visualización (`SectoresInundacion.tsx`) | Simulado | 20/11/2026 |
 
+## Agua observada por satélite (`data/geo/satelite/`, capa del mapa operativo)
+
+Imagen: Copernicus Sentinel-1/2 vía Planetary Computer (catálogo STAC, `sentinel-1-rtc` y `sentinel-2-l2a`; licencia de Copernicus, libre y gratuita; `sentinel-1-rtc` CC BY 4.0 de Microsoft), descarga del 20/11/2026 con `apps/backend/scripts/descargar_satelite.py`. La imagen es `DOCUMENTO DE REFERENCIA`; la **máscara de agua es un producto derivado** del equipo (Otsu sobre VV en dB para Sentinel-1; MNDWI con máscara de nubes SCL para Sentinel-2; resolución de trabajo de 20 m), sin validación a campo: puede confundir suelo húmedo, bañados o vegetación inundada, y las áreas de S1 y S2 no son comparables entre sí. «Agua» es el área de agua dentro de la zona de trabajo (lon -58,40 a -57,95; lat -26,40 a -25,95), no el área de un sector. La altura de K1 es el máximo diario de Puerto Formosa del día de la imagen (`DATO OBSERVADO`). Ninguna escena es posterior al corte del 31/10/2026.
+
+| Qué muestra la herramienta | Valor o rango | Fuente (archivo del kit o URL) | Categoría (observado / referencia / simulado) | Fecha del dato |
+|---|---|---|---|---|
+| Agua observada 09/01/2016 (Sentinel-1, radar): pico de 2016, cuatro días después del máximo | 243,07 km²; K1 9,80 m; nube n/c (radar); cobertura de la zona 80,2 % | `data/geo/satelite/agua_s1_2016-01-09.geojson`; Planetary Computer, `sentinel-1-rtc` | Referencia (imagen) · producto derivado (máscara) | 09/01/2016 |
+| Agua observada 23/01/2016 (Sentinel-2, óptico): descenso posterior al pico | 208,22 km²; K1 9,40 m; nube 0,1 %; cobertura 99,4 % | `agua_s2_2016-01-23.geojson`; Planetary Computer, `sentinel-2-l2a` | Referencia (imagen) · producto derivado (máscara) | 23/01/2016 |
+| Agua observada 28/05/2019 (Sentinel-1): subida previa al pico de 2019 | 277,60 km²; K1 9,64 m; nube n/c; cobertura 100,0 % | `agua_s1_2019-05-28.geojson`; `sentinel-1-rtc` | Referencia (imagen) · producto derivado (máscara) | 28/05/2019 |
+| Agua observada 03/06/2019 (Sentinel-2): pico de 2019, un día después del máximo | 141,75 km² (parcial); K1 9,72 m; nube 28,2 %; cobertura 46,4 % | `agua_s2_2019-06-03.geojson`; `sentinel-2-l2a` | Referencia (imagen) · producto derivado (máscara) | 03/06/2019 |
+| Agua observada 07/10/2019 (Sentinel-1): línea de base de aguas bajas | 71,96 km²; K1 2,07 m; nube n/c; cobertura 100,0 % | `agua_s1_2019-10-07.geojson`; `sentinel-1-rtc` | Referencia (imagen) · producto derivado (máscara) | 07/10/2019 |
+| Agua observada 09/10/2019 (Sentinel-2): línea de base de aguas bajas | 67,13 km²; K1 2,07 m; nube 0,0 %; cobertura 99,9 % | `agua_s2_2019-10-09.geojson`; `sentinel-2-l2a` | Referencia (imagen) · producto derivado (máscara) | 09/10/2019 |
+| Agua observada 25/10/2026 (Sentinel-1): octubre de 2026, previo al corte | 79,84 km²; K1 5,40 m; nube n/c; cobertura 100,0 % | `agua_s1_2026-10-25.geojson`; `sentinel-1-rtc` | Referencia (imagen) · producto derivado (máscara) | 25/10/2026 |
+| Agua observada 26/10/2026 (Sentinel-2): octubre de 2026, previo al corte | 42,63 km² (parcial); K1 5,44 m; nube 24,7 %; cobertura 47,1 % | `agua_s2_2026-10-26.geojson`; `sentinel-2-l2a` | Referencia (imagen) · producto derivado (máscara) | 26/10/2026 |
+| Resumen por fecha que muestra el selector de la capa | Los mismos valores, generados por `apps/frontend/scripts/preparar-datos.mjs` desde `resumen.csv` y `manifiesto.json` (sin recalcular) | `data/geo/satelite/resumen.csv`, `manifiesto.json` | Referencia (imagen) · producto derivado (máscara) | 20/11/2026 |
+
 ## Portal público: Información (El Niño) y esquema de la cuenca (`apps/frontend`)
 
 Cifras verificadas el 18/11/2026 contra los archivos fuente (`K9_fuentes.md`; boletín SMN N.º 8 en PDF; pronóstico agroclimático en PPTX). Los datos de contacto de la fuente del pronóstico agroclimático no se reproducen.

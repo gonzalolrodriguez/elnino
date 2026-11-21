@@ -1,12 +1,13 @@
-import { Alert, AlertIcon, Badge, Box, Button, Checkbox, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
+import { Alert, AlertIcon, Box, Button, Flex, FormControl, FormLabel, Heading, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 
 import { AlertaError } from "../components/Formulario";
 import { Insignia } from "../components/Insignia";
+import { Opcion } from "../components/Opcion";
 import { useEscenario } from "./EscenarioContext";
 import type { AccesoProps, OrigenLluvia } from "./tipos";
 import { MarcasUmbral } from "../components/MarcasUmbral";
 import { MuestraEstado } from "../components/MuestraEstado";
-import { fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
+import { APILAR, Chip, fmtM, fmtNum, NOMBRE_ACCESO } from "./ui";
 import { TablaDesplazable } from "../components/TablaDesplazable";
 import { ultimoHito } from "./lamina";
 import { useReproducirSubida } from "./useReproducirSubida";
@@ -29,7 +30,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
     <Box>
       <Flex direction="column" gap={3}>
         <FormControl>
-          <FormLabel htmlFor="sim-altura" mb={0} fontSize="sm">
+          <FormLabel htmlFor="sim-altura">
             Altura de Puerto Formosa (0 a 12 m): <strong data-testid="sim-altura-valor">{fmtM(entrada.altura_formosa_m)}</strong>
           </FormLabel>
           <input
@@ -43,31 +44,31 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             style={{ width: "100%" }}
           />
           <MarcasUmbral />
-          <Text fontSize="xs" color="textoSuave">
+          <Text textStyle="microdato">
             Valor SIMULADO. Alerta 7,80 m y evacuación 8,30 m (K3). Dato del corte: 5,60 m.
           </Text>
-          <Flex gap={3} align="center" wrap="wrap" mt={2}>
-            <Checkbox size="sm" isChecked={laminaVisible} onChange={(e) => fijarLaminaVisible(e.target.checked)}>
-              Lámina de agua ilustrativa
-            </Checkbox>
-            <Button size="xs" variant="outline" onClick={reproduciendo ? detener : reproducir} isDisabled={!reproduciendo && !puedeReproducir} aria-pressed={reproduciendo}>
+          <Flex gap={3} align="center" wrap="wrap" mt={3}>
+            <Box flex="1 1 12rem">
+              <Opcion etiqueta="Lámina de agua ilustrativa" isChecked={laminaVisible} onChange={fijarLaminaVisible} />
+            </Box>
+            <Button variant="outline" onClick={reproduciendo ? detener : reproducir} isDisabled={!reproduciendo && !puedeReproducir} aria-pressed={reproduciendo}>
               {reproduciendo ? "Detener" : "Reproducir subida"}
             </Button>
           </Flex>
           {reproduciendo && alturaVisual !== null && (
-            <Text fontSize="xs" mt={1} role="status" data-testid="sim-reproduccion">
+            <Text textStyle="microdato" mt={1} role="status" data-testid="sim-reproduccion">
               Reproduciendo: {fmtM(alturaVisual)} (SIMULADO){hito ? `, superó el ${hito.texto}` : ""}.
             </Text>
           )}
           {!reproduciendo && !puedeReproducir && (
-            <Text fontSize="xs" color="textoSuave" mt={1}>
+            <Text textStyle="microdato" mt={1}>
               Para reproducir la subida, elegí una altura mayor que el dato del corte.
             </Text>
           )}
         </FormControl>
 
         <FormControl>
-          <FormLabel htmlFor="sim-lluvia" mb={0} fontSize="sm">
+          <FormLabel htmlFor="sim-lluvia">
             Lluvia: <strong data-testid="sim-lluvia-valor">{fmtNum(entrada.lluvia_mm)} mm</strong> ({lluviaSimulada ? "SIMULADO" : "origen indicado"})
           </FormLabel>
           <input
@@ -80,7 +81,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
             onChange={(e) => fijarLluvia(Number(e.target.value))}
             style={{ width: "100%" }}
           />
-          <Select aria-label="Origen de la lluvia" size="sm" bg="superficie" mt={1} value={entrada.lluvia_origen} onChange={(e) => fijarLluvia(entrada.lluvia_mm, e.target.value as OrigenLluvia)}>
+          <Select aria-label="Origen de la lluvia" bg="superficie" mt={2} value={entrada.lluvia_origen} onChange={(e) => fijarLluvia(entrada.lluvia_mm, e.target.value as OrigenLluvia)}>
             {ORIGENES.map((o) => (
               <option key={o.valor} value={o.valor}>
                 {o.texto}
@@ -90,23 +91,21 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
         </FormControl>
 
         <Box>
-          <Text fontSize="sm" fontWeight={600} mb={1}>
+          <Text textStyle="rotulo" color="texto" mb={2}>
             Caminos cerrados en la simulación
           </Text>
           {accesos.length === 0 ? (
-            <Text fontSize="sm" color="textoSuave">
-              No hay accesos cargados.
-            </Text>
+            <Text textStyle="microdato">No hay accesos cargados.</Text>
           ) : (
-            accesos.map((a) => (
-              <Checkbox key={a.id} size="sm" display="flex" isChecked={entrada.caminos_cerrados.includes(a.id)} onChange={() => alternarCamino(a.id)}>
-                {a.nombre} <Text as="span" color="textoSuave">({a.superficie}{a.sector_id ? `, ${a.sector_id}` : ""})</Text>
-              </Checkbox>
-            ))
+            <Flex direction="column" gap={2}>
+              {accesos.map((a) => (
+                <Opcion key={a.id} etiqueta={`${a.nombre} (${a.superficie}${a.sector_id ? `, ${a.sector_id}` : ""})`} isChecked={entrada.caminos_cerrados.includes(a.id)} onChange={() => alternarCamino(a.id)} />
+              ))}
+            </Flex>
           )}
         </Box>
 
-        <Button onClick={() => void simular()} isLoading={calculando} loadingText="Calculando" size="sm">
+        <Button onClick={() => void simular()} isLoading={calculando} loadingText="Calculando">
           Calcular escenario
         </Button>
       </Flex>
@@ -118,13 +117,13 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
       )}
 
       {escenario && desactualizado && (
-        <Alert status="warning" mt={4} fontSize="sm" alignItems="center" role="status" data-testid="resultado-desactualizado">
+        <Alert status="warning" mt={4} alignItems="center" role="status" data-testid="resultado-desactualizado">
           <AlertIcon />
           <Box flex="1">
             <strong>Resultado desactualizado.</strong> Cambiaste los controles después de calcular (resultado de {fmtM(entradaCalculada?.altura_formosa_m)} y{" "}
             {fmtNum(entradaCalculada?.lluvia_mm)} mm).
           </Box>
-          <Button size="sm" minH="2.75rem" onClick={() => void simular()} isLoading={calculando} loadingText="Calculando">
+          <Button onClick={() => void simular()} isLoading={calculando} loadingText="Calculando">
             Recalcular
           </Button>
         </Alert>
@@ -133,18 +132,18 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
       {escenario && (
         <Box mt={4} data-testid="resultado-escenario" opacity={desactualizado ? 0.55 : 1}>
           <Flex align="center" gap={2} mb={2} wrap="wrap">
-            <Heading as="h3" size="xs">
+            <Heading as="h3" size="bloque" textStyle="rotulo" color="texto">
               Resultado
             </Heading>
             <Insignia categoria="SIMULADO" />
           </Flex>
-          <Text fontSize="sm" mb={2} data-testid="resultado-rio">
+          <Text mb={3} data-testid="resultado-rio">
             Río: <strong>{escenario.rio.estado}</strong> a {fmtM(escenario.rio.altura_m)}; a {fmtM(Math.abs(escenario.rio.distancia_a_alerta_m))}{" "}
             {escenario.rio.distancia_a_alerta_m >= 0 ? "de la alerta" : "por encima de la alerta"} y a {fmtM(Math.abs(escenario.rio.distancia_a_evacuacion_m))}{" "}
             {escenario.rio.distancia_a_evacuacion_m >= 0 ? "de la evacuación" : "por encima de la evacuación"}.
           </Text>
           <TablaDesplazable etiqueta="Estado de los sectores en el escenario">
-            <Table size="sm" aria-label="Estado de los sectores en el escenario">
+            <Table size="sm" aria-label="Estado de los sectores en el escenario" sx={APILAR}>
               <Thead>
                 <Tr>
                   <Th>Sector</Th>
@@ -158,17 +157,15 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
                 {escenario.sectores.map((s) => (
                   <Tr key={s.id} data-testid={`sector-${s.id}`}>
                     <Td fontWeight={700}>{s.id}</Td>
-                    <Td whiteSpace="normal">
-                      <MuestraEstado estado={s.estado} />
-                      {s.aislado && (
-                        <Badge ml={1} colorScheme="red" variant="solid">
-                          aislado
-                        </Badge>
-                      )}
+                    <Td whiteSpace="normal" data-etiqueta="Estado">
+                      <Flex gap={1.5} wrap="wrap" align="center">
+                        <MuestraEstado estado={s.estado} />
+                        {s.aislado && <Chip tono="alerta">aislado</Chip>}
+                      </Flex>
                     </Td>
-                    <Td isNumeric>{fmtM(s.margen_a_compromiso_m)}</Td>
-                    <Td whiteSpace="normal">{s.isad ? `${fmtNum(s.isad.valor, 2)} (SIMULADO)` : "sin dato"}</Td>
-                    <Td whiteSpace="normal" fontSize="xs">
+                    <Td isNumeric data-etiqueta="Margen">{fmtM(s.margen_a_compromiso_m)}</Td>
+                    <Td whiteSpace="normal" data-etiqueta="ISAD">{s.isad ? `${fmtNum(s.isad.valor, 2)} (SIMULADO)` : "sin dato"}</Td>
+                    <Td whiteSpace="normal" textStyle="microdato" data-etiqueta="Accesos">
                       {s.accesos.map((a) => `${a.nombre}: ${NOMBRE_ACCESO[a.estado] ?? a.estado}`).join("; ") || "sin accesos"}
                     </Td>
                   </Tr>
@@ -176,7 +173,7 @@ export function Simulador({ accesos }: { accesos: AccesoProps[] }) {
               </Tbody>
             </Table>
           </TablaDesplazable>
-          <Text fontSize="xs" color="textoSuave" mt={1}>
+          <Text textStyle="microdato" mt={2}>
             El ISAD es un índice relativo SIMULADO y no reemplaza el criterio de compromiso de K10. Margen: distancia en la escala hasta el compromiso del sector (negativa si ya lo superó).
           </Text>
         </Box>
