@@ -5,8 +5,8 @@ import { IconoTilde } from "../components/iconos/Iconos";
 import { Layout } from "../components/Layout";
 import { BloqueApoyo, PaginaFormulario } from "../components/PaginaFormulario";
 
-/** APK publicada por EAS Build (perfil preview, build b08751c6 del 19/11/2026). VITE_APK_URL la reemplaza. */
-const APK_URL_EAS = "https://expo.dev/artifacts/eas/DPhHMaMeOlWckYbImnaICQY-QZdvivoYwiOcL0v2HVg.apk";
+/** APK publicada por EAS Build (perfil preview, build 34864646 del 21/11/2026, desde main). VITE_APK_URL la reemplaza. */
+const APK_URL_EAS = "https://expo.dev/artifacts/eas/Km7I8Iw-a792K0_oQTfwb1hkOG4kafonYpjx-O10u44.apk";
 const APK_URL = (import.meta.env.VITE_APK_URL as string | undefined)?.trim() || APK_URL_EAS;
 
 export function AppMovil() {
