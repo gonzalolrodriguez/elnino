@@ -167,7 +167,7 @@ describe("Tablero", () => {
     renderRuta("/comando");
     expect(await screen.findByTestId("tablero-altura")).toHaveTextContent("5,60 m");
     expect(screen.getByTestId("escala-rio")).toHaveAttribute("aria-label", expect.stringContaining("alerta en 7,80 m"));
-    expect(screen.getByTestId("tablero-supuesto")).toHaveTextContent("es un SUPUESTO, no un pronóstico");
+    expect(screen.getByTestId("tablero-supuesto")).toHaveTextContent("es un supuesto del equipo, no un pronóstico");
     expect(screen.getByText("6 a 20 días")).toBeInTheDocument();
     for (const id of ["S1", "S2", "S3", "S4"]) expect(screen.getByTestId(`tablero-sector-${id}`)).toBeInTheDocument();
     expect(screen.getByTestId("tablero-sector-S4")).toHaveTextContent("en riesgo");
